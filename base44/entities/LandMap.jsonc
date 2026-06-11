@@ -1,0 +1,51 @@
+{
+  "name": "LandMap",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Map title"
+    },
+    "village": {
+      "type": "string"
+    },
+    "district": {
+      "type": "string"
+    },
+    "tehsil": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "in_progress",
+        "review",
+        "approved",
+        "published"
+      ],
+      "default": "draft"
+    },
+    "total_parcels": {
+      "type": "number",
+      "default": 0
+    },
+    "drawing_data": {
+      "type": "string",
+      "description": "JSON string of all canvas objects"
+    },
+    "viewport": {
+      "type": "string",
+      "description": "JSON string of zoom/pan state"
+    },
+    "thumbnail_url": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

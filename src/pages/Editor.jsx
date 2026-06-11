@@ -1,0 +1,361 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
+import GISCanvas from "@/components/editor/GISCanvas";
+import ToolPanel from "@/components/editor/ToolPanel";
+import PropertiesPanel from "@/components/editor/PropertiesPanel";
+import LayerPanel from "@/components/editor/LayerPanel";
+import StatusBar from "@/components/editor/StatusBar";
+import EditorHeader from "@/components/editor/EditorHeader";
+import ExportDialog from "@/components/editor/ExportDialog";
+import {
+  DrawingStateManager,
+  createAcre, createMustateel, createMuraba, createCanal, createOutlet
+} from "@/lib/drawingEngine";
+import { Layers } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+const DEFAULT_LAYERS = {
+  acre: { visible: true, locked: false },
+  mustateel: { visible: true, locked: false },
+  muraba: { visible: true, locked: false },
+  canal: { visible: true, locked: false },
+  outlet: { visible: true, locked: false },
+  grass: { visible: true, locked: false },
+};
+
+export default function Editor() {
+  const queryClient = useQueryClient();
+  const urlParams = new URLSearchParams(window.location.search);
+  const mapId = urlParams.get("id");
+
+  // State
+  const [activeTool, setActiveTool] = useState("select");
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 100, y: 80 });
+  const [layers, setLayers] = useState(DEFAULT_LAYERS);
+  const [selectedId, setSelectedId] = useState(null);
+  const [snapPos, setSnapPos] = useState(null);
+  const [showLayers, setShowLayers] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [canalDraft, setCanalDraft] = useState(null); // null = not drawing, [] = drawing
+  const [outletDraft, setOutletDraft] = useState(null); // null or {x,y,canalId}
+  const [objects, setObjects] = useState([]);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const dsmRef = useRef(new DrawingStateManager([]));
+  const autoSaveTimer = useRef(null);
+
+  // ---- Data Fetching ----
+  const { data: mapData } = useQuery({
+    queryKey: ["map", mapId],
+    queryFn: () => base44.entities.LandMap.filter({ id: mapId }).then(r => r[0]),
+    enabled: !!mapId,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (data) => base44.entities.LandMap.update(mapId, data),
+    onSuccess: () => toast.success("Map saved", { duration: 1500 }),
+    onError: () => toast.error("Save failed"),
+  });
+
+  // Load drawing data when map loads
+  useEffect(() => {
+    if (mapData?.drawing_data) {
+      const loaded = DrawingStateManager.deserialize(mapData.drawing_data);
+      dsmRef.current = new DrawingStateManager(loaded);
+      setObjects([...dsmRef.current.objects]);
+      syncUndoRedo();
+    }
+    if (mapData?.viewport) {
+      try {
+        const vp = JSON.parse(mapData.viewport);
+        if (vp.zoom) setZoom(vp.zoom);
+        if (vp.pan) setPan(vp.pan);
+      } catch {}
+    }
+  }, [mapData?.id]);
+
+  const syncUndoRedo = () => {
+    setCanUndo(dsmRef.current.historyIdx > 0);
+    setCanRedo(dsmRef.current.historyIdx < dsmRef.current.history.length - 1);
+  };
+
+  const syncObjects = () => {
+    setObjects([...dsmRef.current.objects]);
+    syncUndoRedo();
+    scheduleAutoSave();
+  };
+
+  const scheduleAutoSave = () => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      if (mapId) {
+        const parcels = dsmRef.current.getByType("mustateel").length +
+          dsmRef.current.getByType("muraba").length;
+        saveMutation.mutate({
+          drawing_data: dsmRef.current.serialize(),
+          total_parcels: parcels,
+          viewport: JSON.stringify({ zoom, pan }),
+        });
+      }
+    }, 2500);
+  };
+
+  // ---- Tool Actions ----
+  const handleAddObject = useCallback((type, data) => {
+    if (type === "__delete__") {
+      dsmRef.current.remove(data.id);
+      if (selectedId === data.id) setSelectedId(null);
+      syncObjects();
+      return;
+    }
+
+    const layerKey = type;
+    if (layers[layerKey]?.locked) { toast.warning(`${type} layer is locked`); return; }
+
+    let obj;
+    if (type === "acre") obj = createAcre(data.x, data.y);
+    else if (type === "mustateel") obj = createMustateel(data.x, data.y);
+    else if (type === "muraba") obj = createMuraba(data.x, data.y);
+
+    if (obj) {
+      dsmRef.current.add(obj);
+      setSelectedId(obj.id);
+      syncObjects();
+    }
+  }, [layers, selectedId]);
+
+  const handleCanalPointAdd = useCallback((pt) => {
+    setCanalDraft(prev => prev ? [...prev, pt] : [pt]);
+  }, []);
+
+  const handleCanalFinish = useCallback(() => {
+    setCanalDraft(prev => {
+      if (prev && prev.length >= 2) {
+        const canal = createCanal(prev);
+        dsmRef.current.add(canal);
+        setSelectedId(canal.id);
+        syncObjects();
+      }
+      return null;
+    });
+  }, []);
+
+  const handleOutletStart = useCallback((pt, canalId) => {
+    setOutletDraft({ x: pt.x, y: pt.y, canalId });
+  }, []);
+
+  const handleOutletFinish = useCallback((endPt) => {
+    setOutletDraft(prev => {
+      if (prev) {
+        const outlet = createOutlet(prev.canalId, { x: prev.x, y: prev.y }, endPt);
+        dsmRef.current.add(outlet);
+        setSelectedId(outlet.id);
+        syncObjects();
+      }
+      return null;
+    });
+  }, []);
+
+  const handleToolChange = (tool) => {
+    // Finish canal draft if switching away
+    if (activeTool === "canal" && canalDraft && canalDraft.length >= 2) {
+      handleCanalFinish();
+    } else if (activeTool === "canal") {
+      setCanalDraft(null);
+    }
+    if (activeTool === "outlet") setOutletDraft(null);
+    setActiveTool(tool);
+  };
+
+  const handleStopDrawing = () => {
+    if (activeTool === "canal" && canalDraft && canalDraft.length >= 2) {
+      handleCanalFinish();
+    } else {
+      setCanalDraft(null);
+    }
+    setOutletDraft(null);
+    setActiveTool("select");
+  };
+
+  const handleUndo = () => {
+    if (dsmRef.current.undo()) syncObjects();
+  };
+  const handleRedo = () => {
+    if (dsmRef.current.redo()) syncObjects();
+  };
+
+  const handleZoomChange = (newZoom, newPan) => {
+    setZoom(newZoom);
+    if (newPan) setPan(newPan);
+  };
+
+  const handleZoomIn = () => handleZoomChange(Math.min(20, zoom * 1.2), null);
+  const handleZoomOut = () => handleZoomChange(Math.max(0.05, zoom / 1.2), null);
+  const handleFitView = () => { setZoom(1); setPan({ x: 100, y: 80 }); };
+
+  const handleSelect = (id) => setSelectedId(id);
+  const selectedObj = objects.find(o => o.id === selectedId) || null;
+
+  const handleUpdateObject = (id, changes) => {
+    dsmRef.current.update(id, changes);
+    syncObjects();
+  };
+
+  const handleDeleteObject = (id) => {
+    dsmRef.current.remove(id);
+    setSelectedId(null);
+    syncObjects();
+  };
+
+  const handleLayerChange = (layerId, changes) => {
+    setLayers(prev => ({ ...prev, [layerId]: { ...prev[layerId], ...changes } }));
+  };
+
+  const handleSave = (extra = {}) => {
+    if (!mapId) return;
+    const parcels = dsmRef.current.getByType("mustateel").length +
+      dsmRef.current.getByType("muraba").length;
+    saveMutation.mutate({
+      drawing_data: dsmRef.current.serialize(),
+      total_parcels: parcels,
+      viewport: JSON.stringify({ zoom, pan }),
+      ...extra,
+    });
+  };
+
+  const handleStatusChange = (status) => {
+    saveMutation.mutate({ status });
+    queryClient.invalidateQueries({ queryKey: ["map", mapId] });
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.target.tagName === "INPUT") return;
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); handleUndo(); }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.shiftKey && e.key === "z"))) { e.preventDefault(); handleRedo(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); handleSave(); }
+      if (e.key === "Escape") handleStopDrawing();
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedId) { handleDeleteObject(selectedId); }
+      }
+      // Tool shortcuts
+      const shortcuts = { v: "select", h: "pan", a: "acre", m: "mustateel", b: "muraba", c: "canal", o: "outlet", e: "eraser" };
+      if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) handleToolChange(shortcuts[e.key]);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [selectedId, activeTool, canalDraft, zoom, pan]);
+
+  if (!mapId) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#0f1923] text-white">
+        <p className="text-slate-500">No map ID provided.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-screen bg-[#0f1923] overflow-hidden">
+      <EditorHeader
+        mapData={mapData}
+        onSave={handleSave}
+        onStatusChange={handleStatusChange}
+        isSaving={saveMutation.isPending}
+        activeTool={activeTool}
+        onStopDrawing={handleStopDrawing}
+        canalDraftActive={!!canalDraft}
+        onExport={() => setShowExport(true)}
+      />
+
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Tool Panel */}
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20">
+          <ToolPanel
+            activeTool={activeTool}
+            onToolChange={handleToolChange}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onFitView={handleFitView}
+            canUndo={canUndo}
+            canRedo={canRedo}
+          />
+        </div>
+
+        {/* Canvas */}
+        <div className="flex-1 relative overflow-hidden">
+          <GISCanvas
+            objects={objects}
+            activeTool={activeTool}
+            zoom={zoom}
+            pan={pan}
+            layers={layers}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            onAddObject={handleAddObject}
+            onUpdateObject={handleUpdateObject}
+            canalDraft={canalDraft}
+            onCanalPointAdd={handleCanalPointAdd}
+            onCanalFinish={handleCanalFinish}
+            outletDraft={outletDraft}
+            onOutletStart={handleOutletStart}
+            onOutletFinish={handleOutletFinish}
+            snapPos={snapPos}
+            onSnapPosChange={setSnapPos}
+            onPanChange={setPan}
+            onZoomChange={handleZoomChange}
+          />
+
+          {/* Layer Toggle Button */}
+          <Button
+            variant="ghost" size="icon"
+            className="absolute top-3 right-3 w-9 h-9 bg-[#0d1420] border border-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700/60 shadow-lg z-20"
+            onClick={() => setShowLayers(v => !v)}
+          >
+            <Layers className="w-4 h-4" />
+          </Button>
+
+          {/* Layer Panel */}
+          {showLayers && (
+            <div className="absolute top-14 right-3 z-20">
+              <LayerPanel layers={layers} onLayerChange={handleLayerChange} />
+            </div>
+          )}
+        </div>
+
+        {/* Properties Panel */}
+        {selectedObj && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20">
+            <PropertiesPanel
+              selectedObj={selectedObj}
+              onUpdate={handleUpdateObject}
+              onDelete={handleDeleteObject}
+              onClose={() => setSelectedId(null)}
+            />
+          </div>
+        )}
+      </div>
+
+      <StatusBar
+        zoom={zoom}
+        snapPos={snapPos}
+        activeTool={activeTool}
+        objectCount={objects.length}
+        canalDraftLen={canalDraft?.length || 0}
+      />
+
+      <ExportDialog
+        open={showExport}
+        onClose={() => setShowExport(false)}
+        mapData={mapData}
+        objects={objects}
+      />
+    </div>
+  );
+}
