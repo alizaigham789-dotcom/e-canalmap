@@ -4,12 +4,13 @@ import { Slider } from "@/components/ui/slider";
 import { Eye, EyeOff, Lock, Unlock, Layers } from "lucide-react";
 
 const LAYER_DEFS = [
-  { id: "muraba", label: "Muraba", color: "#f97316" },
-  { id: "mustateel", label: "Mustateel", color: "#f59e0b" },
+  { id: "muraba", label: "Muraba", color: "#ef4444" },
+  { id: "mustateel", label: "Mustateel", color: "#ef4444" },
   { id: "acre", label: "Acre Grid", color: "#eab308" },
   { id: "canal", label: "Canals", color: "#3b82f6" },
+  { id: "chakbandi", label: "Chakbandi Lines", color: "#22c55e" },
   { id: "outlet", label: "Outlets / Moga", color: "#06b6d4" },
-  { id: "grass", label: "Grass Effect", color: "#22c55e" },
+  { id: "grass", label: "Tree Effect", color: "#22c55e" },
 ];
 
 export default function LayerPanel({ layers, onLayerChange }) {

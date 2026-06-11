@@ -9,11 +9,14 @@ import LayerPanel from "@/components/editor/LayerPanel";
 import StatusBar from "@/components/editor/StatusBar";
 import EditorHeader from "@/components/editor/EditorHeader";
 import ExportDialog from "@/components/editor/ExportDialog";
+import LegendPanel from "@/components/editor/LegendPanel";
+import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
+import PrintPreview from "@/components/editor/PrintPreview";
 import {
   DrawingStateManager,
-  createAcre, createMustateel, createMuraba, createCanal, createOutlet
+  createAcre, createMustateel, createMuraba, createCanal, createOutlet, createChakbandi
 } from "@/lib/drawingEngine";
-import { Layers } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const DEFAULT_LAYERS = {
@@ -21,8 +24,22 @@ const DEFAULT_LAYERS = {
   mustateel: { visible: true, locked: false },
   muraba: { visible: true, locked: false },
   canal: { visible: true, locked: false },
+  chakbandi: { visible: true, locked: false },
   outlet: { visible: true, locked: false },
   grass: { visible: true, locked: false },
+};
+
+const DEFAULT_COLORS = {
+  acreStroke: "#eab308",
+  acreFill: "rgba(234,179,8,0.08)",
+  mustateelStroke: "#ef4444",
+  mustateelFill: "rgba(245,158,11,0.10)",
+  murabaStroke: "#ef4444",
+  murabaFill: "rgba(249,115,22,0.08)",
+  canalStroke: "#3b82f6",
+  canalFill: "rgba(59,130,246,0.25)",
+  chakbandiStroke: "#22c55e",
+  outletStroke: "#06b6d4",
 };
 
 export default function Editor() {
@@ -30,7 +47,6 @@ export default function Editor() {
   const urlParams = new URLSearchParams(window.location.search);
   const mapId = urlParams.get("id");
 
-  // State
   const [activeTool, setActiveTool] = useState("select");
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 100, y: 80 });
@@ -38,17 +54,23 @@ export default function Editor() {
   const [selectedId, setSelectedId] = useState(null);
   const [snapPos, setSnapPos] = useState(null);
   const [showLayers, setShowLayers] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
+  const [showColors, setShowColors] = useState(false);
   const [showExport, setShowExport] = useState(false);
-  const [canalDraft, setCanalDraft] = useState(null); // null = not drawing, [] = drawing
-  const [outletDraft, setOutletDraft] = useState(null); // null or {x,y,canalId}
+  const [showPrint, setShowPrint] = useState(false);
+  const [canalDraft, setCanalDraft] = useState(null);
+  const [chakbandiDraft, setChakbandiDraft] = useState(null);
+  const [outletDraft, setOutletDraft] = useState(null);
   const [objects, setObjects] = useState([]);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [colorSettings, setColorSettings] = useState(DEFAULT_COLORS);
+  const [bgColor, setBgColor] = useState("#0f1923");
 
   const dsmRef = useRef(new DrawingStateManager([]));
   const autoSaveTimer = useRef(null);
+  const canvasRef = useRef(null);
 
-  // ---- Data Fetching ----
   const { data: mapData } = useQuery({
     queryKey: ["map", mapId],
     queryFn: () => base44.entities.LandMap.filter({ id: mapId }).then(r => r[0]),
@@ -61,7 +83,6 @@ export default function Editor() {
     onError: () => toast.error("Save failed"),
   });
 
-  // Load drawing data when map loads
   useEffect(() => {
     if (mapData?.drawing_data) {
       const loaded = DrawingStateManager.deserialize(mapData.drawing_data);
@@ -104,7 +125,6 @@ export default function Editor() {
     }, 2500);
   };
 
-  // ---- Tool Actions ----
   const handleAddObject = useCallback((type, data) => {
     if (type === "__delete__") {
       dsmRef.current.remove(data.id);
@@ -112,7 +132,6 @@ export default function Editor() {
       syncObjects();
       return;
     }
-
     const layerKey = type;
     if (layers[layerKey]?.locked) { toast.warning(`${type} layer is locked`); return; }
 
@@ -144,6 +163,22 @@ export default function Editor() {
     });
   }, []);
 
+  const handleChakbandiPointAdd = useCallback((pt) => {
+    setChakbandiDraft(prev => prev ? [...prev, pt] : [pt]);
+  }, []);
+
+  const handleChakbandiFinish = useCallback(() => {
+    setChakbandiDraft(prev => {
+      if (prev && prev.length >= 2) {
+        const cb = createChakbandi(prev);
+        dsmRef.current.add(cb);
+        setSelectedId(cb.id);
+        syncObjects();
+      }
+      return null;
+    });
+  }, []);
+
   const handleOutletStart = useCallback((pt, canalId) => {
     setOutletDraft({ x: pt.x, y: pt.y, canalId });
   }, []);
@@ -161,32 +196,25 @@ export default function Editor() {
   }, []);
 
   const handleToolChange = (tool) => {
-    // Finish canal draft if switching away
-    if (activeTool === "canal" && canalDraft && canalDraft.length >= 2) {
-      handleCanalFinish();
-    } else if (activeTool === "canal") {
-      setCanalDraft(null);
-    }
+    if (activeTool === "canal" && canalDraft && canalDraft.length >= 2) handleCanalFinish();
+    else if (activeTool === "canal") setCanalDraft(null);
+    if (activeTool === "chakbandi" && chakbandiDraft && chakbandiDraft.length >= 2) handleChakbandiFinish();
+    else if (activeTool === "chakbandi") setChakbandiDraft(null);
     if (activeTool === "outlet") setOutletDraft(null);
     setActiveTool(tool);
   };
 
   const handleStopDrawing = () => {
-    if (activeTool === "canal" && canalDraft && canalDraft.length >= 2) {
-      handleCanalFinish();
-    } else {
-      setCanalDraft(null);
-    }
+    if (activeTool === "canal" && canalDraft && canalDraft.length >= 2) handleCanalFinish();
+    else setCanalDraft(null);
+    if (activeTool === "chakbandi" && chakbandiDraft && chakbandiDraft.length >= 2) handleChakbandiFinish();
+    else setChakbandiDraft(null);
     setOutletDraft(null);
     setActiveTool("select");
   };
 
-  const handleUndo = () => {
-    if (dsmRef.current.undo()) syncObjects();
-  };
-  const handleRedo = () => {
-    if (dsmRef.current.redo()) syncObjects();
-  };
+  const handleUndo = () => { if (dsmRef.current.undo()) syncObjects(); };
+  const handleRedo = () => { if (dsmRef.current.redo()) syncObjects(); };
 
   const handleZoomChange = (newZoom, newPan) => {
     setZoom(newZoom);
@@ -215,6 +243,10 @@ export default function Editor() {
     setLayers(prev => ({ ...prev, [layerId]: { ...prev[layerId], ...changes } }));
   };
 
+  const handleColorChange = (key, value) => {
+    setColorSettings(prev => ({ ...prev, [key]: value }));
+  };
+
   const handleSave = (extra = {}) => {
     if (!mapId) return;
     const parcels = dsmRef.current.getByType("mustateel").length +
@@ -239,17 +271,22 @@ export default function Editor() {
       if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); handleUndo(); }
       if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.shiftKey && e.key === "z"))) { e.preventDefault(); handleRedo(); }
       if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); handleSave(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "p") { e.preventDefault(); setShowPrint(true); }
       if (e.key === "Escape") handleStopDrawing();
       if (e.key === "Delete" || e.key === "Backspace") {
-        if (selectedId) { handleDeleteObject(selectedId); }
+        if (selectedId) handleDeleteObject(selectedId);
       }
-      // Tool shortcuts
-      const shortcuts = { v: "select", h: "pan", a: "acre", m: "mustateel", b: "muraba", c: "canal", o: "outlet", e: "eraser" };
-      if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) handleToolChange(shortcuts[e.key]);
+      const shortcuts = { v: "select", h: "pan", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", e: "eraser", f: "fitView" };
+      if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) {
+        if (e.key === "f") handleFitView();
+        else handleToolChange(shortcuts[e.key]);
+      }
+      if (e.key === "+" || e.key === "=") handleZoomIn();
+      if (e.key === "-") handleZoomOut();
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selectedId, activeTool, canalDraft, zoom, pan]);
+  }, [selectedId, activeTool, canalDraft, chakbandiDraft, zoom, pan]);
 
   if (!mapId) {
     return (
@@ -259,8 +296,10 @@ export default function Editor() {
     );
   }
 
+  const draftActive = !!(canalDraft || chakbandiDraft);
+
   return (
-    <div className="flex flex-col h-screen bg-[#0f1923] overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden" style={{ background: bgColor }}>
       <EditorHeader
         mapData={mapData}
         onSave={handleSave}
@@ -268,7 +307,7 @@ export default function Editor() {
         isSaving={saveMutation.isPending}
         activeTool={activeTool}
         onStopDrawing={handleStopDrawing}
-        canalDraftActive={!!canalDraft}
+        canalDraftActive={draftActive}
         onExport={() => setShowExport(true)}
       />
 
@@ -291,6 +330,7 @@ export default function Editor() {
         {/* Canvas */}
         <div className="flex-1 relative overflow-hidden">
           <GISCanvas
+            ref={canvasRef}
             objects={objects}
             activeTool={activeTool}
             zoom={zoom}
@@ -303,6 +343,9 @@ export default function Editor() {
             canalDraft={canalDraft}
             onCanalPointAdd={handleCanalPointAdd}
             onCanalFinish={handleCanalFinish}
+            chakbandiDraft={chakbandiDraft}
+            onChakbandiPointAdd={handleChakbandiPointAdd}
+            onChakbandiFinish={handleChakbandiFinish}
             outletDraft={outletDraft}
             onOutletStart={handleOutletStart}
             onOutletFinish={handleOutletFinish}
@@ -310,21 +353,58 @@ export default function Editor() {
             onSnapPosChange={setSnapPos}
             onPanChange={setPan}
             onZoomChange={handleZoomChange}
+            colorSettings={colorSettings}
+            bgColor={bgColor}
           />
 
-          {/* Layer Toggle Button */}
-          <Button
-            variant="ghost" size="icon"
-            className="absolute top-3 right-3 w-9 h-9 bg-[#0d1420] border border-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700/60 shadow-lg z-20"
-            onClick={() => setShowLayers(v => !v)}
-          >
-            <Layers className="w-4 h-4" />
-          </Button>
+          {/* Top-right toolbar buttons */}
+          <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
+            <Button variant="ghost" size="icon"
+              className={`w-9 h-9 border shadow-lg transition-all ${showLegend ? "bg-blue-600 border-blue-500 text-white" : "bg-[#0d1420] border-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700/60"}`}
+              onClick={() => { setShowLegend(v => !v); setShowLayers(false); setShowColors(false); }}
+              title="Legend">
+              <BookOpen className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className={`w-9 h-9 border shadow-lg transition-all ${showLayers ? "bg-blue-600 border-blue-500 text-white" : "bg-[#0d1420] border-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700/60"}`}
+              onClick={() => { setShowLayers(v => !v); setShowLegend(false); setShowColors(false); }}
+              title="Layers">
+              <Layers className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className={`w-9 h-9 border shadow-lg transition-all ${showColors ? "bg-purple-600 border-purple-500 text-white" : "bg-[#0d1420] border-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700/60"}`}
+              onClick={() => { setShowColors(v => !v); setShowLayers(false); setShowLegend(false); }}
+              title="Colour Settings">
+              <Palette className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-[#0d1420] border border-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700/60 shadow-lg"
+              onClick={() => setShowPrint(true)}
+              title="Print Preview (Ctrl+P)">
+              <Printer className="w-4 h-4" />
+            </Button>
+          </div>
 
-          {/* Layer Panel */}
+          {/* Panels */}
+          {showLegend && (
+            <div className="absolute top-[200px] right-3 z-20">
+              <LegendPanel colorSettings={colorSettings} />
+            </div>
+          )}
           {showLayers && (
-            <div className="absolute top-14 right-3 z-20">
+            <div className="absolute top-[200px] right-3 z-20">
               <LayerPanel layers={layers} onLayerChange={handleLayerChange} />
+            </div>
+          )}
+          {showColors && (
+            <div className="absolute top-[200px] right-3 z-20">
+              <ColorSettingsPanel
+                colorSettings={colorSettings}
+                onColorChange={handleColorChange}
+                bgColor={bgColor}
+                onBgColorChange={setBgColor}
+                onClose={() => setShowColors(false)}
+              />
             </div>
           )}
         </div>
@@ -347,7 +427,7 @@ export default function Editor() {
         snapPos={snapPos}
         activeTool={activeTool}
         objectCount={objects.length}
-        canalDraftLen={canalDraft?.length || 0}
+        canalDraftLen={(canalDraft?.length || 0) + (chakbandiDraft?.length || 0)}
       />
 
       <ExportDialog
@@ -356,6 +436,14 @@ export default function Editor() {
         mapData={mapData}
         objects={objects}
       />
+
+      {showPrint && (
+        <PrintPreview
+          mapData={mapData}
+          canvasRef={canvasRef}
+          onClose={() => setShowPrint(false)}
+        />
+      )}
     </div>
   );
 }

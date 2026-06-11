@@ -25,14 +25,16 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
     mustateel: "Mustateel Parcel",
     muraba: "Muraba Block",
     canal: "Canal",
+    chakbandi: "Chakbandi Line",
     outlet: "Outlet / Moga",
   }[selectedObj.type] || selectedObj.type;
 
   const typeColor = {
     acre: "text-yellow-400",
-    mustateel: "text-amber-400",
-    muraba: "text-orange-400",
+    mustateel: "text-red-400",
+    muraba: "text-red-500",
     canal: "text-blue-400",
+    chakbandi: "text-green-400",
     outlet: "text-cyan-400",
   }[selectedObj.type] || "text-slate-400";
 
@@ -105,6 +107,15 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
             <Separator className="bg-slate-700/50" />
             <Field label="Canal Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Nurpur Distry" />
             <div className="text-[10px] text-slate-500 font-mono">Width: {selectedObj.width} ft • Points: {selectedObj.points?.length || 0}</div>
+          </>
+        )}
+
+        {/* Chakbandi */}
+        {selectedObj.type === "chakbandi" && (
+          <>
+            <Separator className="bg-slate-700/50" />
+            <Field label="Chakbandi Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Chakbandi Boundary 1" />
+            <div className="text-[10px] text-slate-500 font-mono text-green-400">Bold green • Cross markers • {selectedObj.points?.length || 0} points</div>
           </>
         )}
 

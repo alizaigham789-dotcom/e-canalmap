@@ -4,21 +4,22 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Separator } from "@/components/ui/separator";
 import {
   Square, MousePointer2, Hand, Eraser, Minus,
-  Droplets, Layers, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2
+  Droplets, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch
 } from "lucide-react";
 
 const TOOLS = [
-  { id: "select", label: "Select", icon: MousePointer2, group: "nav" },
-  { id: "pan", label: "Pan", icon: Hand, group: "nav" },
+  { id: "select", label: "Select (V)", icon: MousePointer2, group: "nav" },
+  { id: "pan", label: "Pan (H)", icon: Hand, group: "nav" },
   null,
-  { id: "acre", label: "Acre (220×198 ft)", icon: Square, group: "draw", color: "text-yellow-400" },
-  { id: "mustateel", label: "Mustateel (440×990 ft)", icon: Square, group: "draw", color: "text-amber-400" },
-  { id: "muraba", label: "Muraba (1100×990 ft)", icon: Square, group: "draw", color: "text-orange-400" },
+  { id: "acre", label: "Acre 220×198 ft (A)", icon: Square, group: "draw", color: "text-yellow-400" },
+  { id: "mustateel", label: "Mustateel 440×990 ft (M)", icon: Square, group: "draw", color: "text-red-400" },
+  { id: "muraba", label: "Muraba 1100×990 ft (B)", icon: Square, group: "draw", color: "text-red-500" },
   null,
-  { id: "canal", label: "Canal Tool", icon: Minus, group: "draw", color: "text-blue-400" },
-  { id: "outlet", label: "Outlet/Moga Tool", icon: Droplets, group: "draw", color: "text-cyan-400" },
+  { id: "canal", label: "Canal Tool (C)", icon: Minus, group: "draw", color: "text-blue-400" },
+  { id: "chakbandi", label: "Chakbandi Line (K)", icon: GitBranch, group: "draw", color: "text-green-400" },
+  { id: "outlet", label: "Outlet / Moga (O)", icon: Droplets, group: "draw", color: "text-cyan-400" },
   null,
-  { id: "eraser", label: "Eraser", icon: Eraser, group: "edit", color: "text-red-400" },
+  { id: "eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
 ];
 
 export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, onZoomIn, onZoomOut, onFitView, canUndo, canRedo }) {
@@ -29,6 +30,10 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
           if (tool === null) return <Separator key={`sep-${i}`} className="bg-slate-700/50 my-0.5" />;
           const Icon = tool.icon;
           const isActive = activeTool === tool.id;
+          // Special highlight for chakbandi
+          const activeClass = tool.id === "chakbandi"
+            ? "bg-green-700 text-white hover:bg-green-600 shadow-lg shadow-green-500/20"
+            : "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20";
           return (
             <Tooltip key={tool.id}>
               <TooltipTrigger asChild>
@@ -37,7 +42,7 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
                   size="icon"
                   className={`w-9 h-9 rounded-lg transition-all ${
                     isActive
-                      ? "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20"
+                      ? activeClass
                       : `text-slate-500 hover:text-white hover:bg-slate-700/60 ${tool.color || ""}`
                   }`}
                   onClick={() => onToolChange(tool.id)}
@@ -54,7 +59,6 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
 
         <Separator className="bg-slate-700/50 my-0.5" />
 
-        {/* Undo/Redo */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-white hover:bg-slate-700/60 disabled:opacity-30"
@@ -62,7 +66,7 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
               <RotateCcw className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Undo</TooltipContent>
+          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Undo (Ctrl+Z)</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -72,19 +76,18 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
               <RotateCw className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Redo</TooltipContent>
+          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Redo (Ctrl+Y)</TooltipContent>
         </Tooltip>
 
         <Separator className="bg-slate-700/50 my-0.5" />
 
-        {/* Zoom */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-white hover:bg-slate-700/60" onClick={onZoomIn}>
               <ZoomIn className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Zoom In</TooltipContent>
+          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Zoom In (+)</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -93,7 +96,7 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
               <ZoomOut className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Zoom Out</TooltipContent>
+          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Zoom Out (-)</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -102,7 +105,7 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
               <Maximize2 className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Fit View</TooltipContent>
+          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Fit View (F)</TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>

@@ -260,6 +260,16 @@ export function createOutlet(canalId, startPt, endPt, label = "") {
   };
 }
 
+export function createChakbandi(points, name = "") {
+  return {
+    id: `chakbandi_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    type: "chakbandi",
+    points: points.map(p => ({ ...p })),
+    name,
+    width: DIMENSIONS.CANAL_WIDTH,
+  };
+}
+
 // ============================================================
 // DRAWING STATE MANAGER
 // ============================================================
