@@ -17,82 +17,68 @@ const COLOR_FIELDS = [
 
 export default function ColorSettingsPanel({ colorSettings, onColorChange, bgColor, onBgColorChange, onClose }) {
   const C = colorSettings || {};
-
-  // Solid color fields only (skip rgba for fill fields in color picker — show as text)
   const solidFields = COLOR_FIELDS.filter(f => !f.default.startsWith("rgba"));
   const fillFields = COLOR_FIELDS.filter(f => f.default.startsWith("rgba"));
 
   return (
-    <div className="bg-[#0d1420] border border-slate-700/50 rounded-xl shadow-2xl overflow-hidden w-60">
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-700/50">
+    <div className="bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden w-60">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-200 bg-slate-50">
         <div className="flex items-center gap-2">
-          <Palette className="w-3.5 h-3.5 text-purple-400" />
-          <span className="text-xs font-bold text-white font-heading tracking-wider">COLOURS</span>
+          <Palette className="w-3.5 h-3.5 text-purple-600" />
+          <span className="text-xs font-bold text-slate-800 font-heading tracking-wider">COLOURS</span>
         </div>
-        <Button variant="ghost" size="icon" className="w-5 h-5 text-slate-500 hover:text-white" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="w-5 h-5 text-slate-400 hover:text-slate-700" onClick={onClose}>
           <X className="w-3 h-3" />
         </Button>
       </div>
 
       <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
-        {/* Background */}
         <div>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">Background</p>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5 font-semibold">Background</p>
           <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={bgColor || "#0f1923"}
+            <input type="color" value={bgColor || "#ffffff"}
               onChange={e => onBgColorChange(e.target.value)}
-              className="w-8 h-7 rounded cursor-pointer border border-slate-700 bg-transparent"
-            />
-            <span className="text-xs text-slate-300">Canvas Background</span>
+              className="w-8 h-7 rounded cursor-pointer border border-slate-200 bg-transparent" />
+            <span className="text-xs text-slate-600">Canvas Background</span>
           </div>
         </div>
 
-        <div className="border-t border-slate-700/50 pt-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">Border / Line Colours</p>
+        <div className="border-t border-slate-100 pt-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5 font-semibold">Border / Line Colours</p>
           <div className="space-y-1.5">
             {solidFields.map(field => (
               <div key={field.key} className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={C[field.key] || field.default}
+                <input type="color" value={C[field.key] || field.default}
                   onChange={e => onColorChange(field.key, e.target.value)}
-                  className="w-7 h-6 rounded cursor-pointer border border-slate-700 bg-transparent shrink-0"
-                />
-                <span className="text-xs text-slate-300">{field.label}</span>
+                  className="w-7 h-6 rounded cursor-pointer border border-slate-200 bg-transparent shrink-0" />
+                <span className="text-xs text-slate-600">{field.label}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="border-t border-slate-700/50 pt-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">Fill Opacity</p>
+        <div className="border-t border-slate-100 pt-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5 font-semibold">Fill Opacity</p>
           {fillFields.map(field => (
             <div key={field.key} className="flex items-center gap-2 mb-1.5">
-              <input
-                type="range" min="0" max="1" step="0.05"
+              <input type="range" min="0" max="1" step="0.05"
                 value={parseFloat((C[field.key] || field.default).match(/[\d.]+(?=\))/)?.[0] || "0.1")}
                 onChange={e => {
                   const base = (field.default.match(/^rgba\((\d+,\d+,\d+)/) || [])[1] || "245,158,11";
                   onColorChange(field.key, `rgba(${base},${e.target.value})`);
                 }}
-                className="w-full h-1.5 accent-purple-400"
-              />
+                className="w-full h-1.5 accent-purple-500" />
               <span className="text-[10px] text-slate-500 w-16 shrink-0">{field.label.replace(" Fill", "")}</span>
             </div>
           ))}
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full h-7 text-xs border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 mt-1"
+        <Button variant="outline" size="sm"
+          className="w-full h-7 text-xs border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 mt-1"
           onClick={() => {
             COLOR_FIELDS.forEach(f => onColorChange(f.key, f.default));
-            onBgColorChange("#0f1923");
-          }}
-        >
+            onBgColorChange("#ffffff");
+          }}>
           Reset to Defaults
         </Button>
       </div>

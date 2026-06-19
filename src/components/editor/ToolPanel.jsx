@@ -25,9 +25,9 @@ const TOOLS = [
 export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, onZoomIn, onZoomOut, onFitView, canUndo, canRedo }) {
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col gap-1 bg-[#0d1420] border border-slate-700/50 rounded-xl p-2 shadow-2xl">
+      <div className="flex flex-col gap-1 bg-white border border-slate-200 rounded-xl p-2 shadow-lg">
         {TOOLS.map((tool, i) => {
-          if (tool === null) return <Separator key={`sep-${i}`} className="bg-slate-700/50 my-0.5" />;
+          if (tool === null) return <Separator key={`sep-${i}`} className="bg-slate-200 my-0.5" />;
           const Icon = tool.icon;
           const isActive = activeTool === tool.id;
           // Special highlight for chakbandi
@@ -43,69 +43,69 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
                   className={`w-9 h-9 rounded-lg transition-all ${
                     isActive
                       ? activeClass
-                      : `text-slate-500 hover:text-white hover:bg-slate-700/60 ${tool.color || ""}`
+                      : `text-slate-500 hover:text-slate-800 hover:bg-slate-100 ${tool.color || ""}`
                   }`}
                   onClick={() => onToolChange(tool.id)}
                 >
                   <Icon className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">
+              <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">
                 {tool.label}
               </TooltipContent>
             </Tooltip>
           );
         })}
 
-        <Separator className="bg-slate-700/50 my-0.5" />
+        <Separator className="bg-slate-200 my-0.5" />
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-white hover:bg-slate-700/60 disabled:opacity-30"
+            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30"
               onClick={onUndo} disabled={!canUndo}>
               <RotateCcw className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Undo (Ctrl+Z)</TooltipContent>
+          <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Undo (Ctrl+Z)</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-white hover:bg-slate-700/60 disabled:opacity-30"
+            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30"
               onClick={onRedo} disabled={!canRedo}>
               <RotateCw className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Redo (Ctrl+Y)</TooltipContent>
+          <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Redo (Ctrl+Y)</TooltipContent>
         </Tooltip>
 
-        <Separator className="bg-slate-700/50 my-0.5" />
+        <Separator className="bg-slate-200 my-0.5" />
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-white hover:bg-slate-700/60" onClick={onZoomIn}>
+            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={onZoomIn}>
               <ZoomIn className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Zoom In (+)</TooltipContent>
+          <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Zoom In (+)</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-white hover:bg-slate-700/60" onClick={onZoomOut}>
+            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={onZoomOut}>
               <ZoomOut className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Zoom Out (-)</TooltipContent>
+          <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Zoom Out (-)</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-white hover:bg-slate-700/60" onClick={onFitView}>
+            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={onFitView}>
               <Maximize2 className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-xs border-slate-700">Fit View (F)</TooltipContent>
+          <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Fit View (F)</TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>

@@ -3,14 +3,10 @@ import { FormWrapper, FormField, FormSection } from "./FormBase";
 
 export default function Form5_Naqshbandi47() {
   const [f, setF] = useState({
-    number: "", date: "",
-    sectionFrom: "",
-    unwanBrKhilaf: "",
-    babatMasari: "",
-    moqaIrvi: "", rajbah: "",
-    naamNaqshi: "",
-    morzah: "",
-    dastKhat: "", sectionSign: "",
+    number: "", date: "", sectionFrom: "",
+    unwanBrKhilaf: "", babatMasari: "",
+    moqaIrvi: "", rajbah: "", naamNaqshi: "",
+    morzah: "", dastKhat: "", sectionSign: "",
   });
   const s = (k) => (v) => setF(p => ({ ...p, [k]: v }));
 
@@ -37,11 +33,8 @@ export default function Form5_Naqshbandi47() {
         <FormField label="بنام نقشی:۔" value={f.naamNaqshi} onChange={s("naamNaqshi")} />
       </FormSection>
 
-      <div className="bg-slate-800/50 rounded-xl p-4 mb-5 text-sm leading-7 text-slate-300" style={{ direction: "rtl", fontFamily: "serif" }}>
-        <p>
-          تلمی ہے کہ سائل اسائلان نے درخواست گزاری ہے کہ ان کاروان کاروان مذکورہ بالا ملفوض اشخاص نے مسار کردیا ہے۔ ان کے وسائل آپ کاجاکر دیے ہیں۔ ان
-          کے خلاف قانونی کارروائی عمل میں لاکران کے کمال کو بحال فرمایا جائے۔
-        </p>
+      <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-5 text-sm leading-7 text-slate-700" style={{ direction: "rtl", fontFamily: "serif" }}>
+        <p>تلمی ہے کہ سائل اسائلان نے درخواست گزاری ہے کہ ان کاروان کمال مذکورہ بالا ملفوض اشخاص نے مسار کردیا ہے۔ ان کے وسائل آپ کاجاکر دیے ہیں۔ ان کے خلاف قانونی کارروائی عمل میں لاکران کے کمال کو بحال فرمایا جائے۔</p>
         <div className="flex items-center gap-2 my-2">
           <span>آپ کو اس ضمن میں پابندگیا جاتا ہے کہ دولوں فریقین کو اطلاعیابی کروائیں کہ وہ موقع موژرہ:</span>
         </div>
@@ -49,19 +42,17 @@ export default function Form5_Naqshbandi47() {
           <FormField label="" value={f.morzah} onChange={s("morzah")} />
           <span>کو دفتر بذا ملہداری میں حاضر ہوں تا کہ درخواست</span>
         </div>
-        <p className="mt-2">پر بیانات وتحقیقات کرتے ہوئے کارروائی مکمل کی جاسکے اور اگر کوئی عذر ہو تو بانی تاخیری پیش کریں۔ عدم حاضری کی صورت میں ایک طرفہ کارروائی عمل میں لائی جائے گی۔</p>
+        <p className="mt-2">پر بیانات وتحقیقات کرتے ہوئے کارروائی مکمل کی جاسکے۔ عدم حاضری کی صورت میں ایک طرفہ کارروائی عمل میں لائی جائے گی۔</p>
       </div>
 
-      <p className="text-center text-sm text-slate-400 mb-6" style={{ fontFamily: "serif" }}>بعدازتعمیل اصل بذرادا پس کریں۔</p>
+      <p className="text-center text-sm text-slate-500 mb-6" style={{ fontFamily: "serif" }}>بعدازتعمیل اصل بذرادا پس کریں۔</p>
 
       <div className="grid grid-cols-2 gap-6 mt-4">
-        <FormField label="دستخط ملہدار:۔" value={f.dastKhat} onChange={s("dastKhat")} />
-        <FormField label="ملہداری سیکشن:۔" value={f.sectionSign} onChange={s("sectionSign")} />
+        <div className="border-t-2 border-slate-200 pt-3"><FormField label="دستخط ملہدار:۔" value={f.dastKhat} onChange={s("dastKhat")} /></div>
+        <div className="border-t-2 border-slate-200 pt-3"><FormField label="ملہداری سیکشن:۔" value={f.sectionSign} onChange={s("sectionSign")} /></div>
       </div>
-
-      <div className="text-center mt-6 text-sm text-slate-400" style={{ fontFamily: "serif" }}>
-        <p>ملہداری سیکشن</p>
-        <p>ملہ فوانہ کینال سب ڈویژن جوہرآباد</p>
+      <div className="text-center mt-6 text-sm text-slate-500" style={{ fontFamily: "serif" }}>
+        <p>ملہداری سیکشن</p><p>ملہ فوانہ کینال سب ڈویژن جوہرآباد</p>
       </div>
     </FormWrapper>
   );

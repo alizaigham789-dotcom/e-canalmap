@@ -36,14 +36,14 @@ export default function EditorHeader({
   const isDrawing = drawingTools.includes(activeTool);
 
   return (
-    <header className="flex items-center gap-3 px-4 py-2.5 bg-[#0d1420] border-b border-slate-800 shrink-0">
+    <header className="flex items-center gap-3 px-4 py-2.5 bg-white border-b border-slate-200 shrink-0 shadow-sm">
       <Link to="/">
-        <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-white hover:bg-slate-700/60">
+        <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100">
           <ArrowLeft className="w-4 h-4" />
         </Button>
       </Link>
 
-      <div className="w-px h-6 bg-slate-700" />
+      <div className="w-px h-6 bg-slate-200" />
 
       {/* Title */}
       <div className="flex items-center gap-1.5 min-w-0">
@@ -53,7 +53,7 @@ export default function EditorHeader({
               value={titleDraft}
               onChange={e => setTitleDraft(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") setEditingTitle(false); }}
-              className="h-7 text-sm bg-slate-800 border-slate-600 text-white w-48 focus:border-blue-500"
+              className="h-7 text-sm bg-slate-50 border-slate-300 text-slate-800 w-48 focus:border-blue-500"
               autoFocus
             />
             <Button size="icon" variant="ghost" className="w-6 h-6 text-emerald-400 hover:bg-emerald-500/10" onClick={commitTitle}>
@@ -65,10 +65,10 @@ export default function EditorHeader({
           </div>
         ) : (
           <button onClick={startEdit} className="flex items-center gap-1.5 group">
-            <span className="text-sm font-semibold text-white font-heading truncate max-w-[180px]">
+            <span className="text-sm font-semibold text-slate-800 font-heading truncate max-w-[180px]">
               {mapData?.title || "Untitled Map"}
             </span>
-            <Pencil className="w-3 h-3 text-slate-600 group-hover:text-slate-400 transition-colors" />
+            <Pencil className="w-3 h-3 text-slate-400 group-hover:text-slate-600 transition-colors" />
           </button>
         )}
       </div>
@@ -78,7 +78,7 @@ export default function EditorHeader({
         <SelectTrigger className={`h-6 w-28 text-[10px] border rounded-full px-2 font-medium ${STATUS_COLORS[mapData?.status || "draft"]} bg-transparent`}>
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="bg-slate-900 border-slate-700 text-xs">
+        <SelectContent className="bg-white border-slate-200 text-xs">
           <SelectItem value="draft">Draft</SelectItem>
           <SelectItem value="in_progress">In Progress</SelectItem>
           <SelectItem value="review">Review</SelectItem>
@@ -89,7 +89,7 @@ export default function EditorHeader({
 
       {/* Location */}
       {(mapData?.village || mapData?.district) && (
-        <span className="text-xs text-slate-600 hidden md:inline truncate">
+        <span className="text-xs text-slate-500 hidden md:inline truncate">
           {[mapData.village, mapData.district].filter(Boolean).join(", ")}
         </span>
       )}
@@ -112,7 +112,7 @@ export default function EditorHeader({
       <Button
         variant="ghost" size="sm"
         onClick={onExport}
-        className="h-7 text-xs text-slate-400 hover:text-white gap-1.5 hidden sm:flex"
+        className="h-7 text-xs text-slate-500 hover:text-slate-800 gap-1.5 hidden sm:flex"
       >
         <Download className="w-3.5 h-3.5" /> Export
       </Button>

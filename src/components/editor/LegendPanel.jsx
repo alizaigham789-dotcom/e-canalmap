@@ -24,10 +24,10 @@ export default function LegendPanel({ colorSettings }) {
   ];
 
   return (
-    <div className="bg-[#0d1420] border border-slate-700/50 rounded-xl shadow-2xl overflow-hidden w-56">
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-700/50">
-        <BookOpen className="w-3.5 h-3.5 text-blue-400" />
-        <span className="text-xs font-bold text-white font-heading tracking-wider">LEGEND</span>
+    <div className="bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden w-56">
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-200 bg-slate-50">
+        <BookOpen className="w-3.5 h-3.5 text-blue-600" />
+        <span className="text-xs font-bold text-slate-800 font-heading tracking-wider">LEGEND</span>
       </div>
       <div className="p-3 space-y-2.5">
         {ITEMS.map((item, idx) => {
@@ -67,8 +67,8 @@ export default function LegendPanel({ colorSettings }) {
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-slate-200 font-medium leading-tight">{item.label}</p>
-                <p className="text-[10px] text-slate-600 font-mono leading-tight">{item.desc}</p>
+                <p className="text-xs text-slate-700 font-medium leading-tight">{item.label}</p>
+                <p className="text-[10px] text-slate-400 font-mono leading-tight">{item.desc}</p>
               </div>
             </div>
           );

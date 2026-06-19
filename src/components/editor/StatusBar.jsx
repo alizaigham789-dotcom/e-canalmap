@@ -14,20 +14,20 @@ export default function StatusBar({ zoom, snapPos, activeTool, objectCount, cana
   }[activeTool] || "";
 
   return (
-    <div className="flex items-center justify-between px-4 py-1.5 bg-[#080d14] border-t border-slate-800/80 text-[10px] font-mono text-slate-500 select-none">
+    <div className="flex items-center justify-between px-4 py-1.5 bg-white border-t border-slate-200 text-[10px] font-mono text-slate-500 select-none shadow-sm">
       <div className="flex items-center gap-4">
-        <span className="text-blue-500/70">TOOL: <span className="text-blue-400">{activeTool?.toUpperCase()}</span></span>
-        <span>{toolInfo}</span>
+        <span className="text-blue-600/80">TOOL: <span className="text-blue-700 font-semibold">{activeTool?.toUpperCase()}</span></span>
+        <span className="text-slate-500">{toolInfo}</span>
       </div>
       <div className="flex items-center gap-4">
         {snapPos && (
-          <span className="text-slate-600">
-            X: <span className="text-slate-400">{Math.round(snapPos.x)}</span> ft
-            &nbsp;Y: <span className="text-slate-400">{Math.round(snapPos.y)}</span> ft
+          <span className="text-slate-500">
+            X: <span className="text-slate-700">{Math.round(snapPos.x)}</span> ft
+            &nbsp;Y: <span className="text-slate-700">{Math.round(snapPos.y)}</span> ft
           </span>
         )}
-        <span>Objects: <span className="text-slate-400">{objectCount}</span></span>
-        <span>Zoom: <span className="text-slate-400">{Math.round(zoom * 100)}%</span></span>
+        <span>Objects: <span className="text-slate-700">{objectCount}</span></span>
+        <span>Zoom: <span className="text-slate-700">{Math.round(zoom * 100)}%</span></span>
       </div>
     </div>
   );

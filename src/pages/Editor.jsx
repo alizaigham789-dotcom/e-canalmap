@@ -65,7 +65,7 @@ export default function Editor() {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [colorSettings, setColorSettings] = useState(DEFAULT_COLORS);
-  const [bgColor, setBgColor] = useState("#0f1923");
+  const [bgColor, setBgColor] = useState("#ffffff");
 
   const dsmRef = useRef(new DrawingStateManager([]));
   const autoSaveTimer = useRef(null);
@@ -290,7 +290,7 @@ export default function Editor() {
 
   if (!mapId) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#0f1923] text-white">
+      <div className="h-screen flex items-center justify-center bg-white">
         <p className="text-slate-500">No map ID provided.</p>
       </div>
     );
@@ -360,25 +360,25 @@ export default function Editor() {
           {/* Top-right toolbar buttons */}
           <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
             <Button variant="ghost" size="icon"
-              className={`w-9 h-9 border shadow-lg transition-all ${showLegend ? "bg-blue-600 border-blue-500 text-white" : "bg-[#0d1420] border-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700/60"}`}
+              className={`w-9 h-9 border shadow-md transition-all ${showLegend ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
               onClick={() => { setShowLegend(v => !v); setShowLayers(false); setShowColors(false); }}
               title="Legend">
               <BookOpen className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
-              className={`w-9 h-9 border shadow-lg transition-all ${showLayers ? "bg-blue-600 border-blue-500 text-white" : "bg-[#0d1420] border-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700/60"}`}
+              className={`w-9 h-9 border shadow-md transition-all ${showLayers ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
               onClick={() => { setShowLayers(v => !v); setShowLegend(false); setShowColors(false); }}
               title="Layers">
               <Layers className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
-              className={`w-9 h-9 border shadow-lg transition-all ${showColors ? "bg-purple-600 border-purple-500 text-white" : "bg-[#0d1420] border-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700/60"}`}
+              className={`w-9 h-9 border shadow-md transition-all ${showColors ? "bg-purple-600 border-purple-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-purple-600 hover:bg-purple-50"}`}
               onClick={() => { setShowColors(v => !v); setShowLayers(false); setShowLegend(false); }}
               title="Colour Settings">
               <Palette className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
-              className="w-9 h-9 bg-[#0d1420] border border-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700/60 shadow-lg"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shadow-md"
               onClick={() => setShowPrint(true)}
               title="Print Preview (Ctrl+P)">
               <Printer className="w-4 h-4" />

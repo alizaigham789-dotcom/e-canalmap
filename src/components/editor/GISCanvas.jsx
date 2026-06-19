@@ -38,7 +38,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     const W = canvas.width, H = canvas.height;
 
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = bgColor || "#0f1923";
+    ctx.fillStyle = bgColor || "#ffffff";
     ctx.fillRect(0, 0, W, H);
 
     ctx.save();
@@ -54,7 +54,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (snapPos) {
       const sx = snapPos.x * zoom + pan.x;
       const sy = snapPos.y * zoom + pan.y;
-      ctx.strokeStyle = "#a78bfa";
+      ctx.strokeStyle = "#7c3aed";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(sx, sy, 6, 0, Math.PI * 2);
@@ -235,7 +235,7 @@ function drawGrid(ctx, W, H, zoom, pan) {
   ctx.lineWidth = 0.5 / zoom;
 
   if (zoom > 0.3) {
-    ctx.strokeStyle = "rgba(59,130,246,0.06)";
+    ctx.strokeStyle = "rgba(59,130,246,0.12)";
     ctx.beginPath();
     for (let x = startX; x < endX; x += acreW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
     for (let y = startY; y < endY; y += acreH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
@@ -244,7 +244,7 @@ function drawGrid(ctx, W, H, zoom, pan) {
 
   const mustW = ftToPx(DIMENSIONS.MUSTATEEL.width, 1);
   const mustH = ftToPx(DIMENSIONS.MUSTATEEL.height, 1);
-  ctx.strokeStyle = "rgba(59,130,246,0.15)";
+  ctx.strokeStyle = "rgba(59,130,246,0.25)";
   ctx.lineWidth = 1 / zoom;
   ctx.beginPath();
   for (let x = Math.floor(startX / mustW) * mustW; x < endX; x += mustW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
@@ -329,7 +329,7 @@ function drawAcre(ctx, obj, isSelected, zoom, C) {
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
   if (zoom > 0.5 && obj.label) {
-    ctx.fillStyle = C.acreStroke || "#fbbf24";
+    ctx.fillStyle = C.acreStroke || "#b45309";
     ctx.font = `${Math.max(8, 11 / zoom)}px JetBrains Mono, monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -347,7 +347,7 @@ function drawMustateel(ctx, obj, isSelected, zoom, C) {
 
   // Killa grid
   if (zoom > 0.3) {
-    ctx.strokeStyle = "rgba(239,68,68,0.2)";
+    ctx.strokeStyle = "rgba(239,68,68,0.3)";
     ctx.lineWidth = 0.5 / zoom;
     const cellW = obj.w / 2, cellH = obj.h / 5;
     ctx.beginPath();
@@ -361,7 +361,7 @@ function drawMustateel(ctx, obj, isSelected, zoom, C) {
 
     if (zoom > 0.5) {
       const grid = getMustateeelKillaGrid();
-      ctx.fillStyle = "rgba(239,68,68,0.8)";
+      ctx.fillStyle = "rgba(220,38,38,0.9)";
       ctx.font = `bold ${Math.max(7, 10 / zoom)}px Rajdhani, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       for (let r = 0; r < 5; r++) {
@@ -382,7 +382,7 @@ function drawMustateel(ctx, obj, isSelected, zoom, C) {
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(labelText, centerX, centerY - (obj.showOwner && obj.ownerName ? 8 / zoom : 0));
     if (obj.showOwner && obj.ownerName) {
-      ctx.fillStyle = "rgba(253,230,138,0.8)";
+      ctx.fillStyle = "rgba(100,116,139,0.9)";
       ctx.font = `${Math.max(7, 10 / zoom)}px Inter, sans-serif`;
       ctx.fillText(obj.ownerName, centerX, centerY + 10 / zoom);
     }
@@ -399,7 +399,7 @@ function drawMuraba(ctx, obj, isSelected, zoom, C) {
 
   // 5×5 killa grid
   if (zoom > 0.15) {
-    ctx.strokeStyle = "rgba(239,68,68,0.15)";
+    ctx.strokeStyle = "rgba(239,68,68,0.25)";
     ctx.lineWidth = 0.5 / zoom;
     const cellW = obj.w / 5, cellH = obj.h / 5;
     ctx.beginPath();
@@ -413,7 +413,7 @@ function drawMuraba(ctx, obj, isSelected, zoom, C) {
 
     if (zoom > 0.3) {
       const grid = getMurabaKillaGrid();
-      ctx.fillStyle = "rgba(239,68,68,0.7)";
+      ctx.fillStyle = "rgba(220,38,38,0.85)";
       ctx.font = `bold ${Math.max(6, 9 / zoom)}px Rajdhani, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       for (let r = 0; r < 5; r++) {
@@ -434,7 +434,7 @@ function drawMuraba(ctx, obj, isSelected, zoom, C) {
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(labelText, centerX, centerY - (obj.showOwner && obj.ownerName ? 10 / zoom : 0));
     if (obj.showOwner && obj.ownerName) {
-      ctx.fillStyle = "rgba(253,186,116,0.85)";
+      ctx.fillStyle = "rgba(100,116,139,0.9)";
       ctx.font = `${Math.max(8, 11 / zoom)}px Inter, sans-serif`;
       ctx.fillText(obj.ownerName, centerX, centerY + 13 / zoom);
     }
@@ -493,7 +493,7 @@ function drawCanal(ctx, obj, isSelected, zoom, C) {
     const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
     ctx.save();
     ctx.translate(p.x, p.y); ctx.rotate(angle);
-    ctx.fillStyle = "#93c5fd";
+    ctx.fillStyle = "#1d4ed8";
     ctx.font = `bold ${Math.max(8, 11 / zoom)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "bottom";
     ctx.fillText(obj.name, 0, -obj.width / 2 - 3 / zoom);
@@ -568,7 +568,7 @@ function drawOutlet(ctx, obj, isSelected, zoom, C) {
   ctx.closePath(); ctx.fill();
 
   if (obj.label && zoom > 0.3) {
-    ctx.fillStyle = C.outletStroke || "#67e8f9";
+    ctx.fillStyle = C.outletStroke || "#0891b2";
     ctx.font = `bold ${Math.max(8, 11 / zoom)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "bottom";
     ctx.fillText(obj.label, len / 2, -6 / zoom);
