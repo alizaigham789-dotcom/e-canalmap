@@ -11,6 +11,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import Editor from './pages/Editor';
 import AdminPanel from './pages/AdminPanel';
+import CanalForms from './pages/CanalForms';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -49,6 +50,7 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Dashboard />} />
         <Route path="/editor" element={<Editor />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/canal-forms" element={<CanalForms />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import {
   Map, Plus, Search, Shield, LogOut, Layers,
-  Calendar, MapPin, FileText, ChevronRight, Globe
+  Calendar, MapPin, FileText, ChevronRight, Globe, ClipboardList
 } from "lucide-react";
 
 const STATUS_COLORS = {
@@ -85,6 +85,11 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Link to="/canal-forms">
+              <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white gap-1.5 text-xs">
+                <ClipboardList className="w-3.5 h-3.5" /> Canal Forms
+              </Button>
+            </Link>
             {currentUser?.role === "admin" && (
               <Link to="/admin">
                 <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white gap-1.5 text-xs">
