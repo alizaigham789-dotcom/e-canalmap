@@ -90,6 +90,11 @@ export default function Dashboard() {
                 <ClipboardList className="w-3.5 h-3.5" /> Canal Forms
               </Button>
             </Link>
+            <Link to="/parat-warabandi">
+              <Button variant="ghost" size="sm" className="text-slate-500 hover:text-blue-600 gap-1.5 text-xs">
+                <FileText className="w-3.5 h-3.5" /> Parat Warabandi
+              </Button>
+            </Link>
             {currentUser?.role === "admin" && (
               <Link to="/admin">
                 <Button variant="ghost" size="sm" className="text-slate-500 hover:text-blue-600 gap-1.5 text-xs">

@@ -1,0 +1,73 @@
+{
+  "name": "ParatWarabandi",
+  "type": "object",
+  "properties": {
+    "circle_name": {
+      "type": "string",
+      "description": "Circle Name"
+    },
+    "canal_name": {
+      "type": "string",
+      "description": "Canal Name"
+    },
+    "mogha_name": {
+      "type": "string",
+      "description": "Mogha Name"
+    },
+    "mogha_number": {
+      "type": "string",
+      "description": "Mogha Number"
+    },
+    "village_name": {
+      "type": "string",
+      "description": "Village Name"
+    },
+    "halqa_patwar": {
+      "type": "string",
+      "description": "Halqa Patwar"
+    },
+    "tehsil": {
+      "type": "string",
+      "description": "Tehsil"
+    },
+    "district": {
+      "type": "string",
+      "description": "District"
+    },
+    "total_cca": {
+      "type": "string",
+      "description": "Total CCA"
+    },
+    "total_khasra_area": {
+      "type": "string",
+      "description": "Total Khasra Area"
+    },
+    "warabandi_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Warabandi Date"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "Order Number"
+    },
+    "shareholders": {
+      "type": "string",
+      "description": "JSON string of shareholder rows"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "completed"
+      ],
+      "default": "draft"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "village_name"
+  ]
+}
