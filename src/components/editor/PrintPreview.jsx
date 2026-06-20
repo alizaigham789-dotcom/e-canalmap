@@ -6,7 +6,7 @@ export default function PrintPreview({ mapData, canvasRef, onClose }) {
   const [scale, setScale] = useState(100);
 
   const handlePrint = () => {
-    const canvas = canvasRef?.current;
+    const canvas = canvasRef?.current?.getCanvas?.();
     if (!canvas) return;
 
     const dataUrl = canvas.toDataURL("image/png");
@@ -68,7 +68,7 @@ export default function PrintPreview({ mapData, canvasRef, onClose }) {
     printWindow.onload = () => { printWindow.print(); };
   };
 
-  const canvas = canvasRef?.current;
+  const canvas = canvasRef?.current?.getCanvas?.();
   const dataUrl = canvas ? canvas.toDataURL("image/png") : null;
 
   return (
