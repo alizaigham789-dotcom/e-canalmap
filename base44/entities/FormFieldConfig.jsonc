@@ -1,0 +1,68 @@
+{
+  "name": "FormFieldConfig",
+  "type": "object",
+  "properties": {
+    "form_type": {
+      "type": "string",
+      "description": "Which form this field belongs to",
+      "enum": [
+        "parat_warabandi_header",
+        "parat_warabandi_table"
+      ]
+    },
+    "field_key": {
+      "type": "string",
+      "description": "Data key for this field (e.g. circle_name, sr_no)"
+    },
+    "label_urdu": {
+      "type": "string",
+      "description": "Urdu label for this field"
+    },
+    "label_en": {
+      "type": "string",
+      "description": "English label for this field"
+    },
+    "field_type": {
+      "type": "string",
+      "enum": [
+        "text",
+        "date",
+        "number"
+      ],
+      "default": "text",
+      "description": "Input type for form fields"
+    },
+    "placeholder": {
+      "type": "string",
+      "description": "Placeholder text"
+    },
+    "visible": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to show this field"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order"
+    },
+    "rtl": {
+      "type": "boolean",
+      "default": false,
+      "description": "Right-to-left text direction"
+    },
+    "num": {
+      "type": "boolean",
+      "default": false,
+      "description": "Numeric input (for table columns)"
+    },
+    "width": {
+      "type": "string",
+      "description": "Column width class (for table columns)"
+    }
+  },
+  "required": [
+    "form_type",
+    "field_key"
+  ]
+}

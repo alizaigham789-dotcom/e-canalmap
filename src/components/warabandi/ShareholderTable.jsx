@@ -1,21 +1,23 @@
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 
-const COLUMNS = [
-  { key: "sr_no", label: "نمبر شمار", labelEn: "Sr#", width: "w-14" },
-  { key: "owner_name", label: "نام مالک", labelEn: "Owner Name", width: "flex-1", rtl: true },
-  { key: "father_name", label: "ولدیت", labelEn: "Father Name", width: "flex-1", rtl: true },
-  { key: "khewat_no", label: "خیوط نمبر", labelEn: "Khewat", width: "w-20" },
-  { key: "khatoni_no", label: "کھتونی نمبر", labelEn: "Khatoni", width: "w-20" },
-  { key: "khasra_no", label: "خسرہ نمبر", labelEn: "Khasra", width: "w-20" },
-  { key: "area_acre", label: "ایکڑ", labelEn: "Acre", width: "w-16", num: true },
-  { key: "area_kanal", label: "کنال", labelEn: "Kanal", width: "w-16", num: true },
-  { key: "area_marla", label: "مرلہ", labelEn: "Marla", width: "w-16", num: true },
-  { key: "water_share", label: "حصہ آب", labelEn: "Share", width: "w-20" },
-  { key: "duration_hours", label: "گھنٹے", labelEn: "Hrs", width: "w-14", num: true },
-  { key: "duration_minutes", label: "منٹ", labelEn: "Min", width: "w-14", num: true },
-  { key: "remarks", label: "کیفیت", labelEn: "Remarks", width: "w-28", rtl: true },
+const FALLBACK_COLUMNS = [
+  { field_key: "sr_no", label_urdu: "نمبر شمار", label_en: "Sr#", width: "w-14" },
+  { field_key: "owner_name", label_urdu: "نام مالک", label_en: "Owner Name", width: "flex-1", rtl: true },
+  { field_key: "father_name", label_urdu: "ولدیت", label_en: "Father Name", width: "flex-1", rtl: true },
+  { field_key: "khewat_no", label_urdu: "خیوط نمبر", label_en: "Khewat", width: "w-20" },
+  { field_key: "khatoni_no", label_urdu: "کھتونی نمبر", label_en: "Khatoni", width: "w-20" },
+  { field_key: "khasra_no", label_urdu: "خسرہ نمبر", label_en: "Khasra", width: "w-20" },
+  { field_key: "area_acre", label_urdu: "ایکڑ", label_en: "Acre", width: "w-16", num: true },
+  { field_key: "area_kanal", label_urdu: "کنال", label_en: "Kanal", width: "w-16", num: true },
+  { field_key: "area_marla", label_urdu: "مرلہ", label_en: "Marla", width: "w-16", num: true },
+  { field_key: "water_share", label_urdu: "حصہ آب", label_en: "Share", width: "w-20" },
+  { field_key: "duration_hours", label_urdu: "گھنٹے", label_en: "Hrs", width: "w-14", num: true },
+  { field_key: "duration_minutes", label_urdu: "منٹ", label_en: "Min", width: "w-14", num: true },
+  { field_key: "remarks", label_urdu: "کیفیت", label_en: "Remarks", width: "w-28", rtl: true },
 ];
 
 const emptyRow = (sr) => ({
@@ -25,6 +27,14 @@ const emptyRow = (sr) => ({
 });
 
 export default function ShareholderTable({ rows, onChange }) {
+  const { data: configs = [] } = useQuery({
+    queryKey: ["form-field-configs", "parat_warabandi_table"],
+    queryFn: () => base44.entities.FormFieldConfig.filter({ form_type: "parat_warabandi_table" }, "order"),
+  });
+
+  const columns = configs.length > 0
+    ? configs.filter(c => c.visible !== false)
+    : FALLBACK_COLUMNS;
   const update = (i, key, val) => {
     const next = [...rows];
     next[i] = { ...next[i], [key]: val };
@@ -63,10 +73,10 @@ export default function ShareholderTable({ rows, onChange }) {
         <table className="w-full text-xs min-w-[900px]">
           <thead>
             <tr className="bg-blue-50 border-b border-slate-200">
-              {COLUMNS.map(col => (
-                <th key={col.key} className="px-1.5 py-2 text-center border-r border-blue-100 last:border-r-0">
-                  <div className="text-slate-600 font-semibold text-[10px]">{col.labelEn}</div>
-                  <div className="text-slate-400 text-[9px]" style={{ fontFamily: "serif" }}>{col.label}</div>
+              {columns.map(col => (
+                <th key={col.field_key} className="px-1.5 py-2 text-center border-r border-blue-100 last:border-r-0">
+                  <div className="text-slate-600 font-semibold text-[10px]">{col.label_en}</div>
+                  <div className="text-slate-400 text-[9px]" style={{ fontFamily: "serif" }}>{col.label_urdu}</div>
                 </th>
               ))}
               <th className="w-8 px-1"></th>
@@ -75,15 +85,15 @@ export default function ShareholderTable({ rows, onChange }) {
           <tbody>
             {rows.map((row, i) => (
               <tr key={i} className="border-b border-slate-100 hover:bg-blue-50/30">
-                {COLUMNS.map(col => (
-                  <td key={col.key} className="px-1 border-r border-slate-50 last:border-r-0">
+                {columns.map(col => (
+                  <td key={col.field_key} className="px-1 border-r border-slate-50 last:border-r-0">
                     <input
                       type={col.num ? "number" : "text"}
-                      value={row[col.key] || ""}
-                      onChange={e => update(i, col.key, e.target.value)}
+                      value={row[col.field_key] || ""}
+                      onChange={e => update(i, col.field_key, e.target.value)}
                       className={inputCls}
                       style={{ direction: col.rtl ? "rtl" : "ltr", textAlign: col.num ? "center" : (col.rtl ? "right" : "left") }}
-                      placeholder={col.key === "sr_no" ? String(i+1) : "—"}
+                      placeholder={col.field_key === "sr_no" ? String(i+1) : "—"}
                     />
                   </td>
                 ))}
@@ -98,13 +108,13 @@ export default function ShareholderTable({ rows, onChange }) {
           <tfoot>
             <tr className="bg-amber-50 border-t-2 border-slate-200 font-semibold">
               <td colSpan={6} className="px-2 py-2 text-right text-xs text-slate-600">مجموعہ / Total:</td>
-              <td className="text-center text-xs text-slate-800">{totalAcre || "—"}</td>
-              <td className="text-center text-xs text-slate-800">{totalKanal || "—"}</td>
-              <td className="text-center text-xs text-slate-800">{totalMarla || "—"}</td>
-              <td className="text-center text-xs text-slate-800"></td>
-              <td className="text-center text-xs text-slate-800">{adjustedHours || "—"}</td>
-              <td className="text-center text-xs text-slate-800">{adjustedMinutes || "—"}</td>
-              <td colSpan={2}></td>
+              {columns.some(c => c.field_key === "area_acre") && <td className="text-center text-xs text-slate-800">{totalAcre || "—"}</td>}
+              {columns.some(c => c.field_key === "area_kanal") && <td className="text-center text-xs text-slate-800">{totalKanal || "—"}</td>}
+              {columns.some(c => c.field_key === "area_marla") && <td className="text-center text-xs text-slate-800">{totalMarla || "—"}</td>}
+              {columns.some(c => c.field_key === "water_share") && <td className="text-center text-xs text-slate-800"></td>}
+              {columns.some(c => c.field_key === "duration_hours") && <td className="text-center text-xs text-slate-800">{adjustedHours || "—"}</td>}
+              {columns.some(c => c.field_key === "duration_minutes") && <td className="text-center text-xs text-slate-800">{adjustedMinutes || "—"}</td>}
+              {columns.some(c => c.field_key === "remarks") ? <td colSpan={1}></td> : null}
             </tr>
           </tfoot>
         </table>

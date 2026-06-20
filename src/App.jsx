@@ -13,6 +13,7 @@ import Editor from './pages/Editor';
 import AdminPanel from './pages/AdminPanel';
 import CanalForms from './pages/CanalForms';
 import ParatWarabandi from './pages/ParatWarabandi';
+import FormSettings from './pages/FormSettings';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -53,6 +54,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/canal-forms" element={<CanalForms />} />
         <Route path="/parat-warabandi" element={<ParatWarabandi />} />
+        <Route path="/form-settings" element={<FormSettings />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

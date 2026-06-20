@@ -1,6 +1,32 @@
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+
+const FALLBACK_COLUMNS = [
+  { field_key: "sr_no", label_urdu: "نمبر شمار", label_en: "Sr#" },
+  { field_key: "owner_name", label_urdu: "نام مالک", label_en: "Owner" },
+  { field_key: "father_name", label_urdu: "ولدیت", label_en: "Father" },
+  { field_key: "khewat_no", label_urdu: "خیوط", label_en: "Khewat" },
+  { field_key: "khatoni_no", label_urdu: "کھتونی", label_en: "Khatoni" },
+  { field_key: "khasra_no", label_urdu: "خسرہ", label_en: "Khasra" },
+  { field_key: "area_acre", label_urdu: "ایکڑ", label_en: "Acre" },
+  { field_key: "area_kanal", label_urdu: "کنال", label_en: "Kanal" },
+  { field_key: "area_marla", label_urdu: "مرلہ", label_en: "Marla" },
+  { field_key: "water_share", label_urdu: "حصہ آب", label_en: "Share" },
+  { field_key: "duration_hours", label_urdu: "گھنٹے", label_en: "Hrs" },
+  { field_key: "duration_minutes", label_urdu: "منٹ", label_en: "Min" },
+  { field_key: "remarks", label_urdu: "کیفیت", label_en: "Remarks" },
+];
 
 export default function WarabandiPrint({ data, rows, onClose }) {
+  const { data: configs = [] } = useQuery({
+    queryKey: ["form-field-configs", "parat_warabandi_table"],
+    queryFn: () => base44.entities.FormFieldConfig.filter({ form_type: "parat_warabandi_table" }, "order"),
+  });
+
+  const columns = configs.length > 0
+    ? configs.filter(c => c.visible !== false)
+    : FALLBACK_COLUMNS;
   const sum = (key) => rows.reduce((s, r) => s + (parseFloat(r[key]) || 0), 0);
   const totalAcre = sum("area_acre");
   const totalKanal = sum("area_kanal");
@@ -68,15 +94,15 @@ export default function WarabandiPrint({ data, rows, onClose }) {
                 <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">نمبر شمار</td>
                 <td className="border border-slate-400 px-2 py-1 text-xs">حصہ داران کے نام ووالدیت</td>
                 <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">تفصیل نمبر</td>
-                <td className="border border-slate-400 px-2 py-1 text-xs" colSpan={2}>
+                <td className="border border-slate-400 px-2 py-1 text-xs" colSpan={columns.filter(c => ["khewat_no","khatoni_no"].includes(c.field_key)).length}>
                   <div className="flex justify-between text-[10px]">
-                    <span>خیوط نمبر: {data.order_number || ""}</span>
-                    <span>کھتونی نمبر</span>
+                    <span>{columns.find(c => c.field_key === "khewat_no")?.label_urdu || "خیوط"}: {data.order_number || ""}</span>
+                    <span>{columns.find(c => c.field_key === "khatoni_no")?.label_urdu || "کھتونی"}</span>
                   </div>
                 </td>
                 <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">رقبہ</td>
                 <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">مدت / وقت</td>
-                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">کیفیت</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">{columns.find(c => c.field_key === "remarks")?.label_urdu || "کیفیت"}</td>
               </tr>
             </tbody>
           </table>
@@ -85,50 +111,34 @@ export default function WarabandiPrint({ data, rows, onClose }) {
           <table className="w-full" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">نمبر<br/>شمار</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">نام مالک</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">ولدیت</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">خیوط<br/>نمبر</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">کھتونی<br/>نمبر</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">خسرہ<br/>نمبر</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">ایکڑ</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">کنال</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">مرلہ</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">حصہ آب</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">گھنٹے</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">منٹ</th>
-                <th className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">کیفیت</th>
+                {columns.map(col => (
+                  <th key={col.field_key} className="border border-slate-400 px-1 py-1.5 bg-slate-50 text-[10px]">
+                    {col.label_urdu}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
                 <tr key={i}>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px] text-center">{row.sr_no || i + 1}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px]">{row.owner_name}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px]">{row.father_name}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px] text-center">{row.khewat_no}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px] text-center">{row.khatoni_no}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px] text-center">{row.khasra_no}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px] text-center">{row.area_acre}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px] text-center">{row.area_kanal}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px] text-center">{row.area_marla}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px] text-center">{row.water_share}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px] text-center">{row.duration_hours}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px] text-center">{row.duration_minutes}</td>
-                  <td className="border border-slate-400 px-1 py-1 text-[10px]">{row.remarks}</td>
+                  {columns.map(col => (
+                    <td key={col.field_key} className={`border border-slate-400 px-1 py-1 text-[10px] ${col.num ? "text-center" : ""}`}>
+                      {row[col.field_key] || (col.field_key === "sr_no" ? i + 1 : "")}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td colSpan={6} className="border border-slate-400 px-2 py-1.5 text-[10px] font-bold text-left">مجموعہ</td>
-                <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold">{totalAcre || ""}</td>
-                <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold">{totalKanal || ""}</td>
-                <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold">{totalMarla || ""}</td>
-                <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold"></td>
-                <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold">{adjH || ""}</td>
-                <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold">{adjM || ""}</td>
-                <td className="border border-slate-400 px-1 py-1.5 text-[10px]"></td>
+                {columns.some(c => c.field_key === "area_acre") && <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold">{totalAcre || ""}</td>}
+                {columns.some(c => c.field_key === "area_kanal") && <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold">{totalKanal || ""}</td>}
+                {columns.some(c => c.field_key === "area_marla") && <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold">{totalMarla || ""}</td>}
+                {columns.some(c => c.field_key === "water_share") && <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold"></td>}
+                {columns.some(c => c.field_key === "duration_hours") && <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold">{adjH || ""}</td>}
+                {columns.some(c => c.field_key === "duration_minutes") && <td className="border border-slate-400 px-1 py-1.5 text-[10px] text-center font-bold">{adjM || ""}</td>}
+                {columns.some(c => c.field_key === "remarks") ? <td className="border border-slate-400 px-1 py-1.5 text-[10px]"></td> : null}
               </tr>
             </tfoot>
           </table>

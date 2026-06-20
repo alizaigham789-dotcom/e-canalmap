@@ -14,7 +14,7 @@ import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Shield, Map, Users, ArrowLeft, Pencil, Globe, Layers } from "lucide-react";
+import { Shield, Map, Users, ArrowLeft, Pencil, Globe, Layers, Settings2 } from "lucide-react";
 
 const STATUS_COLORS = {
   draft: "border-slate-500/30 bg-slate-500/10 text-slate-400",
@@ -119,6 +119,9 @@ export default function AdminPanel() {
             <TabsTrigger value="users" className="gap-1.5 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400">
               <Users className="w-3.5 h-3.5" /> Users ({users.length})
             </TabsTrigger>
+            <TabsTrigger value="settings" className="gap-1.5 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400">
+              <Settings2 className="w-3.5 h-3.5" /> Settings
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="maps">
@@ -204,6 +207,17 @@ export default function AdminPanel() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
+              <h3 className="text-sm font-semibold text-white mb-4 font-heading">Form Settings</h3>
+              <Link to="/form-settings">
+                <Button variant="outline" className="gap-2 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800">
+                  <Settings2 className="w-4 h-4" /> Manage Parat Warabandi Form Fields
+                </Button>
+              </Link>
             </div>
           </TabsContent>
         </Tabs>
