@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import {
   Map, Plus, Search, Shield, LogOut, Layers,
-  Calendar, MapPin, FileText, ChevronRight, Globe, ClipboardList
+  Calendar, MapPin,   FileText, ChevronRight, Globe, ClipboardList
 } from "lucide-react";
 
 const STATUS_COLORS = {

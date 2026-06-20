@@ -16,7 +16,7 @@ export default function WarabandiPrint({ data, rows, onClose }) {
     w.document.write(`<!DOCTYPE html><html><head><title>پرت وارابندی</title>
       <style>
         @page { size: A4 landscape; margin: 12mm; }
-        body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:20px; direction:rtl; color:#000; font-size:11px; }
+        body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:20px; direction:rtl; color:#000; font-size:13px; line-height:1.8; }
         table { border-collapse: collapse; width: 100%; }
         th, td { border: 1.5px solid #333; padding: 4px 6px; text-align: center; }
         th { background: #f0f0f0; font-weight: bold; font-size: 10px; }

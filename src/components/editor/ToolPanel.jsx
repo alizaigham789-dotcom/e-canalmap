@@ -4,12 +4,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Separator } from "@/components/ui/separator";
 import {
   Square, MousePointer2, Hand, Eraser, Minus,
-  Droplets, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch
+  Droplets, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Move
 } from "lucide-react";
 
 const TOOLS = [
   { id: "select", label: "Select (V)", icon: MousePointer2, group: "nav" },
   { id: "pan", label: "Pan (H)", icon: Hand, group: "nav" },
+  null,
+  { id: "move", label: "Move (D) — drag parcels", icon: Move, group: "edit", color: "text-orange-400" },
   null,
   { id: "acre", label: "Acre 220×198 ft (A)", icon: Square, group: "draw", color: "text-yellow-400" },
   { id: "mustateel", label: "Mustateel 440×990 ft (M)", icon: Square, group: "draw", color: "text-red-400" },

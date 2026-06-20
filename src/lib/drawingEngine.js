@@ -271,6 +271,59 @@ export function createChakbandi(points, name = "") {
 }
 
 // ============================================================
+// COLLISION DETECTION
+// ============================================================
+
+// Check if two axis-aligned rectangles overlap
+export function rectsOverlap(a, b) {
+  return !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
+}
+
+// Find a non-overlapping position for a new mustateel/muraba
+// by nudging it away from existing parcels
+export function findNonOverlappingPosition(newObj, existingObjects) {
+  const parcelTypes = ["mustateel", "muraba"];
+  const existingParcels = existingObjects.filter(o => parcelTypes.includes(o.type));
+  
+  if (existingParcels.length === 0) return { x: newObj.x, y: newObj.y };
+  
+  // Check if current position overlaps
+  if (!existingParcels.some(p => rectsOverlap(newObj, p))) {
+    return { x: newObj.x, y: newObj.y };
+  }
+  
+  // Try nudging in 8 directions
+  const directions = [
+    { dx: newObj.w, dy: 0 },      // right
+    { dx: -newObj.w, dy: 0 },     // left
+    { dx: 0, dy: newObj.h },      // down
+    { dx: 0, dy: -newObj.h },     // up
+    { dx: newObj.w, dy: newObj.h },   // down-right
+    { dx: -newObj.w, dy: newObj.h },  // down-left
+    { dx: newObj.w, dy: -newObj.h },  // up-right
+    { dx: -newObj.w, dy: -newObj.h }, // up-left
+  ];
+  
+  for (const dir of directions) {
+    const candidate = { x: newObj.x + dir.dx, y: newObj.y + dir.dy, w: newObj.w, h: newObj.h };
+    if (!existingParcels.some(p => rectsOverlap(candidate, p))) {
+      return { x: candidate.x, y: candidate.y };
+    }
+  }
+  
+  // If all nudges overlap, try 2x nudge
+  for (const dir of directions) {
+    const candidate = { x: newObj.x + dir.dx * 2, y: newObj.y + dir.dy * 2, w: newObj.w, h: newObj.h };
+    if (!existingParcels.some(p => rectsOverlap(candidate, p))) {
+      return { x: candidate.x, y: candidate.y };
+    }
+  }
+  
+  // Fallback: return original
+  return { x: newObj.x, y: newObj.y };
+}
+
+// ============================================================
 // DRAWING STATE MANAGER
 // ============================================================
 export class DrawingStateManager {

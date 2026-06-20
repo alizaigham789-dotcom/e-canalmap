@@ -10,7 +10,7 @@ export default function Form1_NaqshDaroghgi() {
   const s = (k) => (v) => setF(p => ({ ...p, [k]: v }));
 
   return (
-    <FormWrapper title="نقش داروغہ گنی" titleEn="Form 1 — Naqsh Daroghgi (Notice Daroga)">
+    <FormWrapper title="نقش داروغگی" titleEn="Form 1 — Naqsh Daroghgi (Notice Daroga)">
       <FormSection className="mb-4">
         <div className="flex gap-6">
           <FormField label="نمبر:۔" value={f.number} onChange={s("number")} width="flex-1" />
@@ -29,15 +29,15 @@ export default function Form1_NaqshDaroghgi() {
 
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5 text-sm leading-7 text-slate-700" style={{ direction: "rtl", fontFamily: "serif" }}>
         <p>
-          تلمی ہے کہ سائل اسائلان نے درخواست گزارنی ہے کہ فریق دوم مذکورہ بالا نے ان کا منظور شدہ پانی روک کران کی تنتلی کا ہے۔ ان کے خلاف قانونی کارروائی
-          عمل میں لائی جائے۔ آپ کو اس ضمن میں ہدایت کی جاتی ہے کہ آپ موقعہ پر جا کر ناجائز آپاجی کا اندراج کریں اور دولوں فریقین کو مطلع کریں کہ وہ
+          تلمی ہے کہ سائل اسائلان نے درخواست گزاری ہے کہ فریق دوم مذکورہ بالا نے ان کا منظور شدہ پانی روک کر ان کی تنتلی کا ہے۔ ان کے خلاف قانونی کارروائی
+          عمل میں لائی جائے۔ آپ کو اس ضمن میں ہدایت کی جاتی ہے کہ آپ موقعہ پر جا کر ناجائز آپاجی کا اندراج کریں اور دونوں فریقین کو مطلع کریں کہ وہ
         </p>
         <div className="flex items-center gap-2 mt-2">
           <span>موژرفہ:</span>
           <FormField label="" value={f.motarrifah} onChange={s("motarrifah")} />
           <span>کو بمقام دفتر ملہداری میں مقرر وقت پر پابند کریں۔</span>
         </div>
-        <p className="mt-2">عدم حاضری کی صورت میں ایک طرفہ کارروائی غائبانہ عمل میں لائی جائے گی۔ اور بعد ازاں کوئی مقدر قابل قبول نہ ہوگا۔</p>
+        <p className="mt-2">عدم حاضری کی صورت میں یکطرفہ کارروائی غائبانہ عمل میں لائی جائے گی۔ اور بعد ازاں کوئی عذر قابل قبول نہ ہوگا۔</p>
       </div>
 
       <p className="text-center text-sm text-slate-500 mb-6" style={{ fontFamily: "serif" }}>بعدازتعمیل اصل بذرادا پس کریں۔</p>

@@ -4,6 +4,7 @@ import { ftToPx, pxToFt, DIMENSIONS } from "@/lib/drawingEngine";
 export default function StatusBar({ zoom, snapPos, activeTool, objectCount, canalDraftLen }) {
   const toolInfo = {
     select: "Click to select objects",
+    move: "Drag mustateel/muraba parcels to reposition",
     pan: "Drag to pan • Scroll to zoom",
     acre: `Click to place Acre block (${DIMENSIONS.ACRE.width}×${DIMENSIONS.ACRE.height} ft)`,
     mustateel: `Click to place Mustateel (${DIMENSIONS.MUSTATEEL.width}×${DIMENSIONS.MUSTATEEL.height} ft)`,

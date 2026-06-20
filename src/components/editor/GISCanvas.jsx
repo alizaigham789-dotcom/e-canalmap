@@ -20,6 +20,9 @@ const GISCanvas = forwardRef(function GISCanvas(
 ) {
   const canvasRef = useRef(null);
   const isPanning = useRef(false);
+  const isMoving = useRef(false);
+  const movingObjId = useRef(null);
+  const moveOffset = useRef({ x: 0, y: 0 });
   const lastMouse = useRef({ x: 0, y: 0 });
   const animRef = useRef(null);
 
@@ -113,9 +116,20 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
       return;
     }
+    if (isMoving.current && movingObjId.current && activeTool === "move") {
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const worldRaw = screenToWorld(sx, sy, pan.x, pan.y, zoom);
+      const newX = worldRaw.x - moveOffset.current.x;
+      const newY = worldRaw.y - moveOffset.current.y;
+      onUpdateObject(movingObjId.current, { x: newX, y: newY });
+      return;
+    }
     const snapped = getSnappedWorld(e);
     onSnapPosChange(snapped);
-  }, [activeTool, pan, zoom, getSnappedWorld, onPanChange, onSnapPosChange]);
+  }, [activeTool, pan, zoom, getSnappedWorld, onPanChange, onSnapPosChange, onUpdateObject]);
 
   const handleMouseDown = useCallback((e) => {
     if (e.button === 1 || activeTool === "pan") {
@@ -131,7 +145,15 @@ const GISCanvas = forwardRef(function GISCanvas(
     const worldRaw = screenToWorld(sx, sy, pan.x, pan.y, zoom);
     const snapped = getSnappedWorld(e);
 
-    if (activeTool === "acre") {
+    if (activeTool === "move") {
+      const hit = hitTest(worldRaw.x, worldRaw.y, objects);
+      if (hit && ["mustateel", "muraba"].includes(hit.type)) {
+        isMoving.current = true;
+        movingObjId.current = hit.id;
+        moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
+        onSelect(hit.id);
+      }
+    } else if (activeTool === "acre") {
       onAddObject("acre", snapped);
     } else if (activeTool === "mustateel") {
       onAddObject("mustateel", snapped);
@@ -164,7 +186,11 @@ const GISCanvas = forwardRef(function GISCanvas(
     }
   }, [activeTool, pan, zoom, objects, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft]);
 
-  const handleMouseUp = useCallback(() => { isPanning.current = false; }, []);
+  const handleMouseUp = useCallback(() => {
+    isPanning.current = false;
+    isMoving.current = false;
+    movingObjId.current = null;
+  }, []);
 
   const handleDblClick = useCallback((e) => {
     if (activeTool === "canal") onCanalFinish();
@@ -188,6 +214,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     select: "cursor-default", pan: "cursor-grab", eraser: "cursor-cell",
     canal: "cursor-crosshair", chakbandi: "cursor-crosshair", outlet: "cursor-crosshair",
     acre: "cursor-crosshair", mustateel: "cursor-crosshair", muraba: "cursor-crosshair",
+    move: "cursor-move",
   }[activeTool] || "cursor-crosshair";
 
   return (
@@ -447,18 +474,29 @@ function drawCanal(ctx, obj, isSelected, zoom, C) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  // Water fill
+  // Water fill — more visible
   ctx.beginPath();
   ctx.moveTo(left[0].x, left[0].y);
   for (const p of left) ctx.lineTo(p.x, p.y);
   for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
   ctx.closePath();
-  ctx.fillStyle = C.canalFill || "rgba(59,130,246,0.25)";
+  ctx.fillStyle = C.canalFill || "rgba(14,165,233,0.35)";
   ctx.fill();
 
-  // Two blue wall lines
-  ctx.strokeStyle = isSelected ? "#93c5fd" : (C.canalStroke || "#3b82f6");
-  ctx.lineWidth = (isSelected ? 2 : 1.5) / zoom;
+  // Two prominent blue wall lines (thicker)
+  const strokeColor = isSelected ? "#93c5fd" : (C.canalStroke || "#0284c7");
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = (isSelected ? 3.5 : 3) / zoom;
+  for (const side of [left, right]) {
+    ctx.beginPath();
+    ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
+
+  // Inner light highlight for depth
+  ctx.strokeStyle = "rgba(186,230,253,0.6)";
+  ctx.lineWidth = 1 / zoom;
   for (const side of [left, right]) {
     ctx.beginPath();
     ctx.moveTo(side[0].x, side[0].y);

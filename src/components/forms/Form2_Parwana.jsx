@@ -12,7 +12,7 @@ export default function Form2_Parwana() {
   const s = (k) => (v) => setF(p => ({ ...p, [k]: v }));
 
   return (
-    <FormWrapper title="پروانہ پٹواری ملقہ" titleEn="Form 2 — Parwana Patwari Mulqa">
+    <FormWrapper title="پروانہ پٹواری ملکہ" titleEn="Form 2 — Parwana Patwari Mulqa">
       <FormSection className="mb-4">
         <div className="flex gap-6">
           <FormField label="نمبر:۔" value={f.number} onChange={s("number")} width="flex-1" />
@@ -48,7 +48,7 @@ export default function Form2_Parwana() {
       </FormSection>
 
       <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-5 text-sm leading-7 text-slate-700" style={{ direction: "rtl", fontFamily: "serif" }}>
-        <p>لہٰذا آپ جملہ معلقین کو تاریخ ومقام مقرر وقت پر پابند کریں۔ عدم حاضری کی صورت میں ایک طرفہ کارروائی غائبانہ عمل میں لائی جائے گی۔ اور بعد ازاں کوئی مقدر قابل قبول نہ ہوگا۔</p>
+        <p>لہٰذا آپ جملہ معلقین کو تاریخ و مقام مقررہ وقت پر پابند کریں۔ عدم حاضری کی صورت میں یکطرفہ کارروائی غائبانہ عمل میں لائی جائے گی۔ اور بعد ازاں کوئی عذر قابل قبول نہ ہوگا۔</p>
       </div>
 
       <p className="text-center text-sm text-slate-500 mb-6" style={{ fontFamily: "serif" }}>بعدازتعمیل پروانہ واپس کریں۔</p>

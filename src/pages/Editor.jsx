@@ -14,7 +14,8 @@ import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
 import PrintPreview from "@/components/editor/PrintPreview";
 import {
   DrawingStateManager,
-  createAcre, createMustateel, createMuraba, createCanal, createOutlet, createChakbandi
+  createAcre, createMustateel, createMuraba, createCanal, createOutlet, createChakbandi,
+  findNonOverlappingPosition
 } from "@/lib/drawingEngine";
 import { Layers, BookOpen, Palette, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,8 +37,8 @@ const DEFAULT_COLORS = {
   mustateelFill: "rgba(245,158,11,0.10)",
   murabaStroke: "#ef4444",
   murabaFill: "rgba(249,115,22,0.08)",
-  canalStroke: "#3b82f6",
-  canalFill: "rgba(59,130,246,0.25)",
+  canalStroke: "#0284c7",
+  canalFill: "rgba(14,165,233,0.35)",
   chakbandiStroke: "#22c55e",
   outletStroke: "#06b6d4",
 };
@@ -137,8 +138,20 @@ export default function Editor() {
 
     let obj;
     if (type === "acre") obj = createAcre(data.x, data.y);
-    else if (type === "mustateel") obj = createMustateel(data.x, data.y);
-    else if (type === "muraba") obj = createMuraba(data.x, data.y);
+    else if (type === "mustateel") {
+      const adjusted = findNonOverlappingPosition(
+        { x: data.x, y: data.y, w: createMustateel(0, 0).w, h: createMustateel(0, 0).h },
+        dsmRef.current.objects
+      );
+      obj = createMustateel(adjusted.x, adjusted.y);
+    }
+    else if (type === "muraba") {
+      const adjusted = findNonOverlappingPosition(
+        { x: data.x, y: data.y, w: createMuraba(0, 0).w, h: createMuraba(0, 0).h },
+        dsmRef.current.objects
+      );
+      obj = createMuraba(adjusted.x, adjusted.y);
+    }
 
     if (obj) {
       dsmRef.current.add(obj);
@@ -276,7 +289,7 @@ export default function Editor() {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedId) handleDeleteObject(selectedId);
       }
-      const shortcuts = { v: "select", h: "pan", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", e: "eraser", f: "fitView" };
+      const shortcuts = { v: "select", h: "pan", d: "move", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", e: "eraser", f: "fitView" };
       if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) {
         if (e.key === "f") handleFitView();
         else handleToolChange(shortcuts[e.key]);
