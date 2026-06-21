@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import {
   Map, Plus, Search, Shield, LogOut, Layers,
-  Calendar, MapPin,   FileText, ChevronRight, Globe, ClipboardList
+  Calendar, MapPin, FileText, ChevronRight, Globe, ClipboardList, BarChart3
 } from "lucide-react";
+import StatusChart from "@/components/dashboard/StatusChart";
 
 const STATUS_COLORS = {
   draft: "bg-slate-100 text-slate-600 border-slate-300",
@@ -137,6 +138,17 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
+
+        {/* Status Chart */}
+        {maps.length > 0 && (
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-4 h-4 text-blue-600" />
+              <h3 className="text-sm font-bold text-slate-700 font-heading tracking-wide">MAPS BY STATUS</h3>
+            </div>
+            <StatusChart maps={maps} />
+          </div>
+        )}
 
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
