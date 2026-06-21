@@ -6,6 +6,8 @@ const ITEMS = [
   { label: "Muraba Boundary", color: "#ef4444", style: "solid", thickness: 4, desc: "1100 × 990 ft • 25 Killas" },
   { label: "Acre (Killa)", color: "#eab308", style: "solid", thickness: 1.5, desc: "220 × 198 ft" },
   { label: "Canal / Distry", color: "#3b82f6", style: "double", thickness: 2, desc: "Dual wall + trees" },
+  { label: "Khal / Watercourse", color: "#2563eb", style: "solid", thickness: 2.5, desc: "Bold blue line" },
+  { label: "Road", color: "#d97706", style: "double", thickness: 2, desc: "Dual line + ROAD label" },
   { label: "Chakbandi Line", color: "#22c55e", style: "cross", thickness: 3.5, desc: "Land consolidation boundary" },
   { label: "Outlet / Moga", color: "#06b6d4", style: "arrow", thickness: 2, desc: "Directional water outlet" },
 ];
@@ -19,6 +21,8 @@ export default function LegendPanel({ colorSettings }) {
     getColor("murabaStroke", "#ef4444"),
     getColor("acreStroke", "#eab308"),
     getColor("canalStroke", "#3b82f6"),
+    "#2563eb",
+    "#d97706",
     getColor("chakbandiStroke", "#22c55e"),
     getColor("outletStroke", "#06b6d4"),
   ];

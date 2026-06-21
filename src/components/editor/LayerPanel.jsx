@@ -6,6 +6,8 @@ const LAYER_DEFS = [
   { id: "mustateel", label: "Mustateel", color: "#dc2626" },
   { id: "acre", label: "Acre Grid", color: "#d97706" },
   { id: "canal", label: "Canals", color: "#2563eb" },
+  { id: "khal", label: "Khal / Watercourse", color: "#2563eb" },
+  { id: "road", label: "Roads", color: "#d97706" },
   { id: "chakbandi", label: "Chakbandi Lines", color: "#16a34a" },
   { id: "outlet", label: "Outlets / Moga", color: "#0891b2" },
   { id: "grass", label: "Tree Effect", color: "#16a34a" },

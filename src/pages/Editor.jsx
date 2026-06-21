@@ -14,7 +14,7 @@ import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
 import PrintPreview from "@/components/editor/PrintPreview";
 import {
   DrawingStateManager,
-  createAcre, createMustateel, createMuraba, createCanal, createOutlet, createChakbandi,
+  createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi,
   findNonOverlappingPosition
 } from "@/lib/drawingEngine";
 import { Layers, BookOpen, Palette, Printer } from "lucide-react";
@@ -27,6 +27,8 @@ const DEFAULT_LAYERS = {
   canal: { visible: true, locked: false },
   chakbandi: { visible: true, locked: false },
   outlet: { visible: true, locked: false },
+  khal: { visible: true, locked: false },
+  road: { visible: true, locked: false },
   grass: { visible: true, locked: false },
 };
 
@@ -62,6 +64,8 @@ export default function Editor() {
   const [canalDraft, setCanalDraft] = useState(null);
   const [chakbandiDraft, setChakbandiDraft] = useState(null);
   const [outletDraft, setOutletDraft] = useState(null);
+  const [khalDraft, setKhalDraft] = useState(null);
+  const [roadDraft, setRoadDraft] = useState(null);
   const [objects, setObjects] = useState([]);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -192,6 +196,38 @@ export default function Editor() {
     });
   }, []);
 
+  const handleKhalPointAdd = useCallback((pt) => {
+    setKhalDraft(prev => prev ? [...prev, pt] : [pt]);
+  }, []);
+
+  const handleKhalFinish = useCallback(() => {
+    setKhalDraft(prev => {
+      if (prev && prev.length >= 2) {
+        const khal = createKhal(prev);
+        dsmRef.current.add(khal);
+        setSelectedId(khal.id);
+        syncObjects();
+      }
+      return null;
+    });
+  }, []);
+
+  const handleRoadPointAdd = useCallback((pt) => {
+    setRoadDraft(prev => prev ? [...prev, pt] : [pt]);
+  }, []);
+
+  const handleRoadFinish = useCallback(() => {
+    setRoadDraft(prev => {
+      if (prev && prev.length >= 2) {
+        const road = createRoad(prev);
+        dsmRef.current.add(road);
+        setSelectedId(road.id);
+        syncObjects();
+      }
+      return null;
+    });
+  }, []);
+
   const handleOutletStart = useCallback((pt, canalId) => {
     setOutletDraft({ x: pt.x, y: pt.y, canalId });
   }, []);
@@ -214,6 +250,10 @@ export default function Editor() {
     if (activeTool === "chakbandi" && chakbandiDraft && chakbandiDraft.length >= 2) handleChakbandiFinish();
     else if (activeTool === "chakbandi") setChakbandiDraft(null);
     if (activeTool === "outlet") setOutletDraft(null);
+    if (activeTool === "khal" && khalDraft && khalDraft.length >= 2) handleKhalFinish();
+    else if (activeTool === "khal") setKhalDraft(null);
+    if (activeTool === "road" && roadDraft && roadDraft.length >= 2) handleRoadFinish();
+    else if (activeTool === "road") setRoadDraft(null);
     setActiveTool(tool);
   };
 
@@ -222,6 +262,10 @@ export default function Editor() {
     else setCanalDraft(null);
     if (activeTool === "chakbandi" && chakbandiDraft && chakbandiDraft.length >= 2) handleChakbandiFinish();
     else setChakbandiDraft(null);
+    if (activeTool === "khal" && khalDraft && khalDraft.length >= 2) handleKhalFinish();
+    else setKhalDraft(null);
+    if (activeTool === "road" && roadDraft && roadDraft.length >= 2) handleRoadFinish();
+    else setRoadDraft(null);
     setOutletDraft(null);
     setActiveTool("select");
   };
@@ -289,7 +333,7 @@ export default function Editor() {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedId) handleDeleteObject(selectedId);
       }
-      const shortcuts = { v: "select", h: "pan", d: "move", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", e: "eraser", f: "fitView" };
+      const shortcuts = { v: "select", h: "pan", d: "move", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", e: "eraser", f: "fitView" };
       if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) {
         if (e.key === "f") handleFitView();
         else handleToolChange(shortcuts[e.key]);
@@ -299,7 +343,7 @@ export default function Editor() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selectedId, activeTool, canalDraft, chakbandiDraft, zoom, pan]);
+  }, [selectedId, activeTool, canalDraft, chakbandiDraft, khalDraft, roadDraft, zoom, pan]);
 
   if (!mapId) {
     return (
@@ -309,7 +353,7 @@ export default function Editor() {
     );
   }
 
-  const draftActive = !!(canalDraft || chakbandiDraft);
+  const draftActive = !!(canalDraft || chakbandiDraft || khalDraft || roadDraft);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: bgColor }}>
@@ -362,6 +406,12 @@ export default function Editor() {
             outletDraft={outletDraft}
             onOutletStart={handleOutletStart}
             onOutletFinish={handleOutletFinish}
+            khalDraft={khalDraft}
+            onKhalPointAdd={handleKhalPointAdd}
+            onKhalFinish={handleKhalFinish}
+            roadDraft={roadDraft}
+            onRoadPointAdd={handleRoadPointAdd}
+            onRoadFinish={handleRoadFinish}
             snapPos={snapPos}
             onSnapPosChange={setSnapPos}
             onPanChange={setPan}

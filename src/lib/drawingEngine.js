@@ -1,6 +1,7 @@
 // ============================================================
 // CHAKBANDI GIS DRAWING ENGINE
 // Survey-grade cadastral mapping logic
+// Geometry Lock Engine — dimensions preserved across all operations
 // ============================================================
 
 // Real-world survey measurements (in feet)
@@ -9,6 +10,15 @@ export const DIMENSIONS = {
   MUSTATEEL: { width: 440, height: 990 },
   MURABA: { width: 1100, height: 990 },
   CANAL_WIDTH: 7,
+  KHAL_WIDTH: 4,
+  ROAD_WIDTH: 20,
+};
+
+// Locked property keys — these CANNOT be modified by any operation except explicit user edit
+export const LOCKED_DIMS = {
+  acre: { w: DIMENSIONS.ACRE.width, h: DIMENSIONS.ACRE.height },
+  mustateel: { w: DIMENSIONS.MUSTATEEL.width, h: DIMENSIONS.MUSTATEEL.height },
+  muraba: { w: DIMENSIONS.MURABA.width, h: DIMENSIONS.MURABA.height },
 };
 
 // Pixels per foot at scale 1
@@ -85,12 +95,27 @@ export function worldToScreen(worldX, worldY, panX, panY, zoom) {
 }
 
 // ============================================================
+// GEOMETRY LOCK ENGINE
+// Ensures dimensions never change during move, save, export, print
+// ============================================================
+
+export function enforceGeometryLock(obj) {
+  const lock = LOCKED_DIMS[obj.type];
+  if (lock) {
+    obj.w = lock.w;
+    obj.h = lock.h;
+  }
+  return obj;
+}
+
+export function isGeometryLocked(type) {
+  return type in LOCKED_DIMS;
+}
+
+// ============================================================
 // KILLA NUMBER GRIDS
 // ============================================================
 
-// Mustateel: 5 rows × 2 cols = 10 killas
-// Left col: 1,2,3,4,5 (top→bottom)
-// Right col: 10,9,8,7,6 (top→bottom)
 export function getMustateeelKillaGrid() {
   return [
     [1, 10],
@@ -101,7 +126,6 @@ export function getMustateeelKillaGrid() {
   ];
 }
 
-// Muraba: 5 rows × 5 cols = 25 killas
 export function getMurabaKillaGrid() {
   return [
     [1, 2, 3, 4, 5],
@@ -133,7 +157,6 @@ export function distToLineSegment(px, py, ax, ay, bx, by) {
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
-// Find nearest point on a polyline (array of {x,y})
 export function nearestPointOnPolyline(px, py, points) {
   let minDist = Infinity;
   let nearest = null;
@@ -154,7 +177,6 @@ export function nearestPointOnPolyline(px, py, points) {
   return nearest;
 }
 
-// Get parallel offset of a polyline (for canal walls)
 export function getParallelPolyline(points, offset) {
   if (points.length < 2) return points;
   const result = [];
@@ -192,7 +214,7 @@ export function getParallelPolyline(points, offset) {
 }
 
 // ============================================================
-// OBJECT FACTORIES
+// OBJECT FACTORIES (all dimensions locked to DIMENSIONS)
 // ============================================================
 
 export function createAcre(worldX, worldY) {
@@ -205,6 +227,7 @@ export function createAcre(worldX, worldY) {
     w: width,
     h: height,
     label: "",
+    locked: true,
   };
 }
 
@@ -220,6 +243,7 @@ export function createMustateel(worldX, worldY, ownerName = "") {
     ownerName,
     showOwner: true,
     label: "",
+    locked: true,
   };
 }
 
@@ -235,6 +259,7 @@ export function createMuraba(worldX, worldY, ownerName = "") {
     ownerName,
     showOwner: true,
     label: "",
+    locked: true,
   };
 }
 
@@ -245,6 +270,26 @@ export function createCanal(points, name = "") {
     points: points.map(p => ({ ...p })),
     name,
     width: DIMENSIONS.CANAL_WIDTH,
+  };
+}
+
+export function createKhal(points, name = "") {
+  return {
+    id: `khal_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    type: "khal",
+    points: points.map(p => ({ ...p })),
+    name,
+    width: DIMENSIONS.KHAL_WIDTH,
+  };
+}
+
+export function createRoad(points, name = "") {
+  return {
+    id: `road_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    type: "road",
+    points: points.map(p => ({ ...p })),
+    name,
+    width: DIMENSIONS.ROAD_WIDTH,
   };
 }
 
@@ -267,6 +312,9 @@ export function createChakbandi(points, name = "") {
     points: points.map(p => ({ ...p })),
     name,
     width: DIMENSIONS.CANAL_WIDTH,
+    crossPattern: false,
+    crossSize: 8,
+    crossSpacing: 40,
   };
 }
 
@@ -274,34 +322,29 @@ export function createChakbandi(points, name = "") {
 // COLLISION DETECTION
 // ============================================================
 
-// Check if two axis-aligned rectangles overlap
 export function rectsOverlap(a, b) {
   return !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
 }
 
-// Find a non-overlapping position for a new mustateel/muraba
-// by nudging it away from existing parcels
 export function findNonOverlappingPosition(newObj, existingObjects) {
   const parcelTypes = ["mustateel", "muraba"];
   const existingParcels = existingObjects.filter(o => parcelTypes.includes(o.type));
   
   if (existingParcels.length === 0) return { x: newObj.x, y: newObj.y };
   
-  // Check if current position overlaps
   if (!existingParcels.some(p => rectsOverlap(newObj, p))) {
     return { x: newObj.x, y: newObj.y };
   }
   
-  // Try nudging in 8 directions
   const directions = [
-    { dx: newObj.w, dy: 0 },      // right
-    { dx: -newObj.w, dy: 0 },     // left
-    { dx: 0, dy: newObj.h },      // down
-    { dx: 0, dy: -newObj.h },     // up
-    { dx: newObj.w, dy: newObj.h },   // down-right
-    { dx: -newObj.w, dy: newObj.h },  // down-left
-    { dx: newObj.w, dy: -newObj.h },  // up-right
-    { dx: -newObj.w, dy: -newObj.h }, // up-left
+    { dx: newObj.w, dy: 0 },
+    { dx: -newObj.w, dy: 0 },
+    { dx: 0, dy: newObj.h },
+    { dx: 0, dy: -newObj.h },
+    { dx: newObj.w, dy: newObj.h },
+    { dx: -newObj.w, dy: newObj.h },
+    { dx: newObj.w, dy: -newObj.h },
+    { dx: -newObj.w, dy: -newObj.h },
   ];
   
   for (const dir of directions) {
@@ -311,7 +354,6 @@ export function findNonOverlappingPosition(newObj, existingObjects) {
     }
   }
   
-  // If all nudges overlap, try 2x nudge
   for (const dir of directions) {
     const candidate = { x: newObj.x + dir.dx * 2, y: newObj.y + dir.dy * 2, w: newObj.w, h: newObj.h };
     if (!existingParcels.some(p => rectsOverlap(candidate, p))) {
@@ -319,7 +361,6 @@ export function findNonOverlappingPosition(newObj, existingObjects) {
     }
   }
   
-  // Fallback: return original
   return { x: newObj.x, y: newObj.y };
 }
 
@@ -335,7 +376,6 @@ export class DrawingStateManager {
 
   snapshot() {
     const state = JSON.stringify(this.objects);
-    // Trim future if we branched
     this.history = this.history.slice(0, this.historyIdx + 1);
     this.history.push(state);
     if (this.history.length > 50) this.history.shift();
@@ -361,7 +401,7 @@ export class DrawingStateManager {
   }
 
   add(obj) {
-    this.objects = [...this.objects, obj];
+    this.objects = [...this.objects, enforceGeometryLock(obj)];
     this.snapshot();
   }
 
@@ -371,7 +411,19 @@ export class DrawingStateManager {
   }
 
   update(id, changes) {
-    this.objects = this.objects.map(o => o.id === id ? { ...o, ...changes } : o);
+    this.objects = this.objects.map(o => {
+      if (o.id !== id) return o;
+      const merged = { ...o, ...changes };
+      // Geometry lock: enforce fixed dimensions for locked types
+      if (o.locked || isGeometryLocked(o.type)) {
+        const lock = LOCKED_DIMS[o.type];
+        if (lock) {
+          merged.w = lock.w;
+          merged.h = lock.h;
+        }
+      }
+      return merged;
+    });
     this.snapshot();
   }
 

@@ -11,6 +11,9 @@ export default function StatusBar({ zoom, snapPos, activeTool, objectCount, cana
     muraba: `Click to place Muraba (${DIMENSIONS.MURABA.width}×${DIMENSIONS.MURABA.height} ft)`,
     canal: `Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} points` : ""}`,
     outlet: `Click canal start point${canalDraftLen === 0 ? "" : " • Click end point for arrow direction"}`,
+    khal: `Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} points` : ""}`,
+    road: `Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} points` : ""}`,
+    chakbandi: `Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} points` : ""}`,
     eraser: "Click object to delete",
   }[activeTool] || "";
 

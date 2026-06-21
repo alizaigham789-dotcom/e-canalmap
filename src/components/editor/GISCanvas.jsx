@@ -13,6 +13,8 @@ const GISCanvas = forwardRef(function GISCanvas(
     canalDraft, onCanalPointAdd, onCanalFinish,
     chakbandiDraft, onChakbandiPointAdd, onChakbandiFinish,
     outletDraft, onOutletStart, onOutletFinish,
+    khalDraft, onKhalPointAdd, onKhalFinish,
+    roadDraft, onRoadPointAdd, onRoadFinish,
     snapPos, onSnapPosChange, onPanChange, onZoomChange,
     colorSettings, bgColor,
   },
@@ -49,7 +51,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     ctx.scale(zoom, zoom);
 
     drawGrid(ctx, W, H, zoom, pan);
-    drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakbandiDraft, outletDraft, snapPos, C);
+    drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, snapPos, C);
 
     ctx.restore();
 
@@ -67,7 +69,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       ctx.moveTo(sx, sy - 10); ctx.lineTo(sx, sy + 10);
       ctx.stroke();
     }
-  }, [objects, activeTool, zoom, pan, layers, selectedId, canalDraft, chakbandiDraft, outletDraft, snapPos, C, bgColor]);
+  }, [objects, activeTool, zoom, pan, layers, selectedId, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, snapPos, C, bgColor]);
 
   useEffect(() => {
     const loop = () => {
@@ -177,6 +179,10 @@ const GISCanvas = forwardRef(function GISCanvas(
       } else {
         onOutletFinish(worldRaw);
       }
+    } else if (activeTool === "khal") {
+      onKhalPointAdd(snapped);
+    } else if (activeTool === "road") {
+      onRoadPointAdd(snapped);
     } else if (activeTool === "select") {
       const hit = hitTest(worldRaw.x, worldRaw.y, objects);
       onSelect(hit ? hit.id : null);
@@ -184,7 +190,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       const hit = hitTest(worldRaw.x, worldRaw.y, objects);
       if (hit) onAddObject("__delete__", { id: hit.id });
     }
-  }, [activeTool, pan, zoom, objects, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft]);
+  }, [activeTool, pan, zoom, objects, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd]);
 
   const handleMouseUp = useCallback(() => {
     isPanning.current = false;
@@ -195,7 +201,9 @@ const GISCanvas = forwardRef(function GISCanvas(
   const handleDblClick = useCallback((e) => {
     if (activeTool === "canal") onCanalFinish();
     if (activeTool === "chakbandi") onChakbandiFinish();
-  }, [activeTool, onCanalFinish, onChakbandiFinish]);
+    if (activeTool === "khal") onKhalFinish();
+    if (activeTool === "road") onRoadFinish();
+  }, [activeTool, onCanalFinish, onChakbandiFinish, onKhalFinish, onRoadFinish]);
 
   const handleWheel = useCallback((e) => {
     e.preventDefault();
@@ -213,6 +221,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   const cursorClass = {
     select: "cursor-default", pan: "cursor-grab", eraser: "cursor-cell",
     canal: "cursor-crosshair", chakbandi: "cursor-crosshair", outlet: "cursor-crosshair",
+    khal: "cursor-crosshair", road: "cursor-crosshair",
     acre: "cursor-crosshair", mustateel: "cursor-crosshair", muraba: "cursor-crosshair",
     move: "cursor-move",
   }[activeTool] || "cursor-crosshair";
@@ -239,7 +248,7 @@ function hitTest(wx, wy, objects) {
     const o = objects[i];
     if (["acre", "mustateel", "muraba"].includes(o.type)) {
       if (wx >= o.x && wx <= o.x + o.w && wy >= o.y && wy <= o.y + o.h) return o;
-    } else if (o.type === "canal" || o.type === "chakbandi") {
+    } else if (o.type === "canal" || o.type === "chakbandi" || o.type === "khal" || o.type === "road") {
       for (let j = 0; j < o.points.length - 1; j++) {
         if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < 15) return o;
       }
@@ -280,8 +289,8 @@ function drawGrid(ctx, W, H, zoom, pan) {
 }
 
 // ---- Object Drawing ----
-function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakbandiDraft, outletDraft, snapPos, C) {
-  const order = ["muraba", "mustateel", "acre", "canal", "chakbandi", "outlet"];
+function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, snapPos, C) {
+  const order = ["muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet"];
   const sorted = [...objects].sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
 
   for (const obj of sorted) {
@@ -299,6 +308,42 @@ function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakban
     }
     else if (obj.type === "chakbandi") drawChakbandi(ctx, obj, isSelected, zoom, C);
     else if (obj.type === "outlet") drawOutlet(ctx, obj, isSelected, zoom, C);
+    else if (obj.type === "khal") drawKhal(ctx, obj, isSelected, zoom, C);
+    else if (obj.type === "road") drawRoad(ctx, obj, isSelected, zoom, C);
+  }
+
+  // Khal draft
+  if (khalDraft && khalDraft.length > 0) {
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 2.5 / zoom;
+    ctx.setLineDash([6 / zoom, 4 / zoom]);
+    ctx.beginPath();
+    ctx.moveTo(khalDraft[0].x, khalDraft[0].y);
+    for (let i = 1; i < khalDraft.length; i++) ctx.lineTo(khalDraft[i].x, khalDraft[i].y);
+    if (snapPos) ctx.lineTo(snapPos.x, snapPos.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const pt of khalDraft) {
+      ctx.fillStyle = "#2563eb";
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, 4 / zoom, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Road draft
+  if (roadDraft && roadDraft.length > 0) {
+    ctx.strokeStyle = "#d97706";
+    ctx.lineWidth = 3 / zoom;
+    ctx.setLineDash([8 / zoom, 5 / zoom]);
+    ctx.beginPath();
+    ctx.moveTo(roadDraft[0].x, roadDraft[0].y);
+    for (let i = 1; i < roadDraft.length; i++) ctx.lineTo(roadDraft[i].x, roadDraft[i].y);
+    if (snapPos) ctx.lineTo(snapPos.x, snapPos.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const pt of roadDraft) {
+      ctx.fillStyle = "#d97706";
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, 4 / zoom, 0, Math.PI * 2); ctx.fill();
+    }
   }
 
   // Canal draft
@@ -615,4 +660,101 @@ function drawOutlet(ctx, obj, isSelected, zoom, C) {
   ctx.fillStyle = C.outletStroke || "#06b6d4";
   ctx.beginPath(); ctx.arc(0, 0, 4 / zoom, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
+}
+
+// ---- Khal Drawing (bold blue line, adjustable width) ----
+function drawKhal(ctx, obj, isSelected, zoom, C) {
+  if (obj.points.length < 2) return;
+  const width = obj.width || DIMENSIONS.KHAL_WIDTH;
+
+  // Blue water fill between parallel lines
+  const halfW = width / 2;
+  const left = getParallelPolyline(obj.points, -halfW);
+  const right = getParallelPolyline(obj.points, halfW);
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (const p of left) ctx.lineTo(p.x, p.y);
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(37,99,235,0.25)";
+  ctx.fill();
+
+  // Bold blue stroke
+  ctx.strokeStyle = isSelected ? "#93c5fd" : "#2563eb";
+  ctx.lineWidth = (isSelected ? 3.5 : 2.8) / zoom;
+  ctx.beginPath();
+  ctx.moveTo(obj.points[0].x, obj.points[0].y);
+  for (const p of obj.points) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+
+  // Label
+  if (obj.name && zoom > 0.3) {
+    const mid = Math.floor(obj.points.length / 2);
+    const p = obj.points[mid];
+    const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
+    const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(angle);
+    ctx.fillStyle = "#2563eb";
+    ctx.font = `bold ${Math.max(8, 11 / zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(obj.name || "Khal", 0, -width / 2 - 3 / zoom);
+    ctx.restore();
+  }
+}
+
+// ---- Road Drawing (filled with "ROAD" label) ----
+function drawRoad(ctx, obj, isSelected, zoom, C) {
+  if (obj.points.length < 2) return;
+  const width = obj.width || DIMENSIONS.ROAD_WIDTH;
+
+  const halfW = width / 2;
+  const left = getParallelPolyline(obj.points, -halfW);
+  const right = getParallelPolyline(obj.points, halfW);
+
+  // Road fill
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (const p of left) ctx.lineTo(p.x, p.y);
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(217,119,6,0.18)";
+  ctx.fill();
+
+  // Road border lines
+  ctx.strokeStyle = isSelected ? "#fcd34d" : "#d97706";
+  ctx.lineWidth = (isSelected ? 2 : 1.8) / zoom;
+  for (const side of [left, right]) {
+    ctx.beginPath();
+    ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
+
+  // Dashed center line
+  ctx.strokeStyle = "rgba(217,119,6,0.6)";
+  ctx.lineWidth = 1 / zoom;
+  ctx.setLineDash([10 / zoom, 8 / zoom]);
+  ctx.beginPath();
+  ctx.moveTo(obj.points[0].x, obj.points[0].y);
+  for (const p of obj.points) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ROAD label along each segment
+  if (zoom > 0.3) {
+    ctx.fillStyle = "#92400e";
+    ctx.font = `bold ${Math.max(7, 10 / zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (let i = 0; i < obj.points.length - 1; i++) {
+      const a = obj.points[i], b = obj.points[i + 1];
+      const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+      const angle = Math.atan2(b.y - a.y, b.x - a.x);
+      ctx.save();
+      ctx.translate(midX, midY);
+      ctx.rotate(angle);
+      ctx.fillText("ROAD", 0, 0);
+      ctx.restore();
+    }
+  }
 }

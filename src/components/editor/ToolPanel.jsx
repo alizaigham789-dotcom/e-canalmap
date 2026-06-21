@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Separator } from "@/components/ui/separator";
 import {
   Square, MousePointer2, Hand, Eraser, Minus,
-  Droplets, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Move
+  Droplets, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Move, Waves, Car
 } from "lucide-react";
 
 const TOOLS = [
@@ -20,6 +20,8 @@ const TOOLS = [
   { id: "canal", label: "Canal Tool (C)", icon: Minus, group: "draw", color: "text-blue-400" },
   { id: "chakbandi", label: "Chakbandi Line (K)", icon: GitBranch, group: "draw", color: "text-green-400" },
   { id: "outlet", label: "Outlet / Moga (O)", icon: Droplets, group: "draw", color: "text-cyan-400" },
+  { id: "khal", label: "Khal / Watercourse (W)", icon: Waves, group: "draw", color: "text-blue-500" },
+  { id: "road", label: "Road (R)", icon: Car, group: "draw", color: "text-amber-400" },
   null,
   { id: "eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
 ];
