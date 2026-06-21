@@ -14,7 +14,7 @@ import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Shield, Map, Users, ArrowLeft, Pencil, Globe, Layers, Settings2 } from "lucide-react";
+import { Shield, Map, Users, ArrowLeft, Pencil, Globe, Layers, Settings2, Calculator, Save } from "lucide-react";
 
 const STATUS_COLORS = {
   draft: "border-slate-500/30 bg-slate-500/10 text-slate-400",
@@ -42,11 +42,25 @@ export default function AdminPanel() {
     queryFn: () => base44.entities.LandMap.list("-created_date", 100),
   });
 
+  const { data: formulas = [] } = useQuery({
+    queryKey: ["formulas-admin"],
+    queryFn: () => base44.entities.FormulaConfig.list(),
+  });
+
   const updateMapMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.LandMap.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["maps-admin"] });
       toast.success("Map updated");
+    },
+  });
+
+  const updateFormulaMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.FormulaConfig.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["formulas-admin"] });
+      queryClient.invalidateQueries({ queryKey: ["formula-configs"] });
+      toast.success("Formula updated");
     },
   });
 
@@ -118,6 +132,9 @@ export default function AdminPanel() {
             </TabsTrigger>
             <TabsTrigger value="users" className="gap-1.5 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400">
               <Users className="w-3.5 h-3.5" /> Users ({users.length})
+            </TabsTrigger>
+            <TabsTrigger value="formulas" className="gap-1.5 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400">
+              <Calculator className="w-3.5 h-3.5" /> Formulas
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-1.5 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400">
               <Settings2 className="w-3.5 h-3.5" /> Settings
@@ -207,6 +224,51 @@ export default function AdminPanel() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="formulas">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-6">
+              <h3 className="text-sm font-semibold text-white font-heading flex items-center gap-2">
+                <Calculator className="w-4 h-4 text-blue-400" /> Water Time Formula Engine
+              </h3>
+              <p className="text-xs text-slate-500">
+                These values control the automatic water time calculation in Parat Warabandi.
+                Changes take effect immediately — no code changes needed.
+              </p>
+              <div className="space-y-4">
+                {[
+                  { key: "water_time_per_acre", label: "Minutes per Acre", desc: "Default: 6 minutes per acre", unit: "minutes" },
+                  { key: "water_time_per_kanal", label: "Minutes per Kanal", desc: "Default: 0.75 minutes per kanal", unit: "minutes" },
+                ].map(({ key, label, desc, unit }) => {
+                  const formula = formulas.find(f => f.formula_key === key);
+                  if (!formula) return null;
+                  return (
+                    <div key={key} className="flex items-center gap-4 p-4 rounded-lg border border-slate-700/50 bg-slate-800/30">
+                      <div className="flex-1">
+                        <p className="text-sm text-white font-medium">{label}</p>
+                        <p className="text-[11px] text-slate-500">{desc}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          defaultValue={formula.value}
+                          onBlur={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (val > 0 && val !== formula.value) {
+                              updateFormulaMutation.mutate({ id: formula.id, data: { value: val } });
+                            }
+                          }}
+                          className="w-20 h-8 bg-slate-900 border border-slate-600 rounded-md px-2 text-center text-sm text-white focus:border-blue-500 focus:outline-none font-mono"
+                        />
+                        <span className="text-[11px] text-slate-500 w-12">{unit}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </TabsContent>
 

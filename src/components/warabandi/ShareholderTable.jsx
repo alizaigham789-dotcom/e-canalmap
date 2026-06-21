@@ -2,7 +2,7 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Calculator } from "lucide-react";
 
 const FALLBACK_COLUMNS = [
   { field_key: "sr_no", label_urdu: "نمبر شمار", label_en: "Sr#", width: "w-14" },
@@ -32,17 +32,51 @@ export default function ShareholderTable({ rows, onChange }) {
     queryFn: () => base44.entities.FormFieldConfig.filter({ form_type: "parat_warabandi_table" }, "order"),
   });
 
+  const { data: formulas = [] } = useQuery({
+    queryKey: ["formula-configs"],
+    queryFn: () => base44.entities.FormulaConfig.filter({ enabled: true }),
+  });
+
+  // Resolve formula values from admin config or defaults
+  const minutesPerAcre = (() => {
+    const f = formulas.find(f => f.formula_key === "water_time_per_acre" && f.enabled);
+    return f ? Number(f.value) : 6;
+  })();
+
+  const minutesPerKanal = (() => {
+    const f = formulas.find(f => f.formula_key === "water_time_per_kanal" && f.enabled);
+    return f ? Number(f.value) : 0.75;
+  })();
+
   const columns = configs.length > 0
     ? configs.filter(c => c.visible !== false)
     : FALLBACK_COLUMNS;
+
   const update = (i, key, val) => {
     const next = [...rows];
     next[i] = { ...next[i], [key]: val };
     onChange(next);
   };
+
   const addRow = () => onChange([...rows, emptyRow(rows.length + 1)]);
   const removeRow = (i) => {
     const next = rows.filter((_, idx) => idx !== i).map((r, idx) => ({ ...r, sr_no: String(idx + 1) }));
+    onChange(next);
+  };
+
+  // Auto-calculate water time for all rows
+  const calculateWaterTime = () => {
+    const next = rows.map(row => {
+      const acres = parseFloat(row.area_acre) || 0;
+      const kanals = parseFloat(row.area_kanal) || 0;
+      const marlas = parseFloat(row.area_marla) || 0;
+      // 1 acre = 8 kanals = 160 marlas → convert all to acres
+      const totalAcres = acres + (kanals / 8) + (marlas / 160);
+      const totalMinutes = totalAcres * minutesPerAcre + kanals * minutesPerKanal;
+      const hrs = Math.floor(totalMinutes / 60);
+      const mins = Math.round(totalMinutes % 60);
+      return { ...row, duration_hours: String(hrs), duration_minutes: String(mins) };
+    });
     onChange(next);
   };
 
@@ -64,9 +98,15 @@ export default function ShareholderTable({ rows, onChange }) {
         <h3 className="text-sm font-bold text-slate-800 font-heading tracking-wide">
           Shareholders — حصہ داران کی تفصیل
         </h3>
-        <Button size="sm" onClick={addRow} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1">
-          <Plus className="w-3 h-3" /> Add Row
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={calculateWaterTime}
+            className="h-7 text-xs border-blue-200 bg-white text-blue-600 hover:bg-blue-50 gap-1">
+            <Calculator className="w-3 h-3" /> Calc ({minutesPerAcre}m/ac)
+          </Button>
+          <Button size="sm" onClick={addRow} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1">
+            <Plus className="w-3 h-3" /> Add Row
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">

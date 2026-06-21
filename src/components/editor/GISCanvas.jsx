@@ -592,23 +592,46 @@ function drawChakbandi(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const color = C.chakbandiStroke || "#22c55e";
 
-  // Bold green single line with cross markers
-  ctx.strokeStyle = isSelected ? "#86efac" : color;
-  ctx.lineWidth = (isSelected ? 4 : 3.5) / zoom;
-  ctx.beginPath();
-  ctx.moveTo(obj.points[0].x, obj.points[0].y);
-  for (const p of obj.points) ctx.lineTo(p.x, p.y);
-  ctx.stroke();
-
-  // Cross (+) markers at each point
-  const crossSize = 8 / zoom;
-  ctx.strokeStyle = isSelected ? "#86efac" : color;
-  ctx.lineWidth = 2 / zoom;
-  for (const pt of obj.points) {
+  if (obj.crossPattern) {
+    // Cross-pattern mode: × × × along the path
+    const crossSize = (obj.crossSize || 8) / zoom;
+    const spacing = (obj.crossSpacing || 40) / zoom;
+    ctx.strokeStyle = isSelected ? "#86efac" : color;
+    ctx.lineWidth = 1.8 / zoom;
+    for (let i = 0; i < obj.points.length - 1; i++) {
+      const a = obj.points[i], b = obj.points[i + 1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.max(1, Math.floor(segLen / spacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const cx = a.x + (b.x - a.x) * t;
+        const cy = a.y + (b.y - a.y) * t;
+        ctx.beginPath();
+        ctx.moveTo(cx - crossSize, cy - crossSize);
+        ctx.lineTo(cx + crossSize, cy + crossSize);
+        ctx.moveTo(cx + crossSize, cy - crossSize);
+        ctx.lineTo(cx - crossSize, cy + crossSize);
+        ctx.stroke();
+      }
+    }
+  } else {
+    // Solid line with cross markers at vertices
+    ctx.strokeStyle = isSelected ? "#86efac" : color;
+    ctx.lineWidth = (isSelected ? 4 : 3.5) / zoom;
     ctx.beginPath();
-    ctx.moveTo(pt.x - crossSize, pt.y); ctx.lineTo(pt.x + crossSize, pt.y);
-    ctx.moveTo(pt.x, pt.y - crossSize); ctx.lineTo(pt.x, pt.y + crossSize);
+    ctx.moveTo(obj.points[0].x, obj.points[0].y);
+    for (const p of obj.points) ctx.lineTo(p.x, p.y);
     ctx.stroke();
+
+    const crossSize = 8 / zoom;
+    ctx.strokeStyle = isSelected ? "#86efac" : color;
+    ctx.lineWidth = 2 / zoom;
+    for (const pt of obj.points) {
+      ctx.beginPath();
+      ctx.moveTo(pt.x - crossSize, pt.y); ctx.lineTo(pt.x + crossSize, pt.y);
+      ctx.moveTo(pt.x, pt.y - crossSize); ctx.lineTo(pt.x, pt.y + crossSize);
+      ctx.stroke();
+    }
   }
 
   // Name label

@@ -98,7 +98,35 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
           <>
             <Separator className="bg-slate-100" />
             <Field label="Chakbandi Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Chakbandi Boundary 1" />
-            <div className="text-[10px] text-green-600 font-mono">Bold green • Cross markers • {selectedObj.points?.length || 0} points</div>
+            <div className="flex items-center justify-between mt-2">
+              <label className="text-xs text-slate-600">Cross Pattern</label>
+              <Switch checked={!!local.crossPattern} onCheckedChange={v => commit("crossPattern", v)} className="scale-75" />
+            </div>
+            {local.crossPattern && (
+              <>
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Cross Size</label>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      onClick={() => commit("crossSize", Math.max(4, (local.crossSize || 8) - 2))}>−</Button>
+                    <span className="text-xs text-slate-600 font-mono w-8 text-center">{local.crossSize || 8}</span>
+                    <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      onClick={() => commit("crossSize", Math.min(40, (local.crossSize || 8) + 2))}>+</Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Cross Spacing</label>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      onClick={() => commit("crossSpacing", Math.max(10, (local.crossSpacing || 40) - 10))}>−</Button>
+                    <span className="text-xs text-slate-600 font-mono w-8 text-center">{local.crossSpacing || 40}</span>
+                    <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      onClick={() => commit("crossSpacing", Math.min(200, (local.crossSpacing || 40) + 10))}>+</Button>
+                  </div>
+                </div>
+              </>
+            )}
+            <div className="text-[10px] text-green-600 font-mono">Bold green • {local.crossPattern ? "Cross marks" : "Cross markers"} • {selectedObj.points?.length || 0} points</div>
           </>
         )}
 

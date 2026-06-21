@@ -1,0 +1,38 @@
+{
+  "name": "FormulaConfig",
+  "type": "object",
+  "properties": {
+    "formula_key": {
+      "type": "string",
+      "description": "Unique key for this formula (e.g. water_time_per_acre)"
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable label for the formula"
+    },
+    "unit_type": {
+      "type": "string",
+      "enum": [
+        "water_time_per_acre",
+        "water_time_per_kanal",
+        "multiplier",
+        "rounding"
+      ],
+      "description": "Category of the formula"
+    },
+    "value": {
+      "type": "number",
+      "description": "The formula value (e.g. 6 for minutes per acre)"
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this formula is active"
+    }
+  },
+  "required": [
+    "formula_key",
+    "label",
+    "value"
+  ]
+}
