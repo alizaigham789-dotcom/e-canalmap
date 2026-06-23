@@ -491,9 +491,10 @@ function drawAcre(ctx, obj, isSelected, zoom, C) {
   ctx.lineWidth = (isSelected ? 2 : 1.5) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
-  if (zoom > 0.5 && obj.label) {
+  // Always visible — clamped to fixed screen-pixel size
+  if (obj.label) {
     ctx.fillStyle = C.acreStroke || "#b45309";
-    ctx.font = `${Math.max(8, 11 / zoom)}px JetBrains Mono, monospace`;
+    ctx.font = `bold ${13 / zoom}px JetBrains Mono, monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(obj.label, obj.x + obj.w / 2, obj.y + obj.h / 2);
@@ -522,10 +523,10 @@ function drawMustateel(ctx, obj, isSelected, zoom, C) {
     }
     ctx.stroke();
 
-    if (zoom > 0.5) {
+    if (zoom > 0.15) {
       const grid = getMustateeelKillaGrid();
       ctx.fillStyle = "rgba(220,38,38,0.9)";
-      ctx.font = `bold ${Math.max(7, 10 / zoom)}px Rajdhani, sans-serif`;
+      ctx.font = `bold ${11 / zoom}px Rajdhani, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 2; c++) {
@@ -535,18 +536,18 @@ function drawMustateel(ctx, obj, isSelected, zoom, C) {
     }
   }
 
-  // Center label (name + number)
-  if (zoom > 0.2) {
+  // Center label — always visible, fixed screen-pixel size (stays legible at all zoom levels)
+  {
     const centerX = obj.x + obj.w / 2;
     const centerY = obj.y + obj.h / 2;
     const labelText = obj.label ? `مستطیل ${obj.label}` : (C.mustateelDefaultLabel || "MUSTATEEL");
     ctx.fillStyle = C.mustateelStroke || "#ef4444";
-    ctx.font = `bold ${Math.max(9, 14 / zoom)}px Rajdhani, sans-serif`;
+    ctx.font = `bold ${16 / zoom}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(labelText, centerX, centerY - (obj.showOwner && obj.ownerName ? 8 / zoom : 0));
     if (obj.showOwner && obj.ownerName) {
       ctx.fillStyle = "rgba(100,116,139,0.9)";
-      ctx.font = `${Math.max(7, 10 / zoom)}px Inter, sans-serif`;
+      ctx.font = `${12 / zoom}px Inter, sans-serif`;
       ctx.fillText(obj.ownerName, centerX, centerY + 10 / zoom);
     }
   }
@@ -574,10 +575,10 @@ function drawMuraba(ctx, obj, isSelected, zoom, C) {
     }
     ctx.stroke();
 
-    if (zoom > 0.3) {
+    if (zoom > 0.12) {
       const grid = getMurabaKillaGrid();
       ctx.fillStyle = "rgba(220,38,38,0.85)";
-      ctx.font = `bold ${Math.max(6, 9 / zoom)}px Rajdhani, sans-serif`;
+      ctx.font = `bold ${10 / zoom}px Rajdhani, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 5; c++) {
@@ -587,36 +588,45 @@ function drawMuraba(ctx, obj, isSelected, zoom, C) {
     }
   }
 
-  // Center label (name + number)
-  if (zoom > 0.1) {
+  // Center label — always visible, fixed screen-pixel size (stays legible at all zoom levels)
+  {
     const centerX = obj.x + obj.w / 2;
     const centerY = obj.y + obj.h / 2;
     const labelText = obj.label ? `مربعہ ${obj.label}` : (C.murabaDefaultLabel || "MURABA");
     ctx.fillStyle = C.murabaStroke || "#ef4444";
-    ctx.font = `bold ${Math.max(10, 16 / zoom)}px Rajdhani, sans-serif`;
+    ctx.font = `bold ${18 / zoom}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(labelText, centerX, centerY - (obj.showOwner && obj.ownerName ? 10 / zoom : 0));
     if (obj.showOwner && obj.ownerName) {
       ctx.fillStyle = "rgba(100,116,139,0.9)";
-      ctx.font = `${Math.max(8, 11 / zoom)}px Inter, sans-serif`;
+      ctx.font = `${13 / zoom}px Inter, sans-serif`;
       ctx.fillText(obj.ownerName, centerX, centerY + 13 / zoom);
     }
   }
 }
 
-// Canal = two parallel blue lines with adjustable spacing (obj.width = gap between lines)
+// Canal = two parallel blue bank lines with semi-transparent water fill between them
 function drawCanal(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const halfW = obj.width / 2;
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  const strokeColor = isSelected ? "#93c5fd" : (C.canalStroke || "#0284c7");
-  ctx.strokeStyle = strokeColor;
-  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
+  // Water fill between banks (semi-transparent blue)
+  ctx.fillStyle = "rgba(30, 144, 255, 0.25)";
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (const p of left) ctx.lineTo(p.x, p.y);
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  ctx.closePath();
+  ctx.fill();
 
+  // Bank lines (clean blue outer double lines — symmetric, no arrow ends)
+  const bankColor = isSelected ? "#93c5fd" : (C.canalStroke || "#0284c7");
+  ctx.strokeStyle = bankColor;
+  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
+  ctx.lineCap = "butt";
+  ctx.lineJoin = "round";
   for (const side of [left, right]) {
     ctx.beginPath();
     ctx.moveTo(side[0].x, side[0].y);
@@ -625,7 +635,7 @@ function drawCanal(ctx, obj, isSelected, zoom, C) {
   }
 
   // Name label above the canal
-  if (obj.name && zoom > 0.3) {
+  if (obj.name) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid];
     const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
@@ -633,7 +643,7 @@ function drawCanal(ctx, obj, isSelected, zoom, C) {
     ctx.save();
     ctx.translate(p.x, p.y); ctx.rotate(angle);
     ctx.fillStyle = "#1d4ed8";
-    ctx.font = `bold ${Math.max(8, 11 / zoom)}px Rajdhani, sans-serif`;
+    ctx.font = `bold ${Math.max(12 / zoom, 10)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "bottom";
     ctx.fillText(obj.name, 0, -halfW - 3 / zoom);
     ctx.restore();
@@ -706,38 +716,61 @@ function drawChakbandi(ctx, obj, isSelected, zoom, C) {
   }
 }
 
+// Moga / Outlet = prominent block/square base + directional flow arrow (scales dynamically)
 function drawOutlet(ctx, obj, isSelected, zoom, C) {
-  const scale = (obj.arrowScale || 1) / zoom;
+  const scale = obj.arrowScale || 1;
+  const blockSize = obj.blockSize || 20;
   const sx = obj.start.x, sy = obj.start.y;
   const ex = obj.end.x, ey = obj.end.y;
   const angle = Math.atan2(ey - sy, ex - sx);
   const len = Math.hypot(ex - sx, ey - sy);
 
+  const color = isSelected ? "#67e8f9" : (C.outletStroke || "#06b6d4");
+
+  // Prominent block/square at the Moga base
+  const half = blockSize / 2;
+  ctx.fillStyle = color;
+  ctx.fillRect(sx - half, sy - half, blockSize, blockSize);
+  ctx.strokeStyle = "#0e7490";
+  ctx.lineWidth = 2 / zoom;
+  ctx.strokeRect(sx - half, sy - half, blockSize, blockSize);
+
+  // Directional flow arrow — length & width scale proportionally with arrowScale
+  const shaftWidth = (3 * scale) / zoom;
+  const headLen = (22 * scale) / zoom;
+  const headWidth = (14 * scale) / zoom;
+
   ctx.save();
-  ctx.translate(sx, sy); ctx.rotate(angle);
+  ctx.translate(sx, sy);
+  ctx.rotate(angle);
 
-  ctx.strokeStyle = isSelected ? "#67e8f9" : (C.outletStroke || "#06b6d4");
-  ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
-  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+  // Arrow shaft
+  ctx.strokeStyle = color;
+  ctx.lineWidth = shaftWidth;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(len, 0);
+  ctx.stroke();
 
-  const headLen = 16 * scale;
-  const headAngle = Math.PI / 5;
-  ctx.fillStyle = isSelected ? "#67e8f9" : (C.outletStroke || "#06b6d4");
+  // Arrowhead
+  ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(len, 0);
-  ctx.lineTo(len - headLen * Math.cos(headAngle), -headLen * Math.sin(headAngle));
-  ctx.lineTo(len - headLen * Math.cos(headAngle), headLen * Math.sin(headAngle));
-  ctx.closePath(); ctx.fill();
+  ctx.lineTo(len - headLen, -headWidth);
+  ctx.lineTo(len - headLen, headWidth);
+  ctx.closePath();
+  ctx.fill();
 
-  if (obj.label && zoom > 0.3) {
-    ctx.fillStyle = C.outletStroke || "#0891b2";
-    ctx.font = `bold ${Math.max(8, 11 / zoom)}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-    ctx.fillText(obj.label, len / 2, -6 / zoom);
+  // Label
+  if (obj.label) {
+    ctx.fillStyle = "#0e7490";
+    ctx.font = `bold ${Math.max(12 / zoom, 10)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(obj.label, len / 2, -Math.max(headWidth, 8 / zoom));
   }
 
-  ctx.fillStyle = C.outletStroke || "#06b6d4";
-  ctx.beginPath(); ctx.arc(0, 0, 4 / zoom, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
@@ -777,7 +810,7 @@ function drawKhal(ctx, obj, isSelected, zoom, C) {
   }
 }
 
-// ---- Road Drawing (two parallel amber lines with adjustable spacing) ----
+// ---- Road Drawing (solid asphalt fill, amber casing edges, dashed lane divider) ----
 function drawRoad(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const width = obj.width || DIMENSIONS.ROAD_WIDTH;
@@ -786,11 +819,21 @@ function drawRoad(ctx, obj, isSelected, zoom, C) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  ctx.strokeStyle = isSelected ? "#fcd34d" : "#d97706";
-  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
+  // Solid asphalt fill (no transparency — neutral dark)
+  ctx.fillStyle = "#3a3a3a";
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (const p of left) ctx.lineTo(p.x, p.y);
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  ctx.closePath();
+  ctx.fill();
 
+  // Casing edge lines (solid amber — symmetric, parallel)
+  const edgeColor = isSelected ? "#fcd34d" : "#b45309";
+  ctx.strokeStyle = edgeColor;
+  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
+  ctx.lineCap = "butt";
+  ctx.lineJoin = "round";
   for (const side of [left, right]) {
     ctx.beginPath();
     ctx.moveTo(side[0].x, side[0].y);
@@ -798,8 +841,18 @@ function drawRoad(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
   }
 
+  // Dashed lane divider along center line
+  ctx.strokeStyle = "#fbbf24";
+  ctx.lineWidth = 1.5 / zoom;
+  ctx.setLineDash([10 / zoom, 6 / zoom]);
+  ctx.beginPath();
+  ctx.moveTo(obj.points[0].x, obj.points[0].y);
+  for (const p of obj.points) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
   // Name label above the road
-  if (obj.name && zoom > 0.3) {
+  if (obj.name) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid];
     const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
@@ -807,7 +860,7 @@ function drawRoad(ctx, obj, isSelected, zoom, C) {
     ctx.save();
     ctx.translate(p.x, p.y); ctx.rotate(angle);
     ctx.fillStyle = "#92400e";
-    ctx.font = `bold ${Math.max(8, 11 / zoom)}px Rajdhani, sans-serif`;
+    ctx.font = `bold ${Math.max(12 / zoom, 10)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "bottom";
     ctx.fillText(obj.name, 0, -halfW - 3 / zoom);
     ctx.restore();

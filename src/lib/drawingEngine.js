@@ -381,6 +381,7 @@ export function createOutlet(canalId, startPt, endPt, label = "") {
     end: { ...endPt },
     label,
     arrowScale: 1,
+    blockSize: 20,
   };
 }
 

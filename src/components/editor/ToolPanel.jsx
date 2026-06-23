@@ -3,9 +3,47 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import {
-  Square, MousePointer2, Hand, Eraser, Minus,
-  Droplets, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Move, Waves, Car
+  Square, RectangleVertical, RectangleHorizontal,
+  MousePointer2, Hand, Eraser,
+  RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Move, Waves
 } from "lucide-react";
+
+// ---- Custom SVG Icons matching technical tool names ----
+
+// Canal: distinct double bank lines with light blue accent
+const CanalIcon = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M3 7h18" />
+    <path d="M3 17h18" />
+    <path d="M3 12h18" strokeWidth="1" strokeOpacity="0.5" />
+  </svg>
+);
+
+// Road: parallel solid casing edges with dashed lane divider
+const RoadIcon = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M8 3v18" />
+    <path d="M16 3v18" />
+    <path d="M12 5v2M12 10v2M12 15v2" strokeWidth="2" strokeOpacity="0.7" />
+  </svg>
+);
+
+// Moga / Outlet: structured block with directional arrow
+const MogaIcon = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="9" height="9" rx="1" />
+    <path d="M12 7.5h6" />
+    <path d="M15 4.5l3.5 3-3.5 3" />
+  </svg>
+);
+
+// Chakbandi: structured grid / cadastral boundary layout
+const ChakbandiIcon = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="1" />
+    <path d="M3 9h18M3 15h18M9 3v18M15 3v18" strokeWidth="1.3" strokeOpacity="0.6" />
+  </svg>
+);
 
 const TOOLS = [
   { id: "select", label: "Select (V)", icon: MousePointer2, group: "nav" },
@@ -14,14 +52,14 @@ const TOOLS = [
   { id: "move", label: "Move (D) — drag parcels", icon: Move, group: "edit", color: "text-orange-400" },
   null,
   { id: "acre", label: "Acre 220×198 ft (A)", icon: Square, group: "draw", color: "text-yellow-400" },
-  { id: "mustateel", label: "Mustateel 440×990 ft (M)", icon: Square, group: "draw", color: "text-red-400" },
-  { id: "muraba", label: "Muraba 1100×990 ft (B)", icon: Square, group: "draw", color: "text-red-500" },
+  { id: "mustateel", label: "Mustateel 440×990 ft (M)", icon: RectangleVertical, group: "draw", color: "text-red-400" },
+  { id: "muraba", label: "Muraba 1100×990 ft (B)", icon: RectangleHorizontal, group: "draw", color: "text-red-500" },
   null,
-  { id: "canal", label: "Canal Tool (C)", icon: Minus, group: "draw", color: "text-blue-400" },
-  { id: "chakbandi", label: "Chakbandi Line (K)", icon: GitBranch, group: "draw", color: "text-green-400" },
-  { id: "outlet", label: "Outlet / Moga (O)", icon: Droplets, group: "draw", color: "text-cyan-400" },
+  { id: "canal", label: "Canal Tool (C)", icon: CanalIcon, group: "draw", color: "text-blue-400" },
+  { id: "chakbandi", label: "Chakbandi Line (K)", icon: ChakbandiIcon, group: "draw", color: "text-green-400" },
+  { id: "outlet", label: "Outlet / Moga (O)", icon: MogaIcon, group: "draw", color: "text-cyan-400" },
   { id: "khal", label: "Khal / Watercourse (W)", icon: Waves, group: "draw", color: "text-blue-500" },
-  { id: "road", label: "Road (R)", icon: Car, group: "draw", color: "text-amber-400" },
+  { id: "road", label: "Road (R)", icon: RoadIcon, group: "draw", color: "text-amber-400" },
   null,
   { id: "eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
 ];
@@ -34,7 +72,6 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
           if (tool === null) return <Separator key={`sep-${i}`} className="bg-slate-200 my-0.5" />;
           const Icon = tool.icon;
           const isActive = activeTool === tool.id;
-          // Special highlight for chakbandi
           const activeClass = tool.id === "chakbandi"
             ? "bg-green-700 text-white hover:bg-green-600 shadow-lg shadow-green-500/20"
             : "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20";

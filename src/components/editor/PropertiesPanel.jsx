@@ -95,7 +95,7 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
             <SpacingControl
               label="Line Spacing"
               value={local.width || 14}
-              min={2} max={80} step={1}
+              min={2} max={150} step={2}
               onChange={v => commit("width", v)}
               unit="ft"
             />
@@ -125,7 +125,7 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
             <SpacingControl
               label="Line Spacing"
               value={local.width || 28}
-              min={4} max={120} step={1}
+              min={4} max={150} step={2}
               onChange={v => commit("width", v)}
               unit="ft"
             />
@@ -173,18 +173,34 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
           <>
             <Separator className="bg-slate-100" />
             <Field label="Outlet Label" value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 14300/L" icon={<Tag className="w-3 h-3" />} />
+            <SpacingControl
+              label="Block Size"
+              value={local.blockSize || 20}
+              min={8} max={80} step={2}
+              onChange={v => commit("blockSize", v)}
+              unit="ft"
+            />
             <div>
-              <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Arrow Size</label>
+              <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Arrow Scale</label>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                   onClick={() => commit("arrowScale", Math.max(0.5, (local.arrowScale || 1) - 0.25))}>−</Button>
-                <span className="text-xs text-slate-600 font-mono w-8 text-center">{(local.arrowScale || 1).toFixed(2)}×</span>
-                <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  onClick={() => commit("arrowScale", Math.min(3, (local.arrowScale || 1) + 0.25))}>+</Button>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={5}
+                  step={0.25}
+                  value={local.arrowScale || 1}
+                  onChange={e => commit("arrowScale", parseFloat(e.target.value))}
+                  className="flex-1 h-1 accent-cyan-500 cursor-pointer"
+                />
+                <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  onClick={() => commit("arrowScale", Math.min(5, (local.arrowScale || 1) + 0.25))}>+</Button>
+                <span className="text-xs text-slate-600 font-mono w-10 text-center">{(local.arrowScale || 1).toFixed(2)}×</span>
               </div>
             </div>
             <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
-              <ArrowUpDown className="w-3 h-3" /> Flow: start → end
+              <ArrowUpDown className="w-3 h-3" /> Block at start → arrow to end
             </div>
           </>
         )}
