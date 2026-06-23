@@ -4,14 +4,21 @@
 // Geometry Lock Engine — dimensions preserved across all operations
 // ============================================================
 
-// Real-world survey measurements (in feet)
+// Real-world survey measurements (in feet — used directly as canvas world-units at zoom=1)
 export const DIMENSIONS = {
   ACRE: { width: 220, height: 198 },
   MUSTATEEL: { width: 440, height: 990 },
   MURABA: { width: 1100, height: 990 },
-  CANAL_WIDTH: 7,
-  KHAL_WIDTH: 4,
-  ROAD_WIDTH: 20,
+  CANAL_WIDTH: 14,
+  KHAL_WIDTH: 8,
+  ROAD_WIDTH: 28,
+};
+
+// Default label spacing for two-line features (gap between the two parallel lines)
+export const DEFAULT_LINE_SPACING = {
+  canal: 14,
+  khal: 8,
+  road: 28,
 };
 
 // Locked property keys — these CANNOT be modified by any operation except explicit user edit
@@ -56,26 +63,98 @@ export function murabaPixels(zoom) {
   };
 }
 
-// Snap a world point to nearest acre grid corner
-export function snapToAcreGrid(wx, wy, zoom) {
-  const { w, h } = acrePixels(zoom);
-  const snappedX = Math.round(wx / w) * w;
-  const snappedY = Math.round(wy / h) * h;
-  return { x: snappedX, y: snappedY };
+// Snap a world point to nearest acre grid corner.
+// Uses raw DIMENSIONS (feet = canvas world-units at zoom=1) so grid snapping
+// perfectly aligns with how objects are drawn (obj.w/obj.h used directly in fillRect).
+export function snapToAcreGrid(wx, wy) {
+  const w = DIMENSIONS.ACRE.width;
+  const h = DIMENSIONS.ACRE.height;
+  return { x: Math.round(wx / w) * w, y: Math.round(wy / h) * h };
 }
 
-export function snapToMustateeelGrid(wx, wy, zoom) {
-  const { w, h } = mustateeelPixels(zoom);
-  const snappedX = Math.round(wx / w) * w;
-  const snappedY = Math.round(wy / h) * h;
-  return { x: snappedX, y: snappedY };
+export function snapToMustateeelGrid(wx, wy) {
+  const w = DIMENSIONS.MUSTATEEL.width;
+  const h = DIMENSIONS.MUSTATEEL.height;
+  return { x: Math.round(wx / w) * w, y: Math.round(wy / h) * h };
 }
 
-export function snapToMurabaGrid(wx, wy, zoom) {
-  const { w, h } = murabaPixels(zoom);
-  const snappedX = Math.round(wx / w) * w;
-  const snappedY = Math.round(wy / h) * h;
-  return { x: snappedX, y: snappedY };
+export function snapToMurabaGrid(wx, wy) {
+  const w = DIMENSIONS.MURABA.width;
+  const h = DIMENSIONS.MURABA.height;
+  return { x: Math.round(wx / w) * w, y: Math.round(wy / h) * h };
+}
+
+// ============================================================
+// MOVE-SNAP ENGINE
+// Snaps a moved parcel to its own grid AND to adjacent plot edges,
+// guaranteeing zero gaps / overlaps between neighbouring parcels.
+// ============================================================
+export function snapMovePosition(obj, allObjects) {
+  const lock = LOCKED_DIMS[obj.type];
+  if (!lock) return { x: obj.x, y: obj.y };
+
+  // Step 1 — snap to own grid (multiples of w/h)
+  let snappedX = Math.round(obj.x / lock.w) * lock.w;
+  let snappedY = Math.round(obj.y / lock.h) * lock.h;
+
+  // Step 2 — snap to adjacent plot edges (higher priority)
+  // Threshold: 12 % of the smaller dimension
+  const threshold = Math.min(lock.w, lock.h) * 0.12;
+  const others = allObjects.filter(
+    o => o.id !== obj.id && ["mustateel", "muraba", "acre"].includes(o.type)
+  );
+
+  let bestX = snappedX;
+  let bestXDelta = threshold;
+  let bestY = snappedY;
+  let bestYDelta = threshold;
+
+  for (const other of others) {
+    // Left edge of obj ↔ right edge of other
+    const dLeftRight = Math.abs(snappedX - (other.x + other.w));
+    if (dLeftRight < bestXDelta) { bestX = other.x + other.w; bestXDelta = dLeftRight; }
+    // Right edge of obj ↔ left edge of other
+    const dRightLeft = Math.abs((snappedX + lock.w) - other.x);
+    if (dRightLeft < bestXDelta) { bestX = other.x - lock.w; bestXDelta = dRightLeft; }
+    // Left edge of obj ↔ left edge of other (vertical alignment)
+    const dLeftLeft = Math.abs(snappedX - other.x);
+    if (dLeftLeft < bestXDelta) { bestX = other.x; bestXDelta = dLeftLeft; }
+    // Right edge of obj ↔ right edge of other
+    const dRightRight = Math.abs((snappedX + lock.w) - (other.x + other.w));
+    if (dRightRight < bestXDelta) { bestX = other.x + other.w - lock.w; bestXDelta = dRightRight; }
+
+    // Top edge of obj ↔ bottom edge of other
+    const dTopBottom = Math.abs(snappedY - (other.y + other.h));
+    if (dTopBottom < bestYDelta) { bestY = other.y + other.h; bestYDelta = dTopBottom; }
+    // Bottom edge of obj ↔ top edge of other
+    const dBottomTop = Math.abs((snappedY + lock.h) - other.y);
+    if (dBottomTop < bestYDelta) { bestY = other.y - lock.h; bestYDelta = dBottomTop; }
+    // Top edge of obj ↔ top edge of other (horizontal alignment)
+    const dTopTop = Math.abs(snappedY - other.y);
+    if (dTopTop < bestYDelta) { bestY = other.y; bestYDelta = dTopTop; }
+    // Bottom edge of obj ↔ bottom edge of other
+    const dBottomBottom = Math.abs((snappedY + lock.h) - (other.y + other.h));
+    if (dBottomBottom < bestYDelta) { bestY = other.y + other.h - lock.h; bestYDelta = dBottomBottom; }
+  }
+
+  return { x: bestX, y: bestY };
+}
+
+// ============================================================
+// AUTO-LABEL ENGINE
+// Auto-assigns M-1, M-2 … for Mustateel and MR-1, MR-2 … for Muraba
+// ============================================================
+export function autoAssignLabel(type, existingObjects) {
+  const prefix = type === "mustateel" ? "M" : type === "muraba" ? "MR" : "";
+  if (!prefix) return "";
+  const numbers = existingObjects
+    .filter(o => o.type === type && o.label)
+    .map(o => {
+      const m = o.label.match(/(\d+)/);
+      return m ? parseInt(m[1], 10) : 0;
+    });
+  const nextNum = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+  return `${prefix}-${nextNum}`;
 }
 
 // Convert screen to world coordinates

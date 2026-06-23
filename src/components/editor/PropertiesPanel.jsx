@@ -23,11 +23,13 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
   const typeLabel = {
     acre: "Acre Block", mustateel: "Mustateel Parcel", muraba: "Muraba Block",
     canal: "Canal", chakbandi: "Chakbandi Line", outlet: "Outlet / Moga",
+    khal: "Khal / Watercourse", road: "Road",
   }[selectedObj.type] || selectedObj.type;
 
   const typeColor = {
     acre: "text-amber-600", mustateel: "text-red-600", muraba: "text-red-700",
     canal: "text-blue-600", chakbandi: "text-green-600", outlet: "text-cyan-600",
+    khal: "text-blue-500", road: "text-amber-500",
   }[selectedObj.type] || "text-slate-500";
 
   return (
@@ -63,7 +65,7 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
         {selectedObj.type === "mustateel" && (
           <>
             <Separator className="bg-slate-100" />
-            <Field label="Label / Survey No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. M-14" />
+            <Field label="Label / Survey No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. M-1" hint="Double-click plot on map to edit label at centroid" />
             <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
             <div className="flex items-center justify-between">
               <label className="text-xs text-slate-600">Show Owner</label>
@@ -76,7 +78,7 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
         {selectedObj.type === "muraba" && (
           <>
             <Separator className="bg-slate-100" />
-            <Field label="Muraba No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. MR-3" />
+            <Field label="Muraba No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. MR-1" hint="Double-click plot on map to edit label at centroid" />
             <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
             <div className="flex items-center justify-between">
               <label className="text-xs text-slate-600">Show Owner</label>
@@ -90,7 +92,44 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
           <>
             <Separator className="bg-slate-100" />
             <Field label="Canal Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Nurpur Distry" />
-            <div className="text-[10px] text-slate-400 font-mono">Width: {selectedObj.width} ft • Points: {selectedObj.points?.length || 0}</div>
+            <SpacingControl
+              label="Line Spacing"
+              value={local.width || 14}
+              min={2} max={80} step={1}
+              onChange={v => commit("width", v)}
+              unit="ft"
+            />
+            <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
+          </>
+        )}
+
+        {(selectedObj.type === "khal") && (
+          <>
+            <Separator className="bg-slate-100" />
+            <Field label="Khal Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Khal 1" />
+            <SpacingControl
+              label="Line Spacing"
+              value={local.width || 8}
+              min={2} max={60} step={1}
+              onChange={v => commit("width", v)}
+              unit="ft"
+            />
+            <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
+          </>
+        )}
+
+        {(selectedObj.type === "road") && (
+          <>
+            <Separator className="bg-slate-100" />
+            <Field label="Road Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Main Road" />
+            <SpacingControl
+              label="Line Spacing"
+              value={local.width || 28}
+              min={4} max={120} step={1}
+              onChange={v => commit("width", v)}
+              unit="ft"
+            />
+            <div className="text-[10px] text-amber-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
           </>
         )}
 
@@ -171,7 +210,7 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
   );
 }
 
-function Field({ label, value, onChange, placeholder, icon }) {
+function Field({ label, value, onChange, placeholder, icon, hint }) {
   return (
     <div>
       <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">{label}</label>
@@ -183,6 +222,31 @@ function Field({ label, value, onChange, placeholder, icon }) {
           placeholder={placeholder}
           className={`h-7 text-xs bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500 ${icon ? "pl-6" : ""}`}
         />
+      </div>
+      {hint && <p className="text-[9px] text-blue-400 mt-0.5">{hint}</p>}
+    </div>
+  );
+}
+
+function SpacingControl({ label, value, min, max, step, onChange, unit }) {
+  return (
+    <div>
+      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">{label}</label>
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+          onClick={() => onChange(Math.max(min, value - step))}>−</Button>
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={e => onChange(parseInt(e.target.value, 10))}
+          className="flex-1 h-1 accent-blue-500 cursor-pointer"
+        />
+        <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+          onClick={() => onChange(Math.min(max, value + step))}>+</Button>
+        <span className="text-xs text-slate-600 font-mono w-10 text-center">{value}{unit}</span>
       </div>
     </div>
   );

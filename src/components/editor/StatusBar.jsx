@@ -3,17 +3,17 @@ import { ftToPx, pxToFt, DIMENSIONS } from "@/lib/drawingEngine";
 
 export default function StatusBar({ zoom, snapPos, activeTool, objectCount, canalDraftLen }) {
   const toolInfo = {
-    select: "Click to select objects",
-    move: "Drag mustateel/muraba parcels to reposition",
+    select: "Click to select • Double-click parcel to edit centroid label",
+    move: "Drag parcels — snaps to grid & adjacent edges automatically",
     pan: "Drag to pan • Scroll to zoom",
     acre: `Click to place Acre block (${DIMENSIONS.ACRE.width}×${DIMENSIONS.ACRE.height} ft)`,
-    mustateel: `Click to place Mustateel (${DIMENSIONS.MUSTATEEL.width}×${DIMENSIONS.MUSTATEEL.height} ft)`,
-    muraba: `Click to place Muraba (${DIMENSIONS.MURABA.width}×${DIMENSIONS.MURABA.height} ft)`,
-    canal: `Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} points` : ""}`,
+    mustateel: `Click to place Mustateel — auto-labels M-1, M-2… (${DIMENSIONS.MUSTATEEL.width}×${DIMENSIONS.MUSTATEEL.height} ft)`,
+    muraba: `Click to place Muraba — auto-labels MR-1, MR-2… (${DIMENSIONS.MURABA.width}×${DIMENSIONS.MURABA.height} ft)`,
+    canal: `Two parallel lines • Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} pts` : ""}`,
     outlet: `Click canal start point${canalDraftLen === 0 ? "" : " • Click end point for arrow direction"}`,
-    khal: `Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} points` : ""}`,
-    road: `Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} points` : ""}`,
-    chakbandi: `Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} points` : ""}`,
+    khal: `Two parallel lines • Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} pts` : ""}`,
+    road: `Two parallel lines • Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} pts` : ""}`,
+    chakbandi: `Click to add points • Double-click to finish${canalDraftLen > 0 ? ` • ${canalDraftLen} pts` : ""}`,
     eraser: "Click object to delete",
   }[activeTool] || "";
 

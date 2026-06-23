@@ -1,7 +1,8 @@
-import React, { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
+import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import {
   ftToPx, screenToWorld, worldToScreen,
   snapToAcreGrid, snapToMustateeelGrid, snapToMurabaGrid,
+  snapMovePosition,
   getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid,
   distToLineSegment, DIMENSIONS, BASE_SCALE
 } from "@/lib/drawingEngine";
@@ -27,6 +28,13 @@ const GISCanvas = forwardRef(function GISCanvas(
   const moveOffset = useRef({ x: 0, y: 0 });
   const lastMouse = useRef({ x: 0, y: 0 });
   const animRef = useRef(null);
+
+  // Live ref to objects so mouse-move handler always sees the latest array
+  const objectsRef = useRef(objects);
+  objectsRef.current = objects;
+
+  // Inline centroid-label editing state
+  const [editingLabel, setEditingLabel] = useState(null);
 
   useImperativeHandle(ref, () => ({
     getCanvas: () => canvasRef.current,
@@ -102,9 +110,9 @@ const GISCanvas = forwardRef(function GISCanvas(
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
     const world = screenToWorld(sx, sy, pan.x, pan.y, zoom);
-    if (activeTool === "acre") return snapToAcreGrid(world.x, world.y, 1);
-    if (activeTool === "mustateel") return snapToMustateeelGrid(world.x, world.y, 1);
-    if (activeTool === "muraba") return snapToMurabaGrid(world.x, world.y, 1);
+    if (activeTool === "acre") return snapToAcreGrid(world.x, world.y);
+    if (activeTool === "mustateel") return snapToMustateeelGrid(world.x, world.y);
+    if (activeTool === "muraba") return snapToMurabaGrid(world.x, world.y);
     return world;
   }, [pan, zoom, activeTool]);
 
@@ -124,8 +132,18 @@ const GISCanvas = forwardRef(function GISCanvas(
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
       const worldRaw = screenToWorld(sx, sy, pan.x, pan.y, zoom);
-      const newX = worldRaw.x - moveOffset.current.x;
-      const newY = worldRaw.y - moveOffset.current.y;
+      let newX = worldRaw.x - moveOffset.current.x;
+      let newY = worldRaw.y - moveOffset.current.y;
+      // Snap to grid + adjacent plot edges — zero gaps / overlaps
+      const movingObj = objectsRef.current.find(o => o.id === movingObjId.current);
+      if (movingObj && ["mustateel", "muraba", "acre"].includes(movingObj.type)) {
+        const snapped = snapMovePosition(
+          { ...movingObj, x: newX, y: newY },
+          objectsRef.current
+        );
+        newX = snapped.x;
+        newY = snapped.y;
+      }
       onUpdateObject(movingObjId.current, { x: newX, y: newY });
       return;
     }
@@ -203,7 +221,27 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (activeTool === "chakbandi") onChakbandiFinish();
     if (activeTool === "khal") onKhalFinish();
     if (activeTool === "road") onRoadFinish();
-  }, [activeTool, onCanalFinish, onChakbandiFinish, onKhalFinish, onRoadFinish]);
+    // Inline centroid-label editing — double-click a parcel in Select mode
+    if (activeTool === "select") {
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const worldRaw = screenToWorld(sx, sy, pan.x, pan.y, zoom);
+      const hit = hitTest(worldRaw.x, worldRaw.y, objectsRef.current);
+      if (hit && ["mustateel", "muraba", "acre"].includes(hit.type)) {
+        onSelect(hit.id);
+        setEditingLabel({ id: hit.id, value: hit.label || "" });
+      }
+    }
+  }, [activeTool, pan, zoom, objectsRef, onSelect, onCanalFinish, onChakbandiFinish, onKhalFinish, onRoadFinish]);
+
+  const commitLabelEdit = useCallback(() => {
+    if (editingLabel) {
+      onUpdateObject(editingLabel.id, { label: editingLabel.value });
+      setEditingLabel(null);
+    }
+  }, [editingLabel, onUpdateObject]);
 
   const handleWheel = useCallback((e) => {
     e.preventDefault();
@@ -226,17 +264,50 @@ const GISCanvas = forwardRef(function GISCanvas(
     move: "cursor-move",
   }[activeTool] || "cursor-crosshair";
 
+  // Compute screen position of the label being edited
+  const editingObj = editingLabel ? objects.find(o => o.id === editingLabel.id) : null;
+  const labelPos = editingObj
+    ? worldToScreen(
+        editingObj.x + editingObj.w / 2,
+        editingObj.y + editingObj.h / 2,
+        pan.x, pan.y, zoom
+      )
+    : null;
+
   return (
-    <canvas
-      ref={canvasRef}
-      className={`w-full h-full ${cursorClass}`}
-      onMouseMove={handleMouseMove}
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
-      onDoubleClick={handleDblClick}
-      onWheel={handleWheel}
-      style={{ display: "block" }}
-    />
+    <div className="relative w-full h-full">
+      <canvas
+        ref={canvasRef}
+        className={`w-full h-full ${cursorClass}`}
+        onMouseMove={handleMouseMove}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onDoubleClick={handleDblClick}
+        onWheel={handleWheel}
+        style={{ display: "block" }}
+      />
+      {editingLabel && labelPos && (
+        <input
+          autoFocus
+          value={editingLabel.value}
+          onChange={e => setEditingLabel(prev => ({ ...prev, value: e.target.value }))}
+          onBlur={commitLabelEdit}
+          onKeyDown={e => {
+            if (e.key === "Enter") commitLabelEdit();
+            if (e.key === "Escape") setEditingLabel(null);
+          }}
+          className="absolute z-50 px-2 py-1 text-xs font-bold font-heading text-center bg-white border-2 border-blue-500 rounded shadow-lg outline-none focus:ring-2 focus:ring-blue-300"
+          style={{
+            left: labelPos.x,
+            top: labelPos.y,
+            transform: "translate(-50%, -50%)",
+            minWidth: 80,
+            color: editingObj?.type === "mustateel" ? "#ef4444" : editingObj?.type === "muraba" ? "#dc2626" : "#b45309",
+          }}
+          placeholder="M-1"
+        />
+      )}
+    </div>
   );
 });
 
@@ -260,9 +331,11 @@ function hitTest(wx, wy, objects) {
 }
 
 // ---- Grid Drawing ----
+// Uses raw DIMENSIONS (feet = world-units) so grid lines align perfectly with
+// the parcel dimensions used in fillRect / strokeRect.
 function drawGrid(ctx, W, H, zoom, pan) {
-  const acreW = ftToPx(DIMENSIONS.ACRE.width, 1);
-  const acreH = ftToPx(DIMENSIONS.ACRE.height, 1);
+  const acreW = DIMENSIONS.ACRE.width;
+  const acreH = DIMENSIONS.ACRE.height;
   const startX = Math.floor(-pan.x / zoom / acreW) * acreW - acreW;
   const startY = Math.floor(-pan.y / zoom / acreH) * acreH - acreH;
   const endX = startX + (W / zoom) + acreW * 2;
@@ -271,16 +344,16 @@ function drawGrid(ctx, W, H, zoom, pan) {
   ctx.lineWidth = 0.5 / zoom;
 
   if (zoom > 0.3) {
-    ctx.strokeStyle = "rgba(59,130,246,0.12)";
+    ctx.strokeStyle = "rgba(59,130,246,0.10)";
     ctx.beginPath();
     for (let x = startX; x < endX; x += acreW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
     for (let y = startY; y < endY; y += acreH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
     ctx.stroke();
   }
 
-  const mustW = ftToPx(DIMENSIONS.MUSTATEEL.width, 1);
-  const mustH = ftToPx(DIMENSIONS.MUSTATEEL.height, 1);
-  ctx.strokeStyle = "rgba(59,130,246,0.25)";
+  const mustW = DIMENSIONS.MUSTATEEL.width;
+  const mustH = DIMENSIONS.MUSTATEEL.height;
+  ctx.strokeStyle = "rgba(59,130,246,0.22)";
   ctx.lineWidth = 1 / zoom;
   ctx.beginPath();
   for (let x = Math.floor(startX / mustW) * mustW; x < endX; x += mustW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
@@ -312,16 +385,22 @@ function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakban
     else if (obj.type === "road") drawRoad(ctx, obj, isSelected, zoom, C);
   }
 
-  // Khal draft
+  // Khal draft — two parallel dashed preview lines
   if (khalDraft && khalDraft.length > 0) {
+    const draftPts = [...khalDraft];
+    if (snapPos) draftPts.push(snapPos);
+    const halfW = DIMENSIONS.KHAL_WIDTH / 2;
+    const left = getParallelPolyline(draftPts, -halfW);
+    const right = getParallelPolyline(draftPts, halfW);
     ctx.strokeStyle = "#2563eb";
-    ctx.lineWidth = 2.5 / zoom;
+    ctx.lineWidth = 2 / zoom;
     ctx.setLineDash([6 / zoom, 4 / zoom]);
-    ctx.beginPath();
-    ctx.moveTo(khalDraft[0].x, khalDraft[0].y);
-    for (let i = 1; i < khalDraft.length; i++) ctx.lineTo(khalDraft[i].x, khalDraft[i].y);
-    if (snapPos) ctx.lineTo(snapPos.x, snapPos.y);
-    ctx.stroke();
+    for (const side of [left, right]) {
+      ctx.beginPath();
+      ctx.moveTo(side[0].x, side[0].y);
+      for (const p of side) ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
     ctx.setLineDash([]);
     for (const pt of khalDraft) {
       ctx.fillStyle = "#2563eb";
@@ -329,16 +408,22 @@ function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakban
     }
   }
 
-  // Road draft
+  // Road draft — two parallel dashed preview lines
   if (roadDraft && roadDraft.length > 0) {
+    const draftPts = [...roadDraft];
+    if (snapPos) draftPts.push(snapPos);
+    const halfW = DIMENSIONS.ROAD_WIDTH / 2;
+    const left = getParallelPolyline(draftPts, -halfW);
+    const right = getParallelPolyline(draftPts, halfW);
     ctx.strokeStyle = "#d97706";
-    ctx.lineWidth = 3 / zoom;
+    ctx.lineWidth = 2.5 / zoom;
     ctx.setLineDash([8 / zoom, 5 / zoom]);
-    ctx.beginPath();
-    ctx.moveTo(roadDraft[0].x, roadDraft[0].y);
-    for (let i = 1; i < roadDraft.length; i++) ctx.lineTo(roadDraft[i].x, roadDraft[i].y);
-    if (snapPos) ctx.lineTo(snapPos.x, snapPos.y);
-    ctx.stroke();
+    for (const side of [left, right]) {
+      ctx.beginPath();
+      ctx.moveTo(side[0].x, side[0].y);
+      for (const p of side) ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
     ctx.setLineDash([]);
     for (const pt of roadDraft) {
       ctx.fillStyle = "#d97706";
@@ -346,16 +431,22 @@ function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakban
     }
   }
 
-  // Canal draft
+  // Canal draft — two parallel dashed preview lines
   if (canalDraft && canalDraft.length > 0) {
-    ctx.strokeStyle = C.canalStroke || "#3b82f6";
+    const draftPts = [...canalDraft];
+    if (snapPos) draftPts.push(snapPos);
+    const halfW = DIMENSIONS.CANAL_WIDTH / 2;
+    const left = getParallelPolyline(draftPts, -halfW);
+    const right = getParallelPolyline(draftPts, halfW);
+    ctx.strokeStyle = C.canalStroke || "#0284c7";
     ctx.lineWidth = 2 / zoom;
     ctx.setLineDash([6 / zoom, 4 / zoom]);
-    ctx.beginPath();
-    ctx.moveTo(canalDraft[0].x, canalDraft[0].y);
-    for (let i = 1; i < canalDraft.length; i++) ctx.lineTo(canalDraft[i].x, canalDraft[i].y);
-    if (snapPos) ctx.lineTo(snapPos.x, snapPos.y);
-    ctx.stroke();
+    for (const side of [left, right]) {
+      ctx.beginPath();
+      ctx.moveTo(side[0].x, side[0].y);
+      for (const p of side) ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
     ctx.setLineDash([]);
     for (const pt of canalDraft) {
       ctx.fillStyle = C.canalStroke || "#3b82f6";
@@ -513,25 +604,19 @@ function drawMuraba(ctx, obj, isSelected, zoom, C) {
   }
 }
 
+// Canal = two parallel blue lines with adjustable spacing (obj.width = gap between lines)
 function drawCanal(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const halfW = obj.width / 2;
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  // Water fill — more visible
-  ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y);
-  for (const p of left) ctx.lineTo(p.x, p.y);
-  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
-  ctx.closePath();
-  ctx.fillStyle = C.canalFill || "rgba(14,165,233,0.35)";
-  ctx.fill();
-
-  // Two prominent blue wall lines (thicker)
   const strokeColor = isSelected ? "#93c5fd" : (C.canalStroke || "#0284c7");
   ctx.strokeStyle = strokeColor;
-  ctx.lineWidth = (isSelected ? 3.5 : 3) / zoom;
+  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
   for (const side of [left, right]) {
     ctx.beginPath();
     ctx.moveTo(side[0].x, side[0].y);
@@ -539,36 +624,7 @@ function drawCanal(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
   }
 
-  // Inner light highlight for depth
-  ctx.strokeStyle = "rgba(186,230,253,0.6)";
-  ctx.lineWidth = 1 / zoom;
-  for (const side of [left, right]) {
-    ctx.beginPath();
-    ctx.moveTo(side[0].x, side[0].y);
-    for (const p of side) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-  }
-
-  // Trees along canal edges
-  if (zoom > 0.3) {
-    const treeSpacing = 12;
-    for (const side of [left, right]) {
-      for (let i = 0; i < side.length - 1; i++) {
-        const px = side[i].x, py = side[i].y;
-        const nx = side[i + 1].x, ny = side[i + 1].y;
-        const segLen = Math.hypot(nx - px, ny - py);
-        const steps = Math.max(1, Math.floor(segLen / (treeSpacing / zoom)));
-        for (let s = 0; s <= steps; s++) {
-          const t = s / steps;
-          const gx = px + (nx - px) * t, gy = py + (ny - py) * t;
-          ctx.font = `${Math.max(5, 7 / zoom)}px serif`;
-          ctx.textAlign = "center"; ctx.textBaseline = "middle";
-          ctx.fillText("🌲", gx, gy);
-        }
-      }
-    }
-  }
-
+  // Name label above the canal
   if (obj.name && zoom > 0.3) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid];
@@ -579,7 +635,7 @@ function drawCanal(ctx, obj, isSelected, zoom, C) {
     ctx.fillStyle = "#1d4ed8";
     ctx.font = `bold ${Math.max(8, 11 / zoom)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-    ctx.fillText(obj.name, 0, -obj.width / 2 - 3 / zoom);
+    ctx.fillText(obj.name, 0, -halfW - 3 / zoom);
     ctx.restore();
   }
 }
@@ -685,30 +741,25 @@ function drawOutlet(ctx, obj, isSelected, zoom, C) {
   ctx.restore();
 }
 
-// ---- Khal Drawing (bold blue line, adjustable width) ----
+// ---- Khal Drawing (two parallel blue lines with adjustable spacing) ----
 function drawKhal(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const width = obj.width || DIMENSIONS.KHAL_WIDTH;
-
-  // Blue water fill between parallel lines
   const halfW = width / 2;
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
-  ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y);
-  for (const p of left) ctx.lineTo(p.x, p.y);
-  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(37,99,235,0.25)";
-  ctx.fill();
 
-  // Bold blue stroke
   ctx.strokeStyle = isSelected ? "#93c5fd" : "#2563eb";
-  ctx.lineWidth = (isSelected ? 3.5 : 2.8) / zoom;
-  ctx.beginPath();
-  ctx.moveTo(obj.points[0].x, obj.points[0].y);
-  for (const p of obj.points) ctx.lineTo(p.x, p.y);
-  ctx.stroke();
+  ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  for (const side of [left, right]) {
+    ctx.beginPath();
+    ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
 
   // Label
   if (obj.name && zoom > 0.3) {
@@ -721,32 +772,25 @@ function drawKhal(ctx, obj, isSelected, zoom, C) {
     ctx.fillStyle = "#2563eb";
     ctx.font = `bold ${Math.max(8, 11 / zoom)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-    ctx.fillText(obj.name || "Khal", 0, -width / 2 - 3 / zoom);
+    ctx.fillText(obj.name || "Khal", 0, -halfW - 3 / zoom);
     ctx.restore();
   }
 }
 
-// ---- Road Drawing (filled with "ROAD" label) ----
+// ---- Road Drawing (two parallel amber lines with adjustable spacing) ----
 function drawRoad(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const width = obj.width || DIMENSIONS.ROAD_WIDTH;
-
   const halfW = width / 2;
+
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  // Road fill
-  ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y);
-  for (const p of left) ctx.lineTo(p.x, p.y);
-  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(217,119,6,0.18)";
-  ctx.fill();
-
-  // Road border lines
   ctx.strokeStyle = isSelected ? "#fcd34d" : "#d97706";
-  ctx.lineWidth = (isSelected ? 2 : 1.8) / zoom;
+  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
   for (const side of [left, right]) {
     ctx.beginPath();
     ctx.moveTo(side[0].x, side[0].y);
@@ -754,30 +798,18 @@ function drawRoad(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
   }
 
-  // Dashed center line
-  ctx.strokeStyle = "rgba(217,119,6,0.6)";
-  ctx.lineWidth = 1 / zoom;
-  ctx.setLineDash([10 / zoom, 8 / zoom]);
-  ctx.beginPath();
-  ctx.moveTo(obj.points[0].x, obj.points[0].y);
-  for (const p of obj.points) ctx.lineTo(p.x, p.y);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // ROAD label along each segment
-  if (zoom > 0.3) {
+  // Name label above the road
+  if (obj.name && zoom > 0.3) {
+    const mid = Math.floor(obj.points.length / 2);
+    const p = obj.points[mid];
+    const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
+    const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(angle);
     ctx.fillStyle = "#92400e";
-    ctx.font = `bold ${Math.max(7, 10 / zoom)}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    for (let i = 0; i < obj.points.length - 1; i++) {
-      const a = obj.points[i], b = obj.points[i + 1];
-      const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
-      const angle = Math.atan2(b.y - a.y, b.x - a.x);
-      ctx.save();
-      ctx.translate(midX, midY);
-      ctx.rotate(angle);
-      ctx.fillText("ROAD", 0, 0);
-      ctx.restore();
-    }
+    ctx.font = `bold ${Math.max(8, 11 / zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(obj.name, 0, -halfW - 3 / zoom);
+    ctx.restore();
   }
 }

@@ -15,7 +15,7 @@ import PrintPreview from "@/components/editor/PrintPreview";
 import {
   DrawingStateManager,
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi,
-  findNonOverlappingPosition
+  findNonOverlappingPosition, autoAssignLabel
 } from "@/lib/drawingEngine";
 import { Layers, BookOpen, Palette, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -148,6 +148,7 @@ export default function Editor() {
         dsmRef.current.objects
       );
       obj = createMustateel(adjusted.x, adjusted.y);
+      obj.label = autoAssignLabel("mustateel", dsmRef.current.objects);
     }
     else if (type === "muraba") {
       const adjusted = findNonOverlappingPosition(
@@ -155,6 +156,7 @@ export default function Editor() {
         dsmRef.current.objects
       );
       obj = createMuraba(adjusted.x, adjusted.y);
+      obj.label = autoAssignLabel("muraba", dsmRef.current.objects);
     }
 
     if (obj) {
