@@ -506,6 +506,9 @@ export default function Editor() {
         <PrintPreview
           mapData={mapData}
           canvasRef={canvasRef}
+          objects={objects}
+          zoom={zoom}
+          pan={pan}
           onClose={() => setShowPrint(false)}
         />
       )}

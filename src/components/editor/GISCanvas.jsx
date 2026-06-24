@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperat
 import {
   ftToPx, screenToWorld, worldToScreen,
   snapToAcreGrid, snapToMustateeelGrid, snapToMurabaGrid,
-  snapMovePosition,
+  snapMovePosition, snapToParcelBoundaries,
   getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid,
   distToLineSegment, DIMENSIONS, BASE_SCALE
 } from "@/lib/drawingEngine";
@@ -113,6 +113,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (activeTool === "acre") return snapToAcreGrid(world.x, world.y);
     if (activeTool === "mustateel") return snapToMustateeelGrid(world.x, world.y);
     if (activeTool === "muraba") return snapToMurabaGrid(world.x, world.y);
+    if (activeTool === "chakbandi") return snapToParcelBoundaries(world.x, world.y, objectsRef.current);
     return world;
   }, [pan, zoom, activeTool]);
 
@@ -509,10 +510,10 @@ function drawMustateel(ctx, obj, isSelected, zoom, C) {
   ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
-  // Killa grid
+  // Killa grid — thin, light, subtle
   if (zoom > 0.3) {
-    ctx.strokeStyle = "rgba(239,68,68,0.3)";
-    ctx.lineWidth = 0.5 / zoom;
+    ctx.strokeStyle = "rgba(239,68,68,0.12)";
+    ctx.lineWidth = 0.4 / zoom;
     const cellW = obj.w / 2, cellH = obj.h / 5;
     ctx.beginPath();
     ctx.moveTo(obj.x + cellW, obj.y); ctx.lineTo(obj.x + cellW, obj.y + obj.h);
@@ -540,7 +541,7 @@ function drawMustateel(ctx, obj, isSelected, zoom, C) {
   {
     const centerX = obj.x + obj.w / 2;
     const centerY = obj.y + obj.h / 2;
-    const labelText = obj.label ? `مستطیل ${obj.label}` : (C.mustateelDefaultLabel || "MUSTATEEL");
+    const labelText = obj.label || "";
     ctx.fillStyle = C.mustateelStroke || "#ef4444";
     ctx.font = `bold ${16 / zoom}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -561,10 +562,10 @@ function drawMuraba(ctx, obj, isSelected, zoom, C) {
   ctx.lineWidth = (isSelected ? 4 : 3) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
-  // 5×5 killa grid
+  // 5×5 killa grid — thin, light, subtle
   if (zoom > 0.15) {
-    ctx.strokeStyle = "rgba(239,68,68,0.25)";
-    ctx.lineWidth = 0.5 / zoom;
+    ctx.strokeStyle = "rgba(239,68,68,0.10)";
+    ctx.lineWidth = 0.4 / zoom;
     const cellW = obj.w / 5, cellH = obj.h / 5;
     ctx.beginPath();
     for (let c = 1; c < 5; c++) {
@@ -634,18 +635,19 @@ function drawCanal(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
   }
 
-  // Name label above the canal
+  // Watermark name label — centered ON the canal path, rotated, semi-transparent
   if (obj.name) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid];
     const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
     const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
     ctx.save();
-    ctx.translate(p.x, p.y); ctx.rotate(angle);
-    ctx.fillStyle = "#1d4ed8";
-    ctx.font = `bold ${Math.max(12 / zoom, 10)}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-    ctx.fillText(obj.name, 0, -halfW - 3 / zoom);
+    ctx.translate(p.x, p.y);
+    ctx.rotate(angle);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.font = `bold ${Math.max(14 / zoom, 11)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(obj.name, 0, 0);
     ctx.restore();
   }
 }
@@ -762,13 +764,27 @@ function drawOutlet(ctx, obj, isSelected, zoom, C) {
   ctx.closePath();
   ctx.fill();
 
-  // Label
-  if (obj.label) {
+  // Mogha name — displayed above the block (like rectangle labels)
+  if (obj.mogha_name) {
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.fillStyle = "#0e7490";
+    ctx.font = `bold ${Math.max(14 / zoom, 11)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(obj.mogha_name, 0, -blockSize / 2 - 4 / zoom);
+    ctx.restore();
+  }
+
+  // Mogha number / side label (e.g. "18500/L")
+  const moghaNum = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
+  const labelToUse = moghaNum || obj.label || "";
+  if (labelToUse) {
     ctx.fillStyle = "#0e7490";
     ctx.font = `bold ${Math.max(12 / zoom, 10)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    ctx.fillText(obj.label, len / 2, -Math.max(headWidth, 8 / zoom));
+    ctx.fillText(labelToUse, len / 2, -Math.max(headWidth, 8 / zoom));
   }
 
   ctx.restore();
@@ -851,18 +867,19 @@ function drawRoad(ctx, obj, isSelected, zoom, C) {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Name label above the road
+  // Watermark name label — centered ON the road path, rotated, semi-transparent
   if (obj.name) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid];
     const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
     const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
     ctx.save();
-    ctx.translate(p.x, p.y); ctx.rotate(angle);
-    ctx.fillStyle = "#92400e";
-    ctx.font = `bold ${Math.max(12 / zoom, 10)}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-    ctx.fillText(obj.name, 0, -halfW - 3 / zoom);
+    ctx.translate(p.x, p.y);
+    ctx.rotate(angle);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.font = `bold ${Math.max(14 / zoom, 11)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(obj.name, 0, 0);
     ctx.restore();
   }
 }

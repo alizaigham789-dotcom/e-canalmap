@@ -380,9 +380,67 @@ export function createOutlet(canalId, startPt, endPt, label = "") {
     start: { ...startPt },
     end: { ...endPt },
     label,
+    mogha_name: "",
+    mogha_number: "",
+    mogha_side: "",
     arrowScale: 1,
     blockSize: 20,
   };
+}
+
+// Snap chakbandi points to nearby parcel boundaries (edges + corners)
+// Keeps lines straight by aligning to rectangle/killa grid edges
+export function snapToParcelBoundaries(wx, wy, objects, threshold = 15) {
+  let bestX = wx, bestY = wy;
+  let bestXDelta = threshold;
+  let bestYDelta = threshold;
+  let cornerSnap = null;
+
+  for (const o of objects) {
+    if (!["acre", "mustateel", "muraba"].includes(o.type)) continue;
+
+    // Snap to vertical edges (x, x+w)
+    for (const ex of [o.x, o.x + o.w]) {
+      const d = Math.abs(wx - ex);
+      if (d < bestXDelta) { bestX = ex; bestXDelta = d; }
+    }
+    // Snap to horizontal edges (y, y+h)
+    for (const ey of [o.y, o.y + o.h]) {
+      const d = Math.abs(wy - ey);
+      if (d < bestYDelta) { bestY = ey; bestYDelta = d; }
+    }
+
+    // Snap to killa grid lines within the parcel
+    const killaCols = o.type === "muraba" ? 5 : 2;
+    const killaRows = 5;
+    const cellW = o.w / killaCols;
+    const cellH = o.h / killaRows;
+    for (let c = 0; c <= killaCols; c++) {
+      const ex = o.x + c * cellW;
+      const d = Math.abs(wx - ex);
+      if (d < bestXDelta) { bestX = ex; bestXDelta = d; }
+    }
+    for (let r = 0; r <= killaRows; r++) {
+      const ey = o.y + r * cellH;
+      const d = Math.abs(wy - ey);
+      if (d < bestYDelta) { bestY = ey; bestYDelta = d; }
+    }
+
+    // Corner snap (higher priority — snaps both X and Y)
+    const corners = [
+      { x: o.x, y: o.y },
+      { x: o.x + o.w, y: o.y },
+      { x: o.x, y: o.y + o.h },
+      { x: o.x + o.w, y: o.y + o.h },
+    ];
+    for (const cn of corners) {
+      const d = Math.hypot(wx - cn.x, wy - cn.y);
+      if (d < threshold) { cornerSnap = cn; }
+    }
+  }
+
+  if (cornerSnap) return { x: cornerSnap.x, y: cornerSnap.y };
+  return { x: bestX, y: bestY };
 }
 
 export function createChakbandi(points, name = "") {

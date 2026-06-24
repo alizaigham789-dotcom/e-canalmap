@@ -1,15 +1,74 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut } from "lucide-react";
 
-export default function PrintPreview({ mapData, canvasRef, onClose }) {
+// Compute bounding box of all objects in world coordinates
+function getObjectsBounds(objects) {
+  if (!objects || objects.length === 0) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const o of objects) {
+    if (["acre", "mustateel", "muraba"].includes(o.type)) {
+      minX = Math.min(minX, o.x);
+      minY = Math.min(minY, o.y);
+      maxX = Math.max(maxX, o.x + o.w);
+      maxY = Math.max(maxY, o.y + o.h);
+    } else if (o.points && o.points.length > 0) {
+      for (const p of o.points) {
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
+      }
+    } else if (o.start && o.end) {
+      minX = Math.min(minX, o.start.x, o.end.x);
+      minY = Math.min(minY, o.start.y, o.end.y);
+      maxX = Math.max(maxX, o.start.x, o.end.x);
+      maxY = Math.max(maxY, o.start.y, o.end.y);
+    }
+  }
+  if (minX === Infinity) return null;
+  return { minX, minY, maxX, maxY };
+}
+
+// Crop the source canvas to the bounding box of drawn objects only
+function getCroppedCanvas(sourceCanvas, objects, zoom, pan) {
+  if (!sourceCanvas) return null;
+  const bounds = getObjectsBounds(objects);
+  if (!bounds) return sourceCanvas;
+
+  const pad = 40; // pixel padding around content
+  const sx1 = Math.max(0, bounds.minX * zoom + pan.x - pad);
+  const sy1 = Math.max(0, bounds.minY * zoom + pan.y - pad);
+  const sx2 = Math.min(sourceCanvas.width, bounds.maxX * zoom + pan.x + pad);
+  const sy2 = Math.min(sourceCanvas.height, bounds.maxY * zoom + pan.y + pad);
+  const cropW = sx2 - sx1;
+  const cropH = sy2 - sy1;
+  if (cropW <= 10 || cropH <= 10) return sourceCanvas;
+
+  const temp = document.createElement("canvas");
+  temp.width = Math.ceil(cropW);
+  temp.height = Math.ceil(cropH);
+  const tCtx = temp.getContext("2d");
+  tCtx.fillStyle = "#ffffff";
+  tCtx.fillRect(0, 0, temp.width, temp.height);
+  tCtx.drawImage(sourceCanvas, sx1, sy1, cropW, cropH, 0, 0, cropW, cropH);
+  return temp;
+}
+
+export default function PrintPreview({ mapData, canvasRef, objects, zoom, pan, onClose }) {
   const [scale, setScale] = useState(100);
 
-  const handlePrint = () => {
+  const croppedCanvas = useMemo(() => {
     const canvas = canvasRef?.current?.getCanvas?.();
-    if (!canvas) return;
+    if (!canvas) return null;
+    return getCroppedCanvas(canvas, objects, zoom, pan);
+  }, [objects, zoom, pan, canvasRef]);
 
-    const dataUrl = canvas.toDataURL("image/png");
+  const dataUrl = croppedCanvas ? croppedCanvas.toDataURL("image/png") : null;
+
+  const handlePrint = () => {
+    if (!croppedCanvas) return;
+    const imgDataUrl = croppedCanvas.toDataURL("image/png");
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
@@ -25,7 +84,7 @@ export default function PrintPreview({ mapData, canvasRef, onClose }) {
             .header { border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-end; }
             .title { font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
             .meta { font-size: 10px; color: #444; text-align: right; }
-            .map-img { width: 100%; height: auto; border: 1px solid #999; display: block; }
+            .map-img { max-width: 100%; max-height: 70vh; height: auto; border: 1px solid #999; display: block; margin: 0 auto; object-fit: contain; }
             .footer { border-top: 1px solid #999; margin-top: 8px; padding-top: 6px; display: flex; justify-content: space-between; font-size: 9px; color: #555; }
             .legend-row { display: flex; gap: 16px; font-size: 9px; margin-top: 6px; flex-wrap: wrap; }
             .legend-item { display: flex; align-items: center; gap: 5px; }
@@ -38,8 +97,8 @@ export default function PrintPreview({ mapData, canvasRef, onClose }) {
               <div class="title">CHAKBANDI GIS — ${mapData?.title || "Cadastral Survey Map"}</div>
               <div style="font-size:11px; margin-top:3px;">
                 ${mapData?.village ? `Village: <b>${mapData.village}</b>` : ""}
-                ${mapData?.tehsil ? ` | Tehsil: <b>${mapData.tehsil}</b>` : ""}
-                ${mapData?.district ? ` | District: <b>${mapData.district}</b>` : ""}
+                ${mapData?.tehsil ? ` | Sub Division: <b>${mapData.tehsil}</b>` : ""}
+                ${mapData?.district ? ` | Division: <b>${mapData.district}</b>` : ""}
               </div>
             </div>
             <div class="meta">
@@ -48,7 +107,7 @@ export default function PrintPreview({ mapData, canvasRef, onClose }) {
               <div>Parcels: ${mapData?.total_parcels || 0}</div>
             </div>
           </div>
-          <img class="map-img" src="${dataUrl}" />
+          <img class="map-img" src="${imgDataUrl}" />
           <div class="footer">
             <div>
               <div class="legend-row">
@@ -68,13 +127,9 @@ export default function PrintPreview({ mapData, canvasRef, onClose }) {
     printWindow.onload = () => { printWindow.print(); };
   };
 
-  const canvas = canvasRef?.current?.getCanvas?.();
-  const dataUrl = canvas ? canvas.toDataURL("image/png") : null;
-
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-[#0d1420] border border-slate-700 rounded-2xl shadow-2xl flex flex-col w-full max-w-5xl max-h-[95vh]">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-700">
           <div className="flex items-center gap-3">
             <Printer className="w-4 h-4 text-blue-400" />
@@ -82,7 +137,6 @@ export default function PrintPreview({ mapData, canvasRef, onClose }) {
             <span className="text-xs text-slate-500">{mapData?.title}</span>
           </div>
           <div className="flex items-center gap-2">
-            {/* Scale control */}
             <div className="flex items-center gap-1 bg-slate-800 rounded-lg px-2 py-1">
               <Button variant="ghost" size="icon" className="w-6 h-6 text-slate-400 hover:text-white"
                 onClick={() => setScale(s => Math.max(25, s - 10))}>
@@ -105,11 +159,8 @@ export default function PrintPreview({ mapData, canvasRef, onClose }) {
           </div>
         </div>
 
-        {/* Preview area */}
-        <div className="flex-1 overflow-auto bg-slate-950 p-6">
-          <div className="mx-auto bg-white shadow-2xl"
-            style={{ width: `${scale}%`, minWidth: 400 }}>
-            {/* Paper header */}
+        <div className="flex-1 overflow-auto bg-slate-950 p-6 flex items-start justify-center">
+          <div className="bg-white shadow-2xl" style={{ width: `${scale}%`, minWidth: 400 }}>
             <div style={{ padding: "12px 16px", borderBottom: "2px solid #000", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
               <div>
                 <div style={{ fontSize: 16, fontWeight: "bold", fontFamily: "serif", textTransform: "uppercase", letterSpacing: 2, color: "#000" }}>
@@ -117,8 +168,8 @@ export default function PrintPreview({ mapData, canvasRef, onClose }) {
                 </div>
                 <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>
                   {mapData?.village && `Village: ${mapData.village}`}
-                  {mapData?.tehsil && ` | Tehsil: ${mapData.tehsil}`}
-                  {mapData?.district && ` | District: ${mapData.district}`}
+                  {mapData?.tehsil && ` | Sub Division: ${mapData.tehsil}`}
+                  {mapData?.district && ` | Division: ${mapData.district}`}
                 </div>
               </div>
               <div style={{ fontSize: 10, color: "#555", textAlign: "right" }}>
@@ -128,12 +179,10 @@ export default function PrintPreview({ mapData, canvasRef, onClose }) {
               </div>
             </div>
 
-            {/* Map image */}
             {dataUrl && (
               <img src={dataUrl} alt="Map" style={{ width: "100%", display: "block", borderBottom: "1px solid #ccc" }} />
             )}
 
-            {/* Footer with legend */}
             <div style={{ padding: "8px 16px", borderTop: "1px solid #999", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
               <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
                 {[

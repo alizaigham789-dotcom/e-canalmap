@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { X, Trash2, User, Tag, ArrowUpDown } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClose }) {
   const [local, setLocal] = useState({});
@@ -172,7 +173,33 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
         {selectedObj.type === "outlet" && (
           <>
             <Separator className="bg-slate-100" />
-            <Field label="Outlet Label" value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 14300/L" icon={<Tag className="w-3 h-3" />} />
+            <Field label="Mogha Name (موگہ نام)" value={local.mogha_name || ""} onChange={v => commit("mogha_name", v)} placeholder="e.g. Mogha Ali" />
+            <div>
+              <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Mogha Number (موگہ نمبری)</label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  value={local.mogha_number || ""}
+                  onChange={e => commit("mogha_number", e.target.value)}
+                  placeholder="e.g. 18500"
+                  className="h-7 flex-1 text-xs bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500 font-mono"
+                />
+                <Select value={local.mogha_side || ""} onValueChange={v => commit("mogha_side", v)}>
+                  <SelectTrigger className="h-7 w-16 text-xs bg-slate-50 border-slate-200">
+                    <SelectValue placeholder="L/R" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="L">L</SelectItem>
+                    <SelectItem value="R">R</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {(local.mogha_number || local.mogha_side) && (
+                <div className="mt-1 px-2 py-1 bg-cyan-50 border border-cyan-200 rounded text-[10px] font-mono text-cyan-700">
+                  {[local.mogha_number, local.mogha_side].filter(Boolean).join("/")}
+                </div>
+              )}
+            </div>
             <SpacingControl
               label="Block Size"
               value={local.blockSize || 20}
