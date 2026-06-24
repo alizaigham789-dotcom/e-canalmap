@@ -1,56 +1,183 @@
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Info, Waves, MapPin, User } from "lucide-react";
+import CollapsibleCard from "./CollapsibleCard";
 
-const FALLBACK_FIELDS = [
-  { field_key: "circle_name", label_urdu: "حلقہ", label_en: "Circle Name", field_type: "text", rtl: true },
-  { field_key: "canal_name", label_urdu: "نہر", label_en: "Canal Name", field_type: "text", rtl: true },
-  { field_key: "mogha_name", label_urdu: "موغہ نام", label_en: "Mogha Name", field_type: "text", rtl: true },
-  { field_key: "mogha_number", label_urdu: "موغہ نمبر", label_en: "Mogha Number", field_type: "text" },
-  { field_key: "village_name", label_urdu: "گاؤں", label_en: "Village Name", field_type: "text", rtl: true },
-  { field_key: "halqa_patwar", label_urdu: "حلقہ پٹوار", label_en: "Halqa Patwar", field_type: "text", rtl: true },
-  { field_key: "tehsil", label_urdu: "تحصیل", label_en: "Tehsil", field_type: "text", rtl: true },
-  { field_key: "district", label_urdu: "ضلع", label_en: "District", field_type: "text", rtl: true },
-  { field_key: "total_cca", label_urdu: "کل سی سی اے", label_en: "Total CCA", field_type: "text" },
-  { field_key: "total_khasra_area", label_urdu: "کل خسرہ رقبہ", label_en: "Total Khasra Area", field_type: "text" },
-  { field_key: "warabandi_date", label_urdu: "تاریخ وارابندی", label_en: "Warabandi Date", field_type: "date" },
-  { field_key: "order_number", label_urdu: "حکم نمبر", label_en: "Order Number", field_type: "text" },
-];
+const fieldLabel = (en, urdu) => (
+  <>
+    <span className="font-medium">{en}</span>
+    <span className="text-slate-400 ml-1" style={{ fontFamily: "serif" }}>({urdu})</span>
+  </>
+);
+
+const inputCls = "h-9 text-sm bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500";
 
 export default function WarabandiForm({ data, onChange }) {
-  const { data: configs = [] } = useQuery({
-    queryKey: ["form-field-configs", "parat_warabandi_header"],
-    queryFn: () => base44.entities.FormFieldConfig.filter({ form_type: "parat_warabandi_header" }, "order"),
-  });
-
-  const fields = configs.length > 0
-    ? configs.filter(f => f.visible !== false)
-    : FALLBACK_FIELDS;
-
   const set = (key, val) => onChange({ ...data, [key]: val });
 
+  const moghaDisplay = [data.mogha_number, data.mogha_side].filter(Boolean).join(" / ");
+
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-      <h3 className="text-sm font-bold text-slate-800 mb-4 font-heading tracking-wide">Basic Information — بنیادی معلومات</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {fields.map(f => (
-          <div key={f.field_key}>
-            <label className="text-xs text-slate-500 mb-1 block">
-              <span className="font-medium">{f.label_en}</span>
-              <span className="text-slate-400 ml-1" style={{ fontFamily: "serif" }}>({f.label_urdu})</span>
-            </label>
+    <div className="space-y-4">
+      {/* General Information */}
+      <CollapsibleCard title="General Information" titleUrdu="عمومی معلومات" icon={Info} defaultOpen>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Type of Warabandi (dropdown — replaces Circle Name) */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{fieldLabel("Type of Warabandi", "وارابندی کی قسم")}</Label>
+            <Select value={data.warabandi_type || ""} onValueChange={v => set("warabandi_type", v)}>
+              <SelectTrigger className={`${inputCls} justify-start`}>
+                <SelectValue placeholder="Select type…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="پرت وارہ بندی">پرت وارہ بندی</SelectItem>
+                <SelectItem value="ترمیم وارہ بندی">ترمیم وارہ بندی</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Village Name */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{fieldLabel("Village Name", "گاؤں")}</Label>
             <Input
-              type={f.field_type || "text"}
-              value={data[f.field_key] || ""}
-              onChange={e => set(f.field_key, e.target.value)}
-              placeholder={f.label_en}
-              className="h-9 text-sm bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500"
-              style={{ direction: f.rtl ? "rtl" : "ltr" }}
+              value={data.village_name || ""}
+              onChange={e => set("village_name", e.target.value)}
+              placeholder="Village name"
+              className={inputCls}
+              style={{ direction: "rtl" }}
             />
           </div>
-        ))}
-      </div>
+          {/* Division (renamed from District) */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{fieldLabel("Division", "ڈویژن")}</Label>
+            <Input
+              value={data.division || ""}
+              onChange={e => set("division", e.target.value)}
+              placeholder="Division name"
+              className={inputCls}
+              style={{ direction: "rtl" }}
+            />
+          </div>
+          {/* Sub Division (renamed from Tehsil) */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{fieldLabel("Sub Division", "سب ڈویژن")}</Label>
+            <Input
+              value={data.sub_division || ""}
+              onChange={e => set("sub_division", e.target.value)}
+              placeholder="Sub Division name"
+              className={inputCls}
+              style={{ direction: "rtl" }}
+            />
+          </div>
+          {/* Warabandi Date */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{fieldLabel("Warabandi Date", "تاریخ وارابندی")}</Label>
+            <Input
+              type="date"
+              value={data.warabandi_date || ""}
+              onChange={e => set("warabandi_date", e.target.value)}
+              className={inputCls}
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
+
+      {/* Canal Information */}
+      <CollapsibleCard title="Canal Information" titleUrdu="نہر معلومات" icon={Waves}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{fieldLabel("Canal Name", "نہر")}</Label>
+            <Input
+              value={data.canal_name || ""}
+              onChange={e => set("canal_name", e.target.value)}
+              placeholder="Canal name"
+              className={inputCls}
+              style={{ direction: "rtl" }}
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
+
+      {/* Moga Information */}
+      <CollapsibleCard title="Moga Information" titleUrdu="موگہ معلومات" icon={MapPin}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* موگہ نام — text input */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{fieldLabel("Mogha Name", "موگہ نام")}</Label>
+            <Input
+              value={data.mogha_name || ""}
+              onChange={e => set("mogha_name", e.target.value)}
+              placeholder="Mogha name"
+              className={inputCls}
+              style={{ direction: "rtl" }}
+            />
+          </div>
+          {/* موگہ نمبری — numeric input + side dropdown */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{fieldLabel("Mogha Number", "موگہ نمبری")}</Label>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                value={data.mogha_number || ""}
+                onChange={e => set("mogha_number", e.target.value)}
+                placeholder="e.g. 18500"
+                className={`${inputCls} flex-1`}
+              />
+              <Select value={data.mogha_side || ""} onValueChange={v => set("mogha_side", v)}>
+                <SelectTrigger className={`${inputCls} w-20`}>
+                  <SelectValue placeholder="Side" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="L">L</SelectItem>
+                  <SelectItem value="R">R</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Combined display: 18500 / L */}
+            {moghaDisplay && (
+              <div className="mt-1 px-3 py-1.5 bg-cyan-50 border border-cyan-200 rounded-lg text-xs font-mono text-cyan-700">
+                {moghaDisplay}
+              </div>
+            )}
+          </div>
+        </div>
+      </CollapsibleCard>
+
+      {/* Applicant Information */}
+      <CollapsibleCard title="Applicant Information" titleUrdu="درخواست گزار معلومات" icon={User}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{fieldLabel("Applicant Name", "نام درخواست گزار")}</Label>
+            <Input
+              value={data.applicant_name || ""}
+              onChange={e => set("applicant_name", e.target.value)}
+              placeholder="Applicant name"
+              className={inputCls}
+              style={{ direction: "rtl" }}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{fieldLabel("Father Name", "ولدیت")}</Label>
+            <Input
+              value={data.applicant_father || ""}
+              onChange={e => set("applicant_father", e.target.value)}
+              placeholder="Father name"
+              className={inputCls}
+              style={{ direction: "rtl" }}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{fieldLabel("CNIC", "شناختی کارڈ")}</Label>
+            <Input
+              value={data.applicant_cnic || ""}
+              onChange={e => set("applicant_cnic", e.target.value)}
+              placeholder="XXXXX-XXXXXXX-X"
+              className={inputCls}
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

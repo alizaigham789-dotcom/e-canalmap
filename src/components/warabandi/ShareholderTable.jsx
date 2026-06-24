@@ -8,7 +8,7 @@ const FALLBACK_COLUMNS = [
   { field_key: "sr_no", label_urdu: "نمبر شمار", label_en: "Sr#", width: "w-14" },
   { field_key: "owner_name", label_urdu: "نام مالک", label_en: "Owner Name", width: "flex-1", rtl: true },
   { field_key: "father_name", label_urdu: "ولدیت", label_en: "Father Name", width: "flex-1", rtl: true },
-  { field_key: "khewat_no", label_urdu: "خیوط نمبر", label_en: "Khewat", width: "w-20" },
+  { field_key: "khewat_no", label_urdu: "کھسوٹ نمبر", label_en: "Khewat", width: "w-20" },
   { field_key: "khatoni_no", label_urdu: "کھتونی نمبر", label_en: "Khatoni", width: "w-20" },
   { field_key: "khasra_no", label_urdu: "خسرہ نمبر", label_en: "Khasra", width: "w-20" },
   { field_key: "area_acre", label_urdu: "ایکڑ", label_en: "Acre", width: "w-16", num: true },
@@ -37,7 +37,6 @@ export default function ShareholderTable({ rows, onChange }) {
     queryFn: () => base44.entities.FormulaConfig.filter({ enabled: true }),
   });
 
-  // Resolve formula values from admin config or defaults
   const minutesPerAcre = (() => {
     const f = formulas.find(f => f.formula_key === "water_time_per_acre" && f.enabled);
     return f ? Number(f.value) : 6;
@@ -64,13 +63,11 @@ export default function ShareholderTable({ rows, onChange }) {
     onChange(next);
   };
 
-  // Auto-calculate water time for all rows
   const calculateWaterTime = () => {
     const next = rows.map(row => {
       const acres = parseFloat(row.area_acre) || 0;
       const kanals = parseFloat(row.area_kanal) || 0;
       const marlas = parseFloat(row.area_marla) || 0;
-      // 1 acre = 8 kanals = 160 marlas → convert all to acres
       const totalAcres = acres + (kanals / 8) + (marlas / 160);
       const totalMinutes = totalAcres * minutesPerAcre + kanals * minutesPerKanal;
       const hrs = Math.floor(totalMinutes / 60);
@@ -80,7 +77,6 @@ export default function ShareholderTable({ rows, onChange }) {
     onChange(next);
   };
 
-  // Totals
   const sum = (key) => rows.reduce((s, r) => s + (parseFloat(r[key]) || 0), 0);
   const totalAcre = sum("area_acre");
   const totalKanal = sum("area_kanal");
@@ -95,9 +91,11 @@ export default function ShareholderTable({ rows, onChange }) {
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50">
-        <h3 className="text-sm font-bold text-slate-800 font-heading tracking-wide">
-          Shareholders — حصہ داران کی تفصیل
-        </h3>
+        <div>
+          <h3 className="text-sm font-bold text-slate-800 font-heading tracking-wide">
+            Khasra Details — حصہ داران کی تفصیل
+          </h3>
+        </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={calculateWaterTime}
             className="h-7 text-xs border-blue-200 bg-white text-blue-600 hover:bg-blue-50 gap-1">

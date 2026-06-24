@@ -9,11 +9,16 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 
 // Page imports
 import Dashboard from './pages/Dashboard';
+import MapList from './pages/MapList';
 import Editor from './pages/Editor';
 import AdminPanel from './pages/AdminPanel';
 import CanalForms from './pages/CanalForms';
 import ParatWarabandi from './pages/ParatWarabandi';
 import FormSettings from './pages/FormSettings';
+import KhalMismari from './pages/KhalMismari';
+import Warashikni from './pages/Warashikni';
+import TawanCase from './pages/TawanCase';
+import TAForm from './pages/TAForm';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -52,9 +57,14 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Dashboard />} />
         <Route path="/editor" element={<Editor />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/map-list" element={<MapList />} />
         <Route path="/canal-forms" element={<CanalForms />} />
         <Route path="/parat-warabandi" element={<ParatWarabandi />} />
         <Route path="/form-settings" element={<FormSettings />} />
+        <Route path="/khal-mismari" element={<KhalMismari />} />
+        <Route path="/warashikni" element={<Warashikni />} />
+        <Route path="/tawan-case" element={<TawanCase />} />
+        <Route path="/ta-form" element={<TAForm />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

@@ -6,7 +6,7 @@ const FALLBACK_COLUMNS = [
   { field_key: "sr_no", label_urdu: "نمبر شمار", label_en: "Sr#" },
   { field_key: "owner_name", label_urdu: "نام مالک", label_en: "Owner" },
   { field_key: "father_name", label_urdu: "ولدیت", label_en: "Father" },
-  { field_key: "khewat_no", label_urdu: "خیوط", label_en: "Khewat" },
+  { field_key: "khewat_no", label_urdu: "کھسوٹ", label_en: "Khewat" },
   { field_key: "khatoni_no", label_urdu: "کھتونی", label_en: "Khatoni" },
   { field_key: "khasra_no", label_urdu: "خسرہ", label_en: "Khasra" },
   { field_key: "area_acre", label_urdu: "ایکڑ", label_en: "Acre" },
@@ -27,6 +27,8 @@ export default function WarabandiPrint({ data, rows, onClose }) {
   const columns = configs.length > 0
     ? configs.filter(c => c.visible !== false)
     : FALLBACK_COLUMNS;
+
+  const moghaDisplay = [data.mogha_number, data.mogha_side].filter(Boolean).join(" / ");
   const sum = (key) => rows.reduce((s, r) => s + (parseFloat(r[key]) || 0), 0);
   const totalAcre = sum("area_acre");
   const totalKanal = sum("area_kanal");
@@ -62,7 +64,6 @@ export default function WarabandiPrint({ data, rows, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-auto py-8">
       <div className="bg-white rounded-xl shadow-2xl max-w-[1100px] w-full mx-4">
-        {/* Toolbar */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 bg-slate-50 rounded-t-xl print:hidden">
           <h3 className="text-sm font-bold text-slate-800 font-heading">Print Preview — پرت وارابندی</h3>
           <div className="flex gap-2">
@@ -75,35 +76,46 @@ export default function WarabandiPrint({ data, rows, onClose }) {
           </div>
         </div>
 
-        {/* Print Content */}
         <div id="warabandi-print-area" className="p-8" style={{ direction: "rtl", fontFamily: "serif" }}>
           {/* Header */}
           <div className="text-center mb-4">
+            <h1 className="text-base font-bold mb-1" style={{ fontSize: "16px" }}>
+              {data.warabandi_type || "پرت وارہ بندی"}
+            </h1>
             <p className="text-xs text-slate-600 mb-1">
-              پرت وارابندی موغہ نمبر {data.mogha_number || "___"} / 16000 واجبہ آبیانہ تحقیقات موسم خریف رنجی غلطنگ وادی نکال / ساب ایران قناۃ آراضی {data.village_name || "___"} خرقوب
-            </p>
-            <p className="text-[10px] text-slate-500">
-              پاری ند نظر ({data.total_cca || "___"}) ({data.total_khasra_area || "___"})
+              موگہ نمبری {moghaDisplay || "___"} — واجبہ آبیانہ تحقیقات موسم خریف رنجی غلطنگ وادی نکال / ساب ایران قناۃ آراضی {data.village_name || "___"} خرقوب
             </p>
           </div>
 
-          {/* Meta Info */}
+          {/* Meta Info — new fields */}
           <table className="w-full mb-4" style={{ borderCollapse: "collapse" }}>
             <tbody>
               <tr>
-                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">نمبر شمار</td>
-                <td className="border border-slate-400 px-2 py-1 text-xs">حصہ داران کے نام ووالدیت</td>
-                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">تفصیل نمبر</td>
-                <td className="border border-slate-400 px-2 py-1 text-xs" colSpan={columns.filter(c => ["khewat_no","khatoni_no"].includes(c.field_key)).length}>
-                  <div className="flex justify-between text-[10px]">
-                    <span>{columns.find(c => c.field_key === "khewat_no")?.label_urdu || "خیوط"}: {data.order_number || ""}</span>
-                    <span>{columns.find(c => c.field_key === "khatoni_no")?.label_urdu || "کھتونی"}</span>
-                  </div>
-                </td>
-                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">رقبہ</td>
-                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">مدت / وقت</td>
-                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">{columns.find(c => c.field_key === "remarks")?.label_urdu || "کیفیت"}</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">نہر</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs">{data.canal_name || "___"}</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">موگہ نام</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs">{data.mogha_name || "___"}</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">موگہ نمبری</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs font-mono">{moghaDisplay || "___"}</td>
               </tr>
+              <tr>
+                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">گاؤں</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs">{data.village_name || "___"}</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">سب ڈویژن</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs">{data.sub_division || "___"}</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">ڈویژن</td>
+                <td className="border border-slate-400 px-2 py-1 text-xs">{data.division || "___"}</td>
+              </tr>
+              {(data.applicant_name || data.applicant_father || data.applicant_cnic) && (
+                <tr>
+                  <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">درخواست گزار</td>
+                  <td className="border border-slate-400 px-2 py-1 text-xs">{data.applicant_name || "___"}</td>
+                  <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">ولدیت</td>
+                  <td className="border border-slate-400 px-2 py-1 text-xs">{data.applicant_father || "___"}</td>
+                  <td className="border border-slate-400 px-2 py-1 text-xs bg-slate-50 font-bold">شناختی کارڈ</td>
+                  <td className="border border-slate-400 px-2 py-1 text-xs font-mono">{data.applicant_cnic || "___"}</td>
+                </tr>
+              )}
             </tbody>
           </table>
 
