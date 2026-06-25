@@ -6,16 +6,16 @@ import { Shield, LogOut, Globe } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 
 const MODULES = [
-  { id: "map-editor", label: "MAP EDITOR", labelUrdu: "نقشہ ایڈیٹر", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/95cfcc6b7_generated_image.png", path: "/map-list", bg: "from-blue-50 to-blue-100" },
-  { id: "warabandi", label: "WARABANDI PARAT", labelUrdu: "وارابندی پرت", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/a72cdee99_generated_image.png", path: "/parat-warabandi", bg: "from-green-50 to-green-100" },
-  { id: "khal-mismari", label: "KHAL MISMARI", labelUrdu: "خال مسماری", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/16b5f7025_generated_image.png", path: "/khal-mismari", bg: "from-orange-50 to-orange-100" },
-  { id: "warashikni", label: "WARASHIKNI", labelUrdu: "وارشکنی", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/316f23d74_generated_image.png", path: "/warashikni", bg: "from-sky-50 to-sky-100" },
-  { id: "tawan-case", label: "TAWAN CASE", labelUrdu: "تاوان کیس", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/f6a632e03_generated_image.png", path: "/tawan-case", bg: "from-purple-50 to-purple-100" },
-  { id: "ta-form", label: "TA FORM", labelUrdu: "ٹی اے فارم", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/83d2ce503_generated_image.png", path: "/ta-form", bg: "from-pink-50 to-pink-100" },
-  { id: "geo-map", label: "GEO MAP", labelUrdu: "جیو میپ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/06d24a88b_generated_image.png", path: "/geo-map", bg: "from-blue-50 to-cyan-100" },
-  { id: "deputy-collector", label: "DEPUTY COLLECTOR", labelUrdu: "ڈپٹی کلکٹر دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/bfe2c768f_generated_image.png", path: "/deputy-collector", bg: "from-green-50 to-emerald-100" },
-  { id: "zilladar", label: "ZILLADAR DOCS", labelUrdu: "ذیلدار دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/2086f36ed_generated_image.png", path: "/zilladar", bg: "from-orange-50 to-amber-100" },
-  { id: "group-chat", label: "GROUP CHAT", labelUrdu: "گروپ چیٹ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/9566e5eca_generated_image.png", path: "/group-chat", bg: "from-violet-50 to-purple-100" },
+  { id: "map-editor", label: "MAP EDITOR", labelUrdu: "نقشہ ایڈیٹر", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/b98e0885c_generated_image.png", path: "/map-list", bg: "from-blue-50 to-blue-100" },
+  { id: "warabandi", label: "WARABANDI PARAT", labelUrdu: "وارہ بندی پرت", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/ddf8bc723_generated_image.png", path: "/parat-warabandi", bg: "from-green-50 to-green-100" },
+  { id: "khal-mismari", label: "KHAL MISMARI", labelUrdu: "کھال مسماری", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/5e2f34f0a_generated_image.png", path: "/khal-mismari", bg: "from-orange-50 to-orange-100" },
+  { id: "warashikni", label: "WARASHIKNI", labelUrdu: "واراشکنی", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/187981eaa_generated_image.png", path: "/warashikni", bg: "from-sky-50 to-sky-100" },
+  { id: "tawan-case", label: "TAWAN CASE DOCUMENT", labelUrdu: "تاوان کیس دستاویز", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/d5b3c8e48_generated_image.png", path: "/tawan-case", bg: "from-purple-50 to-purple-100" },
+  { id: "ta-form", label: "TA FORM", labelUrdu: "ٹی اے فارم", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/887265e12_generated_image.png", path: "/ta-form", bg: "from-pink-50 to-pink-100" },
+  { id: "geo-map", label: "GEO MAP", labelUrdu: "جیو میپ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/96bc463c2_generated_image.png", path: "/geo-map", bg: "from-blue-50 to-cyan-100" },
+  { id: "deputy-collector", label: "DEPUTY COLLECTOR DOCUMENTS", labelUrdu: "ڈپٹی کلکٹر دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/40a685ff8_generated_image.png", path: "/deputy-collector", bg: "from-green-50 to-emerald-100" },
+  { id: "zilladar", label: "ZILLADAR DOCUMENTS", labelUrdu: "ضلعدار دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/28c493acc_generated_image.png", path: "/zilladar", bg: "from-orange-50 to-amber-100" },
+  { id: "group-chat", label: "GROUP CHAT", labelUrdu: "گروپ چیٹ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/61b0a5032_generated_image.png", path: "/group-chat", bg: "from-violet-50 to-purple-100" },
 ];
 
 export default function Dashboard() {
