@@ -505,6 +505,14 @@ export default function Editor() {
               title="Snap Engine">
               <Magnet className="w-4 h-4" />
             </Button>
+            {(activeTool === "chakbandi" || activeTool === "mouza") && (
+              <Button variant="ghost" size="icon"
+                className={`w-9 h-9 border shadow-md transition-all ${freehandMode ? "bg-green-600 border-green-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-green-600 hover:bg-green-50"}`}
+                onClick={() => setFreehandMode(v => !v)}
+                title="Freehand Mode (drag to draw)">
+                <Pen className="w-4 h-4" />
+              </Button>
+            )}
             <Button variant="ghost" size="icon"
               className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shadow-md"
               onClick={() => setShowPrint(true)}

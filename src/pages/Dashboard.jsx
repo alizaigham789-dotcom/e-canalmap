@@ -2,23 +2,24 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
+import { Shield, LogOut, Globe } from "lucide-react";
 import {
-  Shield, LogOut, Globe, Map, FileText, Pickaxe, Waves, Scale, FilePen,
-  Satellite, Landmark, Stamp, MessagesSquare,
-} from "lucide-react";
+  MapEditorIcon, WarabandiIcon, KhalMismariIcon, WarashikniIcon, TawanCaseIcon, TAFormIcon,
+  GeoMapIcon, DeputyCollectorIcon, ZilladarIcon, GroupChatIcon,
+} from "@/components/ModuleIcons";
 import BottomNav from "@/components/BottomNav";
 
 const MODULES = [
-  { id: "map-editor", label: "MAP EDITOR", labelUrdu: "نقشہ ایڈیٹر", Icon: Map, path: "/map-list", gradient: "from-blue-500 to-cyan-400", shadow: "shadow-blue-500/25" },
-  { id: "warabandi", label: "WARABANDI PARAT", labelUrdu: "وارابندی پرت", Icon: FileText, path: "/parat-warabandi", gradient: "from-emerald-500 to-teal-400", shadow: "shadow-emerald-500/25" },
-  { id: "khal-mismari", label: "KHAL MISMARI", labelUrdu: "خال مسماری", Icon: Pickaxe, path: "/khal-mismari", gradient: "from-amber-500 to-orange-400", shadow: "shadow-amber-500/25" },
-  { id: "warashikni", label: "WARASHIKNI", labelUrdu: "وارشکنی", Icon: Waves, path: "/warashikni", gradient: "from-sky-500 to-blue-400", shadow: "shadow-sky-500/25" },
-  { id: "tawan-case", label: "TAWAN CASE DOCUMENT", labelUrdu: "تاوان کیس دستاویز", Icon: Scale, path: "/tawan-case", gradient: "from-purple-500 to-violet-400", shadow: "shadow-purple-500/25" },
-  { id: "ta-form", label: "TA FORM", labelUrdu: "ٹی اے فارم", Icon: FilePen, path: "/ta-form", gradient: "from-rose-500 to-pink-400", shadow: "shadow-rose-500/25" },
-  { id: "geo-map", label: "GEO MAP", labelUrdu: "جیو میپ", Icon: Satellite, path: "/geo-map", gradient: "from-sky-400 to-blue-300", shadow: "shadow-sky-400/25" },
-  { id: "deputy-collector", label: "DEPUTY COLLECTOR", labelUrdu: "ڈپٹی کلکٹر دستاویزات", Icon: Landmark, path: "/deputy-collector", gradient: "from-emerald-400 to-green-300", shadow: "shadow-emerald-400/25" },
-  { id: "zilladar", label: "ZILLADAR DOCS", labelUrdu: "ذیلدار دستاویزات", Icon: Stamp, path: "/zilladar", gradient: "from-amber-400 to-orange-300", shadow: "shadow-amber-400/25" },
-  { id: "group-chat", label: "GROUP CHAT", labelUrdu: "گروپ چیٹ", Icon: MessagesSquare, path: "/group-chat", gradient: "from-violet-400 to-purple-300", shadow: "shadow-violet-400/25" },
+  { id: "map-editor", label: "MAP EDITOR", labelUrdu: "نقشہ ایڈیٹر", Icon: MapEditorIcon, path: "/map-list", gradient: "from-blue-500 to-cyan-400", shadow: "shadow-blue-500/25" },
+  { id: "warabandi", label: "WARABANDI PARAT", labelUrdu: "وارابندی پرت", Icon: WarabandiIcon, path: "/parat-warabandi", gradient: "from-emerald-500 to-teal-400", shadow: "shadow-emerald-500/25" },
+  { id: "khal-mismari", label: "KHAL MISMARI", labelUrdu: "خال مسماری", Icon: KhalMismariIcon, path: "/khal-mismari", gradient: "from-amber-500 to-orange-400", shadow: "shadow-amber-500/25" },
+  { id: "warashikni", label: "WARASHIKNI", labelUrdu: "وارشکنی", Icon: WarashikniIcon, path: "/warashikni", gradient: "from-sky-500 to-blue-400", shadow: "shadow-sky-500/25" },
+  { id: "tawan-case", label: "TAWAN CASE DOCUMENT", labelUrdu: "تاوان کیس دستاویز", Icon: TawanCaseIcon, path: "/tawan-case", gradient: "from-purple-500 to-violet-400", shadow: "shadow-purple-500/25" },
+  { id: "ta-form", label: "TA FORM", labelUrdu: "ٹی اے فارم", Icon: TAFormIcon, path: "/ta-form", gradient: "from-rose-500 to-pink-400", shadow: "shadow-rose-500/25" },
+  { id: "geo-map", label: "GEO MAP", labelUrdu: "جیو میپ", Icon: GeoMapIcon, path: "/geo-map", gradient: "from-sky-400 to-blue-300", shadow: "shadow-sky-400/25" },
+  { id: "deputy-collector", label: "DEPUTY COLLECTOR", labelUrdu: "ڈپٹی کلکٹر دستاویزات", Icon: DeputyCollectorIcon, path: "/deputy-collector", gradient: "from-emerald-400 to-green-300", shadow: "shadow-emerald-400/25" },
+  { id: "zilladar", label: "ZILLADAR DOCS", labelUrdu: "ذیلدار دستاویزات", Icon: ZilladarIcon, path: "/zilladar", gradient: "from-amber-400 to-orange-300", shadow: "shadow-amber-400/25" },
+  { id: "group-chat", label: "GROUP CHAT", labelUrdu: "گروپ چیٹ", Icon: GroupChatIcon, path: "/group-chat", gradient: "from-violet-400 to-purple-300", shadow: "shadow-violet-400/25" },
 ];
 
 export default function Dashboard() {
@@ -80,7 +81,7 @@ export default function Dashboard() {
                 className={`group relative rounded-[28px] bg-gradient-to-br ${mod.gradient} p-5 shadow-lg ${mod.shadow} hover:shadow-xl hover:${mod.shadow} hover:scale-[1.03] active:scale-[0.98] ring-1 ring-white/20 transition-all duration-200 text-center min-h-[140px] flex flex-col items-center justify-center`}
               >
                 <div className="mb-3 group-hover:scale-110 transition-transform duration-200">
-                  <Icon className="w-10 h-10 text-white drop-shadow-sm" strokeWidth={2} />
+                  <Icon className="w-10 h-10 text-white drop-shadow-sm" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-white tracking-wide leading-tight drop-shadow-sm">{mod.label}</p>

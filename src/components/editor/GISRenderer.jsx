@@ -12,6 +12,13 @@ function scaledFont(basePx, zoom, minPx = 11, maxPx = 28) {
   return Math.max(minPx, Math.min(maxPx, basePx / zoom));
 }
 
+// Screen-clamped font: keeps a readable on-screen size (minScreen..maxScreen)
+// regardless of zoom, while scaling with parcel geometry. Returns world units.
+function screenClampedFont(worldSize, zoom, minScreen = 14, maxScreen = 26) {
+  const screen = worldSize * zoom;
+  return Math.max(minScreen, Math.min(maxScreen, screen)) / zoom;
+}
+
 // Print-aware font: ignores zoom clamping — uses a fixed pt size based on cell dimensions
 function printFont(cellW, cellH, fraction = 0.22, minPx = 12) {
   return Math.max(minPx, Math.min(cellW, cellH) * fraction);
@@ -132,12 +139,14 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Layer 5: Killa numbers — always prominent, print-aware (not zoom-clamped)
+    // Layer 5: Killa numbers — screen-clamped (min 14px) so they stay readable at any
+    // zoom without blowing up, clipped to the parcel so text never crosses the boundary.
     {
       const grid = getMustateeelKillaGrid();
+      ctx.save();
+      ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
       ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.9)";
-      // Use cell-size-relative font so numbers stay large regardless of zoom
-      const killaFontSize = Math.max(10 / zoom, Math.min(cellW, cellH) * 0.28);
+      const killaFontSize = screenClampedFont(Math.min(cellW, cellH) * 0.30, zoom, 14, 24);
       ctx.font = `bold ${killaFontSize}px Rajdhani, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       for (let r = 0; r < 5; r++) {
@@ -145,21 +154,25 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C) {
           ctx.fillText(String(grid[r][c]), obj.x + c * cellW + cellW/2, obj.y + r * cellH + cellH/2);
         }
       }
+      ctx.restore();
     }
   }
 
-  // Layer 5: Center label
+  // Layer 5: Center label — centroid-anchored, screen-clamped, in-boundary clipped
   {
     const centerX = obj.x + obj.w / 2, centerY = obj.y + obj.h / 2;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
     ctx.fillStyle = C.labelColor || "#000000";
-    ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
+    ctx.font = `bold ${screenClampedFont(Math.min(obj.w, obj.h) * 0.16, zoom, 14, 22)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(obj.label || "", centerX, centerY - (obj.showOwner && obj.ownerName ? 8/zoom : 0));
     if (obj.showOwner && obj.ownerName) {
       ctx.fillStyle = "rgba(100,116,139,0.9)";
-      ctx.font = `${scaledFont(11, zoom)}px Inter, sans-serif`;
+      ctx.font = `${screenClampedFont(Math.min(obj.w, obj.h) * 0.12, zoom, 11, 16)}px Inter, sans-serif`;
       ctx.fillText(obj.ownerName, centerX, centerY + 10/zoom);
     }
+    ctx.restore();
   }
 }
 
@@ -204,11 +217,13 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Always draw killa numbers — print-aware, cell-relative size
+    // Always draw killa numbers — screen-clamped (min 14px), in-boundary clipped
     {
       const grid = getMurabaKillaGrid();
+      ctx.save();
+      ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
       ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.85)";
-      const killaFontSize = Math.max(9 / zoom, Math.min(cellW, cellH) * 0.26);
+      const killaFontSize = screenClampedFont(Math.min(cellW, cellH) * 0.26, zoom, 14, 20);
       ctx.font = `bold ${killaFontSize}px Rajdhani, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       for (let r = 0; r < 5; r++) {
@@ -216,21 +231,25 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C) {
           ctx.fillText(String(grid[r][c]), obj.x + c * cellW + cellW/2, obj.y + r * cellH + cellH/2);
         }
       }
+      ctx.restore();
     }
   }
 
-  // Layer 5: Center label
+  // Layer 5: Center label — centroid-anchored, screen-clamped, in-boundary clipped
   {
     const centerX = obj.x + obj.w / 2, centerY = obj.y + obj.h / 2;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
     ctx.fillStyle = C.labelColor || "#000000";
-    ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
+    ctx.font = `bold ${screenClampedFont(Math.min(obj.w, obj.h) * 0.16, zoom, 14, 22)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(obj.label || "", centerX, centerY - (obj.showOwner && obj.ownerName ? 10/zoom : 0));
     if (obj.showOwner && obj.ownerName) {
       ctx.fillStyle = "rgba(100,116,139,0.9)";
-      ctx.font = `${scaledFont(12, zoom)}px Inter, sans-serif`;
+      ctx.font = `${screenClampedFont(Math.min(obj.w, obj.h) * 0.12, zoom, 11, 16)}px Inter, sans-serif`;
       ctx.fillText(obj.ownerName, centerX, centerY + 13/zoom);
     }
+    ctx.restore();
   }
 }
 
@@ -259,7 +278,7 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   const bankColor = isSelected ? "#93c5fd" : (C.canalStroke || "#0284c7");
   ctx.strokeStyle = bankColor;
   ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
-  ctx.lineCap = "square";
+  ctx.lineCap = "butt";
   ctx.lineJoin = "miter";
   for (const side of [left, right]) {
     ctx.beginPath();
@@ -312,7 +331,7 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
 
   ctx.strokeStyle = khalColor;
   ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
-  ctx.lineCap = "square";
+  ctx.lineCap = "butt";
   ctx.lineJoin = "miter";
   for (const side of [left, right]) {
     ctx.beginPath();
@@ -366,7 +385,7 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
   const edgeColor = isSelected ? "#fcd34d" : (C.roadStroke || "#b45309");
   ctx.strokeStyle = edgeColor;
   ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
-  ctx.lineCap = "square";
+  ctx.lineCap = "butt";
   ctx.lineJoin = "miter";
   for (const side of [left, right]) {
     ctx.beginPath();
@@ -513,7 +532,7 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C) {
   const color = C.chakbandiStroke || "#22c55e";
   if (obj.crossPattern) {
     const crossSize = (obj.crossSize || 6) / zoom;
-    const spacing = (obj.crossSpacing || 18) / zoom; // tighter spacing
+    const spacing = (obj.crossSpacing || 20) / zoom; // denser alignment tracks
     ctx.strokeStyle = isSelected ? "#86efac" : color;
     ctx.lineWidth = 1.8 / zoom;
     for (let i = 0; i < obj.points.length - 1; i++) {
@@ -650,7 +669,7 @@ export function drawChakbandiDraft(ctx, chakbandiDraft, snapPos, zoom, C) {
   const color = C.chakbandiStroke || "#22c55e";
   const draftPts = [...chakbandiDraft];
   if (snapPos) draftPts.push(snapPos);
-  const crossSize = 6/zoom, spacing = 18/zoom; // tighter spacing
+  const crossSize = 6/zoom, spacing = 20/zoom; // denser alignment tracks
   ctx.strokeStyle = color; ctx.lineWidth = 1.8/zoom;
   for (let i = 0; i < draftPts.length - 1; i++) {
     const a = draftPts[i], b = draftPts[i+1];
