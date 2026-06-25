@@ -7,8 +7,23 @@
 import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS } from "@/lib/gisEngine";
 
 // ---- Anti-aliased zoom-clamped font size ----
+// For print: use a larger effective min so labels are always readable regardless of zoom
 function scaledFont(basePx, zoom, minPx = 11, maxPx = 28) {
   return Math.max(minPx, Math.min(maxPx, basePx / zoom));
+}
+
+// Print-aware font: ignores zoom clamping — uses a fixed pt size based on cell dimensions
+function printFont(cellW, cellH, fraction = 0.22, minPx = 12) {
+  return Math.max(minPx, Math.min(cellW, cellH) * fraction);
+}
+
+// Draw rectangular (squared-off) end caps for canals/roads/khals
+function drawSquaredCap(ctx, side, isStart) {
+  if (side.length < 2) return;
+  const idx = isStart ? 0 : side.length - 1;
+  const p = side[idx];
+  // The cap is already a straight edge; we just draw the closing perpendicular line
+  // between left[idx] and right[idx] in the caller
 }
 
 // ============================================================
@@ -117,11 +132,13 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Layer 5: Killa numbers (clamped to readable size)
-    if (zoom > 0.25) {
+    // Layer 5: Killa numbers — always prominent, print-aware (not zoom-clamped)
+    {
       const grid = getMustateeelKillaGrid();
       ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.9)";
-      ctx.font = `bold ${scaledFont(10, zoom, 8, 14)}px Rajdhani, sans-serif`;
+      // Use cell-size-relative font so numbers stay large regardless of zoom
+      const killaFontSize = Math.max(10 / zoom, Math.min(cellW, cellH) * 0.28);
+      ctx.font = `bold ${killaFontSize}px Rajdhani, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 2; c++) {
@@ -187,10 +204,12 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    if (zoom > 0.2) {
+    // Always draw killa numbers — print-aware, cell-relative size
+    {
       const grid = getMurabaKillaGrid();
       ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.85)";
-      ctx.font = `bold ${scaledFont(9, zoom, 7, 13)}px Rajdhani, sans-serif`;
+      const killaFontSize = Math.max(9 / zoom, Math.min(cellW, cellH) * 0.26);
+      ctx.font = `bold ${killaFontSize}px Rajdhani, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 5; c++) {
@@ -216,36 +235,45 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C) {
 }
 
 // ============================================================
-// LAYER 3: Canal — symmetric bilateral buffering, butt caps
+// LAYER 3: Canal — symmetric bilateral buffering, squared ends
 // ============================================================
 export function drawCanal(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const halfW = obj.width / 2;
-  // Spine anchored; boundaries = spine ± W/2
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  // Water fill
+  // Water fill — closed polygon with squared ends
   ctx.fillStyle = C.canalFill || "rgba(30,144,255,0.25)";
   ctx.beginPath();
   ctx.moveTo(left[0].x, left[0].y);
   for (const p of left) ctx.lineTo(p.x, p.y);
+  // Squared end cap at finish
+  ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
   for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  // Squared end cap at start
   ctx.closePath();
   ctx.fill();
 
-  // Bank lines — butt caps (NO arrow ends)
+  // Bank lines — squared ends
   const bankColor = isSelected ? "#93c5fd" : (C.canalStroke || "#0284c7");
   ctx.strokeStyle = bankColor;
   ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
-  ctx.lineCap = "butt"; // strict — no tapers
-  ctx.lineJoin = "round";
+  ctx.lineCap = "square";
+  ctx.lineJoin = "miter";
   for (const side of [left, right]) {
     ctx.beginPath();
     ctx.moveTo(side[0].x, side[0].y);
     for (const p of side) ctx.lineTo(p.x, p.y);
     ctx.stroke();
   }
+  // Perpendicular end caps (squared rectangular ends)
+  ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y); ctx.lineTo(right[0].x, right[0].y);
+  ctx.moveTo(left[left.length-1].x, left[left.length-1].y);
+  ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
+  ctx.stroke();
 
   // Layer 5: Canal name — RED, center-aligned, rotated along segment angle
   if (obj.name) {
@@ -255,7 +283,7 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
     const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
     ctx.save();
     ctx.translate(p.x, p.y); ctx.rotate(angle);
-    ctx.fillStyle = "#dc2626"; // RED per spec
+    ctx.fillStyle = "#dc2626";
     ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(obj.name, 0, 0);
@@ -264,7 +292,7 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
 }
 
 // ============================================================
-// LAYER 3: Khal — bilateral buffer, butt caps
+// LAYER 3: Khal — bilateral buffer, squared ends, uniform width
 // ============================================================
 export function drawKhal(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
@@ -272,11 +300,20 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
+  // Water fill with squared ends
   const khalColor = isSelected ? "#93c5fd" : (C.khalStroke || "#2563eb");
+  ctx.fillStyle = `${khalColor}33`;
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (const p of left) ctx.lineTo(p.x, p.y);
+  ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
+  for (let i = right.length-1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  ctx.closePath(); ctx.fill();
+
   ctx.strokeStyle = khalColor;
   ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
-  ctx.lineCap = "butt";
-  ctx.lineJoin = "round";
+  ctx.lineCap = "square";
+  ctx.lineJoin = "miter";
   for (const side of [left, right]) {
     ctx.beginPath();
     ctx.moveTo(side[0].x, side[0].y);
@@ -284,24 +321,13 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
   }
 
-  // Perpendicular cap at start
+  // Squared rectangular end caps
+  ctx.lineWidth = (isSelected ? 2 : 1.5) / zoom;
   ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y);
-  ctx.lineTo(right[0].x, right[0].y);
+  ctx.moveTo(left[0].x, left[0].y); ctx.lineTo(right[0].x, right[0].y);
+  ctx.moveTo(left[left.length-1].x, left[left.length-1].y);
+  ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
   ctx.stroke();
-
-  // Arrow at endpoint
-  const lastPt = obj.points[obj.points.length - 1];
-  const prevPt = obj.points[obj.points.length - 2];
-  const arrowAngle = Math.atan2(lastPt.y - prevPt.y, lastPt.x - prevPt.x);
-  const arrowLen = Math.max(halfW * 2 * 1.5, 14/zoom);
-  ctx.save();
-  ctx.translate(lastPt.x, lastPt.y); ctx.rotate(arrowAngle);
-  ctx.fillStyle = khalColor;
-  ctx.beginPath();
-  ctx.moveTo(0, 0); ctx.lineTo(-arrowLen, -halfW); ctx.lineTo(-arrowLen, halfW);
-  ctx.closePath(); ctx.fill();
-  ctx.restore();
 
   if (obj.name && zoom > 0.3) {
     const mid = Math.floor(obj.points.length / 2);
@@ -319,7 +345,7 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
 }
 
 // ============================================================
-// LAYER 3: Road — bilateral buffer, butt caps
+// LAYER 3: Road — bilateral buffer, squared ends, uniform width
 // ============================================================
 export function drawRoad(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
@@ -327,26 +353,34 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  // Asphalt fill
+  // Asphalt fill — closed polygon with squared ends
   ctx.fillStyle = "#3a3a3a";
   ctx.beginPath();
   ctx.moveTo(left[0].x, left[0].y);
   for (const p of left) ctx.lineTo(p.x, p.y);
+  ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
   for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
   ctx.closePath(); ctx.fill();
 
-  // Casing edges — butt caps
+  // Casing edges — squared ends
   const edgeColor = isSelected ? "#fcd34d" : (C.roadStroke || "#b45309");
   ctx.strokeStyle = edgeColor;
   ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
-  ctx.lineCap = "butt";
-  ctx.lineJoin = "round";
+  ctx.lineCap = "square";
+  ctx.lineJoin = "miter";
   for (const side of [left, right]) {
     ctx.beginPath();
     ctx.moveTo(side[0].x, side[0].y);
     for (const p of side) ctx.lineTo(p.x, p.y);
     ctx.stroke();
   }
+  // Rectangular end caps
+  ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y); ctx.lineTo(right[0].x, right[0].y);
+  ctx.moveTo(left[left.length-1].x, left[left.length-1].y);
+  ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
+  ctx.stroke();
 
   // Dashed center divider
   ctx.strokeStyle = "#fbbf24";
@@ -358,7 +392,6 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Layer 5: Road name — WHITE, center-aligned, rotated
   if (obj.name) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid];
@@ -366,7 +399,7 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
     const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
     ctx.save();
     ctx.translate(p.x, p.y); ctx.rotate(angle);
-    ctx.fillStyle = "rgba(255,255,255,0.95)"; // WHITE per spec
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
     ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(obj.name, 0, 0);
@@ -423,41 +456,52 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
 }
 
 // ============================================================
-// LAYER 4: Canal Damage Marker
+// LAYER 4: Canal Damage Mark — simple red line on the canal
 // ============================================================
 export function drawDamageMarker(ctx, obj, isSelected, zoom) {
-  const SEV_COLORS = { Low: "#22c55e", Medium: "#f59e0b", High: "#f97316", Critical: "#ef4444" };
-  const color = SEV_COLORS[obj.severity] || "#ef4444";
-  const r = 10 / zoom;
-  const x = obj.x, y = obj.y;
-
-  // Pulsing outer ring for critical
-  if (obj.severity === "Critical" || isSelected) {
-    ctx.strokeStyle = isSelected ? "#93c5fd" : color;
-    ctx.lineWidth = 1.5 / zoom;
-    ctx.globalAlpha = 0.4;
-    ctx.beginPath(); ctx.arc(x, y, r * 1.8, 0, Math.PI * 2); ctx.stroke();
-    ctx.globalAlpha = 1;
+  if (!obj.points || obj.points.length < 2) {
+    // Legacy point-type marker: draw a simple X cross
+    const r = 8 / zoom;
+    const x = obj.x, y = obj.y;
+    ctx.strokeStyle = isSelected ? "#60a5fa" : "#ef4444";
+    ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x - r, y - r); ctx.lineTo(x + r, y + r);
+    ctx.moveTo(x + r, y - r); ctx.lineTo(x - r, y + r);
+    ctx.stroke();
+    return;
   }
-
-  // Main marker circle
-  ctx.fillStyle = color;
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5 / zoom;
+  // New line-type damage mark
+  ctx.strokeStyle = isSelected ? "#60a5fa" : "#ef4444";
+  ctx.lineWidth = (isSelected ? 5 : 4) / zoom;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(obj.points[0].x, obj.points[0].y);
+  for (const p of obj.points) ctx.lineTo(p.x, p.y);
   ctx.stroke();
 
-  // Exclamation icon
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `bold ${scaledFont(10, zoom, 8, 14)}px Arial, sans-serif`;
-  ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("!", x, y);
-
-  // Layer 5: Label below
-  if (zoom > 0.4 && obj.damage_category) {
-    ctx.fillStyle = color;
-    ctx.font = `${scaledFont(9, zoom, 8, 12)}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(obj.damage_category, x, y + r + 2/zoom);
+  // Draw tick marks across the line to make it visually distinct
+  ctx.strokeStyle = isSelected ? "#93c5fd" : "#dc2626";
+  ctx.lineWidth = 2 / zoom;
+  for (let i = 0; i < obj.points.length - 1; i++) {
+    const a = obj.points[i], b = obj.points[i + 1];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 1) continue;
+    const nx = -dy / len, ny = dx / len;
+    const tickSize = 6 / zoom;
+    const steps = Math.max(1, Math.floor(len / (20 / zoom)));
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const cx = a.x + dx * t, cy = a.y + dy * t;
+      ctx.beginPath();
+      ctx.moveTo(cx - nx * tickSize, cy - ny * tickSize);
+      ctx.lineTo(cx + nx * tickSize, cy + ny * tickSize);
+      ctx.stroke();
+    }
   }
 }
 
@@ -468,8 +512,8 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const color = C.chakbandiStroke || "#22c55e";
   if (obj.crossPattern) {
-    const crossSize = (obj.crossSize || 8) / zoom;
-    const spacing = (obj.crossSpacing || 40) / zoom;
+    const crossSize = (obj.crossSize || 6) / zoom;
+    const spacing = (obj.crossSpacing || 18) / zoom; // tighter spacing
     ctx.strokeStyle = isSelected ? "#86efac" : color;
     ctx.lineWidth = 1.8 / zoom;
     for (let i = 0; i < obj.points.length - 1; i++) {
@@ -606,7 +650,7 @@ export function drawChakbandiDraft(ctx, chakbandiDraft, snapPos, zoom, C) {
   const color = C.chakbandiStroke || "#22c55e";
   const draftPts = [...chakbandiDraft];
   if (snapPos) draftPts.push(snapPos);
-  const crossSize = 8/zoom, spacing = 40/zoom;
+  const crossSize = 6/zoom, spacing = 18/zoom; // tighter spacing
   ctx.strokeStyle = color; ctx.lineWidth = 1.8/zoom;
   for (let i = 0; i < draftPts.length - 1; i++) {
     const a = draftPts[i], b = draftPts[i+1];

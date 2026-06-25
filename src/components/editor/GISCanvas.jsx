@@ -24,6 +24,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     snapPos, onSnapPosChange, onPanChange, onZoomChange,
     colorSettings, bgColor, snapSettings,
     onDamageMarkerClick,
+    freehandMode, // if true: chakbandi/mouza follow mouse without click-per-point
   },
   ref
 ) {
@@ -37,6 +38,9 @@ const GISCanvas = forwardRef(function GISCanvas(
   const objectsRef = useRef(objects);
   objectsRef.current = objects;
   const [editingLabel, setEditingLabel] = useState(null);
+  // Damage marker line drawing state
+  const damageStartRef = useRef(null);
+  const [damageDraft, setDamageDraft] = useState(null);
 
   useImperativeHandle(ref, () => ({ getCanvas: () => canvasRef.current }));
 
@@ -90,6 +94,15 @@ const GISCanvas = forwardRef(function GISCanvas(
     drawChakbandiDraft(ctx, chakbandiDraft, snapPos, zoom, C);
     drawMouzaDraft(ctx, mouzaDraft, snapPos, zoom, C);
     drawOutletDraft(ctx, outletDraft, snapPos, zoom);
+    // Damage marker line draft
+    if (damageDraft && snapPos) {
+      ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 4 / zoom;
+      ctx.lineCap = "round"; ctx.setLineDash([6/zoom, 3/zoom]);
+      ctx.beginPath();
+      ctx.moveTo(damageDraft.x, damageDraft.y);
+      ctx.lineTo(snapPos.x, snapPos.y);
+      ctx.stroke(); ctx.setLineDash([]);
+    }
 
     ctx.restore();
 
@@ -104,7 +117,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       ctx.moveTo(sx, sy - 10); ctx.lineTo(sx, sy + 10);
       ctx.stroke();
     }
-  }, [objects, zoom, pan, layers, selectedId, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor]);
+  }, [objects, zoom, pan, layers, selectedId, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft]);
 
   useEffect(() => {
     const loop = () => { render(); animRef.current = requestAnimationFrame(loop); };
@@ -143,6 +156,16 @@ const GISCanvas = forwardRef(function GISCanvas(
         lastMouse.current = { x: e.clientX, y: e.clientY };
       }
       return;
+    }
+    // Freehand drawing — add points on mouse drag
+    if (freehandMode && (activeTool === "chakbandi" || activeTool === "mouza")) {
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
+      if (e.buttons === 1) { // only while mouse button is held
+        if (activeTool === "chakbandi") onChakbandiPointAdd(worldRaw);
+        else if (activeTool === "mouza") onMouzaPointAdd(worldRaw);
+      }
     }
     if (isMoving.current && movingObjId.current && activeTool === "move") {
       const canvas = canvasRef.current;
@@ -185,7 +208,11 @@ const GISCanvas = forwardRef(function GISCanvas(
     else if (activeTool === "muraba") onAddObject("muraba", snapped);
     else if (activeTool === "canal") onCanalPointAdd(snapped);
     else if (activeTool === "chakbandi") onChakbandiPointAdd(snapped);
-    else if (activeTool === "damageMarker") onAddObject("damageMarker", worldRaw);
+    else if (activeTool === "damageMarker") {
+      // First click: set start point
+      damageStartRef.current = { x: worldRaw.x, y: worldRaw.y };
+      setDamageDraft({ x: worldRaw.x, y: worldRaw.y });
+    }
     else if (activeTool === "outlet") {
       if (!outletDraft) {
         const canals = objects.filter(o => o.type === "canal");
@@ -213,9 +240,21 @@ const GISCanvas = forwardRef(function GISCanvas(
     }
   }, [activeTool, pan, zoom, objects, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd, onMouzaPointAdd, onDamageMarkerClick]);
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e) => {
     isPanning.current = false; isMoving.current = false; movingObjId.current = null;
-  }, []);
+    // Finish damage marker line on mouse up
+    if (activeTool === "damageMarker" && damageStartRef.current) {
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
+      const dist = Math.hypot(worldRaw.x - damageStartRef.current.x, worldRaw.y - damageStartRef.current.y);
+      if (dist > 3 / zoom) {
+        onAddObject("damageMarkerLine", { start: damageStartRef.current, end: worldRaw });
+      }
+      damageStartRef.current = null;
+      setDamageDraft(null);
+    }
+  }, [activeTool, pan, zoom, onAddObject]);
 
   const handleDblClick = useCallback((e) => {
     if (activeTool === "canal") onCanalFinish();

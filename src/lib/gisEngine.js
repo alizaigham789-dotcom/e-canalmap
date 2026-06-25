@@ -409,17 +409,22 @@ export function createMouza(points, name = "") {
   };
 }
 
+// Simple line-based damage mark (no metadata form required)
 export function createDamageMarker(x, y) {
   return {
     id: `dmg_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "damageMarker",
-    x, y,
-    damage_category: "Broken Canal",
-    description: "",
-    date: new Date().toISOString(),
-    severity: "Medium",
-    responsible_person: "",
-    attachment_url: "",
+    points: [{ x, y }], // start point; end point added on second click
+    x, y, // kept for legacy hit-test compatibility
+  };
+}
+
+export function createDamageMarkerLine(startPt, endPt) {
+  return {
+    id: `dmg_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    type: "damageMarker",
+    points: [{ ...startPt }, { ...endPt }],
+    x: startPt.x, y: startPt.y,
   };
 }
 
@@ -430,8 +435,46 @@ export function rectsOverlap(a, b) {
   return !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
 }
 
+// Snap new parcel to existing boundary edges — no gaps, no overlaps
+export function snapToNearestBoundary(newObj, existingObjects) {
+  const existingParcels = existingObjects.filter(o => ["mustateel", "muraba", "acre"].includes(o.type));
+  if (existingParcels.length === 0) return { x: newObj.x, y: newObj.y };
+
+  let bestX = newObj.x, bestY = newObj.y;
+  let bestXDist = Infinity, bestYDist = Infinity;
+  const snapThresh = Math.min(newObj.w, newObj.h) * 0.6; // generous snap radius
+
+  for (const p of existingParcels) {
+    // Right edge of p → left edge of new
+    const rightToLeft = Math.abs(newObj.x - (p.x + p.w));
+    if (rightToLeft < bestXDist && rightToLeft < snapThresh) { bestX = p.x + p.w; bestXDist = rightToLeft; }
+    // Left edge of p → right edge of new
+    const leftToRight = Math.abs((newObj.x + newObj.w) - p.x);
+    if (leftToRight < bestXDist && leftToRight < snapThresh) { bestX = p.x - newObj.w; bestXDist = leftToRight; }
+    // Align left edges
+    const leftAlign = Math.abs(newObj.x - p.x);
+    if (leftAlign < bestXDist && leftAlign < snapThresh) { bestX = p.x; bestXDist = leftAlign; }
+    // Bottom edge of p → top edge of new
+    const bottomToTop = Math.abs(newObj.y - (p.y + p.h));
+    if (bottomToTop < bestYDist && bottomToTop < snapThresh) { bestY = p.y + p.h; bestYDist = bottomToTop; }
+    // Top edge of p → bottom edge of new
+    const topToBottom = Math.abs((newObj.y + newObj.h) - p.y);
+    if (topToBottom < bestYDist && topToBottom < snapThresh) { bestY = p.y - newObj.h; bestYDist = topToBottom; }
+    // Align top edges
+    const topAlign = Math.abs(newObj.y - p.y);
+    if (topAlign < bestYDist && topAlign < snapThresh) { bestY = p.y; bestYDist = topAlign; }
+  }
+
+  const snapped = { x: bestX, y: bestY, w: newObj.w, h: newObj.h };
+  // If still overlapping, push out
+  if (existingParcels.some(p => rectsOverlap(snapped, p))) {
+    return findNonOverlappingPosition(snapped, existingObjects);
+  }
+  return { x: bestX, y: bestY };
+}
+
 export function findNonOverlappingPosition(newObj, existingObjects) {
-  const existingParcels = existingObjects.filter(o => ["mustateel", "muraba"].includes(o.type));
+  const existingParcels = existingObjects.filter(o => ["mustateel", "muraba", "acre"].includes(o.type));
   if (existingParcels.length === 0) return { x: newObj.x, y: newObj.y };
   if (!existingParcels.some(p => rectsOverlap(newObj, p))) return { x: newObj.x, y: newObj.y };
   const directions = [

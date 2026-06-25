@@ -15,12 +15,12 @@ import PrintPreview from "@/components/editor/PrintPreview";
 import {
   DrawingStateManager,
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
-  createDamageMarker, findNonOverlappingPosition, autoAssignLabel
+  createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
-import DamageMarkerDialog from "@/components/editor/DamageMarkerDialog";
+// DamageMarkerDialog removed — damage tool is now a simple line draw
 
 const DEFAULT_LAYERS = {
   acre: { visible: true, locked: false },
@@ -70,7 +70,8 @@ export default function Editor() {
   const [showPrint, setShowPrint] = useState(false);
   const [showSnap, setShowSnap] = useState(false);
   const [snapSettings, setSnapSettings] = useState({ gridSnap: true, spineSnap: true, mogaSnap: true });
-  const [activeDamageMarker, setActiveDamageMarker] = useState(null);
+  const [freehandMode, setFreehandMode] = useState(false);
+  // damage marker is now a simple line — no dialog state needed
   const [canalDraft, setCanalDraft] = useState(null);
   const [chakbandiDraft, setChakbandiDraft] = useState(null);
   const [outletDraft, setOutletDraft] = useState(null);
@@ -153,28 +154,35 @@ export default function Editor() {
 
     let obj;
     if (type === "damageMarker") {
+      // handled by drag-line in canvas; this path used for simple click fallback
       obj = createDamageMarker(data.x, data.y);
       dsmRef.current.add(obj);
       setSelectedId(obj.id);
-      setActiveDamageMarker({ ...obj });
+      syncObjects();
+      return;
+    }
+    if (type === "damageMarkerLine") {
+      obj = createDamageMarkerLine(data.start, data.end);
+      dsmRef.current.add(obj);
+      setSelectedId(obj.id);
       syncObjects();
       return;
     }
     if (type === "acre") obj = createAcre(data.x, data.y);
     else if (type === "mustateel") {
-      const adjusted = findNonOverlappingPosition(
+      const snap = snapToNearestBoundary(
         { x: data.x, y: data.y, w: createMustateel(0, 0).w, h: createMustateel(0, 0).h },
         dsmRef.current.objects
       );
-      obj = createMustateel(adjusted.x, adjusted.y);
+      obj = createMustateel(snap.x, snap.y);
       obj.label = autoAssignLabel("mustateel", dsmRef.current.objects);
     }
     else if (type === "muraba") {
-      const adjusted = findNonOverlappingPosition(
+      const snap = snapToNearestBoundary(
         { x: data.x, y: data.y, w: createMuraba(0, 0).w, h: createMuraba(0, 0).h },
         dsmRef.current.objects
       );
-      obj = createMuraba(adjusted.x, adjusted.y);
+      obj = createMuraba(snap.x, snap.y);
       obj.label = autoAssignLabel("muraba", dsmRef.current.objects);
     }
 
@@ -283,12 +291,7 @@ export default function Editor() {
 
   const handleSnapChange = (key, val) => setSnapSettings(prev => ({ ...prev, [key]: val }));
 
-  const handleDamageMarkerClick = (marker) => { setActiveDamageMarker({ ...marker }); };
-
-  const handleDamageMarkerSave = (id, data) => {
-    dsmRef.current.update(id, data);
-    syncObjects();
-  };
+  const handleDamageMarkerClick = () => {}; // no-op: line-based, no dialog
 
   const handleToolChange = (tool) => {
     if (activeTool === "canal" && canalDraft && canalDraft.length >= 2) handleCanalFinish();
@@ -473,6 +476,7 @@ export default function Editor() {
             bgColor={bgColor}
             snapSettings={{ ...snapSettings, zoom }}
             onDamageMarkerClick={handleDamageMarkerClick}
+            freehandMode={freehandMode}
           />
 
           {/* Top-right toolbar buttons */}
@@ -577,14 +581,7 @@ export default function Editor() {
         />
       )}
 
-      {activeDamageMarker && (
-        <DamageMarkerDialog
-          marker={activeDamageMarker}
-          onSave={handleDamageMarkerSave}
-          onClose={() => setActiveDamageMarker(null)}
-          onDelete={(id) => { handleDeleteObject(id); setActiveDamageMarker(null); }}
-        />
-      )}
+      {/* Damage tool is now a simple line drawn directly on canvas — no dialog */}
     </div>
   );
 }
