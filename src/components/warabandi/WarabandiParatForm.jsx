@@ -3,34 +3,28 @@ import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Printer } from "lucide-react";
 
 const emptyRow = () => ({
-  khatoni: "", owner_name: "", bandubast: "", total_area: "", ghair_mumkin: "", khalis_raqba: "",
-  // واری بحساب رقبہ → گھنٹے | منٹ
-  waari_ghante: "", waari_minute: "",
-  // زائدہ وصولی → گھنٹے | منٹ
-  zaidah_ghante: "", zaidah_minute: "",
-  // وضگی → گھنٹے | منٹ
-  wazgi_ghante: "", wazgi_minute: "",
-  // خالص واری → گھنٹے | منٹ
-  khalis_waari_ghante: "", khalis_waari_minute: "",
-  // نکہ جات → دیگا | لیگا
-  nikha_dega: "", nikha_lega: "",
-  // تشریح اوقات دن (single col)
-  tashreeh_din: "",
-  // تشریح اوقات رات (single col)
-  tashreeh_raat: "",
-  // right side
+  // === LEFT (summary) section — moved to START ===
   khatoni2: "", owner_name2: "", total_area2: "",
-  khalis_waari2_ghante: "", khalis_waari2_minute: "",
-  nikha2_dega: "", nikha2_lega: "",
+  khalis_waari2_minute: "", khalis_waari2_ghante: "",
+  nikha2_lega: "", nikha2_dega: "",
   tashreeh_din2: "", tashreeh_raat2: "",
+  // === MAIN detail section ===
+  khatoni: "", owner_name: "", bandubast: "", total_area: "", ghair_mumkin: "", khalis_raqba: "",
+  waari_minute: "", waari_ghante: "",
+  zaidah_minute: "", zaidah_ghante: "",
+  wazgi_minute: "", wazgi_ghante: "",
+  khalis_waari_minute: "", khalis_waari_ghante: "",
+  nikha_lega: "", nikha_dega: "",
+  tashreeh_din: "",
+  tashreeh_raat: "",
 });
 
 export default function WarabandiParatForm() {
   const [docType, setDocType] = useState("پرت وارہ بندی");
   const [header, setHeader] = useState({
-    mogha_number: "73780",
+    mogha_number: "18650",
     mogha_side: "R",
-    rajbaha: "پیلو ماینر ، ڈھاک",
+    rajbaha: "پیلو مائنر ۔",
     mouza: "روڈہ",
     section: "گنجیال",
     sub_division: "قائد آباد",
@@ -48,8 +42,9 @@ export default function WarabandiParatForm() {
   const addRow = () => setRows(prev => [...prev, emptyRow()]);
   const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
 
-  // Header line: docType موگہ نمبری X/Y راجباہ ... موضع ... سیکشن ... سب ڈویژن ... کینال ڈویژن ...
-  const moghaFull = `${header.mogha_number || "___"}/${header.mogha_side}`;
+  // In RTL context, writing side/number means side appears on LEFT (visually right side of number)
+  // To show as "18650/R" visually in RTL, we write number first then slash then side
+  const moghaFull = `${header.mogha_side}/${header.mogha_number}`;
   const headerLine = `${docType} موگہ نمبری ${moghaFull} راجباہ ${header.rajbaha || "___"} موضع ${header.mouza || "___"} سیکشن ${header.section || "___"} ، سب ڈویژن ${header.sub_division || "___"} کینال ڈویژن ${header.canal_division || "___"}`;
 
   const inputCls = "w-full bg-transparent outline-none text-[10px] text-slate-800 text-center px-0.5 py-0.5 placeholder:text-slate-300";
@@ -61,7 +56,6 @@ export default function WarabandiParatForm() {
       {/* Screen Header */}
       <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
         <div className="flex items-center justify-between mb-3">
-          {/* Document type dropdown */}
           <select
             value={docType}
             onChange={e => setDocType(e.target.value)}
@@ -77,16 +71,15 @@ export default function WarabandiParatForm() {
           </Button>
         </div>
 
-        {/* Header fields */}
         <div dir="rtl" className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
-          {/* موگہ نمبری + L/R side by side */}
+          {/* موگہ نمبری: number input + L/R dropdown */}
           <div className="flex flex-col gap-0.5">
             <label className="text-[9px] text-slate-500 font-semibold" style={{ fontFamily: "serif" }}>موگہ نمبری</label>
-            <div className="flex gap-1">
+            <div className="flex gap-1" dir="ltr">
               <input
                 value={header.mogha_number}
                 onChange={e => updateHeader("mogha_number", e.target.value)}
-                placeholder="73780"
+                placeholder="18650"
                 dir="ltr"
                 className="border border-slate-300 rounded px-2 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:border-blue-400 flex-1 min-w-0"
               />
@@ -102,7 +95,7 @@ export default function WarabandiParatForm() {
           </div>
 
           {[
-            { key: "rajbaha", label: "راجباہ", placeholder: "پیلو ماینر ، ڈھاک" },
+            { key: "rajbaha", label: "راجباہ", placeholder: "پیلو مائنر ۔" },
             { key: "mouza", label: "موضع", placeholder: "روڈہ" },
             { key: "section", label: "سیکشن", placeholder: "گنجیال" },
             { key: "sub_division", label: "سب ڈویژن", placeholder: "قائد آباد" },
@@ -122,7 +115,6 @@ export default function WarabandiParatForm() {
           ))}
         </div>
 
-        {/* Live header preview */}
         <div dir="rtl" className="mt-3 p-2 bg-white border border-dashed border-slate-300 rounded text-center text-[11px] text-slate-700"
           style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 2 }}>
           {headerLine}
@@ -138,95 +130,78 @@ export default function WarabandiParatForm() {
           </Button>
         </div>
 
-        <table style={{ borderCollapse: "collapse", minWidth: "1600px", width: "100%", direction: "rtl" }}>
+        <table style={{ borderCollapse: "collapse", minWidth: "1700px", width: "100%", direction: "rtl" }}>
           <thead>
-            {/* Row 1 */}
             <tr style={{ backgroundColor: "#e8f0fe" }}>
+              {/* === START: summary cols (moved from end) === */}
+              <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
+              <th className={thCls} rowSpan={2}>نام مالک معہ والدیت</th>
+              <th className={thCls} rowSpan={2}>کل رقبہ</th>
+              <th className={thCls} colSpan={2}>خالص واری</th>
+              <th className={thCls} colSpan={2}>نکہ جات</th>
+              <th className={thCls} rowSpan={2}>تشریح اوقات دن</th>
+              <th className={thCls} rowSpan={2}>تشریح اوقات رات</th>
+              {/* === MAIN detail cols === */}
               <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
               <th className={thCls} rowSpan={2}>نام مالک معہ والدیت</th>
               <th className={thCls} rowSpan={2}>نمبران بندوبست</th>
               <th className={thCls} rowSpan={2}>کل رقبہ</th>
               <th className={thCls} rowSpan={2}>غیر ممکن رقبہ</th>
               <th className={thCls} rowSpan={2}>خالص رقبہ</th>
-              {/* واری بحساب رقبہ → 2 sub-cols */}
               <th className={thCls} colSpan={2}>واری بحساب رقبہ</th>
-              {/* زائدہ وصولی → 2 sub-cols */}
               <th className={thCls} colSpan={2}>زائدہ وصولی</th>
-              {/* وضگی → 2 sub-cols */}
               <th className={thCls} colSpan={2}>وضگی</th>
-              {/* خالص واری → 2 sub-cols */}
-              <th className={thCls} colSpan={2}>خالص واری</th>
-              {/* نکہ جات → 2 sub-cols */}
-              <th className={thCls} colSpan={2}>نکہ جات</th>
-              {/* تشریح اوقات دن — single col */}
-              <th className={thCls} rowSpan={2}>تشریح اوقات دن</th>
-              {/* تشریح اوقات رات — single col */}
-              <th className={thCls} rowSpan={2}>تشریح اوقات رات</th>
-              {/* right section */}
-              <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
-              <th className={thCls} rowSpan={2}>نام مالک معہ والدیت</th>
-              <th className={thCls} rowSpan={2}>کل رقبہ</th>
               <th className={thCls} colSpan={2}>خالص واری</th>
               <th className={thCls} colSpan={2}>نکہ جات</th>
               <th className={thCls} rowSpan={2}>تشریح اوقات دن</th>
               <th className={thCls} rowSpan={2}>تشریح اوقات رات</th>
               <th className={thCls} rowSpan={2} style={{ width: 24 }}></th>
             </tr>
-            {/* Row 2 — sub-labels */}
             <tr style={{ backgroundColor: "#f0f4ff" }}>
-              {/* واری بحساب رقبہ */}
-              <th className={thCls}>گھنٹے</th><th className={thCls}>منٹ</th>
-              {/* زائدہ وصولی */}
-              <th className={thCls}>گھنٹے</th><th className={thCls}>منٹ</th>
-              {/* وضگی */}
-              <th className={thCls}>گھنٹے</th><th className={thCls}>منٹ</th>
-              {/* خالص واری */}
-              <th className={thCls}>گھنٹے</th><th className={thCls}>منٹ</th>
-              {/* نکہ جات */}
-              <th className={thCls}>دیگا</th><th className={thCls}>لیگا</th>
-              {/* right section sub */}
-              <th className={thCls}>گھنٹے</th><th className={thCls}>منٹ</th>
-              <th className={thCls}>دیگا</th><th className={thCls}>لیگا</th>
+              {/* summary sub: خالص واری → منٹ | گھنٹے, نکہ جات → لیگا | دیگا */}
+              <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
+              <th className={thCls}>لیگا</th><th className={thCls}>دیگا</th>
+              {/* main sub: all → منٹ | گھنٹے, نکہ جات → لیگا | دیگا */}
+              <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
+              <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
+              <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
+              <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
+              <th className={thCls}>لیگا</th><th className={thCls}>دیگا</th>
               <th className={thCls} style={{ width: 24 }}></th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row, i) => (
               <tr key={i} className="hover:bg-blue-50/20">
+                {/* summary cols at start */}
+                <td className={tdCls}><input value={row.khatoni2} onChange={e => updateRow(i, "khatoni2", e.target.value)} className={inputCls} /></td>
+                <td className={tdCls} style={{ minWidth: 80 }}><input value={row.owner_name2} onChange={e => updateRow(i, "owner_name2", e.target.value)} className={inputCls} dir="rtl" /></td>
+                <td className={tdCls}><input value={row.total_area2} onChange={e => updateRow(i, "total_area2", e.target.value)} className={inputCls} type="number" /></td>
+                <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inputCls} type="number" /></td>
+                <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inputCls} type="number" /></td>
+                <td className={tdCls}><input value={row.nikha2_lega} onChange={e => updateRow(i, "nikha2_lega", e.target.value)} className={inputCls} /></td>
+                <td className={tdCls}><input value={row.nikha2_dega} onChange={e => updateRow(i, "nikha2_dega", e.target.value)} className={inputCls} /></td>
+                <td className={tdCls}><input value={row.tashreeh_din2} onChange={e => updateRow(i, "tashreeh_din2", e.target.value)} className={inputCls} /></td>
+                <td className={tdCls}><input value={row.tashreeh_raat2} onChange={e => updateRow(i, "tashreeh_raat2", e.target.value)} className={inputCls} /></td>
+                {/* main detail cols */}
                 <td className={tdCls}><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inputCls} /></td>
                 <td className={tdCls} style={{ minWidth: 90 }}><input value={row.owner_name} onChange={e => updateRow(i, "owner_name", e.target.value)} className={inputCls} dir="rtl" /></td>
                 <td className={tdCls}><input value={row.bandubast} onChange={e => updateRow(i, "bandubast", e.target.value)} className={inputCls} /></td>
                 <td className={tdCls}><input value={row.total_area} onChange={e => updateRow(i, "total_area", e.target.value)} className={inputCls} type="number" /></td>
                 <td className={tdCls}><input value={row.ghair_mumkin} onChange={e => updateRow(i, "ghair_mumkin", e.target.value)} className={inputCls} type="number" /></td>
                 <td className={tdCls}><input value={row.khalis_raqba} onChange={e => updateRow(i, "khalis_raqba", e.target.value)} className={inputCls} type="number" /></td>
-                {/* واری بحساب رقبہ */}
-                <td className={tdCls}><input value={row.waari_ghante} onChange={e => updateRow(i, "waari_ghante", e.target.value)} className={inputCls} type="number" /></td>
                 <td className={tdCls}><input value={row.waari_minute} onChange={e => updateRow(i, "waari_minute", e.target.value)} className={inputCls} type="number" /></td>
-                {/* زائدہ وصولی */}
-                <td className={tdCls}><input value={row.zaidah_ghante} onChange={e => updateRow(i, "zaidah_ghante", e.target.value)} className={inputCls} type="number" /></td>
+                <td className={tdCls}><input value={row.waari_ghante} onChange={e => updateRow(i, "waari_ghante", e.target.value)} className={inputCls} type="number" /></td>
                 <td className={tdCls}><input value={row.zaidah_minute} onChange={e => updateRow(i, "zaidah_minute", e.target.value)} className={inputCls} type="number" /></td>
-                {/* وضگی */}
-                <td className={tdCls}><input value={row.wazgi_ghante} onChange={e => updateRow(i, "wazgi_ghante", e.target.value)} className={inputCls} type="number" /></td>
+                <td className={tdCls}><input value={row.zaidah_ghante} onChange={e => updateRow(i, "zaidah_ghante", e.target.value)} className={inputCls} type="number" /></td>
                 <td className={tdCls}><input value={row.wazgi_minute} onChange={e => updateRow(i, "wazgi_minute", e.target.value)} className={inputCls} type="number" /></td>
-                {/* خالص واری */}
-                <td className={tdCls}><input value={row.khalis_waari_ghante} onChange={e => updateRow(i, "khalis_waari_ghante", e.target.value)} className={inputCls} type="number" /></td>
+                <td className={tdCls}><input value={row.wazgi_ghante} onChange={e => updateRow(i, "wazgi_ghante", e.target.value)} className={inputCls} type="number" /></td>
                 <td className={tdCls}><input value={row.khalis_waari_minute} onChange={e => updateRow(i, "khalis_waari_minute", e.target.value)} className={inputCls} type="number" /></td>
-                {/* نکہ جات */}
-                <td className={tdCls}><input value={row.nikha_dega} onChange={e => updateRow(i, "nikha_dega", e.target.value)} className={inputCls} /></td>
+                <td className={tdCls}><input value={row.khalis_waari_ghante} onChange={e => updateRow(i, "khalis_waari_ghante", e.target.value)} className={inputCls} type="number" /></td>
                 <td className={tdCls}><input value={row.nikha_lega} onChange={e => updateRow(i, "nikha_lega", e.target.value)} className={inputCls} /></td>
-                {/* تشریح اوقات دن / رات — single col each */}
+                <td className={tdCls}><input value={row.nikha_dega} onChange={e => updateRow(i, "nikha_dega", e.target.value)} className={inputCls} /></td>
                 <td className={tdCls}><input value={row.tashreeh_din} onChange={e => updateRow(i, "tashreeh_din", e.target.value)} className={inputCls} /></td>
                 <td className={tdCls}><input value={row.tashreeh_raat} onChange={e => updateRow(i, "tashreeh_raat", e.target.value)} className={inputCls} /></td>
-                {/* right section */}
-                <td className={tdCls}><input value={row.khatoni2} onChange={e => updateRow(i, "khatoni2", e.target.value)} className={inputCls} /></td>
-                <td className={tdCls} style={{ minWidth: 80 }}><input value={row.owner_name2} onChange={e => updateRow(i, "owner_name2", e.target.value)} className={inputCls} dir="rtl" /></td>
-                <td className={tdCls}><input value={row.total_area2} onChange={e => updateRow(i, "total_area2", e.target.value)} className={inputCls} type="number" /></td>
-                <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inputCls} type="number" /></td>
-                <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inputCls} type="number" /></td>
-                <td className={tdCls}><input value={row.nikha2_dega} onChange={e => updateRow(i, "nikha2_dega", e.target.value)} className={inputCls} /></td>
-                <td className={tdCls}><input value={row.nikha2_lega} onChange={e => updateRow(i, "nikha2_lega", e.target.value)} className={inputCls} /></td>
-                <td className={tdCls}><input value={row.tashreeh_din2} onChange={e => updateRow(i, "tashreeh_din2", e.target.value)} className={inputCls} /></td>
-                <td className={tdCls}><input value={row.tashreeh_raat2} onChange={e => updateRow(i, "tashreeh_raat2", e.target.value)} className={inputCls} /></td>
                 <td className={tdCls} style={{ width: 24 }}>
                   <button onClick={() => removeRow(i)} className="text-slate-300 hover:text-red-500 p-0.5">
                     <Trash2 className="w-3 h-3" />
@@ -284,6 +259,15 @@ function PrintModal({ docType, header, headerLine, rows, onClose }) {
           <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
             <thead>
               <tr>
+                {/* summary cols at start */}
+                <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
+                <th style={{ ...thP, minWidth: 70 }} rowSpan={2}>نام مالک معہ والدیت</th>
+                <th style={thP} rowSpan={2}>کل رقبہ</th>
+                <th style={thP} colSpan={2}>خالص واری</th>
+                <th style={thP} colSpan={2}>نکہ جات</th>
+                <th style={thP} rowSpan={2}>تشریح اوقات دن</th>
+                <th style={thP} rowSpan={2}>تشریح اوقات رات</th>
+                {/* main detail cols */}
                 <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
                 <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نام مالک معہ والدیت</th>
                 <th style={thP} rowSpan={2}>نمبران بندوبست</th>
@@ -297,63 +281,56 @@ function PrintModal({ docType, header, headerLine, rows, onClose }) {
                 <th style={thP} colSpan={2}>نکہ جات</th>
                 <th style={thP} rowSpan={2}>تشریح اوقات دن</th>
                 <th style={thP} rowSpan={2}>تشریح اوقات رات</th>
-                <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
-                <th style={{ ...thP, minWidth: 70 }} rowSpan={2}>نام مالک معہ والدیت</th>
-                <th style={thP} rowSpan={2}>کل رقبہ</th>
-                <th style={thP} colSpan={2}>خالص واری</th>
-                <th style={thP} colSpan={2}>نکہ جات</th>
-                <th style={thP} rowSpan={2}>تشریح اوقات دن</th>
-                <th style={thP} rowSpan={2}>تشریح اوقات رات</th>
               </tr>
               <tr>
-                <th style={thP}>گھنٹے</th><th style={thP}>منٹ</th>
-                <th style={thP}>گھنٹے</th><th style={thP}>منٹ</th>
-                <th style={thP}>گھنٹے</th><th style={thP}>منٹ</th>
-                <th style={thP}>گھنٹے</th><th style={thP}>منٹ</th>
-                <th style={thP}>دیگا</th><th style={thP}>لیگا</th>
-                <th style={thP}>گھنٹے</th><th style={thP}>منٹ</th>
-                <th style={thP}>دیگا</th><th style={thP}>لیگا</th>
+                <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
+                <th style={thP}>لیگا</th><th style={thP}>دیگا</th>
+                <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
+                <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
+                <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
+                <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
+                <th style={thP}>لیگا</th><th style={thP}>دیگا</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
                 <tr key={i}>
+                  <td style={tdP}>{row.khatoni2}</td>
+                  <td style={{ ...tdP, textAlign: "right" }}>{row.owner_name2}</td>
+                  <td style={tdP}>{row.total_area2}</td>
+                  <td style={tdP}>{row.khalis_waari2_minute}</td>
+                  <td style={tdP}>{row.khalis_waari2_ghante}</td>
+                  <td style={tdP}>{row.nikha2_lega}</td>
+                  <td style={tdP}>{row.nikha2_dega}</td>
+                  <td style={tdP}>{row.tashreeh_din2}</td>
+                  <td style={tdP}>{row.tashreeh_raat2}</td>
                   <td style={tdP}>{row.khatoni}</td>
                   <td style={{ ...tdP, textAlign: "right" }}>{row.owner_name}</td>
                   <td style={tdP}>{row.bandubast}</td>
                   <td style={tdP}>{row.total_area}</td>
                   <td style={tdP}>{row.ghair_mumkin}</td>
                   <td style={tdP}>{row.khalis_raqba}</td>
-                  <td style={tdP}>{row.waari_ghante}</td>
                   <td style={tdP}>{row.waari_minute}</td>
-                  <td style={tdP}>{row.zaidah_ghante}</td>
+                  <td style={tdP}>{row.waari_ghante}</td>
                   <td style={tdP}>{row.zaidah_minute}</td>
-                  <td style={tdP}>{row.wazgi_ghante}</td>
+                  <td style={tdP}>{row.zaidah_ghante}</td>
                   <td style={tdP}>{row.wazgi_minute}</td>
-                  <td style={tdP}>{row.khalis_waari_ghante}</td>
+                  <td style={tdP}>{row.wazgi_ghante}</td>
                   <td style={tdP}>{row.khalis_waari_minute}</td>
-                  <td style={tdP}>{row.nikha_dega}</td>
+                  <td style={tdP}>{row.khalis_waari_ghante}</td>
                   <td style={tdP}>{row.nikha_lega}</td>
+                  <td style={tdP}>{row.nikha_dega}</td>
                   <td style={tdP}>{row.tashreeh_din}</td>
                   <td style={tdP}>{row.tashreeh_raat}</td>
-                  <td style={tdP}>{row.khatoni2}</td>
-                  <td style={{ ...tdP, textAlign: "right" }}>{row.owner_name2}</td>
-                  <td style={tdP}>{row.total_area2}</td>
-                  <td style={tdP}>{row.khalis_waari2_ghante}</td>
-                  <td style={tdP}>{row.khalis_waari2_minute}</td>
-                  <td style={tdP}>{row.nikha2_dega}</td>
-                  <td style={tdP}>{row.nikha2_lega}</td>
-                  <td style={tdP}>{row.tashreeh_din2}</td>
-                  <td style={tdP}>{row.tashreeh_raat2}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px", fontSize: "11px" }}>
-            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "120px" }}>دستخط نہری نگران</div>
-            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "120px" }}>دستخط ملہدار</div>
-            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "120px" }}>دستخط ذیلدار</div>
+            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "140px" }}>دستخط نہری پٹواری</div>
+            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "140px" }}>دستخط ضلعدار</div>
+            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "200px" }}>دستخط سب ڈویژنل کینال آفیسر</div>
           </div>
         </div>
       </div>
