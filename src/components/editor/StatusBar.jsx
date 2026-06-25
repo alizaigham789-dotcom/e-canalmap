@@ -1,5 +1,5 @@
 import React from "react";
-import { ftToPx, pxToFt, DIMENSIONS } from "@/lib/drawingEngine";
+import { DIMENSIONS } from "@/lib/gisEngine";
 
 export default function StatusBar({ zoom, snapPos, activeTool, objectCount, canalDraftLen }) {
   const toolInfo = {

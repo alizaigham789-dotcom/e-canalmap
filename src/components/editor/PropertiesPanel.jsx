@@ -3,8 +3,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { X, Trash2, User, Tag, ArrowUpDown } from "lucide-react";
+import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+
+const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
+const KILLA_STROKE_COLORS = ["#ef4444","#000000","#ffffff","#9ca3af","#22c55e","#3b82f6","#a16207","#eab308","custom"];
+const KILLA_STROKE_STYLES = ["solid", "dashed", "dotted"];
 
 export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClose }) {
   const [local, setLocal] = useState({});
@@ -25,12 +29,14 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
     acre: "Acre Block", mustateel: "Mustateel Parcel", muraba: "Muraba Block",
     canal: "Canal", chakbandi: "Chakbandi Line", outlet: "Outlet / Moga",
     khal: "Khal / Watercourse", road: "Road", mouza: "Mouza Boundary",
+    damageMarker: "Canal Damage Marker",
   }[selectedObj.type] || selectedObj.type;
 
   const typeColor = {
     acre: "text-amber-600", mustateel: "text-red-600", muraba: "text-red-700",
     canal: "text-blue-600", chakbandi: "text-green-600", outlet: "text-cyan-600",
     khal: "text-blue-500", road: "text-amber-500", mouza: "text-slate-700",
+    damageMarker: "text-red-600",
   }[selectedObj.type] || "text-slate-500";
 
   return (
@@ -55,10 +61,25 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
           <p className="text-[10px] font-mono text-slate-400 truncate">{selectedObj.id}</p>
         </div>
 
+        {selectedObj.type === "damageMarker" && (
+          <>
+            <Separator className="bg-slate-100" />
+            <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-xs font-semibold text-red-700">{local.damage_category}</p>
+              <p className="text-[10px] text-red-500 mt-0.5">Severity: <span className="font-bold">{local.severity}</span></p>
+              {local.description && <p className="text-[10px] text-slate-500 mt-1">{local.description}</p>}
+              {local.responsible_person && <p className="text-[10px] text-slate-500">Resp: {local.responsible_person}</p>}
+              {local.date && <p className="text-[10px] text-slate-400 font-mono">{new Date(local.date).toLocaleDateString()}</p>}
+            </div>
+            <p className="text-[9px] text-blue-500">Double-click marker on map to edit details</p>
+          </>
+        )}
+
         {selectedObj.type === "acre" && (
           <>
             <Separator className="bg-slate-100" />
             <Field label="Label" value={local.label || ""} onChange={v => commit("label", v)} placeholder="Optional label" />
+            <FillStyleControl local={local} commit={commit} />
             <div className="text-[10px] text-slate-400 font-mono">220 ft × 198 ft</div>
           </>
         )}
@@ -72,6 +93,12 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
               <label className="text-xs text-slate-600">Show Owner</label>
               <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
             </div>
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
+              <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
+            </div>
+            <FillStyleControl local={local} commit={commit} />
+            <KillaStyleControl local={local} commit={commit} />
             <div className="text-[10px] text-slate-400 font-mono">440 ft × 990 ft • 10 Killas</div>
           </>
         )}
@@ -85,6 +112,12 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
               <label className="text-xs text-slate-600">Show Owner</label>
               <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
             </div>
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
+              <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
+            </div>
+            <FillStyleControl local={local} commit={commit} />
+            <KillaStyleControl local={local} commit={commit} />
             <div className="text-[10px] text-slate-400 font-mono">1100 ft × 990 ft • 25 Killas</div>
           </>
         )}
@@ -298,6 +331,99 @@ function SpacingControl({ label, value, min, max, step, onChange, unit }) {
         <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
           onClick={() => onChange(Math.min(max, value + step))}>+</Button>
         <span className="text-xs text-slate-600 font-mono w-10 text-center">{value}{unit}</span>
+      </div>
+    </div>
+  );
+}
+
+function FillStyleControl({ local, commit }) {
+  return (
+    <div>
+      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+        <Palette className="w-3 h-3" /> Fill Pattern
+      </label>
+      <div className="flex flex-wrap gap-1 mb-2">
+        {FILL_STYLES.map(fs => (
+          <button key={fs}
+            onClick={() => commit("fillStyle", fs)}
+            className={`px-2 py-0.5 text-[9px] rounded border font-medium transition-colors ${
+              (local.fillStyle || "solid") === fs
+                ? "bg-blue-600 text-white border-blue-500"
+                : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"
+            }`}>
+            {fs}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="text-[9px] text-slate-400 shrink-0">Color</label>
+        <input type="color" value={local.fillColor?.startsWith("rgba") ? "#ef4444" : (local.fillColor || "#ef4444")}
+          onChange={e => commit("fillColor", e.target.value)}
+          className="h-5 w-8 rounded cursor-pointer border border-slate-200" />
+        <label className="text-[9px] text-slate-400 shrink-0">Opacity</label>
+        <input type="range" min={0} max={1} step={0.05} value={local.fillOpacity || 0.35}
+          onChange={e => commit("fillOpacity", parseFloat(e.target.value))}
+          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+        <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((local.fillOpacity || 0.35)*100)}%</span>
+      </div>
+      {(local.fillStyle !== "solid" && local.fillStyle) && (
+        <div className="flex items-center gap-2 mt-1">
+          <label className="text-[9px] text-slate-400 shrink-0">Spacing</label>
+          <input type="range" min={4} max={24} step={2} value={local.fillSpacing || 8}
+            onChange={e => commit("fillSpacing", parseInt(e.target.value))}
+            className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+          <span className="text-[9px] font-mono text-slate-500 w-6">{local.fillSpacing || 8}px</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KillaStyleControl({ local, commit }) {
+  const ks = local.killaStyle || {};
+  const updateKs = (key, val) => commit("killaStyle", { ...ks, [key]: val });
+
+  return (
+    <div>
+      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+        <Grid3x3 className="w-3 h-3" /> Killa Grid Style
+      </label>
+      <div className="space-y-2 pl-1 border-l-2 border-slate-100">
+        <div className="flex items-center gap-2">
+          <label className="text-[9px] text-slate-400 w-12 shrink-0">Stroke</label>
+          <Select value={ks.strokeStyle || "solid"} onValueChange={v => updateKs("strokeStyle", v)}>
+            <SelectTrigger className="h-5 text-[9px] flex-1 border-slate-200">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {KILLA_STROKE_STYLES.map(s => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <input type="color" value={ks.strokeColor || "#ef4444"}
+            onChange={e => updateKs("strokeColor", e.target.value)}
+            className="h-5 w-7 rounded cursor-pointer border border-slate-200" />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-[9px] text-slate-400 w-12 shrink-0">Width</label>
+          <input type="range" min={0.5} max={5} step={0.5} value={ks.strokeWidth || 1}
+            onChange={e => updateKs("strokeWidth", parseFloat(e.target.value))}
+            className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+          <span className="text-[9px] font-mono text-slate-500 w-6">{ks.strokeWidth || 1}px</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-[9px] text-slate-400 w-12 shrink-0">Opacity</label>
+          <input type="range" min={0} max={1} step={0.05} value={ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.15}
+            onChange={e => updateKs("strokeOpacity", parseFloat(e.target.value))}
+            className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+          <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.15)*100)}%</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-[9px] text-slate-400 w-12 shrink-0">Label</label>
+          <input type="color" value={ks.labelColor?.startsWith("rgba") ? "#dc2626" : (ks.labelColor || "#dc2626")}
+            onChange={e => updateKs("labelColor", e.target.value)}
+            className="h-5 w-7 rounded cursor-pointer border border-slate-200" />
+          <span className="text-[9px] text-slate-400">Killa number color</span>
+        </div>
       </div>
     </div>
   );

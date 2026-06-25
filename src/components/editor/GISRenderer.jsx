@@ -1,0 +1,656 @@
+// ============================================================
+// GIS RENDERER — Pure canvas drawing functions
+// Z-Index Layer Stack (0–5), Anti-aliased zoom scaling,
+// Symmetric bilateral buffering, Vector fill patterns
+// ============================================================
+
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS } from "@/lib/gisEngine";
+
+// ---- Anti-aliased zoom-clamped font size ----
+function scaledFont(basePx, zoom, minPx = 11, maxPx = 28) {
+  return Math.max(minPx, Math.min(maxPx, basePx / zoom));
+}
+
+// ============================================================
+// LAYER 0: Grid (editor mode only, stripped in print/export)
+// ============================================================
+export function drawGrid(ctx, W, H, zoom, pan) {
+  const acreW = DIMENSIONS.ACRE.width, acreH = DIMENSIONS.ACRE.height;
+  const startX = Math.floor(-pan.x / zoom / acreW) * acreW - acreW;
+  const startY = Math.floor(-pan.y / zoom / acreH) * acreH - acreH;
+  const endX = startX + W / zoom + acreW * 2;
+  const endY = startY + H / zoom + acreH * 2;
+
+  ctx.lineWidth = 0.5 / zoom;
+
+  if (zoom > 0.3) {
+    ctx.strokeStyle = "rgba(59,130,246,0.10)";
+    ctx.beginPath();
+    for (let x = startX; x < endX; x += acreW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
+    for (let y = startY; y < endY; y += acreH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
+    ctx.stroke();
+  }
+
+  const mustW = DIMENSIONS.MUSTATEEL.width, mustH = DIMENSIONS.MUSTATEEL.height;
+  ctx.strokeStyle = "rgba(59,130,246,0.20)";
+  ctx.lineWidth = 1 / zoom;
+  ctx.beginPath();
+  for (let x = Math.floor(startX / mustW) * mustW; x < endX; x += mustW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
+  for (let y = Math.floor(startY / mustH) * mustH; y < endY; y += mustH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
+  ctx.stroke();
+}
+
+// ============================================================
+// LAYER 1+2: Parcels (fill then boundary)
+// ============================================================
+export function drawAcre(ctx, obj, isSelected, zoom, C) {
+  // Layer 1: Fill
+  const fs = obj.fillStyle || "solid";
+  if (fs === "solid") {
+    ctx.fillStyle = obj.fillColor || C.acreFill || "rgba(234,179,8,0.08)";
+    ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+  } else {
+    ctx.fillStyle = "rgba(234,179,8,0.05)";
+    ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+    const pat = createFillPattern(ctx, fs, obj.fillColor || "#eab308", obj.fillOpacity || 0.4, obj.fillSpacing || 8);
+    if (pat) {
+      ctx.save(); ctx.translate(obj.x, obj.y);
+      ctx.fillStyle = pat; ctx.fillRect(0, 0, obj.w, obj.h);
+      ctx.restore();
+    }
+  }
+
+  // Layer 2: Boundary
+  ctx.strokeStyle = isSelected ? "#60a5fa" : (C.acreStroke || "#eab308");
+  ctx.lineWidth = (isSelected ? 2 : 1.5) / zoom;
+  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+
+  // Layer 5: Label
+  if (obj.label) {
+    ctx.fillStyle = C.labelColor || "#000000";
+    ctx.font = `bold ${scaledFont(12, zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(obj.label, obj.x + obj.w / 2, obj.y + obj.h / 2);
+  }
+}
+
+export function drawMustateel(ctx, obj, isSelected, zoom, C) {
+  const ks = obj.killaStyle || {};
+  const fs = obj.fillStyle || "solid";
+
+  // Layer 1: Fill
+  if (fs === "solid") {
+    ctx.fillStyle = obj.fillColor || C.mustateelFill || "rgba(245,158,11,0.10)";
+    ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+  } else {
+    ctx.fillStyle = "rgba(245,158,11,0.05)";
+    ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+    const pat = createFillPattern(ctx, fs, obj.fillColor || "#ef4444", obj.fillOpacity || 0.35, obj.fillSpacing || 8);
+    if (pat) {
+      ctx.save(); ctx.translate(obj.x, obj.y);
+      ctx.fillStyle = pat; ctx.fillRect(0, 0, obj.w, obj.h);
+      ctx.restore();
+    }
+  }
+
+  // Layer 2: Outer boundary — RED, thick
+  ctx.strokeStyle = isSelected ? "#60a5fa" : (C.mustateelStroke || "#ef4444");
+  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
+  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+
+  // Layer 2: Killa grid (decoupled style state)
+  if (zoom > 0.12) {
+    const alpha = ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.15;
+    const ksColor = ks.strokeColor || "#ef4444";
+    ctx.strokeStyle = `rgba(${hexToRgb(ksColor)},${alpha})`;
+    ctx.lineWidth = ((ks.strokeWidth || 1)) / zoom;
+    if (ks.strokeStyle === "dashed") ctx.setLineDash([6/zoom, 3/zoom]);
+    else if (ks.strokeStyle === "dotted") ctx.setLineDash([2/zoom, 3/zoom]);
+    else ctx.setLineDash([]);
+
+    const cellW = obj.w / 2, cellH = obj.h / 5;
+    ctx.beginPath();
+    ctx.moveTo(obj.x + cellW, obj.y); ctx.lineTo(obj.x + cellW, obj.y + obj.h);
+    for (let r = 1; r < 5; r++) {
+      ctx.moveTo(obj.x, obj.y + r * cellH); ctx.lineTo(obj.x + obj.w, obj.y + r * cellH);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Layer 5: Killa numbers (clamped to readable size)
+    if (zoom > 0.25) {
+      const grid = getMustateeelKillaGrid();
+      ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.9)";
+      ctx.font = `bold ${scaledFont(10, zoom, 8, 14)}px Rajdhani, sans-serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 2; c++) {
+          ctx.fillText(String(grid[r][c]), obj.x + c * cellW + cellW/2, obj.y + r * cellH + cellH/2);
+        }
+      }
+    }
+  }
+
+  // Layer 5: Center label
+  {
+    const centerX = obj.x + obj.w / 2, centerY = obj.y + obj.h / 2;
+    ctx.fillStyle = C.labelColor || "#000000";
+    ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(obj.label || "", centerX, centerY - (obj.showOwner && obj.ownerName ? 8/zoom : 0));
+    if (obj.showOwner && obj.ownerName) {
+      ctx.fillStyle = "rgba(100,116,139,0.9)";
+      ctx.font = `${scaledFont(11, zoom)}px Inter, sans-serif`;
+      ctx.fillText(obj.ownerName, centerX, centerY + 10/zoom);
+    }
+  }
+}
+
+export function drawMuraba(ctx, obj, isSelected, zoom, C) {
+  const ks = obj.killaStyle || {};
+  const fs = obj.fillStyle || "solid";
+
+  // Layer 1: Fill
+  if (fs === "solid") {
+    ctx.fillStyle = obj.fillColor || C.murabaFill || "rgba(249,115,22,0.08)";
+    ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+  } else {
+    ctx.fillStyle = "rgba(249,115,22,0.05)";
+    ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+    const pat = createFillPattern(ctx, fs, obj.fillColor || "#ef4444", obj.fillOpacity || 0.35, obj.fillSpacing || 8);
+    if (pat) {
+      ctx.save(); ctx.translate(obj.x, obj.y);
+      ctx.fillStyle = pat; ctx.fillRect(0, 0, obj.w, obj.h);
+      ctx.restore();
+    }
+  }
+
+  // Layer 2: Outer boundary — RED, thicker
+  ctx.strokeStyle = isSelected ? "#60a5fa" : (C.murabaStroke || "#ef4444");
+  ctx.lineWidth = (isSelected ? 4 : 3) / zoom;
+  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+
+  // Layer 2: Killa grid (decoupled style state)
+  if (zoom > 0.08) {
+    const alpha = ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.10;
+    const ksColor = ks.strokeColor || "#ef4444";
+    ctx.strokeStyle = `rgba(${hexToRgb(ksColor)},${alpha})`;
+    ctx.lineWidth = ((ks.strokeWidth || 1)) / zoom;
+    if (ks.strokeStyle === "dashed") ctx.setLineDash([6/zoom, 3/zoom]);
+    else if (ks.strokeStyle === "dotted") ctx.setLineDash([2/zoom, 3/zoom]);
+    else ctx.setLineDash([]);
+
+    const cellW = obj.w / 5, cellH = obj.h / 5;
+    ctx.beginPath();
+    for (let c = 1; c < 5; c++) { ctx.moveTo(obj.x + c * cellW, obj.y); ctx.lineTo(obj.x + c * cellW, obj.y + obj.h); }
+    for (let r = 1; r < 5; r++) { ctx.moveTo(obj.x, obj.y + r * cellH); ctx.lineTo(obj.x + obj.w, obj.y + r * cellH); }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (zoom > 0.2) {
+      const grid = getMurabaKillaGrid();
+      ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.85)";
+      ctx.font = `bold ${scaledFont(9, zoom, 7, 13)}px Rajdhani, sans-serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          ctx.fillText(String(grid[r][c]), obj.x + c * cellW + cellW/2, obj.y + r * cellH + cellH/2);
+        }
+      }
+    }
+  }
+
+  // Layer 5: Center label
+  {
+    const centerX = obj.x + obj.w / 2, centerY = obj.y + obj.h / 2;
+    ctx.fillStyle = C.labelColor || "#000000";
+    ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(obj.label || "", centerX, centerY - (obj.showOwner && obj.ownerName ? 10/zoom : 0));
+    if (obj.showOwner && obj.ownerName) {
+      ctx.fillStyle = "rgba(100,116,139,0.9)";
+      ctx.font = `${scaledFont(12, zoom)}px Inter, sans-serif`;
+      ctx.fillText(obj.ownerName, centerX, centerY + 13/zoom);
+    }
+  }
+}
+
+// ============================================================
+// LAYER 3: Canal — symmetric bilateral buffering, butt caps
+// ============================================================
+export function drawCanal(ctx, obj, isSelected, zoom, C) {
+  if (obj.points.length < 2) return;
+  const halfW = obj.width / 2;
+  // Spine anchored; boundaries = spine ± W/2
+  const left = getParallelPolyline(obj.points, -halfW);
+  const right = getParallelPolyline(obj.points, halfW);
+
+  // Water fill
+  ctx.fillStyle = C.canalFill || "rgba(30,144,255,0.25)";
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (const p of left) ctx.lineTo(p.x, p.y);
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Bank lines — butt caps (NO arrow ends)
+  const bankColor = isSelected ? "#93c5fd" : (C.canalStroke || "#0284c7");
+  ctx.strokeStyle = bankColor;
+  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
+  ctx.lineCap = "butt"; // strict — no tapers
+  ctx.lineJoin = "round";
+  for (const side of [left, right]) {
+    ctx.beginPath();
+    ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
+
+  // Layer 5: Canal name — RED, center-aligned, rotated along segment angle
+  if (obj.name) {
+    const mid = Math.floor(obj.points.length / 2);
+    const p = obj.points[mid];
+    const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
+    const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(angle);
+    ctx.fillStyle = "#dc2626"; // RED per spec
+    ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(obj.name, 0, 0);
+    ctx.restore();
+  }
+}
+
+// ============================================================
+// LAYER 3: Khal — bilateral buffer, butt caps
+// ============================================================
+export function drawKhal(ctx, obj, isSelected, zoom, C) {
+  if (obj.points.length < 2) return;
+  const halfW = (obj.width || DIMENSIONS.KHAL_WIDTH) / 2;
+  const left = getParallelPolyline(obj.points, -halfW);
+  const right = getParallelPolyline(obj.points, halfW);
+
+  const khalColor = isSelected ? "#93c5fd" : (C.khalStroke || "#2563eb");
+  ctx.strokeStyle = khalColor;
+  ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
+  ctx.lineCap = "butt";
+  ctx.lineJoin = "round";
+  for (const side of [left, right]) {
+    ctx.beginPath();
+    ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
+
+  // Perpendicular cap at start
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  ctx.lineTo(right[0].x, right[0].y);
+  ctx.stroke();
+
+  // Arrow at endpoint
+  const lastPt = obj.points[obj.points.length - 1];
+  const prevPt = obj.points[obj.points.length - 2];
+  const arrowAngle = Math.atan2(lastPt.y - prevPt.y, lastPt.x - prevPt.x);
+  const arrowLen = Math.max(halfW * 2 * 1.5, 14/zoom);
+  ctx.save();
+  ctx.translate(lastPt.x, lastPt.y); ctx.rotate(arrowAngle);
+  ctx.fillStyle = khalColor;
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(-arrowLen, -halfW); ctx.lineTo(-arrowLen, halfW);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  if (obj.name && zoom > 0.3) {
+    const mid = Math.floor(obj.points.length / 2);
+    const p = obj.points[mid];
+    const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
+    const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(angle);
+    ctx.fillStyle = khalColor;
+    ctx.font = `bold ${scaledFont(11, zoom, 9)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(obj.name, 0, -halfW - 3/zoom);
+    ctx.restore();
+  }
+}
+
+// ============================================================
+// LAYER 3: Road — bilateral buffer, butt caps
+// ============================================================
+export function drawRoad(ctx, obj, isSelected, zoom, C) {
+  if (obj.points.length < 2) return;
+  const halfW = (obj.width || DIMENSIONS.ROAD_WIDTH) / 2;
+  const left = getParallelPolyline(obj.points, -halfW);
+  const right = getParallelPolyline(obj.points, halfW);
+
+  // Asphalt fill
+  ctx.fillStyle = "#3a3a3a";
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (const p of left) ctx.lineTo(p.x, p.y);
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  ctx.closePath(); ctx.fill();
+
+  // Casing edges — butt caps
+  const edgeColor = isSelected ? "#fcd34d" : (C.roadStroke || "#b45309");
+  ctx.strokeStyle = edgeColor;
+  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
+  ctx.lineCap = "butt";
+  ctx.lineJoin = "round";
+  for (const side of [left, right]) {
+    ctx.beginPath();
+    ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
+
+  // Dashed center divider
+  ctx.strokeStyle = "#fbbf24";
+  ctx.lineWidth = 1.5 / zoom;
+  ctx.setLineDash([10/zoom, 6/zoom]);
+  ctx.beginPath();
+  ctx.moveTo(obj.points[0].x, obj.points[0].y);
+  for (const p of obj.points) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Layer 5: Road name — WHITE, center-aligned, rotated
+  if (obj.name) {
+    const mid = Math.floor(obj.points.length / 2);
+    const p = obj.points[mid];
+    const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
+    const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(angle);
+    ctx.fillStyle = "rgba(255,255,255,0.95)"; // WHITE per spec
+    ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(obj.name, 0, 0);
+    ctx.restore();
+  }
+}
+
+// ============================================================
+// LAYER 4: Outlet / Moga
+// ============================================================
+export function drawOutlet(ctx, obj, isSelected, zoom, C) {
+  const scale = obj.arrowScale || 1;
+  const blockSize = obj.blockSize || 20;
+  const { x: sx, y: sy } = obj.start;
+  const { x: ex, y: ey } = obj.end;
+  const angle = Math.atan2(ey - sy, ex - sx);
+  const len = Math.hypot(ex - sx, ey - sy);
+  const color = isSelected ? "#67e8f9" : (C.outletStroke || "#06b6d4");
+  const half = blockSize / 2;
+
+  ctx.fillStyle = color;
+  ctx.fillRect(sx - half, sy - half, blockSize, blockSize);
+  ctx.strokeStyle = "#0e7490"; ctx.lineWidth = 2/zoom;
+  ctx.strokeRect(sx - half, sy - half, blockSize, blockSize);
+
+  ctx.save(); ctx.translate(sx, sy); ctx.rotate(angle);
+  ctx.strokeStyle = color; ctx.lineWidth = (3 * scale) / zoom;
+  ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(len, 0);
+  ctx.lineTo(len - (22*scale)/zoom, -(14*scale)/zoom);
+  ctx.lineTo(len - (22*scale)/zoom, (14*scale)/zoom);
+  ctx.closePath(); ctx.fill();
+
+  if (obj.mogha_name) {
+    ctx.save(); ctx.translate(sx, sy);
+    ctx.fillStyle = "#0e7490";
+    ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(obj.mogha_name, 0, -blockSize/2 - 4/zoom);
+    ctx.restore();
+  }
+  const moghaNum = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
+  const labelToUse = moghaNum || obj.label || "";
+  if (labelToUse) {
+    ctx.fillStyle = "#0e7490";
+    ctx.font = `bold ${scaledFont(12, zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(labelToUse, len/2, -(14*scale)/zoom);
+  }
+  ctx.restore();
+}
+
+// ============================================================
+// LAYER 4: Canal Damage Marker
+// ============================================================
+export function drawDamageMarker(ctx, obj, isSelected, zoom) {
+  const SEV_COLORS = { Low: "#22c55e", Medium: "#f59e0b", High: "#f97316", Critical: "#ef4444" };
+  const color = SEV_COLORS[obj.severity] || "#ef4444";
+  const r = 10 / zoom;
+  const x = obj.x, y = obj.y;
+
+  // Pulsing outer ring for critical
+  if (obj.severity === "Critical" || isSelected) {
+    ctx.strokeStyle = isSelected ? "#93c5fd" : color;
+    ctx.lineWidth = 1.5 / zoom;
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath(); ctx.arc(x, y, r * 1.8, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Main marker circle
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5 / zoom;
+  ctx.stroke();
+
+  // Exclamation icon
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `bold ${scaledFont(10, zoom, 8, 14)}px Arial, sans-serif`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("!", x, y);
+
+  // Layer 5: Label below
+  if (zoom > 0.4 && obj.damage_category) {
+    ctx.fillStyle = color;
+    ctx.font = `${scaledFont(9, zoom, 8, 12)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillText(obj.damage_category, x, y + r + 2/zoom);
+  }
+}
+
+// ============================================================
+// LAYER 2: Chakbandi
+// ============================================================
+export function drawChakbandi(ctx, obj, isSelected, zoom, C) {
+  if (obj.points.length < 2) return;
+  const color = C.chakbandiStroke || "#22c55e";
+  if (obj.crossPattern) {
+    const crossSize = (obj.crossSize || 8) / zoom;
+    const spacing = (obj.crossSpacing || 40) / zoom;
+    ctx.strokeStyle = isSelected ? "#86efac" : color;
+    ctx.lineWidth = 1.8 / zoom;
+    for (let i = 0; i < obj.points.length - 1; i++) {
+      const a = obj.points[i], b = obj.points[i+1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.max(1, Math.floor(segLen / spacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+        ctx.beginPath();
+        ctx.moveTo(cx - crossSize, cy - crossSize); ctx.lineTo(cx + crossSize, cy + crossSize);
+        ctx.moveTo(cx + crossSize, cy - crossSize); ctx.lineTo(cx - crossSize, cy + crossSize);
+        ctx.stroke();
+      }
+    }
+  } else {
+    ctx.strokeStyle = isSelected ? "#86efac" : color;
+    ctx.lineWidth = (isSelected ? 4 : 3.5) / zoom;
+    ctx.beginPath();
+    ctx.moveTo(obj.points[0].x, obj.points[0].y);
+    for (const p of obj.points) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
+  if (obj.name && zoom > 0.3) {
+    const mid = Math.floor(obj.points.length / 2);
+    const p = obj.points[mid], p2 = obj.points[Math.min(mid+1, obj.points.length-1)];
+    const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.font = `bold ${scaledFont(11, zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(obj.name, 0, -6/zoom);
+    ctx.restore();
+  }
+}
+
+// ============================================================
+// LAYER 2: Mouza boundary
+// ============================================================
+export function drawMouza(ctx, obj, isSelected, zoom, C) {
+  if (obj.points.length < 2) return;
+  const color = C.mouzaStroke || "#000000";
+  ctx.strokeStyle = isSelected ? "#6366f1" : color;
+  ctx.lineWidth = (isSelected ? 2 : 1.2) / zoom;
+  ctx.setLineDash([3/zoom, 4/zoom]); ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(obj.points[0].x, obj.points[0].y);
+  for (const p of obj.points) ctx.lineTo(p.x, p.y);
+  ctx.stroke(); ctx.setLineDash([]);
+
+  if (obj.name && zoom > 0.2) {
+    const mid = Math.floor(obj.points.length / 2);
+    const p = obj.points[mid], p2 = obj.points[Math.min(mid+1, obj.points.length-1)];
+    const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.font = `bold ${scaledFont(10, zoom, 9)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(obj.name, 0, -6/zoom);
+    ctx.restore();
+  }
+}
+
+// ============================================================
+// DRAW DRAFT PREVIEWS
+// ============================================================
+export function drawCanalDraft(ctx, canalDraft, snapPos, zoom, C) {
+  if (!canalDraft || canalDraft.length === 0) return;
+  const draftPts = [...canalDraft];
+  if (snapPos) draftPts.push(snapPos);
+  const halfW = DIMENSIONS.CANAL_WIDTH / 2;
+  const left = getParallelPolyline(draftPts, -halfW);
+  const right = getParallelPolyline(draftPts, halfW);
+  ctx.strokeStyle = C.canalStroke || "#0284c7";
+  ctx.lineWidth = 2 / zoom;
+  ctx.setLineDash([6/zoom, 4/zoom]);
+  for (const side of [left, right]) {
+    ctx.beginPath(); ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  for (const pt of canalDraft) {
+    ctx.fillStyle = C.canalStroke || "#3b82f6";
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 4/zoom, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+export function drawKhalDraft(ctx, khalDraft, snapPos, zoom, C) {
+  if (!khalDraft || khalDraft.length === 0) return;
+  const draftPts = [...khalDraft];
+  if (snapPos) draftPts.push(snapPos);
+  const halfW = DIMENSIONS.KHAL_WIDTH / 2;
+  const left = getParallelPolyline(draftPts, -halfW);
+  const right = getParallelPolyline(draftPts, halfW);
+  ctx.strokeStyle = C.khalStroke || "#2563eb";
+  ctx.lineWidth = 2 / zoom;
+  ctx.setLineDash([6/zoom, 4/zoom]);
+  for (const side of [left, right]) {
+    ctx.beginPath(); ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  for (const pt of khalDraft) {
+    ctx.fillStyle = C.khalStroke || "#2563eb";
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 4/zoom, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+export function drawRoadDraft(ctx, roadDraft, snapPos, zoom, C) {
+  if (!roadDraft || roadDraft.length === 0) return;
+  const draftPts = [...roadDraft];
+  if (snapPos) draftPts.push(snapPos);
+  const halfW = DIMENSIONS.ROAD_WIDTH / 2;
+  const left = getParallelPolyline(draftPts, -halfW);
+  const right = getParallelPolyline(draftPts, halfW);
+  ctx.strokeStyle = C.roadStroke || "#d97706";
+  ctx.lineWidth = 2.5 / zoom;
+  ctx.setLineDash([8/zoom, 5/zoom]);
+  for (const side of [left, right]) {
+    ctx.beginPath(); ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  for (const pt of roadDraft) {
+    ctx.fillStyle = C.roadStroke || "#d97706";
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 4/zoom, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+export function drawChakbandiDraft(ctx, chakbandiDraft, snapPos, zoom, C) {
+  if (!chakbandiDraft || chakbandiDraft.length === 0) return;
+  const color = C.chakbandiStroke || "#22c55e";
+  const draftPts = [...chakbandiDraft];
+  if (snapPos) draftPts.push(snapPos);
+  const crossSize = 8/zoom, spacing = 40/zoom;
+  ctx.strokeStyle = color; ctx.lineWidth = 1.8/zoom;
+  for (let i = 0; i < draftPts.length - 1; i++) {
+    const a = draftPts[i], b = draftPts[i+1];
+    const segLen = Math.hypot(b.x-a.x, b.y-a.y);
+    const steps = Math.max(1, Math.floor(segLen/spacing));
+    for (let s = 0; s <= steps; s++) {
+      const t = s/steps;
+      const cx = a.x + (b.x-a.x)*t, cy = a.y + (b.y-a.y)*t;
+      ctx.beginPath();
+      ctx.moveTo(cx-crossSize, cy-crossSize); ctx.lineTo(cx+crossSize, cy+crossSize);
+      ctx.moveTo(cx+crossSize, cy-crossSize); ctx.lineTo(cx-crossSize, cy+crossSize);
+      ctx.stroke();
+    }
+  }
+  for (const pt of chakbandiDraft) {
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(pt.x, pt.y, 4/zoom, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+export function drawMouzaDraft(ctx, mouzaDraft, snapPos, zoom, C) {
+  if (!mouzaDraft || mouzaDraft.length === 0) return;
+  ctx.strokeStyle = C.mouzaStroke || "#000000";
+  ctx.lineWidth = 1.5/zoom; ctx.setLineDash([3/zoom, 4/zoom]);
+  ctx.beginPath(); ctx.moveTo(mouzaDraft[0].x, mouzaDraft[0].y);
+  for (let i = 1; i < mouzaDraft.length; i++) ctx.lineTo(mouzaDraft[i].x, mouzaDraft[i].y);
+  if (snapPos) ctx.lineTo(snapPos.x, snapPos.y);
+  ctx.stroke(); ctx.setLineDash([]);
+  for (const pt of mouzaDraft) {
+    ctx.fillStyle = C.mouzaStroke || "#000000";
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 3/zoom, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+export function drawOutletDraft(ctx, outletDraft, snapPos, zoom) {
+  if (!outletDraft) return;
+  ctx.strokeStyle = "#06b6d4"; ctx.lineWidth = 2/zoom;
+  ctx.setLineDash([4/zoom, 3/zoom]);
+  ctx.beginPath(); ctx.moveTo(outletDraft.x, outletDraft.y);
+  if (snapPos) ctx.lineTo(snapPos.x, snapPos.y);
+  ctx.stroke(); ctx.setLineDash([]);
+}
+
+// ---- Hex color to RGB string ----
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? `${parseInt(result[1],16)},${parseInt(result[2],16)},${parseInt(result[3],16)}` : "239,68,68";
+}

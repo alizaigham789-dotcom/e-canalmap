@@ -15,10 +15,12 @@ import PrintPreview from "@/components/editor/PrintPreview";
 import {
   DrawingStateManager,
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
-  findNonOverlappingPosition, autoAssignLabel
-} from "@/lib/drawingEngine";
-import { Layers, BookOpen, Palette, Printer } from "lucide-react";
+  createDamageMarker, findNonOverlappingPosition, autoAssignLabel
+} from "@/lib/gisEngine";
+import { Layers, BookOpen, Palette, Printer, Magnet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
+import DamageMarkerDialog from "@/components/editor/DamageMarkerDialog";
 
 const DEFAULT_LAYERS = {
   acre: { visible: true, locked: false },
@@ -66,6 +68,9 @@ export default function Editor() {
   const [showColors, setShowColors] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
+  const [showSnap, setShowSnap] = useState(false);
+  const [snapSettings, setSnapSettings] = useState({ gridSnap: true, spineSnap: true, mogaSnap: true });
+  const [activeDamageMarker, setActiveDamageMarker] = useState(null);
   const [canalDraft, setCanalDraft] = useState(null);
   const [chakbandiDraft, setChakbandiDraft] = useState(null);
   const [outletDraft, setOutletDraft] = useState(null);
@@ -147,6 +152,14 @@ export default function Editor() {
     if (layers[layerKey]?.locked) { toast.warning(`${type} layer is locked`); return; }
 
     let obj;
+    if (type === "damageMarker") {
+      obj = createDamageMarker(data.x, data.y);
+      dsmRef.current.add(obj);
+      setSelectedId(obj.id);
+      setActiveDamageMarker({ ...obj });
+      syncObjects();
+      return;
+    }
     if (type === "acre") obj = createAcre(data.x, data.y);
     else if (type === "mustateel") {
       const adjusted = findNonOverlappingPosition(
@@ -268,6 +281,15 @@ export default function Editor() {
     });
   }, []);
 
+  const handleSnapChange = (key, val) => setSnapSettings(prev => ({ ...prev, [key]: val }));
+
+  const handleDamageMarkerClick = (marker) => { setActiveDamageMarker({ ...marker }); };
+
+  const handleDamageMarkerSave = (id, data) => {
+    dsmRef.current.update(id, data);
+    syncObjects();
+  };
+
   const handleToolChange = (tool) => {
     if (activeTool === "canal" && canalDraft && canalDraft.length >= 2) handleCanalFinish();
     else if (activeTool === "canal") setCanalDraft(null);
@@ -361,7 +383,7 @@ export default function Editor() {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedId) handleDeleteObject(selectedId);
       }
-      const shortcuts = { v: "select", h: "pan", d: "move", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", u: "mouza", e: "eraser", f: "fitView" };
+      const shortcuts = { v: "select", h: "pan", d: "move", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", u: "mouza", g: "damageMarker", e: "eraser", f: "fitView" };
       if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) {
         if (e.key === "f") handleFitView();
         else handleToolChange(shortcuts[e.key]);
@@ -449,27 +471,35 @@ export default function Editor() {
             onZoomChange={handleZoomChange}
             colorSettings={colorSettings}
             bgColor={bgColor}
+            snapSettings={{ ...snapSettings, zoom }}
+            onDamageMarkerClick={handleDamageMarkerClick}
           />
 
           {/* Top-right toolbar buttons */}
           <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
             <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${showLegend ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
-              onClick={() => { setShowLegend(v => !v); setShowLayers(false); setShowColors(false); }}
+              onClick={() => { setShowLegend(v => !v); setShowLayers(false); setShowColors(false); setShowSnap(false); }}
               title="Legend">
               <BookOpen className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${showLayers ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
-              onClick={() => { setShowLayers(v => !v); setShowLegend(false); setShowColors(false); }}
+              onClick={() => { setShowLayers(v => !v); setShowLegend(false); setShowColors(false); setShowSnap(false); }}
               title="Layers">
               <Layers className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${showColors ? "bg-purple-600 border-purple-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-purple-600 hover:bg-purple-50"}`}
-              onClick={() => { setShowColors(v => !v); setShowLayers(false); setShowLegend(false); }}
+              onClick={() => { setShowColors(v => !v); setShowLayers(false); setShowLegend(false); setShowSnap(false); }}
               title="Colour Settings">
               <Palette className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className={`w-9 h-9 border shadow-md transition-all ${showSnap ? "bg-violet-600 border-violet-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-violet-600 hover:bg-violet-50"}`}
+              onClick={() => { setShowSnap(v => !v); setShowLayers(false); setShowLegend(false); setShowColors(false); }}
+              title="Snap Engine">
+              <Magnet className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
               className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shadow-md"
@@ -499,6 +529,11 @@ export default function Editor() {
                 onBgColorChange={setBgColor}
                 onClose={() => setShowColors(false)}
               />
+            </div>
+          )}
+          {showSnap && (
+            <div className="absolute top-[260px] right-3 z-20">
+              <SnapSettingsPanel snapSettings={snapSettings} onSnapChange={handleSnapChange} />
             </div>
           )}
         </div>
@@ -539,6 +574,15 @@ export default function Editor() {
           zoom={zoom}
           pan={pan}
           onClose={() => setShowPrint(false)}
+        />
+      )}
+
+      {activeDamageMarker && (
+        <DamageMarkerDialog
+          marker={activeDamageMarker}
+          onSave={handleDamageMarkerSave}
+          onClose={() => setActiveDamageMarker(null)}
+          onDelete={(id) => { handleDeleteObject(id); setActiveDamageMarker(null); }}
         />
       )}
     </div>
