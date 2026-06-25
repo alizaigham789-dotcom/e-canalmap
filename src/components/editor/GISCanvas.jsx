@@ -114,7 +114,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (activeTool === "acre") return snapToAcreGrid(world.x, world.y);
     if (activeTool === "mustateel") return snapToMustateeelGrid(world.x, world.y);
     if (activeTool === "muraba") return snapToMurabaGrid(world.x, world.y);
-    if (activeTool === "chakbandi") return snapToParcelBoundaries(world.x, world.y, objectsRef.current);
+    if (activeTool === "chakbandi" || activeTool === "mouza") return snapToParcelBoundaries(world.x, world.y, objectsRef.current);
     return world;
   }, [pan, zoom, activeTool]);
 
@@ -309,7 +309,7 @@ const GISCanvas = forwardRef(function GISCanvas(
             minWidth: 80,
             color: editingObj?.type === "mustateel" ? "#ef4444" : editingObj?.type === "muraba" ? "#dc2626" : "#b45309",
           }}
-          placeholder="M-1"
+          placeholder="1"
         />
       )}
     </div>
@@ -402,7 +402,7 @@ function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakban
     const halfW = DIMENSIONS.KHAL_WIDTH / 2;
     const left = getParallelPolyline(draftPts, -halfW);
     const right = getParallelPolyline(draftPts, halfW);
-    ctx.strokeStyle = "#2563eb";
+    ctx.strokeStyle = C.khalStroke || "#2563eb";
     ctx.lineWidth = 2 / zoom;
     ctx.setLineDash([6 / zoom, 4 / zoom]);
     for (const side of [left, right]) {
@@ -413,7 +413,7 @@ function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakban
     }
     ctx.setLineDash([]);
     for (const pt of khalDraft) {
-      ctx.fillStyle = "#2563eb";
+      ctx.fillStyle = C.khalStroke || "#2563eb";
       ctx.beginPath(); ctx.arc(pt.x, pt.y, 4 / zoom, 0, Math.PI * 2); ctx.fill();
     }
   }
@@ -425,7 +425,7 @@ function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakban
     const halfW = DIMENSIONS.ROAD_WIDTH / 2;
     const left = getParallelPolyline(draftPts, -halfW);
     const right = getParallelPolyline(draftPts, halfW);
-    ctx.strokeStyle = "#d97706";
+    ctx.strokeStyle = C.roadStroke || "#d97706";
     ctx.lineWidth = 2.5 / zoom;
     ctx.setLineDash([8 / zoom, 5 / zoom]);
     for (const side of [left, right]) {
@@ -436,7 +436,7 @@ function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakban
     }
     ctx.setLineDash([]);
     for (const pt of roadDraft) {
-      ctx.fillStyle = "#d97706";
+      ctx.fillStyle = C.roadStroke || "#d97706";
       ctx.beginPath(); ctx.arc(pt.x, pt.y, 4 / zoom, 0, Math.PI * 2); ctx.fill();
     }
   }
@@ -550,10 +550,11 @@ function drawMustateel(ctx, obj, isSelected, zoom, C) {
   ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
-  // Killa grid — thin, light, subtle
-  if (zoom > 0.3) {
-    ctx.strokeStyle = "rgba(239,68,68,0.12)";
-    ctx.lineWidth = 0.4 / zoom;
+  // Killa grid — always visible; thinner (bareek) at low zoom, more visible at high zoom
+  {
+    const killaAlpha = zoom > 0.3 ? 0.12 : 0.05;
+    ctx.strokeStyle = `rgba(239,68,68,${killaAlpha})`;
+    ctx.lineWidth = zoom > 0.3 ? 0.4 / zoom : 0.2 / zoom;
     const cellW = obj.w / 2, cellH = obj.h / 5;
     ctx.beginPath();
     ctx.moveTo(obj.x + cellW, obj.y); ctx.lineTo(obj.x + cellW, obj.y + obj.h);
@@ -564,7 +565,8 @@ function drawMustateel(ctx, obj, isSelected, zoom, C) {
     }
     ctx.stroke();
 
-    if (zoom > 0.15) {
+    // Killa numbers — only at readable zoom levels
+    if (zoom > 0.25) {
       const grid = getMustateeelKillaGrid();
       ctx.fillStyle = "rgba(220,38,38,0.9)";
       ctx.font = `bold ${11 / zoom}px Rajdhani, sans-serif`;
@@ -602,10 +604,11 @@ function drawMuraba(ctx, obj, isSelected, zoom, C) {
   ctx.lineWidth = (isSelected ? 4 : 3) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
-  // 5×5 killa grid — thin, light, subtle
-  if (zoom > 0.15) {
-    ctx.strokeStyle = "rgba(239,68,68,0.10)";
-    ctx.lineWidth = 0.4 / zoom;
+  // 5×5 killa grid — always visible; thinner (bareek) at low zoom, more visible at high zoom
+  {
+    const killaAlpha = zoom > 0.15 ? 0.10 : 0.04;
+    ctx.strokeStyle = `rgba(239,68,68,${killaAlpha})`;
+    ctx.lineWidth = zoom > 0.15 ? 0.4 / zoom : 0.2 / zoom;
     const cellW = obj.w / 5, cellH = obj.h / 5;
     ctx.beginPath();
     for (let c = 1; c < 5; c++) {
@@ -616,7 +619,8 @@ function drawMuraba(ctx, obj, isSelected, zoom, C) {
     }
     ctx.stroke();
 
-    if (zoom > 0.12) {
+    // Killa numbers — only at readable zoom levels
+    if (zoom > 0.2) {
       const grid = getMurabaKillaGrid();
       ctx.fillStyle = "rgba(220,38,38,0.85)";
       ctx.font = `bold ${10 / zoom}px Rajdhani, sans-serif`;
@@ -851,20 +855,25 @@ function drawKhal(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
   }
 
-  // Arrow at endpoint only — centered and symmetrical
+  // Clean perpendicular cap at the start point — closes the two bank lines
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  ctx.lineTo(right[0].x, right[0].y);
+  ctx.stroke();
+
+  // Arrow at endpoint — spans full khal width, tapers cleanly to a point
   const lastPt = obj.points[obj.points.length - 1];
   const prevPt = obj.points[obj.points.length - 2];
   const arrowAngle = Math.atan2(lastPt.y - prevPt.y, lastPt.x - prevPt.x);
-  const arrowLen = Math.max(14 / zoom, 10);
-  const arrowWidth = Math.max(8 / zoom, 6);
+  const arrowLen = Math.max(width * 1.5, 14 / zoom, 12);
   ctx.save();
   ctx.translate(lastPt.x, lastPt.y);
   ctx.rotate(arrowAngle);
   ctx.fillStyle = isSelected ? "#93c5fd" : khalColor;
   ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(-arrowLen, -arrowWidth);
-  ctx.lineTo(-arrowLen, arrowWidth);
+  ctx.moveTo(0, 0);                        // tip — at the centerline endpoint
+  ctx.lineTo(-arrowLen, -halfW);            // back-left — matches left bank
+  ctx.lineTo(-arrowLen, halfW);            // back-right — matches right bank
   ctx.closePath();
   ctx.fill();
   ctx.restore();

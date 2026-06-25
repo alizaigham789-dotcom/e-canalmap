@@ -66,7 +66,7 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
         {selectedObj.type === "mustateel" && (
           <>
             <Separator className="bg-slate-100" />
-            <Field label="Label / Survey No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. M-1" hint="Double-click plot on map to edit label at centroid" />
+            <Field label="Label / Survey No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 1" hint="Double-click plot on map to edit label at centroid" />
             <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
             <div className="flex items-center justify-between">
               <label className="text-xs text-slate-600">Show Owner</label>
@@ -79,7 +79,7 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
         {selectedObj.type === "muraba" && (
           <>
             <Separator className="bg-slate-100" />
-            <Field label="Muraba No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. MR-1" hint="Double-click plot on map to edit label at centroid" />
+            <Field label="Muraba No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 1" hint="Double-click plot on map to edit label at centroid" />
             <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
             <div className="flex items-center justify-between">
               <label className="text-xs text-slate-600">Show Owner</label>

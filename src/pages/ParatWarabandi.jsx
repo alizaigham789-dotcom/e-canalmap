@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft, Save, Printer, Plus, FileText, ChevronRight, Trash2 } from "lucide-react";
 import WarabandiForm from "@/components/warabandi/WarabandiForm";
+import WarabandiHeaderBar from "@/components/warabandi/WarabandiHeaderBar";
 import ShareholderTable from "@/components/warabandi/ShareholderTable";
 import WarabandiPrint from "@/components/warabandi/WarabandiPrint";
 import BottomNav from "@/components/BottomNav";
@@ -212,6 +213,7 @@ export default function ParatWarabandi() {
       </header>
 
       <main className="max-w-md mx-auto px-5 py-5 space-y-4">
+        <WarabandiHeaderBar data={formData} />
         <WarabandiForm data={formData} onChange={setFormData} />
         <ShareholderTable rows={shareholders} onChange={setShareholders} />
       </main>

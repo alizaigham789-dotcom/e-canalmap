@@ -145,8 +145,9 @@ export function snapMovePosition(obj, allObjects) {
 // Auto-assigns M-1, M-2 … for Mustateel and MR-1, MR-2 … for Muraba
 // ============================================================
 export function autoAssignLabel(type, existingObjects) {
-  const prefix = type === "mustateel" ? "M" : type === "muraba" ? "MR" : "";
-  if (!prefix) return "";
+  const isMustateel = type === "mustateel";
+  const isMuraba = type === "muraba";
+  if (!isMustateel && !isMuraba) return "";
   const numbers = existingObjects
     .filter(o => o.type === type && o.label)
     .map(o => {
@@ -154,7 +155,8 @@ export function autoAssignLabel(type, existingObjects) {
       return m ? parseInt(m[1], 10) : 0;
     });
   const nextNum = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
-  return `${prefix}-${nextNum}`;
+  // Raw number only — no "M-" or "MR-" prefix
+  return String(nextNum);
 }
 
 // Convert screen to world coordinates
