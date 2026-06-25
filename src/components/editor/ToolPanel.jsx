@@ -45,6 +45,14 @@ const ChakbandiIcon = ({ className }) => (
   </svg>
 );
 
+// Mouza Boundary: dotted dashed line representing village/mouza boundary
+const MouzaIcon = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 4l16 16" strokeDasharray="2 3" />
+    <path d="M20 4L4 20" strokeDasharray="2 3" />
+  </svg>
+);
+
 const TOOLS = [
   { id: "select", label: "Select (V)", icon: MousePointer2, group: "nav" },
   { id: "pan", label: "Pan (H)", icon: Hand, group: "nav" },
@@ -60,6 +68,7 @@ const TOOLS = [
   { id: "outlet", label: "Outlet / Moga (O)", icon: MogaIcon, group: "draw", color: "text-cyan-400" },
   { id: "khal", label: "Khal / Watercourse (W)", icon: Waves, group: "draw", color: "text-blue-500" },
   { id: "road", label: "Road (R)", icon: RoadIcon, group: "draw", color: "text-amber-400" },
+  { id: "mouza", label: "Mouza Boundary (U)", icon: MouzaIcon, group: "draw", color: "text-slate-700" },
   null,
   { id: "eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
 ];

@@ -450,9 +450,18 @@ export function createChakbandi(points, name = "") {
     points: points.map(p => ({ ...p })),
     name,
     width: DIMENSIONS.CANAL_WIDTH,
-    crossPattern: false,
+    crossPattern: true,
     crossSize: 8,
     crossSpacing: 40,
+  };
+}
+
+export function createMouza(points, name = "") {
+  return {
+    id: `mouza_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    type: "mouza",
+    points: points.map(p => ({ ...p })),
+    name,
   };
 }
 

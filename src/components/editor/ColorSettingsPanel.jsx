@@ -3,6 +3,7 @@ import { Palette, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const COLOR_FIELDS = [
+  { key: "labelColor", label: "All Labels / Numbers", default: "#000000" },
   { key: "acreStroke", label: "Acre Border", default: "#eab308" },
   { key: "acreFill", label: "Acre Fill", default: "rgba(234,179,8,0.08)" },
   { key: "mustateelStroke", label: "Mustateel Border", default: "#ef4444" },
@@ -11,7 +12,10 @@ const COLOR_FIELDS = [
   { key: "murabaFill", label: "Muraba Fill", default: "rgba(249,115,22,0.08)" },
   { key: "canalStroke", label: "Canal Line", default: "#3b82f6" },
   { key: "canalFill", label: "Canal Water", default: "rgba(59,130,246,0.25)" },
+  { key: "khalStroke", label: "Khal Line", default: "#2563eb" },
+  { key: "roadStroke", label: "Road Edge", default: "#b45309" },
   { key: "chakbandiStroke", label: "Chakbandi Line", default: "#22c55e" },
+  { key: "mouzaStroke", label: "Mouza Boundary", default: "#000000" },
   { key: "outletStroke", label: "Outlet Arrow", default: "#06b6d4" },
 ];
 

@@ -24,13 +24,13 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
   const typeLabel = {
     acre: "Acre Block", mustateel: "Mustateel Parcel", muraba: "Muraba Block",
     canal: "Canal", chakbandi: "Chakbandi Line", outlet: "Outlet / Moga",
-    khal: "Khal / Watercourse", road: "Road",
+    khal: "Khal / Watercourse", road: "Road", mouza: "Mouza Boundary",
   }[selectedObj.type] || selectedObj.type;
 
   const typeColor = {
     acre: "text-amber-600", mustateel: "text-red-600", muraba: "text-red-700",
     canal: "text-blue-600", chakbandi: "text-green-600", outlet: "text-cyan-600",
-    khal: "text-blue-500", road: "text-amber-500",
+    khal: "text-blue-500", road: "text-amber-500", mouza: "text-slate-700",
   }[selectedObj.type] || "text-slate-500";
 
   return (
@@ -139,7 +139,7 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
             <Separator className="bg-slate-100" />
             <Field label="Chakbandi Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Chakbandi Boundary 1" />
             <div className="flex items-center justify-between mt-2">
-              <label className="text-xs text-slate-600">Cross Pattern</label>
+              <label className="text-xs text-slate-600">Cross Pattern (× × ×)</label>
               <Switch checked={!!local.crossPattern} onCheckedChange={v => commit("crossPattern", v)} className="scale-75" />
             </div>
             {local.crossPattern && (
@@ -166,7 +166,15 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
                 </div>
               </>
             )}
-            <div className="text-[10px] text-green-600 font-mono">Bold green • {local.crossPattern ? "Cross marks" : "Cross markers"} • {selectedObj.points?.length || 0} points</div>
+            <div className="text-[10px] text-green-600 font-mono">{local.crossPattern ? "Cross pattern" : "Solid line"} • {selectedObj.points?.length || 0} points</div>
+          </>
+        )}
+
+        {selectedObj.type === "mouza" && (
+          <>
+            <Separator className="bg-slate-100" />
+            <Field label="Mouza Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="حد بندی موضع" />
+            <div className="text-[10px] text-slate-600 font-mono">Dotted boundary • {selectedObj.points?.length || 0} points</div>
           </>
         )}
 

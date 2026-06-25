@@ -16,6 +16,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     outletDraft, onOutletStart, onOutletFinish,
     khalDraft, onKhalPointAdd, onKhalFinish,
     roadDraft, onRoadPointAdd, onRoadFinish,
+    mouzaDraft, onMouzaPointAdd, onMouzaFinish,
     snapPos, onSnapPosChange, onPanChange, onZoomChange,
     colorSettings, bgColor,
   },
@@ -59,7 +60,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     ctx.scale(zoom, zoom);
 
     drawGrid(ctx, W, H, zoom, pan);
-    drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, snapPos, C);
+    drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C);
 
     ctx.restore();
 
@@ -77,7 +78,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       ctx.moveTo(sx, sy - 10); ctx.lineTo(sx, sy + 10);
       ctx.stroke();
     }
-  }, [objects, activeTool, zoom, pan, layers, selectedId, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, snapPos, C, bgColor]);
+  }, [objects, activeTool, zoom, pan, layers, selectedId, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor]);
 
   useEffect(() => {
     const loop = () => {
@@ -202,6 +203,8 @@ const GISCanvas = forwardRef(function GISCanvas(
       onKhalPointAdd(snapped);
     } else if (activeTool === "road") {
       onRoadPointAdd(snapped);
+    } else if (activeTool === "mouza") {
+      onMouzaPointAdd(snapped);
     } else if (activeTool === "select") {
       const hit = hitTest(worldRaw.x, worldRaw.y, objects);
       onSelect(hit ? hit.id : null);
@@ -209,7 +212,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       const hit = hitTest(worldRaw.x, worldRaw.y, objects);
       if (hit) onAddObject("__delete__", { id: hit.id });
     }
-  }, [activeTool, pan, zoom, objects, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd]);
+  }, [activeTool, pan, zoom, objects, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd, onMouzaPointAdd]);
 
   const handleMouseUp = useCallback(() => {
     isPanning.current = false;
@@ -222,6 +225,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (activeTool === "chakbandi") onChakbandiFinish();
     if (activeTool === "khal") onKhalFinish();
     if (activeTool === "road") onRoadFinish();
+    if (activeTool === "mouza") onMouzaFinish();
     // Inline centroid-label editing — double-click a parcel in Select mode
     if (activeTool === "select") {
       const canvas = canvasRef.current;
@@ -235,7 +239,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         setEditingLabel({ id: hit.id, value: hit.label || "" });
       }
     }
-  }, [activeTool, pan, zoom, objectsRef, onSelect, onCanalFinish, onChakbandiFinish, onKhalFinish, onRoadFinish]);
+  }, [activeTool, pan, zoom, objectsRef, onSelect, onCanalFinish, onChakbandiFinish, onKhalFinish, onRoadFinish, onMouzaFinish]);
 
   const commitLabelEdit = useCallback(() => {
     if (editingLabel) {
@@ -260,7 +264,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   const cursorClass = {
     select: "cursor-default", pan: "cursor-grab", eraser: "cursor-cell",
     canal: "cursor-crosshair", chakbandi: "cursor-crosshair", outlet: "cursor-crosshair",
-    khal: "cursor-crosshair", road: "cursor-crosshair",
+    khal: "cursor-crosshair", road: "cursor-crosshair", mouza: "cursor-crosshair",
     acre: "cursor-crosshair", mustateel: "cursor-crosshair", muraba: "cursor-crosshair",
     move: "cursor-move",
   }[activeTool] || "cursor-crosshair";
@@ -326,6 +330,10 @@ function hitTest(wx, wy, objects) {
       }
     } else if (o.type === "outlet") {
       if (distToLineSegment(wx, wy, o.start.x, o.start.y, o.end.x, o.end.y) < 15) return o;
+    } else if (o.type === "mouza") {
+      for (let j = 0; j < o.points.length - 1; j++) {
+        if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < 12) return o;
+      }
     }
   }
   return null;
@@ -363,8 +371,8 @@ function drawGrid(ctx, W, H, zoom, pan) {
 }
 
 // ---- Object Drawing ----
-function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, snapPos, C) {
-  const order = ["muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet"];
+function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C) {
+  const order = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet"];
   const sorted = [...objects].sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
 
   for (const obj of sorted) {
@@ -384,6 +392,7 @@ function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakban
     else if (obj.type === "outlet") drawOutlet(ctx, obj, isSelected, zoom, C);
     else if (obj.type === "khal") drawKhal(ctx, obj, isSelected, zoom, C);
     else if (obj.type === "road") drawRoad(ctx, obj, isSelected, zoom, C);
+    else if (obj.type === "mouza") drawMouza(ctx, obj, isSelected, zoom, C);
   }
 
   // Khal draft — two parallel dashed preview lines
@@ -455,19 +464,33 @@ function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakban
     }
   }
 
-  // Chakbandi draft
+  // Chakbandi draft — cross pattern preview
   if (chakbandiDraft && chakbandiDraft.length > 0) {
-    ctx.strokeStyle = C.chakbandiStroke || "#22c55e";
-    ctx.lineWidth = 3 / zoom;
-    ctx.setLineDash([6 / zoom, 4 / zoom]);
-    ctx.beginPath();
-    ctx.moveTo(chakbandiDraft[0].x, chakbandiDraft[0].y);
-    for (let i = 1; i < chakbandiDraft.length; i++) ctx.lineTo(chakbandiDraft[i].x, chakbandiDraft[i].y);
-    if (snapPos) ctx.lineTo(snapPos.x, snapPos.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    const color = C.chakbandiStroke || "#22c55e";
+    const draftPts = [...chakbandiDraft];
+    if (snapPos) draftPts.push(snapPos);
+    const crossSize = 8 / zoom;
+    const spacing = 40 / zoom;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.8 / zoom;
+    for (let i = 0; i < draftPts.length - 1; i++) {
+      const a = draftPts[i], b = draftPts[i + 1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.max(1, Math.floor(segLen / spacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const cx = a.x + (b.x - a.x) * t;
+        const cy = a.y + (b.y - a.y) * t;
+        ctx.beginPath();
+        ctx.moveTo(cx - crossSize, cy - crossSize);
+        ctx.lineTo(cx + crossSize, cy + crossSize);
+        ctx.moveTo(cx + crossSize, cy - crossSize);
+        ctx.lineTo(cx - crossSize, cy + crossSize);
+        ctx.stroke();
+      }
+    }
     for (const pt of chakbandiDraft) {
-      ctx.fillStyle = C.chakbandiStroke || "#22c55e";
+      ctx.fillStyle = color;
       ctx.beginPath(); ctx.arc(pt.x, pt.y, 4 / zoom, 0, Math.PI * 2); ctx.fill();
     }
   }
@@ -483,6 +506,23 @@ function drawObjects(ctx, objects, zoom, selectedId, layers, canalDraft, chakban
     ctx.stroke();
     ctx.setLineDash([]);
   }
+
+  // Mouza draft — dotted/dashed thin black preview line
+  if (mouzaDraft && mouzaDraft.length > 0) {
+    ctx.strokeStyle = C.mouzaStroke || "#000000";
+    ctx.lineWidth = 1.5 / zoom;
+    ctx.setLineDash([3 / zoom, 4 / zoom]);
+    ctx.beginPath();
+    ctx.moveTo(mouzaDraft[0].x, mouzaDraft[0].y);
+    for (let i = 1; i < mouzaDraft.length; i++) ctx.lineTo(mouzaDraft[i].x, mouzaDraft[i].y);
+    if (snapPos) ctx.lineTo(snapPos.x, snapPos.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const pt of mouzaDraft) {
+      ctx.fillStyle = C.mouzaStroke || "#000000";
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, 3 / zoom, 0, Math.PI * 2); ctx.fill();
+    }
+  }
 }
 
 function drawAcre(ctx, obj, isSelected, zoom, C) {
@@ -494,8 +534,8 @@ function drawAcre(ctx, obj, isSelected, zoom, C) {
 
   // Always visible — clamped to fixed screen-pixel size
   if (obj.label) {
-    ctx.fillStyle = C.acreStroke || "#b45309";
-    ctx.font = `bold ${13 / zoom}px JetBrains Mono, monospace`;
+    ctx.fillStyle = C.labelColor || "#000000";
+    ctx.font = `bold ${Math.max(12 / zoom, 10)}px JetBrains Mono, monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(obj.label, obj.x + obj.w / 2, obj.y + obj.h / 2);
@@ -542,8 +582,8 @@ function drawMustateel(ctx, obj, isSelected, zoom, C) {
     const centerX = obj.x + obj.w / 2;
     const centerY = obj.y + obj.h / 2;
     const labelText = obj.label || "";
-    ctx.fillStyle = C.mustateelStroke || "#ef4444";
-    ctx.font = `bold ${16 / zoom}px Rajdhani, sans-serif`;
+    ctx.fillStyle = C.labelColor || "#000000";
+    ctx.font = `bold ${Math.max(14 / zoom, 11)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(labelText, centerX, centerY - (obj.showOwner && obj.ownerName ? 8 / zoom : 0));
     if (obj.showOwner && obj.ownerName) {
@@ -593,9 +633,9 @@ function drawMuraba(ctx, obj, isSelected, zoom, C) {
   {
     const centerX = obj.x + obj.w / 2;
     const centerY = obj.y + obj.h / 2;
-    const labelText = obj.label ? `مربعہ ${obj.label}` : (C.murabaDefaultLabel || "MURABA");
-    ctx.fillStyle = C.murabaStroke || "#ef4444";
-    ctx.font = `bold ${18 / zoom}px Rajdhani, sans-serif`;
+    const labelText = obj.label || "";
+    ctx.fillStyle = C.labelColor || "#000000";
+    ctx.font = `bold ${Math.max(14 / zoom, 11)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(labelText, centerX, centerY - (obj.showOwner && obj.ownerName ? 10 / zoom : 0));
     if (obj.showOwner && obj.ownerName) {
@@ -798,9 +838,10 @@ function drawKhal(ctx, obj, isSelected, zoom, C) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  ctx.strokeStyle = isSelected ? "#93c5fd" : "#2563eb";
+  const khalColor = C.khalStroke || "#2563eb";
+  ctx.strokeStyle = isSelected ? "#93c5fd" : khalColor;
   ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
-  ctx.lineCap = "round";
+  ctx.lineCap = "butt";
   ctx.lineJoin = "round";
 
   for (const side of [left, right]) {
@@ -810,6 +851,24 @@ function drawKhal(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
   }
 
+  // Arrow at endpoint only — centered and symmetrical
+  const lastPt = obj.points[obj.points.length - 1];
+  const prevPt = obj.points[obj.points.length - 2];
+  const arrowAngle = Math.atan2(lastPt.y - prevPt.y, lastPt.x - prevPt.x);
+  const arrowLen = Math.max(14 / zoom, 10);
+  const arrowWidth = Math.max(8 / zoom, 6);
+  ctx.save();
+  ctx.translate(lastPt.x, lastPt.y);
+  ctx.rotate(arrowAngle);
+  ctx.fillStyle = isSelected ? "#93c5fd" : khalColor;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(-arrowLen, -arrowWidth);
+  ctx.lineTo(-arrowLen, arrowWidth);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
   // Label
   if (obj.name && zoom > 0.3) {
     const mid = Math.floor(obj.points.length / 2);
@@ -818,7 +877,7 @@ function drawKhal(ctx, obj, isSelected, zoom, C) {
     const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
     ctx.save();
     ctx.translate(p.x, p.y); ctx.rotate(angle);
-    ctx.fillStyle = "#2563eb";
+    ctx.fillStyle = khalColor;
     ctx.font = `bold ${Math.max(8, 11 / zoom)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "bottom";
     ctx.fillText(obj.name || "Khal", 0, -halfW - 3 / zoom);
@@ -845,7 +904,7 @@ function drawRoad(ctx, obj, isSelected, zoom, C) {
   ctx.fill();
 
   // Casing edge lines (solid amber — symmetric, parallel)
-  const edgeColor = isSelected ? "#fcd34d" : "#b45309";
+  const edgeColor = isSelected ? "#fcd34d" : (C.roadStroke || "#b45309");
   ctx.strokeStyle = edgeColor;
   ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
   ctx.lineCap = "butt";
@@ -880,6 +939,36 @@ function drawRoad(ctx, obj, isSelected, zoom, C) {
     ctx.font = `bold ${Math.max(14 / zoom, 11)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(obj.name, 0, 0);
+    ctx.restore();
+  }
+}
+
+// ---- Mouza Boundary Drawing (dotted/dashed thin black line) ----
+function drawMouza(ctx, obj, isSelected, zoom, C) {
+  if (obj.points.length < 2) return;
+  const color = C.mouzaStroke || "#000000";
+  ctx.strokeStyle = isSelected ? "#6366f1" : color;
+  ctx.lineWidth = (isSelected ? 2 : 1.2) / zoom;
+  ctx.setLineDash([3 / zoom, 4 / zoom]);
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(obj.points[0].x, obj.points[0].y);
+  for (const p of obj.points) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Name label — حد بندی موضع
+  if (obj.name && zoom > 0.2) {
+    const mid = Math.floor(obj.points.length / 2);
+    const p = obj.points[mid];
+    const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
+    const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.font = `bold ${Math.max(10 / zoom, 9)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(obj.name, 0, -6 / zoom);
     ctx.restore();
   }
 }

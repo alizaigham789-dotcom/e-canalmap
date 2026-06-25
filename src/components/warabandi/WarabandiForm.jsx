@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Info, Waves, MapPin, User } from "lucide-react";
 import CollapsibleCard from "./CollapsibleCard";
+import DepartmentalSection from "./DepartmentalSection";
 
 const fieldLabel = (en, urdu) => (
   <>
@@ -21,8 +22,8 @@ export default function WarabandiForm({ data, onChange }) {
 
   return (
     <div className="space-y-4">
-      {/* General Information */}
-      <CollapsibleCard title="General Information" titleUrdu="عمومی معلومات" icon={Info} defaultOpen>
+      {/* General Information — Departmental heading style */}
+      <DepartmentalSection titleUrdu="عمومی معلومات" titleEn="General Information">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Type of Warabandi (dropdown — replaces Circle Name) */}
           <div className="space-y-1.5">
@@ -81,7 +82,7 @@ export default function WarabandiForm({ data, onChange }) {
             />
           </div>
         </div>
-      </CollapsibleCard>
+      </DepartmentalSection>
 
       {/* Canal Information */}
       <CollapsibleCard title="Canal Information" titleUrdu="نہر معلومات" icon={Waves}>

@@ -14,7 +14,7 @@ import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
 import PrintPreview from "@/components/editor/PrintPreview";
 import {
   DrawingStateManager,
-  createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi,
+  createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
   findNonOverlappingPosition, autoAssignLabel
 } from "@/lib/drawingEngine";
 import { Layers, BookOpen, Palette, Printer } from "lucide-react";
@@ -29,6 +29,7 @@ const DEFAULT_LAYERS = {
   outlet: { visible: true, locked: false },
   khal: { visible: true, locked: false },
   road: { visible: true, locked: false },
+  mouza: { visible: true, locked: false },
   grass: { visible: true, locked: false },
 };
 
@@ -41,7 +42,11 @@ const DEFAULT_COLORS = {
   murabaFill: "rgba(249,115,22,0.08)",
   canalStroke: "#0284c7",
   canalFill: "rgba(14,165,233,0.35)",
+  khalStroke: "#2563eb",
+  roadStroke: "#b45309",
   chakbandiStroke: "#22c55e",
+  mouzaStroke: "#000000",
+  labelColor: "#000000",
   outletStroke: "#06b6d4",
 };
 
@@ -66,6 +71,7 @@ export default function Editor() {
   const [outletDraft, setOutletDraft] = useState(null);
   const [khalDraft, setKhalDraft] = useState(null);
   const [roadDraft, setRoadDraft] = useState(null);
+  const [mouzaDraft, setMouzaDraft] = useState(null);
   const [objects, setObjects] = useState([]);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -230,6 +236,22 @@ export default function Editor() {
     });
   }, []);
 
+  const handleMouzaPointAdd = useCallback((pt) => {
+    setMouzaDraft(prev => prev ? [...prev, pt] : [pt]);
+  }, []);
+
+  const handleMouzaFinish = useCallback(() => {
+    setMouzaDraft(prev => {
+      if (prev && prev.length >= 2) {
+        const mouza = createMouza(prev);
+        dsmRef.current.add(mouza);
+        setSelectedId(mouza.id);
+        syncObjects();
+      }
+      return null;
+    });
+  }, []);
+
   const handleOutletStart = useCallback((pt, canalId) => {
     setOutletDraft({ x: pt.x, y: pt.y, canalId });
   }, []);
@@ -256,6 +278,8 @@ export default function Editor() {
     else if (activeTool === "khal") setKhalDraft(null);
     if (activeTool === "road" && roadDraft && roadDraft.length >= 2) handleRoadFinish();
     else if (activeTool === "road") setRoadDraft(null);
+    if (activeTool === "mouza" && mouzaDraft && mouzaDraft.length >= 2) handleMouzaFinish();
+    else if (activeTool === "mouza") setMouzaDraft(null);
     setActiveTool(tool);
   };
 
@@ -268,6 +292,8 @@ export default function Editor() {
     else setKhalDraft(null);
     if (activeTool === "road" && roadDraft && roadDraft.length >= 2) handleRoadFinish();
     else setRoadDraft(null);
+    if (activeTool === "mouza" && mouzaDraft && mouzaDraft.length >= 2) handleMouzaFinish();
+    else setMouzaDraft(null);
     setOutletDraft(null);
     setActiveTool("select");
   };
@@ -335,7 +361,7 @@ export default function Editor() {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedId) handleDeleteObject(selectedId);
       }
-      const shortcuts = { v: "select", h: "pan", d: "move", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", e: "eraser", f: "fitView" };
+      const shortcuts = { v: "select", h: "pan", d: "move", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", u: "mouza", e: "eraser", f: "fitView" };
       if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) {
         if (e.key === "f") handleFitView();
         else handleToolChange(shortcuts[e.key]);
@@ -345,7 +371,7 @@ export default function Editor() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selectedId, activeTool, canalDraft, chakbandiDraft, khalDraft, roadDraft, zoom, pan]);
+  }, [selectedId, activeTool, canalDraft, chakbandiDraft, khalDraft, roadDraft, mouzaDraft, zoom, pan]);
 
   if (!mapId) {
     return (
@@ -355,7 +381,7 @@ export default function Editor() {
     );
   }
 
-  const draftActive = !!(canalDraft || chakbandiDraft || khalDraft || roadDraft);
+  const draftActive = !!(canalDraft || chakbandiDraft || khalDraft || roadDraft || mouzaDraft);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: bgColor }}>
@@ -414,6 +440,9 @@ export default function Editor() {
             roadDraft={roadDraft}
             onRoadPointAdd={handleRoadPointAdd}
             onRoadFinish={handleRoadFinish}
+            mouzaDraft={mouzaDraft}
+            onMouzaPointAdd={handleMouzaPointAdd}
+            onMouzaFinish={handleMouzaFinish}
             snapPos={snapPos}
             onSnapPosChange={setSnapPos}
             onPanChange={setPan}
