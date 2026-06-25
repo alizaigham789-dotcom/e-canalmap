@@ -9,6 +9,7 @@ import WarabandiForm from "@/components/warabandi/WarabandiForm";
 import WarabandiHeaderBar from "@/components/warabandi/WarabandiHeaderBar";
 import ShareholderTable from "@/components/warabandi/ShareholderTable";
 import WarabandiPrint from "@/components/warabandi/WarabandiPrint";
+import WarabandiParatForm from "@/components/warabandi/WarabandiParatForm";
 import BottomNav from "@/components/BottomNav";
 
 const emptyRow = (sr) => ({
@@ -29,6 +30,7 @@ export default function ParatWarabandi() {
   const editId = urlParams.get("id");
 
   const [mode, setMode] = useState(editId ? "edit" : "list");
+  const [activeTab, setActiveTab] = useState("list"); // "list" | "new-parat"
   const [formData, setFormData] = useState({ ...EMPTY_DATA });
   const [shareholders, setShareholders] = useState([emptyRow(1), emptyRow(2), emptyRow(3)]);
   const [showPrint, setShowPrint] = useState(false);
@@ -124,10 +126,23 @@ export default function ParatWarabandi() {
               <Plus className="w-3.5 h-3.5" /> New
             </Button>
           </div>
+          {/* Tabs */}
+          <div className="max-w-md mx-auto px-5 flex gap-1 pb-2">
+            <button onClick={() => setActiveTab("list")}
+              className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${activeTab === "list" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+              ریکارڈ فہرست
+            </button>
+            <button onClick={() => setActiveTab("new-parat")}
+              className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${activeTab === "new-parat" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+              پرت وارہ بندی (نیا)
+            </button>
+          </div>
         </header>
 
-        <main className="max-w-md mx-auto px-5 py-5">
-          {isLoading ? (
+        <main className="max-w-5xl mx-auto px-4 py-5">
+          {activeTab === "new-parat" ? (
+            <WarabandiParatForm />
+          ) : isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => <div key={i} className="h-16 bg-white rounded-xl border border-slate-200 animate-pulse" />)}
             </div>
