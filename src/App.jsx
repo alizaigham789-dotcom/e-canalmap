@@ -19,6 +19,10 @@ import KhalMismari from './pages/KhalMismari';
 import Warashikni from './pages/Warashikni';
 import TawanCase from './pages/TawanCase';
 import TAForm from './pages/TAForm';
+import GeoMap from './pages/GeoMap';
+import DeputyCollectorDocs from './pages/DeputyCollectorDocs';
+import ZilladarDocs from './pages/ZilladarDocs';
+import GroupChat from './pages/GroupChat';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -65,6 +69,10 @@ const AuthenticatedApp = () => {
         <Route path="/warashikni" element={<Warashikni />} />
         <Route path="/tawan-case" element={<TawanCase />} />
         <Route path="/ta-form" element={<TAForm />} />
+        <Route path="/geo-map" element={<GeoMap />} />
+        <Route path="/deputy-collector" element={<DeputyCollectorDocs />} />
+        <Route path="/zilladar" element={<ZilladarDocs />} />
+        <Route path="/group-chat" element={<GroupChat />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
