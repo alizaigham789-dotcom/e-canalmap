@@ -3,23 +3,19 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { Shield, LogOut, Globe } from "lucide-react";
-import {
-  MapEditorIcon, WarabandiIcon, KhalMismariIcon, WarashikniIcon, TawanCaseIcon, TAFormIcon,
-  GeoMapIcon, DeputyCollectorIcon, ZilladarIcon, GroupChatIcon,
-} from "@/components/ModuleIcons";
 import BottomNav from "@/components/BottomNav";
 
 const MODULES = [
-  { id: "map-editor", label: "MAP EDITOR", labelUrdu: "نقشہ ایڈیٹر", Icon: MapEditorIcon, path: "/map-list", gradient: "from-blue-500 to-cyan-400", shadow: "shadow-blue-500/25" },
-  { id: "warabandi", label: "WARABANDI PARAT", labelUrdu: "وارابندی پرت", Icon: WarabandiIcon, path: "/parat-warabandi", gradient: "from-emerald-500 to-teal-400", shadow: "shadow-emerald-500/25" },
-  { id: "khal-mismari", label: "KHAL MISMARI", labelUrdu: "خال مسماری", Icon: KhalMismariIcon, path: "/khal-mismari", gradient: "from-amber-500 to-orange-400", shadow: "shadow-amber-500/25" },
-  { id: "warashikni", label: "WARASHIKNI", labelUrdu: "وارشکنی", Icon: WarashikniIcon, path: "/warashikni", gradient: "from-sky-500 to-blue-400", shadow: "shadow-sky-500/25" },
-  { id: "tawan-case", label: "TAWAN CASE DOCUMENT", labelUrdu: "تاوان کیس دستاویز", Icon: TawanCaseIcon, path: "/tawan-case", gradient: "from-purple-500 to-violet-400", shadow: "shadow-purple-500/25" },
-  { id: "ta-form", label: "TA FORM", labelUrdu: "ٹی اے فارم", Icon: TAFormIcon, path: "/ta-form", gradient: "from-rose-500 to-pink-400", shadow: "shadow-rose-500/25" },
-  { id: "geo-map", label: "GEO MAP", labelUrdu: "جیو میپ", Icon: GeoMapIcon, path: "/geo-map", gradient: "from-sky-400 to-blue-300", shadow: "shadow-sky-400/25" },
-  { id: "deputy-collector", label: "DEPUTY COLLECTOR", labelUrdu: "ڈپٹی کلکٹر دستاویزات", Icon: DeputyCollectorIcon, path: "/deputy-collector", gradient: "from-emerald-400 to-green-300", shadow: "shadow-emerald-400/25" },
-  { id: "zilladar", label: "ZILLADAR DOCS", labelUrdu: "ذیلدار دستاویزات", Icon: ZilladarIcon, path: "/zilladar", gradient: "from-amber-400 to-orange-300", shadow: "shadow-amber-400/25" },
-  { id: "group-chat", label: "GROUP CHAT", labelUrdu: "گروپ چیٹ", Icon: GroupChatIcon, path: "/group-chat", gradient: "from-violet-400 to-purple-300", shadow: "shadow-violet-400/25" },
+  { id: "map-editor", label: "MAP EDITOR", labelUrdu: "نقشہ ایڈیٹر", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/95cfcc6b7_generated_image.png", path: "/map-list", bg: "from-blue-50 to-blue-100" },
+  { id: "warabandi", label: "WARABANDI PARAT", labelUrdu: "وارابندی پرت", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/a72cdee99_generated_image.png", path: "/parat-warabandi", bg: "from-green-50 to-green-100" },
+  { id: "khal-mismari", label: "KHAL MISMARI", labelUrdu: "خال مسماری", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/16b5f7025_generated_image.png", path: "/khal-mismari", bg: "from-orange-50 to-orange-100" },
+  { id: "warashikni", label: "WARASHIKNI", labelUrdu: "وارشکنی", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/316f23d74_generated_image.png", path: "/warashikni", bg: "from-sky-50 to-sky-100" },
+  { id: "tawan-case", label: "TAWAN CASE", labelUrdu: "تاوان کیس", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/f6a632e03_generated_image.png", path: "/tawan-case", bg: "from-purple-50 to-purple-100" },
+  { id: "ta-form", label: "TA FORM", labelUrdu: "ٹی اے فارم", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/83d2ce503_generated_image.png", path: "/ta-form", bg: "from-pink-50 to-pink-100" },
+  { id: "geo-map", label: "GEO MAP", labelUrdu: "جیو میپ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/06d24a88b_generated_image.png", path: "/geo-map", bg: "from-blue-50 to-cyan-100" },
+  { id: "deputy-collector", label: "DEPUTY COLLECTOR", labelUrdu: "ڈپٹی کلکٹر دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/bfe2c768f_generated_image.png", path: "/deputy-collector", bg: "from-green-50 to-emerald-100" },
+  { id: "zilladar", label: "ZILLADAR DOCS", labelUrdu: "ذیلدار دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/2086f36ed_generated_image.png", path: "/zilladar", bg: "from-orange-50 to-amber-100" },
+  { id: "group-chat", label: "GROUP CHAT", labelUrdu: "گروپ چیٹ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/9566e5eca_generated_image.png", path: "/group-chat", bg: "from-violet-50 to-purple-100" },
 ];
 
 export default function Dashboard() {
@@ -72,24 +68,21 @@ export default function Dashboard() {
 
         {/* Module Cards — 2-column grid */}
         <div className="grid grid-cols-2 gap-4">
-          {MODULES.map((mod) => {
-            const Icon = mod.Icon;
-            return (
-              <button
-                key={mod.id}
-                onClick={() => navigate(mod.path)}
-                className={`group relative rounded-[28px] bg-gradient-to-br ${mod.gradient} p-5 shadow-lg ${mod.shadow} hover:shadow-xl hover:${mod.shadow} hover:scale-[1.03] active:scale-[0.98] ring-1 ring-white/20 transition-all duration-200 text-center min-h-[140px] flex flex-col items-center justify-center`}
-              >
-                <div className="mb-3 group-hover:scale-110 transition-transform duration-200">
-                  <Icon className="w-10 h-10 text-white drop-shadow-sm" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-white tracking-wide leading-tight drop-shadow-sm">{mod.label}</p>
-                  <p className="text-[10px] text-white/80 mt-1" style={{ fontFamily: "serif" }}>{mod.labelUrdu}</p>
-                </div>
-              </button>
-            );
-          })}
+          {MODULES.map((mod) => (
+            <button
+              key={mod.id}
+              onClick={() => navigate(mod.path)}
+              className={`group relative rounded-[24px] bg-gradient-to-br ${mod.bg} p-4 shadow-md shadow-slate-200/60 hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] ring-1 ring-slate-200/50 transition-all duration-200 text-center min-h-[150px] flex flex-col items-center justify-center`}
+            >
+              <div className="mb-2 w-16 h-16 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                <img src={mod.icon} alt={mod.label} className="w-16 h-16 object-contain drop-shadow-sm" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-slate-800 tracking-wide leading-tight">{mod.label}</p>
+                <p className="text-[10px] text-slate-500 mt-0.5" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{mod.labelUrdu}</p>
+              </div>
+            </button>
+          ))}
         </div>
       </main>
 
