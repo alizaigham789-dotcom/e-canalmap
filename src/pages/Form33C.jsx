@@ -10,7 +10,7 @@ const YEARS = Array.from({ length: 10 }, (_, i) => String(CURRENT_YEAR - i));
 const emptyVillage = () => ({
   id: Date.now() + Math.random(),
   mouza: "",
-  tehsil: "تاملہ آباد",
+  tehsil: "",
   total_bills: "",
   total_zar: "",
 });
@@ -21,7 +21,7 @@ function calcTotal(zar) {
   return z > 0 ? (z + s).toFixed(2) : "";
 }
 
-// Column definitions — natural (RTL) order: نام موضع on right
+// Natural RTL order: نام موضع (right) → surcharge (left)
 const COLUMNS = [
   { key: "mouza", label: "نام موضع" },
   { key: "tehsil", label: "نام تحصیل" },
@@ -37,12 +37,10 @@ function SigUpload({ label, value, onChange }) {
 
   const handleFile = async (file) => {
     if (!file) return;
-    // Read as data URL for preview
     const reader = new FileReader();
     reader.onload = async (e) => {
       const dataUrl = e.target.result;
       onChange(dataUrl);
-      // Auto-enhance via AI
       setEnhancing(true);
       try {
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
@@ -88,7 +86,6 @@ export default function Form33C() {
   const [pasteText, setPasteText] = useState("");
   const [scanLoading, setScanLoading] = useState(false);
   const [scanResult, setScanResult] = useState("");
-  // Print options
   const [showBorder, setShowBorder] = useState(true);
   const [showSurcharge, setShowSurcharge] = useState(true);
   const [showDistrict, setShowDistrict] = useState(true);
@@ -107,9 +104,9 @@ export default function Form33C() {
     const parsed = lines.map(line => {
       const cols = line.split(/\t/).map(c => c.trim());
       if (cols.length >= 4) return { id: Date.now() + Math.random(), mouza: cols[0], tehsil: cols[1], total_bills: cols[2], total_zar: cols[3] };
-      if (cols.length === 3) return { id: Date.now() + Math.random(), mouza: cols[0], tehsil: "تاملہ آباد", total_bills: cols[1], total_zar: cols[2] };
-      if (cols.length === 2) return { id: Date.now() + Math.random(), mouza: cols[0], tehsil: "تاملہ آباد", total_bills: "", total_zar: cols[1] };
-      return { id: Date.now() + Math.random(), mouza: cols[0] || "", tehsil: "تاملہ آباد", total_bills: "", total_zar: "" };
+      if (cols.length === 3) return { id: Date.now() + Math.random(), mouza: cols[0], tehsil: "", total_bills: cols[1], total_zar: cols[2] };
+      if (cols.length === 2) return { id: Date.now() + Math.random(), mouza: cols[0], tehsil: "", total_bills: "", total_zar: cols[1] };
+      return { id: Date.now() + Math.random(), mouza: cols[0] || "", tehsil: "", total_bills: "", total_zar: "" };
     });
     setVillages(parsed);
     setPasteText("");
@@ -122,7 +119,7 @@ export default function Form33C() {
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `This is a 33-C form or a list of villages with irrigation billing data. Extract all village entries. For each row return: village name (Urdu), tehsil name, total printed bills (number), total zar aabiana amount (number). Return as tab-separated lines: MouzaName\tTehsil\tBills\tZar. If tehsil not clear write تاملہ آباد. Return ONLY the data lines, no headers.`,
+        prompt: `This is a 33-C form or a list of villages with irrigation billing data. Extract all village entries. For each row return: village name (Urdu), tehsil name, total printed bills (number), total zar aabiana amount (number). Return as tab-separated lines: MouzaName\tTehsil\tBills\tZar. If tehsil not clear leave empty. Return ONLY the data lines, no headers.`,
         file_urls: [file_url],
         model: "claude_sonnet_4_6",
       });
@@ -134,26 +131,25 @@ export default function Form33C() {
     setScanLoading(false);
   };
 
-  // Columns for print — inverted order (بمعہ on right, نام موضع on left)
-  const printCols = [...COLUMNS].reverse();
-  const activeCols = showSurcharge ? printCols : printCols.filter(c => c.key !== "surcharge");
+  const activeCols = showSurcharge ? COLUMNS : COLUMNS.filter(c => c.key !== "surcharge");
 
   function renderCardHtml(v, compact) {
-    const fs = compact ? "11px" : "16px";
-    const tfs = compact ? "18px" : "30px";
-    const sigH = compact ? "34px" : "60px";
-    const mt = compact ? "10px" : "0";
-    const p = compact ? "5px 6px" : "8px 10px";
-    const sigFs = compact ? "9px" : "13px";
-    const borderStyle = showBorder ? "1px solid #000" : "1px solid transparent";
+    const fs = compact ? "13px" : "20px";
+    const tfs = compact ? "22px" : "38px";
+    const sigH = compact ? "42px" : "72px";
+    const sigFs = compact ? "11px" : "16px";
+    const p = compact ? "6px 8px" : "10px 12px";
+    const borderStyle = showBorder ? "1.5px solid #000" : "1px solid transparent";
     const outerBorder = showBorder ? "2px solid #000" : "2px solid transparent";
     const surcharge = calcTotal(v.total_zar);
 
-    const divSig = signatures.divisional_img ? `<img src="${signatures.divisional_img}" style="height:${sigH};object-fit:contain;display:block;margin:0 auto 2px;" />` : "";
-    const depSig = signatures.deputy_img ? `<img src="${signatures.deputy_img}" style="height:${sigH};object-fit:contain;display:block;margin:0 auto 2px;" />` : "";
-    const clkSig = signatures.clerk_img ? `<img src="${signatures.clerk_img}" style="height:${sigH};object-fit:contain;display:block;margin:0 auto 2px;" />` : "";
+    const divSig = signatures.divisional_img ? `<img src="${signatures.divisional_img}" style="height:${sigH};object-fit:contain;display:block;margin:0 auto 3px;" />` : "";
+    const depSig = signatures.deputy_img ? `<img src="${signatures.deputy_img}" style="height:${sigH};object-fit:contain;display:block;margin:0 auto 3px;" />` : "";
+    const clkSig = signatures.clerk_img ? `<img src="${signatures.clerk_img}" style="height:${sigH};object-fit:contain;display:block;margin:0 auto 3px;" />` : "";
 
-    const districtLine = showDistrict && district ? `<div style="font-size:${sigFs};">${district}</div>` : "";
+    const districtLine = showDistrict && district
+      ? `<div style="font-size:${sigFs};">${district} Canal Division</div>`
+      : "";
 
     const cells = activeCols.map(c => {
       const val = c.key === "surcharge" ? (surcharge || "—") : (v[c.key] || "—");
@@ -165,32 +161,34 @@ export default function Form33C() {
     ).join("");
 
     return `
-      <div style="direction:rtl;font-family:'Noto Nastaliq Urdu',serif;padding:${compact ? "10px 16px" : "20px 30px"};border:${outerBorder};box-sizing:border-box;height:100%;display:flex;flex-direction:column;">
-        <div style="text-align:center;font-size:${tfs};font-weight:bold;margin-bottom:${compact ? "8px" : "14px"};">
-          C-33 &nbsp;&nbsp; بابت فصل ${fasal} ${year}ء
+      <div style="direction:rtl;font-family:'Noto Nastaliq Urdu',serif;padding:${compact ? "12px 18px" : "24px 34px"};border:${outerBorder};box-sizing:border-box;height:100%;display:flex;flex-direction:column;">
+        <div style="text-align:center;font-size:${tfs};font-weight:bold;margin-bottom:${compact ? "10px" : "18px"};">
+          33-C &nbsp;&nbsp; بابت فصل ${fasal} ${year}ء
         </div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:6px;">
           <thead><tr>${headers}</tr></thead>
           <tbody><tr>${cells}</tr></tbody>
         </table>
-        <div style="display:flex;justify-content:space-between;margin-top:auto;padding-top:${compact ? "10px" : "20px"};direction:ltr;">
-          <div style="text-align:center;min-width:130px;">
+        <div style="display:flex;justify-content:space-between;margin-top:auto;padding-top:${compact ? "14px" : "28px"};padding-bottom:${compact ? "6px" : "12px"};direction:ltr;">
+          <div style="text-align:center;min-width:140px;">
             ${divSig}
-            <div style="border-top:${showBorder ? "1px solid #000" : "1px solid transparent"};padding-top:3px;font-size:${sigFs};">
+            <div style="border-top:${showBorder ? "1px solid #000" : "1px solid transparent"};padding-top:4px;font-size:${sigFs};">
               <strong>Divisional Canal Officer</strong>
               ${districtLine}
             </div>
           </div>
-          <div style="text-align:center;min-width:130px;">
+          <div style="text-align:center;min-width:140px;">
             ${depSig}
-            <div style="border-top:${showBorder ? "1px solid #000" : "1px solid transparent"};padding-top:3px;font-size:${sigFs};">
+            <div style="border-top:${showBorder ? "1px solid #000" : "1px solid transparent"};padding-top:4px;font-size:${sigFs};">
               <strong>Deputy Collector</strong>
+              ${districtLine}
             </div>
           </div>
-          <div style="text-align:center;min-width:130px;">
+          <div style="text-align:center;min-width:140px;">
             ${clkSig}
-            <div style="border-top:${showBorder ? "1px solid #000" : "1px solid transparent"};padding-top:3px;font-size:${sigFs};">
+            <div style="border-top:${showBorder ? "1px solid #000" : "1px solid transparent"};padding-top:4px;font-size:${sigFs};">
               <strong>Assessment Clerk</strong>
+              ${districtLine}
             </div>
           </div>
         </div>
@@ -201,7 +199,7 @@ export default function Form33C() {
     const isPortrait = orientation === "portrait";
     const pageSize = isPortrait ? "A4 portrait" : "A4 landscape";
 
-    const html = `<!DOCTYPE html><html dir="rtl"><head><title>C-33 ${fasal} ${year}</title>
+    const html = `<!DOCTYPE html><html dir="rtl"><head><title>33-C ${fasal} ${year}</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
       @page { size: ${pageSize}; margin: 8mm; }
@@ -243,7 +241,7 @@ export default function Form33C() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-sm font-bold font-heading text-slate-800">C-33 فارم</h1>
+              <h1 className="text-sm font-bold font-heading text-slate-800">33-C فارم</h1>
               <p className="text-[9px] text-slate-400" style={{ fontFamily: "serif" }}>بابت فصل آبیانہ</p>
             </div>
           </div>
@@ -300,6 +298,7 @@ export default function Form33C() {
                 <span className="text-[10px] text-slate-500">ضلع:</span>
                 <input value={district} onChange={e => setDistrict(e.target.value)}
                   className="w-24 border border-slate-300 rounded px-2 py-0.5 text-xs focus:outline-none focus:border-blue-400" />
+                <span className="text-[10px] text-slate-400">Canal Division</span>
               </div>
             )}
           </div>
@@ -346,11 +345,11 @@ export default function Form33C() {
                   <tr key={v.id} className="hover:bg-slate-50">
                     <td className="border border-slate-200 p-0">
                       <input value={v.mouza} onChange={e => updateVillage(v.id, "mouza", e.target.value)}
-                        className="w-full px-2 py-1 text-xs outline-none bg-transparent" dir="rtl" style={{ fontFamily: "serif" }} placeholder="موضع کا نام" />
+                        className="w-full px-2 py-1 text-xs outline-none bg-transparent" dir="rtl" style={{ fontFamily: "serif" }} placeholder="نام موضع" />
                     </td>
                     <td className="border border-slate-200 p-0">
                       <input value={v.tehsil} onChange={e => updateVillage(v.id, "tehsil", e.target.value)}
-                        className="w-full px-2 py-1 text-xs outline-none bg-transparent" dir="rtl" style={{ fontFamily: "serif" }} placeholder="تحصیل" />
+                        className="w-full px-2 py-1 text-xs outline-none bg-transparent" dir="rtl" style={{ fontFamily: "serif" }} placeholder="نام تحصیل" />
                     </td>
                     <td className="border border-slate-200 p-0">
                       <input value={v.total_bills} onChange={e => updateVillage(v.id, "total_bills", e.target.value)}
@@ -380,7 +379,7 @@ export default function Form33C() {
             <textarea value={pasteText} onChange={e => setPasteText(e.target.value)}
               rows={4} dir="rtl"
               className="w-full border border-slate-200 rounded px-2 py-1 text-xs font-mono bg-white focus:outline-none focus:border-blue-400 resize-none"
-              placeholder={"چک اسلام آباد\tتاملہ آباد\t336\t623405\nچک 2\tتاملہ آباد\t210\t450000"} />
+              placeholder={"چک اسلام آباد\tقائد آباد\t336\t623405\nچک 2\t\t210\t450000"} />
             <div className="flex justify-end mt-1.5">
               <Button size="sm" onClick={handlePaste} disabled={!pasteText.trim()}
                 className="h-6 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white gap-1 px-3">
@@ -411,36 +410,36 @@ export default function Form33C() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
           <h2 className="text-xs font-bold text-slate-700 mb-4">👁 پرنٹ پریویو</h2>
           <div className="space-y-3">
-            {villages.map((v, i) => (
+            {villages.map((v) => (
               <div key={v.id}
-                style={{ border: showBorder ? "2px solid #000" : "2px dashed #cbd5e1", direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif", padding: orientation === "portrait" ? "10px 16px" : "16px 24px", backgroundColor: "#fff" }}>
-                <div style={{ textAlign: "center", fontSize: orientation === "portrait" ? "16px" : "24px", fontWeight: "bold", marginBottom: "10px" }}>
-                  C-33 &nbsp;&nbsp; بابت فصل {fasal} {year}ء
+                style={{ border: showBorder ? "2px solid #000" : "2px dashed #cbd5e1", direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif", padding: orientation === "portrait" ? "12px 18px" : "20px 30px", backgroundColor: "#fff" }}>
+                <div style={{ textAlign: "center", fontSize: orientation === "portrait" ? "22px" : "34px", fontWeight: "bold", marginBottom: "14px" }}>
+                  33-C &nbsp;&nbsp; بابت فصل {fasal} {year}ء
                 </div>
-                <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "8px" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "10px" }}>
                   <thead><tr>
                     {activeCols.map(c => (
-                      <th key={c.key} style={{ border: showBorder ? "1px solid #000" : "1px solid #e2e8f0", padding: "5px 6px", fontSize: orientation === "portrait" ? "10px" : "13px", textAlign: "center" }}>{c.label}</th>
+                      <th key={c.key} style={{ border: showBorder ? "1.5px solid #000" : "1px solid #e2e8f0", padding: "6px 8px", fontSize: orientation === "portrait" ? "13px" : "18px", textAlign: "center" }}>{c.label}</th>
                     ))}
                   </tr></thead>
                   <tbody><tr>
                     {activeCols.map(c => {
                       const val = c.key === "surcharge" ? (calcTotal(v.total_zar) || "—") : (v[c.key] || "—");
-                      return <td key={c.key} style={{ border: showBorder ? "1px solid #000" : "1px solid #e2e8f0", padding: "5px 6px", fontSize: orientation === "portrait" ? "10px" : "13px", textAlign: "center" }}>{val}</td>;
+                      return <td key={c.key} style={{ border: showBorder ? "1.5px solid #000" : "1px solid #e2e8f0", padding: "6px 8px", fontSize: orientation === "portrait" ? "13px" : "18px", textAlign: "center" }}>{val}</td>;
                     })}
                   </tr></tbody>
                 </table>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", direction: "ltr" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", paddingBottom: "8px", direction: "ltr" }}>
                   {[
-                    { img: signatures.divisional_img, title: "Divisional Canal Officer", extra: showDistrict && district ? district : "" },
-                    { img: signatures.deputy_img, title: "Deputy Collector", extra: "" },
-                    { img: signatures.clerk_img, title: "Assessment Clerk", extra: "" },
+                    { img: signatures.divisional_img, title: "Divisional Canal Officer" },
+                    { img: signatures.deputy_img, title: "Deputy Collector" },
+                    { img: signatures.clerk_img, title: "Assessment Clerk" },
                   ].map((s, idx) => (
-                    <div key={idx} style={{ textAlign: "center", minWidth: "120px" }}>
-                      {s.img && <img src={s.img} alt="sig" style={{ height: orientation === "portrait" ? "30px" : "48px", objectFit: "contain", display: "block", margin: "0 auto 2px" }} />}
-                      <div style={{ borderTop: showBorder ? "1px solid #000" : "1px solid #cbd5e1", paddingTop: "3px", fontSize: orientation === "portrait" ? "9px" : "11px" }}>
+                    <div key={idx} style={{ textAlign: "center", minWidth: "130px" }}>
+                      {s.img && <img src={s.img} alt="sig" style={{ height: orientation === "portrait" ? "42px" : "68px", objectFit: "contain", display: "block", margin: "0 auto 3px" }} />}
+                      <div style={{ borderTop: showBorder ? "1px solid #000" : "1px solid #cbd5e1", paddingTop: "4px", fontSize: orientation === "portrait" ? "11px" : "15px" }}>
                         <strong>{s.title}</strong>
-                        {s.extra && <div>{s.extra}</div>}
+                        {showDistrict && district && <div>{district} Canal Division</div>}
                       </div>
                     </div>
                   ))}
