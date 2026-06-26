@@ -1,12 +1,17 @@
 import React from "react";
 import { Landmark, FileBadge2, ChevronRight } from "lucide-react";
 import ModuleShell from "@/components/ModuleShell";
+import { useNavigate } from "react-router-dom";
 
 const SUB_MODULES = [
   { id: "33c", label: "33-C", labelUrdu: "۳۳-سی", desc: "Deputy Collector 33-C proceeding" },
 ];
 
 export default function DeputyCollectorDocs() {
+  const navigate = useNavigate();
+  const handleClick = (s) => {
+    if (s.id === "33c") navigate("/deputy-collector/33c");
+  };
   return (
     <ModuleShell title="DEPUTY COLLECTOR" titleUrdu="ڈپٹی کلکٹر دستاویزات" Icon={Landmark} gradient="from-emerald-400 to-green-300">
       <p className="text-xs text-slate-500 mb-5">
@@ -16,6 +21,7 @@ export default function DeputyCollectorDocs() {
         {SUB_MODULES.map((s) => (
           <button
             key={s.id}
+            onClick={() => handleClick(s)}
             className="w-full flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70 hover:shadow-md hover:ring-emerald-200 transition-all text-left"
           >
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-green-300 flex items-center justify-center shadow-md shadow-emerald-400/25 ring-1 ring-white/20 shrink-0">
