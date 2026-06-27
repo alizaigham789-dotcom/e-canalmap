@@ -104,6 +104,7 @@ export default function Form33C() {
   const [signatures, setSignatures] = useState({ divisional_img: "", deputy_img: "", clerk_img: "" });
   const [pasteText, setPasteText] = useState("");
   const [scanLoading, setScanLoading] = useState(false);
+  const [lastScanResult, setLastScanResult] = useState("");
   const [saving, setSaving] = useState(false);
   const [showBorder, setShowBorder] = useState(true);
   const [showSurcharge, setShowSurcharge] = useState(true);
@@ -145,20 +146,13 @@ export default function Form33C() {
         file_urls: [file_url],
         model: "claude_sonnet_4_6",
       });
-      // Replace existing villages with scanned data
-      const lines = result.trim().split("\n").filter(l => l.trim());
-      if (lines.length) {
-        const parsed = lines.map(line => {
-          const cols = line.split(/\t/).map(c => c.trim());
-          return { id: Date.now() + Math.random(), mouza: cols[0] || "", tehsil: cols[1] || "", total_bills: cols[2] || "", total_zar: cols[3] || "", surcharge_override: "" };
-        });
-        setVillages(parsed);
-      }
+      // Show scanned data in the Excel textarea so user can verify before importing
+      setLastScanResult(result);
+      setPasteText(result);
     } catch (e) {
-      alert("اسکین ناکام رہا");
+      alert("اسکین ناکام رہا — دوبارہ کوشش کریں");
     }
     setScanLoading(false);
-    // reset file input so same file can be re-uploaded
     if (scanFileRef.current) scanFileRef.current.value = "";
   };
 
@@ -368,27 +362,41 @@ export default function Form33C() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-xs font-bold text-slate-700">📷 تصویر سے ڈیٹا (AI اسکین)</h2>
-            <span className="text-[9px] text-slate-400">نئی تصویر پرانا ڈیٹا خود ہٹا دے گی</span>
+            <span className="text-[9px] text-slate-400">اسکین شدہ ڈیٹا نیچے Excel باکس میں آئے گا</span>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <Button size="sm" onClick={() => scanFileRef.current.click()} disabled={scanLoading}
               className="h-7 text-xs bg-amber-500 hover:bg-amber-600 text-white gap-1">
               <Camera className="w-3.5 h-3.5" />
-              {scanLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> اسکین ہو رہا ہے...</> : "تصویر اپ لوڈ / ریفریش"}
+              {scanLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> اسکین ہو رہا ہے...</> : "تصویر اپ لوڈ کریں"}
+            </Button>
+            <Button size="sm" onClick={() => { if (lastScanResult) setPasteText(lastScanResult); }}
+              disabled={!lastScanResult || scanLoading}
+              className="h-7 text-xs bg-blue-500 hover:bg-blue-600 text-white gap-1">
+              <RefreshCw className="w-3.5 h-3.5" /> ریفریش (پچھلی اسکین)
             </Button>
             <input ref={scanFileRef} type="file" accept="image/*" className="hidden"
               onChange={e => { handleScan(e.target.files[0]); }} />
+            {lastScanResult && !scanLoading && (
+              <span className="text-[10px] text-emerald-600">✓ پچھلی اسکین محفوظ ہے — ریفریش سے دوبارہ دیکھیں</span>
+            )}
           </div>
         </div>
 
         {/* ── Excel Paste ── */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <h2 className="text-xs font-bold text-slate-700 mb-2">📋 Excel سے پیسٹ کریں</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs font-bold text-slate-700">📋 Excel سے پیسٹ کریں</h2>
+            <button onClick={() => setPasteText("")} disabled={!pasteText}
+              className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-1 disabled:opacity-30">
+              <Trash2 className="w-3 h-3" /> کلیئر
+            </button>
+          </div>
           <p className="text-[10px] text-slate-400 mb-2">ٹیب الگ کالم: موضع، تحصیل، بلز، زر</p>
           <textarea value={pasteText} onChange={e => setPasteText(e.target.value)}
             rows={4} dir="rtl"
             className="w-full border border-slate-200 rounded px-2 py-1.5 text-xs font-mono bg-white focus:outline-none focus:border-blue-400 resize-none"
-            placeholder={"یہاں Excel سے کاپی کریں..."} />
+            placeholder={"یہاں Excel سے کاپی کریں یا تصویر اسکین کریں..."} />
           <div className="flex justify-end mt-1.5">
             <Button size="sm" onClick={handlePaste} disabled={!pasteText.trim()}
               className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1 px-3">
