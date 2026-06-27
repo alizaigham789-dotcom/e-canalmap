@@ -1,8 +1,38 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Calculator } from "lucide-react";
+import { Plus, Trash2, Calculator, Languages } from "lucide-react";
+
+// ====== Area format helpers ======
+// Parse area string like "24-3-15" (Murabba-Acre-Kanal-Marla) or plain acres
+// Display format: "24 MB 3 Acre 2 Kanal 5 Marla" (English) or just raw value (Urdu)
+function formatAreaDisplay(val) {
+  if (!val) return "";
+  // if it contains MB notation already
+  if (/mb/i.test(val)) return val;
+  const num = parseFloat(val);
+  if (isNaN(num) || num === 0) return val;
+  // Convert total acres to MB-Acre-Kanal-Marla
+  const totalAcres = num;
+  const mb = Math.floor(totalAcres / 25);
+  const remAfterMB = totalAcres - mb * 25;
+  const acre = Math.floor(remAfterMB);
+  const kanalFloat = (remAfterMB - acre) * 8;
+  const kanal = Math.floor(kanalFloat);
+  const marla = Math.round((kanalFloat - kanal) * 20);
+  let parts = [];
+  if (mb > 0) parts.push(`${mb} MB`);
+  if (acre > 0) parts.push(`${acre} Ac`);
+  if (kanal > 0) parts.push(`${kanal} Kn`);
+  if (marla > 0) parts.push(`${marla} Ml`);
+  return parts.length ? parts.join(" ") : val;
+}
+
+function isEnglishOrDigit(val) {
+  if (!val) return false;
+  return /^[\x00-\x7F\d\s\.\-\/]+$/.test(val.trim());
+}
 
 const FALLBACK_COLUMNS = [
   { field_key: "sr_no", label_urdu: "نمبر شمار", label_en: "Sr#", width: "w-14" },
@@ -27,6 +57,7 @@ const emptyRow = (sr) => ({
 });
 
 export default function ShareholderTable({ rows, onChange }) {
+  const [isUrduMode, setIsUrduMode] = useState(false);
   const { data: configs = [] } = useQuery({
     queryKey: ["form-field-configs", "parat_warabandi_table"],
     queryFn: () => base44.entities.FormFieldConfig.filter({ form_type: "parat_warabandi_table" }, "order"),
@@ -90,13 +121,28 @@ export default function ShareholderTable({ rows, onChange }) {
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50 flex-wrap gap-2">
         <div>
           <h3 className="text-sm font-bold text-slate-800 font-heading tracking-wide">
             Khasra Details — حصہ داران کی تفصیل
           </h3>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Language toggle checkbox */}
+          <label className="flex items-center gap-1.5 cursor-pointer bg-white border border-slate-200 rounded-lg px-2 py-1 shadow-sm hover:border-blue-300 transition-colors">
+            <input
+              type="checkbox"
+              checked={isUrduMode}
+              onChange={e => setIsUrduMode(e.target.checked)}
+              className="w-3.5 h-3.5 accent-blue-600"
+            />
+            <Languages className="w-3 h-3 text-slate-500" />
+            <span className="text-[10px] font-medium text-slate-600">
+              {isUrduMode ? (
+                <span style={{ fontFamily: "serif" }}>اردو</span>
+              ) : "English"}
+            </span>
+          </label>
           <Button size="sm" variant="outline" onClick={calculateWaterTime}
             className="h-7 text-xs border-blue-200 bg-white text-blue-600 hover:bg-blue-50 gap-1">
             <Calculator className="w-3 h-3" /> Calc ({minutesPerAcre}m/ac)
@@ -113,8 +159,14 @@ export default function ShareholderTable({ rows, onChange }) {
             <tr className="bg-blue-50 border-b border-slate-200">
               {columns.map(col => (
                 <th key={col.field_key} className="px-1.5 py-2 text-center border-r border-blue-100 last:border-r-0">
-                  <div className="text-slate-600 font-semibold text-[10px]">{col.label_en}</div>
-                  <div className="text-slate-400 text-[9px]" style={{ fontFamily: "serif" }}>{col.label_urdu}</div>
+                  {isUrduMode ? (
+                    <div className="text-slate-700 font-semibold text-[10px]" style={{ fontFamily: "serif" }}>{col.label_urdu}</div>
+                  ) : (
+                    <>
+                      <div className="text-slate-600 font-semibold text-[10px]">{col.label_en}</div>
+                      <div className="text-slate-400 text-[9px]" style={{ fontFamily: "serif" }}>{col.label_urdu}</div>
+                    </>
+                  )}
                 </th>
               ))}
               <th className="w-8 px-1"></th>
@@ -123,18 +175,44 @@ export default function ShareholderTable({ rows, onChange }) {
           <tbody>
             {rows.map((row, i) => (
               <tr key={i} className="border-b border-slate-100 hover:bg-blue-50/30">
-                {columns.map(col => (
-                  <td key={col.field_key} className="px-1 border-r border-slate-50 last:border-r-0">
-                    <input
-                      type={col.num ? "number" : "text"}
-                      value={row[col.field_key] || ""}
-                      onChange={e => update(i, col.field_key, e.target.value)}
-                      className={inputCls}
-                      style={{ direction: col.rtl ? "rtl" : "ltr", textAlign: col.num ? "center" : (col.rtl ? "right" : "left") }}
-                      placeholder={col.field_key === "sr_no" ? String(i+1) : "—"}
-                    />
-                  </td>
-                ))}
+                {columns.map(col => {
+                  const isAreaField = ["area_acre", "area_kanal", "area_marla"].includes(col.field_key);
+                  const rawVal = row[col.field_key] || "";
+                  // For area fields in English mode, show MB format as placeholder/display
+                  const showMBHint = isAreaField && !isUrduMode && rawVal && isEnglishOrDigit(rawVal);
+                  // Name fields direction based on language mode
+                  const isNameField = col.rtl;
+                  const direction = isUrduMode
+                    ? (isNameField ? "rtl" : "ltr")
+                    : "ltr";
+                  const textAlign = col.num ? "center" : (isUrduMode && isNameField ? "right" : "left");
+
+                  return (
+                    <td key={col.field_key} className={`px-1 border-r border-slate-50 last:border-r-0 ${showMBHint ? "bg-blue-50/40" : ""}`}>
+                      <input
+                        type={col.num && !isAreaField ? "number" : "text"}
+                        value={rawVal}
+                        onChange={e => update(i, col.field_key, e.target.value)}
+                        className={inputCls}
+                        style={{
+                          direction,
+                          textAlign,
+                          fontFamily: isUrduMode && isNameField ? "'Noto Nastaliq Urdu', serif" : undefined,
+                        }}
+                        placeholder={
+                          col.field_key === "sr_no" ? String(i + 1)
+                          : isAreaField && !isUrduMode ? (col.field_key === "area_acre" ? "Ac" : col.field_key === "area_kanal" ? "Kn" : "Ml")
+                          : "—"
+                        }
+                      />
+                      {showMBHint && (
+                        <div className="text-[8px] text-blue-600 text-center font-mono leading-tight pb-0.5">
+                          {col.field_key === "area_acre" ? formatAreaDisplay(rawVal) : ""}
+                        </div>
+                      )}
+                    </td>
+                  );
+                })}
                 <td className="px-1">
                   <button onClick={() => removeRow(i)} className="text-slate-300 hover:text-red-500 p-0.5">
                     <Trash2 className="w-3 h-3" />

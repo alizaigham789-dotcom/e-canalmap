@@ -1,6 +1,29 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Printer, Clock } from "lucide-react";
+import { Plus, Trash2, Printer, Clock, Languages } from "lucide-react";
+
+// ====== Area format helpers ======
+function formatAreaMB(totalAcres) {
+  const num = parseFloat(totalAcres);
+  if (isNaN(num) || num === 0) return "";
+  const mb = Math.floor(num / 25);
+  const remAfterMB = num - mb * 25;
+  const acre = Math.floor(remAfterMB);
+  const kanalFloat = (remAfterMB - acre) * 8;
+  const kanal = Math.floor(kanalFloat);
+  const marla = Math.round((kanalFloat - kanal) * 20);
+  let parts = [];
+  if (mb > 0) parts.push(`${mb} MB`);
+  if (acre > 0) parts.push(`${acre} Ac`);
+  if (kanal > 0) parts.push(`${kanal} Kn`);
+  if (marla > 0) parts.push(`${marla} Ml`);
+  return parts.join(" ");
+}
+
+function isEnglishOrDigit(val) {
+  if (!val) return false;
+  return /^[\x00-\x7F\d\s\.\-\/]+$/.test(val.trim());
+}
 
 const DEFAULT_NOTES = [
   "تصدیق کی جاتی ہے کہ نقل مطابق اصل درست ہے۔",
@@ -148,6 +171,7 @@ function buildTashreehSchedule(rows, startTimeStr) {
 }
 
 export default function WarabandiParatForm() {
+  const [isUrduMode, setIsUrduMode] = useState(false);
   const [docType, setDocType] = useState("پرت وارہ بندی");
   const [header, setHeader] = useState({
     mogha_number: "18650", mogha_side: "R", rajbaha: "پیلو مائنر",
@@ -312,12 +336,29 @@ export default function WarabandiParatForm() {
       {/* Screen Header */}
       <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <select value={docType} onChange={e => setDocType(e.target.value)} dir="rtl"
-            className="border border-slate-300 rounded px-2 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:border-blue-400 font-semibold"
-            style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-            <option value="پرت وارہ بندی">پرت وارہ بندی</option>
-            <option value="کیس ترمیم وارہ بندی">کیس ترمیم وارہ بندی</option>
-          </select>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select value={docType} onChange={e => setDocType(e.target.value)} dir="rtl"
+              className="border border-slate-300 rounded px-2 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:border-blue-400 font-semibold"
+              style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+              <option value="پرت وارہ بندی">پرت وارہ بندی</option>
+              <option value="کیس ترمیم وارہ بندی">کیس ترمیم وارہ بندی</option>
+            </select>
+            {/* Data Language Toggle */}
+            <label className="flex items-center gap-1.5 cursor-pointer bg-white border border-slate-200 rounded-lg px-2 py-1 shadow-sm hover:border-blue-300 transition-colors">
+              <input
+                type="checkbox"
+                checked={isUrduMode}
+                onChange={e => setIsUrduMode(e.target.checked)}
+                className="w-3.5 h-3.5 accent-blue-600"
+              />
+              <Languages className="w-3 h-3 text-slate-500" />
+              <span className="text-[10px] font-medium text-slate-600">
+                {isUrduMode ? (
+                  <span style={{ fontFamily: "serif" }}>اردو ڈیٹا</span>
+                ) : "English Data"}
+              </span>
+            </label>
+          </div>
           <div className="flex gap-2 items-center flex-wrap justify-end">
             <label className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer">
               <input type="checkbox" checked={printRowSr} onChange={e => setPrintRowSr(e.target.checked)} className="w-3 h-3" />
@@ -523,19 +564,42 @@ export default function WarabandiParatForm() {
               {rows.map((row, i) => (
                 <tr key={i} className="hover:bg-blue-50/30">
                   {showRowSr && <td className={tdCls} style={{ fontSize: "9px", color: "#1d4ed8", minWidth: 28, textAlign: "center", fontWeight: "bold" }}>{i + 1}</td>}
-                  <td className={tdCls}><input value={row.khatoni2} onChange={e => updateRow(i, "khatoni2", e.target.value)} className={inp} /></td>
-                  <td className={tdCls} style={{ minWidth: 80 }}><input value={row.owner_name2} onChange={e => updateRow(i, "owner_name2", e.target.value)} className={inp} dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }} /></td>
-                  <td className={tdCls}><input value={row.total_area2} onChange={e => updateRow(i, "total_area2", e.target.value)} className={inp} /></td>
+                  <td className={tdCls}><input value={row.khatoni2} onChange={e => updateRow(i, "khatoni2", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
+                  <td className={tdCls} style={{ minWidth: 80 }}>
+                    <input value={row.owner_name2} onChange={e => updateRow(i, "owner_name2", e.target.value)} className={inp}
+                      dir={isUrduMode ? "rtl" : "ltr"}
+                      style={{ fontFamily: isUrduMode ? "'Noto Nastaliq Urdu', serif" : undefined, textAlign: isUrduMode ? "right" : "left" }} />
+                  </td>
+                  <td className={tdCls} style={{ position: "relative" }}>
+                    <input value={row.total_area2} onChange={e => updateRow(i, "total_area2", e.target.value)} className={inp} dir="ltr" />
+                    {!isUrduMode && row.total_area2 && isEnglishOrDigit(row.total_area2) && (
+                      <div className="text-[7px] text-blue-600 text-center font-mono leading-none pb-0.5">{formatAreaMB(row.total_area2)}</div>
+                    )}
+                  </td>
                   <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls}><input value={row.nikha2_lega} onChange={e => updateRow(i, "nikha2_lega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} /></td>
                   <td className={tdCls}><input value={row.nikha2_dega} onChange={e => updateRow(i, "nikha2_dega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} /></td>
-                  <td className={tdCls}><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp} /></td>
-                  <td className={tdCls} style={{ minWidth: 80 }}><input value={row.owner_name} onChange={e => updateRow(i, "owner_name", e.target.value)} className={inp} dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }} /></td>
+                  <td className={tdCls}><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
+                  <td className={tdCls} style={{ minWidth: 80 }}>
+                    <input value={row.owner_name} onChange={e => updateRow(i, "owner_name", e.target.value)} className={inp}
+                      dir={isUrduMode ? "rtl" : "ltr"}
+                      style={{ fontFamily: isUrduMode ? "'Noto Nastaliq Urdu', serif" : undefined, textAlign: isUrduMode ? "right" : "left" }} />
+                  </td>
                   <td className={tdCls} style={{ minWidth: 90 }}><input value={row.bandubast} onChange={e => updateRow(i, "bandubast", e.target.value)} className={inp} placeholder="87/(3-4)" dir="ltr" style={{ fontFamily: "serif" }} /></td>
-                  <td className={tdCls}><input value={row.total_area} onChange={e => updateRow(i, "total_area", e.target.value)} className={inp} /></td>
+                  <td className={tdCls} style={{ position: "relative" }}>
+                    <input value={row.total_area} onChange={e => updateRow(i, "total_area", e.target.value)} className={inp} dir="ltr" />
+                    {!isUrduMode && row.total_area && isEnglishOrDigit(row.total_area) && (
+                      <div className="text-[7px] text-blue-600 text-center font-mono leading-none pb-0.5">{formatAreaMB(row.total_area)}</div>
+                    )}
+                  </td>
                   <td className={tdCls}><input value={row.ghair_mumkin} onChange={e => updateRow(i, "ghair_mumkin", e.target.value)} className={inp} /></td>
-                  <td className={tdCls} style={{ backgroundColor: "#f0fdf4" }}><input value={row.khalis_raqba} onChange={e => updateRow(i, "khalis_raqba", e.target.value)} className={inp} style={{ color: "#166534" }} /></td>
+                  <td className={tdCls} style={{ backgroundColor: "#f0fdf4", position: "relative" }}>
+                    <input value={row.khalis_raqba} onChange={e => updateRow(i, "khalis_raqba", e.target.value)} className={inp} style={{ color: "#166534" }} dir="ltr" />
+                    {!isUrduMode && row.khalis_raqba && isEnglishOrDigit(row.khalis_raqba) && (
+                      <div className="text-[7px] text-emerald-600 text-center font-mono leading-none pb-0.5">{formatAreaMB(row.khalis_raqba)}</div>
+                    )}
+                  </td>
                   <td className={tdCls}><input value={row.waari_minute} onChange={e => updateRow(i, "waari_minute", e.target.value)} className={inp} /></td>
                   <td className={tdCls}><input value={row.waari_ghante} onChange={e => updateRow(i, "waari_ghante", e.target.value)} className={inp} /></td>
                   <td className={tdCls}><input value={row.zaidah_minute} onChange={e => updateRow(i, "zaidah_minute", e.target.value)} className={inp} /></td>
