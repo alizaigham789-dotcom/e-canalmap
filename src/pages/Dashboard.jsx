@@ -2,20 +2,20 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
-import { Shield, LogOut, Globe } from "lucide-react";
+import { Shield, LogOut, Globe, Lock } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 
 const MODULES = [
-  { id: "map-editor", label: "MAP EDITOR", labelUrdu: "نقشہ ایڈیٹر", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/b98e0885c_generated_image.png", path: "/map-list", bg: "from-blue-50 to-blue-100" },
-  { id: "warabandi", label: "WARABANDI PARAT", labelUrdu: "وارہ بندی پرت", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/ddf8bc723_generated_image.png", path: "/parat-warabandi", bg: "from-green-50 to-green-100" },
-  { id: "khal-mismari", label: "KHAL MISMARI", labelUrdu: "کھال مسماری", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/5e2f34f0a_generated_image.png", path: "/khal-mismari", bg: "from-orange-50 to-orange-100" },
-  { id: "warashikni", label: "WARASHIKNI", labelUrdu: "واراشکنی", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/187981eaa_generated_image.png", path: "/warashikni", bg: "from-sky-50 to-sky-100" },
-  { id: "tawan-case", label: "TAWAN CASE DOCUMENT", labelUrdu: "تاوان کیس دستاویز", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/d5b3c8e48_generated_image.png", path: "/tawan-case", bg: "from-purple-50 to-purple-100" },
-  { id: "ta-form", label: "TA FORM", labelUrdu: "ٹی اے فارم", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/887265e12_generated_image.png", path: "/ta-form", bg: "from-pink-50 to-pink-100" },
-  { id: "geo-map", label: "GEO MAP", labelUrdu: "جیو میپ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/96bc463c2_generated_image.png", path: "/geo-map", bg: "from-blue-50 to-cyan-100" },
-  { id: "deputy-collector", label: "DEPUTY COLLECTOR DOCUMENTS", labelUrdu: "ڈپٹی کلکٹر دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/40a685ff8_generated_image.png", path: "/deputy-collector", bg: "from-green-50 to-emerald-100" },
-  { id: "zilladar", label: "ZILLADAR DOCUMENTS", labelUrdu: "ضلعدار دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/28c493acc_generated_image.png", path: "/zilladar", bg: "from-orange-50 to-amber-100" },
-  { id: "group-chat", label: "GROUP CHAT", labelUrdu: "گروپ چیٹ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/61b0a5032_generated_image.png", path: "/group-chat", bg: "from-violet-50 to-purple-100" },
+  { id: "map-editor", label: "MAP EDITOR", labelUrdu: "نقشہ ایڈیٹر", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/b98e0885c_generated_image.png", path: "/map-list", bg: "from-blue-50 to-blue-100", locked: true },
+  { id: "warabandi", label: "WARABANDI PARAT", labelUrdu: "وارہ بندی پرت", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/ddf8bc723_generated_image.png", path: "/parat-warabandi", bg: "from-green-50 to-green-100", locked: true },
+  { id: "khal-mismari", label: "KHAL MISMARI", labelUrdu: "کھال مسماری", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/5e2f34f0a_generated_image.png", path: "/khal-mismari", bg: "from-orange-50 to-orange-100", locked: true },
+  { id: "warashikni", label: "WARASHIKNI", labelUrdu: "واراشکنی", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/187981eaa_generated_image.png", path: "/warashikni", bg: "from-sky-50 to-sky-100", locked: true },
+  { id: "tawan-case", label: "TAWAN CASE DOCUMENT", labelUrdu: "تاوان کیس دستاویز", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/d5b3c8e48_generated_image.png", path: "/tawan-case", bg: "from-purple-50 to-purple-100", locked: true },
+  { id: "ta-form", label: "TA FORM", labelUrdu: "ٹی اے فارم", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/887265e12_generated_image.png", path: "/ta-form", bg: "from-pink-50 to-pink-100", locked: true },
+  { id: "geo-map", label: "GEO MAP", labelUrdu: "جیو میپ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/96bc463c2_generated_image.png", path: "/geo-map", bg: "from-blue-50 to-cyan-100", locked: true },
+  { id: "deputy-collector", label: "DEPUTY COLLECTOR DOCUMENTS", labelUrdu: "ڈپٹی کلکٹر دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/40a685ff8_generated_image.png", path: "/deputy-collector", bg: "from-green-50 to-emerald-100", locked: false },
+  { id: "zilladar", label: "ZILLADAR DOCUMENTS", labelUrdu: "ضلعدار دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/28c493acc_generated_image.png", path: "/zilladar", bg: "from-orange-50 to-amber-100", locked: true },
+  { id: "group-chat", label: "GROUP CHAT", labelUrdu: "گروپ چیٹ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/61b0a5032_generated_image.png", path: "/group-chat", bg: "from-violet-50 to-purple-100", locked: true },
 ];
 
 export default function Dashboard() {
@@ -25,6 +25,8 @@ export default function Dashboard() {
     queryKey: ["me"],
     queryFn: () => base44.auth.me(),
   });
+
+  const isAdmin = currentUser?.role === "admin";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-20 antialiased">
@@ -68,21 +70,31 @@ export default function Dashboard() {
 
         {/* Module Cards — 2-column grid */}
         <div className="grid grid-cols-2 gap-4">
-          {MODULES.map((mod) => (
-            <button
-              key={mod.id}
-              onClick={() => navigate(mod.path)}
-              className={`group relative rounded-[24px] bg-gradient-to-br ${mod.bg} p-4 shadow-md shadow-slate-200/60 hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] ring-1 ring-slate-200/50 transition-all duration-200 text-center min-h-[150px] flex flex-col items-center justify-center`}
-            >
-              <div className="mb-2 w-16 h-16 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                <img src={mod.icon} alt={mod.label} className="w-16 h-16 object-contain drop-shadow-sm" />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-800 tracking-wide leading-tight">{mod.label}</p>
-                <p className="text-[10px] text-slate-500 mt-0.5" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{mod.labelUrdu}</p>
-              </div>
-            </button>
-          ))}
+          {MODULES.map((mod) => {
+            const isLocked = !isAdmin && mod.locked;
+            return (
+              <button
+                key={mod.id}
+                onClick={() => !isLocked && navigate(mod.path)}
+                disabled={isLocked}
+                className={`group relative rounded-[24px] bg-gradient-to-br ${mod.bg} p-4 shadow-md shadow-slate-200/60 ring-1 ring-slate-200/50 transition-all duration-200 text-center min-h-[150px] flex flex-col items-center justify-center
+                  ${isLocked ? "opacity-50 cursor-not-allowed grayscale" : "hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] cursor-pointer"}`}
+              >
+                {isLocked && (
+                  <div className="absolute top-2 right-2 bg-slate-600/80 rounded-full p-1">
+                    <Lock className="w-3 h-3 text-white" />
+                  </div>
+                )}
+                <div className="mb-2 w-16 h-16 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                  <img src={mod.icon} alt={mod.label} className="w-16 h-16 object-contain drop-shadow-sm" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-slate-800 tracking-wide leading-tight">{mod.label}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{mod.labelUrdu}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </main>
 
