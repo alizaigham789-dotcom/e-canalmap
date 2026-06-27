@@ -214,14 +214,14 @@ export default function Form33C() {
 
     return `
       <div style="direction:rtl;font-family:'Noto Nastaliq Urdu',serif;padding:${compact ? "14px 20px" : "30px 44px"};border:${outerBorder};box-sizing:border-box;height:100%;display:flex;flex-direction:column;">
-        <div style="text-align:center;font-size:${tfs};font-weight:bold;margin-bottom:${compact ? "16px" : "28px"};">
+        <div style="text-align:center;font-size:${tfs};font-weight:bold;margin-bottom:${compact ? "44px" : "76px"};">
           <span dir="ltr">33-C</span>&nbsp;&nbsp;بابت فصل ${fasal} ${year}ء
         </div>
         <table style="width:100%;border-collapse:collapse;">
           <thead><tr>${headers}</tr></thead>
           <tbody><tr>${cells}</tr></tbody>
         </table>
-        <div style="display:flex;justify-content:space-between;gap:10px;margin-top:auto;padding-top:${compact ? "24px" : "50px"};padding-bottom:${compact ? "10px" : "18px"};direction:ltr;align-items:flex-end;">
+        <div style="display:flex;justify-content:space-between;gap:10px;margin-top:auto;padding-top:${compact ? "24px" : "50px"};padding-bottom:${compact ? "34px" : "56px"};direction:ltr;align-items:flex-end;">
           ${sig(signatures.divisional_img, "Divisional Canal Officer")}
           ${sig(signatures.deputy_img, "Deputy Collector")}
           ${sig(signatures.clerk_img, "Assessment Clerk")}
@@ -488,7 +488,7 @@ export default function Form33C() {
               <div key={v.id}
                 style={{ border: showBorder ? "2px solid #000" : "2px dashed #cbd5e1", direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif", padding: orientation === "portrait" ? "14px 20px" : "26px 40px", backgroundColor: "#fff" }}>
                 {/* Title */}
-                <div style={{ textAlign: "center", fontSize: orientation === "portrait" ? "24px" : "40px", fontWeight: "bold", marginBottom: orientation === "portrait" ? "16px" : "28px" }}>
+                <div style={{ textAlign: "center", fontSize: orientation === "portrait" ? "24px" : "40px", fontWeight: "bold", marginBottom: orientation === "portrait" ? "44px" : "76px" }}>
                   <span dir="ltr">33-C</span>&nbsp;&nbsp;بابت فصل {fasal} {year}ء
                 </div>
                 {/* Table */}
@@ -506,7 +506,7 @@ export default function Form33C() {
                   </tr></tbody>
                 </table>
                 {/* Signatures — fixed height image area keeps them level */}
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginTop: orientation === "portrait" ? "24px" : "50px", paddingBottom: "8px", direction: "ltr", alignItems: "flex-end" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginTop: orientation === "portrait" ? "24px" : "50px", paddingBottom: orientation === "portrait" ? "34px" : "56px", direction: "ltr", alignItems: "flex-end" }}>
                   {[
                     { img: signatures.divisional_img, title: "Divisional Canal Officer" },
                     { img: signatures.deputy_img, title: "Deputy Collector" },
