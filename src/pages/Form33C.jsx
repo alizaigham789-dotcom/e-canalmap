@@ -210,7 +210,7 @@ export default function Form33C() {
       `<th style="border:${borderStyle};padding:${p};font-size:${fs};text-align:center;font-weight:bold;">${c.label}</th>`
     ).join("");
     const cells = cols.map(c => {
-      const val = c.key === "surcharge" ? (surcharge || "—") : (v[c.key] || "—");
+      const val = c.key === "surcharge" ? "" : (v[c.key] || "—");
       return `<td style="border:${borderStyle};padding:${p};font-size:${fs};text-align:center;">${val}</td>`;
     }).join("");
 
@@ -520,7 +520,7 @@ export default function Form33C() {
                   </tr></thead>
                   <tbody><tr>
                     {activeCols.map(c => {
-                      const val = c.key === "surcharge" ? (calcTotal(v) || "—") : (v[c.key] || "—");
+                      const val = c.key === "surcharge" ? "" : (v[c.key] || "—");
                       return <td key={c.key} style={{ border: showTableBorder ? "1.5px solid #000" : "1px solid #e2e8f0", padding: "8px 10px", fontSize: orientation === "portrait" ? "13px" : "19px", textAlign: "center" }}>{val}</td>;
                     })}
                   </tr></tbody>
