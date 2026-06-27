@@ -1,0 +1,30 @@
+{
+  "name": "Form33CRecord",
+  "type": "object",
+  "properties": {
+    "fasal": {
+      "type": "string"
+    },
+    "year": {
+      "type": "string"
+    },
+    "orientation": {
+      "type": "string"
+    },
+    "district": {
+      "type": "string"
+    },
+    "villages_json": {
+      "type": "string",
+      "description": "JSON string of village rows"
+    },
+    "signatures_json": {
+      "type": "string",
+      "description": "JSON string of signature metadata"
+    }
+  },
+  "required": [
+    "fasal",
+    "year"
+  ]
+}
