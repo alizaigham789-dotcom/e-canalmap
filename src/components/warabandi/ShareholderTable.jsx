@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Calculator, Languages } from "lucide-react";
+import { Plus, Trash2, Calculator, Languages, Camera, Loader2 } from "lucide-react";
 
 // ====== Area format helpers ======
 // Parse area string like "24-3-15" (Murabba-Acre-Kanal-Marla) or plain acres
@@ -58,6 +58,8 @@ const emptyRow = (sr) => ({
 
 export default function ShareholderTable({ rows, onChange }) {
   const [isUrduMode, setIsUrduMode] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const scanRef = useRef();
   const { data: configs = [] } = useQuery({
     queryKey: ["form-field-configs", "parat_warabandi_table"],
     queryFn: () => base44.entities.FormFieldConfig.filter({ form_type: "parat_warabandi_table" }, "order"),
@@ -127,6 +129,77 @@ export default function ShareholderTable({ rows, onChange }) {
   const adjustedHours = totalHours + Math.floor(totalMinutes / 60);
   const adjustedMinutes = totalMinutes % 60;
 
+  const handleScan = async (file) => {
+    if (!file) return;
+    setScanning(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `This is a scanned Khasra / Jamabandi or Parat Warabandi register page. Extract all rows of land holder data. For each row, return a JSON object with these fields:
+- sr_no: row number
+- owner_name: name of occupier / مالک کا نام (Urdu)
+- father_name: father name / ولدیت (Urdu)
+- khewat_no: khewat number
+- khatoni_no: khatoni / khata number
+- khasra_no: khasra number(s)
+- area_acre: total area in acres (number only)
+- area_kanal: kanal portion (number only)
+- area_marla: marla portion (number only)
+- water_share: water share / حصہ آب
+- remarks: any remarks or Ghair Mumkin / Zaid Wasoli / Wazgi notes (Urdu)
+Return ONLY a JSON array of objects, no extra text.`,
+        file_urls: [file_url],
+        model: "claude_sonnet_4_6",
+        response_json_schema: {
+          type: "object",
+          properties: {
+            rows: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  sr_no: { type: "string" },
+                  owner_name: { type: "string" },
+                  father_name: { type: "string" },
+                  khewat_no: { type: "string" },
+                  khatoni_no: { type: "string" },
+                  khasra_no: { type: "string" },
+                  area_acre: { type: "string" },
+                  area_kanal: { type: "string" },
+                  area_marla: { type: "string" },
+                  water_share: { type: "string" },
+                  remarks: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (result?.rows?.length > 0) {
+        const parsed = result.rows.map((r, i) => ({
+          sr_no: r.sr_no || String(i + 1),
+          owner_name: r.owner_name || "",
+          father_name: r.father_name || "",
+          khewat_no: r.khewat_no || "",
+          khatoni_no: r.khatoni_no || "",
+          khasra_no: r.khasra_no || "",
+          area_acre: r.area_acre || "",
+          area_kanal: r.area_kanal || "",
+          area_marla: r.area_marla || "",
+          water_share: r.water_share || "",
+          duration_hours: "",
+          duration_minutes: "",
+          remarks: r.remarks || "",
+        }));
+        onChange(parsed);
+      }
+    } catch (e) {
+      alert("اسکین ناکام — دوبارہ کوشش کریں");
+    }
+    setScanning(false);
+    if (scanRef.current) scanRef.current.value = "";
+  };
+
   const inputCls = "w-full bg-transparent outline-none text-xs text-slate-800 px-1 py-1 placeholder:text-slate-300";
 
   return (
@@ -158,6 +231,13 @@ export default function ShareholderTable({ rows, onChange }) {
             title={`Formula: 7×24×60=${totalWeekMinutes} min/week ÷ total area = ${minutesPerAcre.toFixed(2)} min/acre`}>
             <Calculator className="w-3 h-3" /> حساب ({minutesPerAcre.toFixed(2)}m/ac)
           </Button>
+          <Button size="sm" onClick={() => scanRef.current?.click()} disabled={scanning}
+            className="h-7 text-xs bg-amber-500 hover:bg-amber-600 text-white gap-1">
+            {scanning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
+            {scanning ? "اسکین..." : "AI اسکین"}
+          </Button>
+          <input ref={scanRef} type="file" accept="image/*" className="hidden"
+            onChange={e => handleScan(e.target.files[0])} />
           <Button size="sm" onClick={addRow} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1">
             <Plus className="w-3 h-3" /> Add Row
           </Button>

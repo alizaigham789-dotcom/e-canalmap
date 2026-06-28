@@ -443,56 +443,56 @@ export function rectsOverlap(a, b) {
 }
 
 // Snap new parcel to existing boundary edges — no gaps, no overlaps, exact edge matching
+// The parcel is placed at the grid cell the user clicked, then snapped to adjacent parcel edges
+// if any are very close (within half a cell width). This ensures the parcel lands where clicked
+// and only sticks to neighbors if it's genuinely near them.
 export function snapToNearestBoundary(newObj, existingObjects) {
   const sameParcels = existingObjects.filter(o => o.type === newObj.type);
   const allParcels = existingObjects.filter(o => ["mustateel", "muraba", "acre"].includes(o.type));
-  if (allParcels.length === 0) return { x: newObj.x, y: newObj.y };
 
-  // First: snap to grid for the type
-  let snappedX = newObj.x, snappedY = newObj.y;
-  if (newObj.type === "mustateel" || newObj.type === "acre") {
-    const gw = newObj.w, gh = newObj.h;
-    snappedX = Math.round(newObj.x / gw) * gw;
-    snappedY = Math.round(newObj.y / gh) * gh;
-  } else if (newObj.type === "muraba") {
-    const gw = newObj.w, gh = newObj.h;
-    snappedX = Math.round(newObj.x / gw) * gw;
-    snappedY = Math.round(newObj.y / gh) * gh;
-  }
+  // Always snap to grid first — this is the primary placement
+  const gw = newObj.w, gh = newObj.h;
+  const snappedX = Math.round(newObj.x / gw) * gw;
+  const snappedY = Math.round(newObj.y / gh) * gh;
 
-  // Second: try to snap to neighboring same-type parcels (exact edge adjacency)
+  if (sameParcels.length === 0) return { x: snappedX, y: snappedY };
+
+  // Magnetic snap threshold: within half a cell in each axis
+  const magX = gw * 0.5;
+  const magY = gh * 0.5;
+
   let bestX = snappedX, bestY = snappedY;
-  let bestXDelta = Infinity, bestYDelta = Infinity;
+  let bestXDelta = magX, bestYDelta = magY; // only snap if CLOSER than threshold
 
   for (const p of sameParcels) {
-    // Place immediately to the right of p
-    const toRight = p.x + p.w;
-    const dRight = Math.abs(snappedX - toRight);
-    if (dRight < bestXDelta) { bestX = toRight; bestXDelta = dRight; }
-    // Place immediately to the left of p
-    const toLeft = p.x - newObj.w;
-    const dLeft = Math.abs(snappedX - toLeft);
-    if (dLeft < bestXDelta) { bestX = toLeft; bestXDelta = dLeft; }
-    // Align same column
-    const dAlignX = Math.abs(snappedX - p.x);
-    if (dAlignX < bestXDelta) { bestX = p.x; bestXDelta = dAlignX; }
-
-    // Place immediately below p
-    const toBottom = p.y + p.h;
-    const dBottom = Math.abs(snappedY - toBottom);
-    if (dBottom < bestYDelta) { bestY = toBottom; bestYDelta = dBottom; }
-    // Place immediately above p
-    const toTop = p.y - newObj.h;
-    const dTop = Math.abs(snappedY - toTop);
-    if (dTop < bestYDelta) { bestY = toTop; bestYDelta = dTop; }
-    // Align same row
-    const dAlignY = Math.abs(snappedY - p.y);
-    if (dAlignY < bestYDelta) { bestY = p.y; bestYDelta = dAlignY; }
+    // X-axis candidates: right edge of p, left edge of p (minus width), same column as p
+    const candidates = [
+      { x: p.x + p.w, d: Math.abs(snappedX - (p.x + p.w)) },
+      { x: p.x - gw,  d: Math.abs(snappedX - (p.x - gw)) },
+      { x: p.x,       d: Math.abs(snappedX - p.x) },
+    ];
+    for (const c of candidates) {
+      if (c.d < bestXDelta) { bestX = c.x; bestXDelta = c.d; }
+    }
+    // Y-axis candidates: below p, above p, same row as p
+    const candidatesY = [
+      { y: p.y + p.h, d: Math.abs(snappedY - (p.y + p.h)) },
+      { y: p.y - gh,  d: Math.abs(snappedY - (p.y - gh)) },
+      { y: p.y,       d: Math.abs(snappedY - p.y) },
+    ];
+    for (const c of candidatesY) {
+      if (c.d < bestYDelta) { bestY = c.y; bestYDelta = c.d; }
+    }
   }
 
   const candidate = { x: bestX, y: bestY, w: newObj.w, h: newObj.h };
-  // If overlapping after snap, find next free slot
+  // If overlapping after snap, place at pure grid position (not next to anything)
   if (allParcels.some(p => rectsOverlap(candidate, p))) {
+    // Try pure grid position first
+    const gridCandidate = { x: snappedX, y: snappedY, w: gw, h: gh };
+    if (!allParcels.some(p => rectsOverlap(gridCandidate, p))) {
+      return { x: snappedX, y: snappedY };
+    }
     return findNonOverlappingPosition(candidate, existingObjects);
   }
   return { x: bestX, y: bestY };

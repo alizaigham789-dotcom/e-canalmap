@@ -17,10 +17,10 @@ const emptyVillage = () => ({
   surcharge_override: "",
 });
 
-function calcTotal(v) {
+function calcTotal(v, pct = 10) {
   if (v.surcharge_override && v.surcharge_override.trim() !== "") return v.surcharge_override;
   const z = parseFloat(v.total_zar) || 0;
-  return z > 0 ? (z + z * 0.1).toFixed(2) : "";
+  return z > 0 ? (z + z * (pct / 100)).toFixed(2) : "";
 }
 
 const COLUMNS = [
@@ -63,7 +63,7 @@ function SigUpload({ label, value, onChange }) {
       try {
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
         const result = await base44.integrations.Core.GenerateImage({
-          prompt: `This is a scanned signature or rubber stamp on paper. Remove all background paper texture making it pure white (#FFFFFF). Make the ink crisp and dark. Keep exact shape. Clean white background only.`,
+          prompt: `Extract just the handwritten signature or rubber stamp ink from this scanned image. Remove all paper background, making it pure white (#FFFFFF). Keep the ink lines crisp, dark, and at original scale. Do not resize or crop the ink marks. White background only.`,
           existing_image_urls: [file_url],
         });
         if (result?.url) onChange(result.url);
@@ -112,6 +112,7 @@ export default function Form33C() {
   const [historyKey, setHistoryKey] = useState(0);
   const [showSurcharge, setShowSurcharge] = useState(true);
   const [showSurchargeInput, setShowSurchargeInput] = useState(true);
+  const [surchargePercent, setSurchargePercent] = useState(10);
   const [showDistrict, setShowDistrict] = useState(true);
   const [district, setDistrict] = useState("Khushab");
   const scanFileRef = useRef();
@@ -191,21 +192,26 @@ export default function Form33C() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const activeCols = showSurcharge ? COLUMNS : COLUMNS.filter(c => c.key !== "surcharge");
+  const surchargeLabel = `کل زر آبیانہ بمعہ ${surchargePercent}% سر چارج`;
+  const activeCols = showSurcharge
+    ? COLUMNS.map(c => c.key === "surcharge" ? { ...c, label: surchargeLabel } : c)
+    : COLUMNS.filter(c => c.key !== "surcharge");
 
   // ─── Build print HTML ─────────────────────────────────────────────────────
   function renderCardHtml(v, compact) {
-    const fs = compact ? "14px" : "22px";
-    const tfs = compact ? "32px" : "56px";
-    const sigH = "60px";
-    const sigFs = compact ? "12px" : "17px";
-    const p = compact ? "8px 10px" : "13px 16px";
+    const fs = compact ? "13px" : "20px";
+    const tfs = compact ? "28px" : "48px";
+    const sigImgH = compact ? "50px" : "70px";
+    const stampMaxW = compact ? "90px" : "120px";
+    const sigFs = compact ? "11px" : "15px";
+    const p = compact ? "6px 8px" : "10px 14px";
     const borderStyle = showTableBorder ? "1.5px solid #000" : "1px solid transparent";
     const outerBorder = showPageBorder ? "2px solid #000" : "2px solid transparent";
-    const surcharge = calcTotal(v);
     const districtLine = showDistrict && district ? `<div style="font-size:${sigFs};">${district} Canal Division</div>` : "";
 
-    const cols = showSurcharge ? COLUMNS : COLUMNS.filter(c => c.key !== "surcharge");
+    const cols = showSurcharge
+      ? COLUMNS.map(c => c.key === "surcharge" ? { ...c, label: surchargeLabel } : c)
+      : COLUMNS.filter(c => c.key !== "surcharge");
     const headers = cols.map(c =>
       `<th style="border:${borderStyle};padding:${p};font-size:${fs};text-align:center;font-weight:bold;">${c.label}</th>`
     ).join("");
@@ -214,27 +220,30 @@ export default function Form33C() {
       return `<td style="border:${borderStyle};padding:${p};font-size:${fs};text-align:center;">${val}</td>`;
     }).join("");
 
-    // Each sig block has fixed-height image area so they stay level
-    const sig = (src, title) => `
-      <div style="text-align:center;flex:1;">
-        <div style="height:${sigH};display:flex;align-items:flex-end;justify-content:center;margin-bottom:4px;">
-          ${src ? `<img src="${src}" style="max-height:${sigH};max-width:130px;object-fit:contain;" />` : ""}
+    // Signature block: image fills available height, line width matches text width
+    const sig = (src, title) => {
+      const lineW = compact ? "160px" : "200px";
+      return `
+      <div style="text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;">
+        <div style="height:${sigImgH};display:flex;align-items:flex-end;justify-content:center;margin-bottom:2px;width:100%;">
+          ${src ? `<img src="${src}" style="height:${sigImgH};max-width:${stampMaxW};object-fit:contain;display:block;" />` : ""}
         </div>
-        <div style="border-top:${showTableBorder ? "1px solid #000" : "1px solid transparent"};padding-top:4px;font-size:${sigFs};">
+        <div style="width:${lineW};border-top:1.5px solid #000;padding-top:3px;font-size:${sigFs};text-align:center;">
           <strong>${title}</strong>${districtLine}
         </div>
       </div>`;
+    };
 
     return `
-      <div style="direction:rtl;font-family:'Noto Nastaliq Urdu',serif;padding:${compact ? "14px 20px" : "30px 44px"};border:${outerBorder};box-sizing:border-box;height:100%;display:flex;flex-direction:column;">
-        <div style="text-align:center;font-size:${tfs};font-weight:bold;margin-bottom:${compact ? "44px" : "76px"};letter-spacing:1px;word-spacing:6px;line-height:1.8;">
+      <div style="direction:rtl;font-family:'Noto Nastaliq Urdu',serif;padding:${compact ? "10px 16px" : "24px 36px"};border:${outerBorder};box-sizing:border-box;height:100%;display:flex;flex-direction:column;">
+        <div style="text-align:center;font-size:${tfs};font-weight:bold;margin-bottom:${compact ? "20px" : "40px"};letter-spacing:1px;word-spacing:6px;line-height:1.6;">
           <span dir="ltr">33-C</span>&nbsp;&nbsp;بابت فصل ${fasal} ${year}ء
         </div>
         <table style="width:100%;border-collapse:collapse;">
           <thead><tr>${headers}</tr></thead>
           <tbody><tr>${cells}</tr></tbody>
         </table>
-        <div style="display:flex;justify-content:space-between;gap:10px;margin-top:auto;padding-top:${compact ? "24px" : "50px"};padding-bottom:${compact ? "34px" : "56px"};direction:ltr;align-items:flex-end;">
+        <div style="display:flex;justify-content:space-around;gap:8px;margin-top:auto;padding-top:${compact ? "16px" : "36px"};padding-bottom:${compact ? "12px" : "28px"};direction:ltr;align-items:flex-end;">
           ${sig(signatures.divisional_img, "Divisional Canal Officer")}
           ${sig(signatures.deputy_img, "Deputy Collector")}
           ${sig(signatures.clerk_img, "Assessment Clerk")}
@@ -244,29 +253,39 @@ export default function Form33C() {
 
   const handlePrint = () => {
     const isPortrait = orientation === "portrait";
-    // Use explicit @page size to force orientation
-    const pageSize = isPortrait ? "210mm 297mm portrait" : "297mm 210mm landscape";
+    const pageSize = isPortrait ? "A4 portrait" : "A4 landscape";
     const w = window.open("", "_blank", "width=1200,height=900");
     let body = "";
     if (isPortrait) {
+      // 2 villages per A4 page, each occupies exactly half
       for (let i = 0; i < villages.length; i += 2) {
         const pair = villages.slice(i, i + 2);
         const cards = pair.map(v => `<div class="card-half">${renderCardHtml(v, true)}</div>`).join("");
         body += `<div class="page-group">${cards}</div>`;
       }
     } else {
+      // 1 village per landscape A4 page, strictly one page
       body = villages.map(v => `<div class="page-single">${renderCardHtml(v, false)}</div>`).join("");
     }
     w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>33-C</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-      @page { size: ${pageSize}; margin: 8mm; }
+      @page { size: ${pageSize}; margin: 6mm; }
       *{box-sizing:border-box;margin:0;padding:0;}
-      html,body{font-family:'Noto Nastaliq Urdu',serif;direction:rtl;}
+      html,body{font-family:'Noto Nastaliq Urdu',serif;direction:rtl;width:100%;height:100%;}
       ${isPortrait
-        ? `.page-group{display:flex;flex-direction:column;gap:5mm;page-break-after:always;height:calc(297mm - 16mm);}
+        ? `.page-group{
+             display:flex;flex-direction:column;
+             height:calc(297mm - 12mm);
+             page-break-after:always;break-after:page;
+             overflow:hidden;
+           }
            .card-half{flex:1;min-height:0;overflow:hidden;}`
-        : `.page-single{page-break-after:always;height:calc(210mm - 16mm);overflow:hidden;}`}
+        : `.page-single{
+             height:calc(210mm - 12mm);
+             page-break-after:always;break-after:page;
+             overflow:hidden;
+           }`}
     </style></head><body>${body}</body></html>`);
     w.document.close();
     setTimeout(() => { w.focus(); w.print(); }, 900);
@@ -341,10 +360,21 @@ export default function Form33C() {
               سر چارج کالم دکھائیں
             </label>
             {showSurcharge && (
-              <label className="flex items-center gap-1.5 text-[10px] text-slate-600 cursor-pointer">
-                <input type="checkbox" checked={showSurchargeInput} onChange={e => setShowSurchargeInput(e.target.checked)} className="w-3.5 h-3.5 accent-emerald-600" />
-                سر چارج خانہ ظاہر کریں
-              </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="flex items-center gap-1.5 text-[10px] text-slate-600 cursor-pointer">
+                  <input type="checkbox" checked={showSurchargeInput} onChange={e => setShowSurchargeInput(e.target.checked)} className="w-3.5 h-3.5 accent-emerald-600" />
+                  سر چارج خانہ ظاہر کریں
+                </label>
+                <div className="flex items-center gap-1">
+                  <label className="text-[10px] text-slate-500 font-semibold">سر چارج %</label>
+                  <input
+                    type="number" min="0" max="100" step="0.5"
+                    value={surchargePercent}
+                    onChange={e => setSurchargePercent(parseFloat(e.target.value) || 0)}
+                    className="w-16 border border-slate-300 rounded px-2 py-0.5 text-xs focus:outline-none focus:border-blue-400 text-center"
+                  />
+                </div>
+              </div>
             )}
             <label className="flex items-center gap-1.5 text-[10px] text-slate-600 cursor-pointer">
               <input type="checkbox" checked={showDistrict} onChange={e => setShowDistrict(e.target.checked)} className="w-3.5 h-3.5 accent-blue-600" />
@@ -426,9 +456,16 @@ export default function Form33C() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-bold text-slate-700">📋 موضع ڈیٹا</h2>
-            <Button size="sm" onClick={addVillage} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1">
-              <Plus className="w-3 h-3" /> موضع شامل کریں
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline"
+                onClick={() => { if (confirm("کیا آپ تمام ڈیٹا صاف کرنا چاہتے ہیں؟")) setVillages([emptyVillage()]); }}
+                className="h-7 text-xs border-red-200 text-red-600 hover:bg-red-50 gap-1">
+                <Trash2 className="w-3 h-3" /> ٹیبل صاف کریں
+              </Button>
+              <Button size="sm" onClick={addVillage} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1">
+                <Plus className="w-3 h-3" /> موضع شامل کریں
+              </Button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs min-w-[640px]" style={{ borderCollapse: "collapse" }} dir="rtl">
@@ -477,12 +514,12 @@ export default function Form33C() {
                       <td className="border border-slate-200 p-0">
                         <input value={v.surcharge_override} onChange={e => updateVillage(v.id, "surcharge_override", e.target.value)}
                           className="w-full px-2 py-2 text-xs outline-none bg-transparent text-center text-emerald-700 font-semibold"
-                          placeholder={calcTotal(v) || "خودکار"} />
+                          placeholder={calcTotal(v, surchargePercent) || "خودکار"} />
                       </td>
                     )}
                     {showSurcharge && !showSurchargeInput && (
                       <td className="border border-slate-200 px-2 py-2 text-center text-xs text-slate-400 italic">
-                        {calcTotal(v) || "—"}
+                        {calcTotal(v, surchargePercent) || "—"}
                       </td>
                     )}
                     <td className="border border-slate-200 px-1 py-1 text-center">
@@ -515,30 +552,30 @@ export default function Form33C() {
                 <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "8px" }}>
                   <thead><tr>
                     {activeCols.map(c => (
-                      <th key={c.key} style={{ border: showTableBorder ? "1.5px solid #000" : "1px solid #e2e8f0", padding: "8px 10px", fontSize: orientation === "portrait" ? "13px" : "19px", textAlign: "center" }}>{c.label}</th>
+                      <th key={c.key} style={{ border: showTableBorder ? "1.5px solid #000" : "1px solid #e2e8f0", padding: "6px 8px", fontSize: orientation === "portrait" ? "12px" : "17px", textAlign: "center" }}>{c.label}</th>
                     ))}
                   </tr></thead>
                   <tbody><tr>
                     {activeCols.map(c => {
                       const val = c.key === "surcharge" ? "" : (v[c.key] || "—");
-                      return <td key={c.key} style={{ border: showTableBorder ? "1.5px solid #000" : "1px solid #e2e8f0", padding: "8px 10px", fontSize: orientation === "portrait" ? "13px" : "19px", textAlign: "center" }}>{val}</td>;
+                      return <td key={c.key} style={{ border: showTableBorder ? "1.5px solid #000" : "1px solid #e2e8f0", padding: "6px 8px", fontSize: orientation === "portrait" ? "12px" : "17px", textAlign: "center" }}>{val}</td>;
                     })}
                   </tr></tbody>
                 </table>
                 {/* Signatures — fixed height image area keeps them level */}
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginTop: orientation === "portrait" ? "24px" : "50px", paddingBottom: orientation === "portrait" ? "34px" : "56px", direction: "ltr", alignItems: "flex-end" }}>
+                <div style={{ display: "flex", justifyContent: "space-around", gap: "8px", marginTop: orientation === "portrait" ? "16px" : "36px", paddingBottom: orientation === "portrait" ? "12px" : "24px", direction: "ltr", alignItems: "flex-end" }}>
                   {[
                     { img: signatures.divisional_img, title: "Divisional Canal Officer" },
                     { img: signatures.deputy_img, title: "Deputy Collector" },
                     { img: signatures.clerk_img, title: "Assessment Clerk" },
                   ].map((s, idx) => (
-                    <div key={idx} style={{ textAlign: "center", flex: 1 }}>
-                      <div style={{ height: orientation === "portrait" ? "48px" : "74px", display: "flex", alignItems: "flex-end", justifyContent: "center", marginBottom: "4px" }}>
-                        {s.img && <img src={s.img} alt="sig" style={{ maxHeight: orientation === "portrait" ? "46px" : "72px", maxWidth: "100%", objectFit: "contain" }} />}
+                    <div key={idx} style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      <div style={{ height: orientation === "portrait" ? "50px" : "70px", display: "flex", alignItems: "flex-end", justifyContent: "center", marginBottom: "2px", width: "100%" }}>
+                        {s.img && <img src={s.img} alt="sig" style={{ height: orientation === "portrait" ? "50px" : "70px", maxWidth: orientation === "portrait" ? "90px" : "120px", objectFit: "contain", display: "block" }} />}
                       </div>
-                      <div style={{ borderTop: showTableBorder ? "1px solid #000" : "1px solid #cbd5e1", paddingTop: "5px", fontSize: orientation === "portrait" ? "12px" : "16px" }}>
+                      <div style={{ width: orientation === "portrait" ? "140px" : "190px", borderTop: "1.5px solid #000", paddingTop: "4px", fontSize: orientation === "portrait" ? "11px" : "15px", textAlign: "center" }}>
                         <strong>{s.title}</strong>
-                        {showDistrict && district && <div style={{ fontSize: orientation === "portrait" ? "11px" : "15px" }}>{district} Canal Division</div>}
+                        {showDistrict && district && <div style={{ fontSize: orientation === "portrait" ? "10px" : "13px" }}>{district} Canal Division</div>}
                       </div>
                     </div>
                   ))}

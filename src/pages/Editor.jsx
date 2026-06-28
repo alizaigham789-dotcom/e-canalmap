@@ -579,9 +579,12 @@ export default function Editor() {
           )}
         </div>
 
-        {/* Properties Panel */}
+        {/* Properties Panel — top-right on desktop, bottom-left on mobile */}
         {selectedObj && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20">
+          <div className="absolute z-30
+            right-3 top-1/2 -translate-y-1/2
+            sm:right-3 sm:top-1/2 sm:-translate-y-1/2
+            max-sm:right-auto max-sm:left-2 max-sm:top-auto max-sm:bottom-16 max-sm:translate-y-0 max-sm:translate-x-0">
             <PropertiesPanel
               selectedObj={selectedObj}
               onUpdate={handleUpdateObject}
