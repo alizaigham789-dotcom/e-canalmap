@@ -193,9 +193,11 @@ export default function Form33C() {
   };
 
   const surchargeLabel = `کل زر آبیانہ بمعہ ${surchargePercent}% سر چارج`;
+  // Update COLUMNS dynamically so the surcharge header always reflects the current %
+  const COLUMNS_DYNAMIC = COLUMNS.map(c => c.key === "surcharge" ? { ...c, label: surchargeLabel } : c);
   const activeCols = showSurcharge
-    ? COLUMNS.map(c => c.key === "surcharge" ? { ...c, label: surchargeLabel } : c)
-    : COLUMNS.filter(c => c.key !== "surcharge");
+    ? COLUMNS_DYNAMIC
+    : COLUMNS_DYNAMIC.filter(c => c.key !== "surcharge");
 
   // ─── Build print HTML ─────────────────────────────────────────────────────
   function renderCardHtml(v, compact) {
@@ -478,7 +480,7 @@ export default function Form33C() {
                   {showSurcharge && showSurchargeInput && (
                     <th className="border border-slate-300 px-2 py-2 text-center text-[10px]" style={{ fontFamily: "serif" }}>
                       <span className="flex items-center justify-center gap-1">
-                        بمعہ 10% سر چارج
+                        بمعہ {surchargePercent}% سر چارج
                         <button onClick={() => setShowSurchargeInput(false)} className="text-slate-300 hover:text-red-400"><EyeOff className="w-3 h-3" /></button>
                       </span>
                     </th>

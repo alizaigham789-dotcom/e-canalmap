@@ -108,21 +108,17 @@ export default function MapList() {
         ) : (
           <div className="space-y-3">
             {filtered.map(map => (
-              <Link key={map.id} to={`/editor?id=${map.id}`}>
-                <div className="group flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-3 hover:border-blue-300 hover:shadow-md transition-all shadow-sm">
+              <div key={map.id} className="bg-white border border-slate-200 rounded-xl p-3 hover:border-blue-300 hover:shadow-md transition-all shadow-sm">
+                <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center shrink-0">
                     <Map className="w-5 h-5 text-blue-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 truncate">
-                      {map.title || "Untitled Map"}
-                    </h3>
+                    <h3 className="text-sm font-semibold text-slate-800 truncate">{map.title || "Untitled Map"}</h3>
                     {(map.village || map.district) && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <MapPin className="w-3 h-3 text-slate-400" />
-                        <span className="text-xs text-slate-500 truncate">
-                          {[map.village, map.tehsil, map.district].filter(Boolean).join(", ")}
-                        </span>
+                        <span className="text-xs text-slate-500 truncate">{[map.village, map.tehsil, map.district].filter(Boolean).join(", ")}</span>
                       </div>
                     )}
                     <div className="flex items-center gap-3 mt-1">
@@ -136,7 +132,19 @@ export default function MapList() {
                     </div>
                   </div>
                 </div>
-              </Link>
+                <div className="flex gap-2 mt-2.5">
+                  <Link to={`/editor?id=${map.id}`} className="flex-1">
+                    <button className="w-full py-1.5 text-[10px] font-semibold rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors">
+                      Map Editor
+                    </button>
+                  </Link>
+                  <Link to={`/editor-pro?id=${map.id}`} className="flex-1">
+                    <button className="w-full py-1.5 text-[10px] font-semibold rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors">
+                      ✦ Editor Pro
+                    </button>
+                  </Link>
+                </div>
+              </div>
             ))}
           </div>
         )}

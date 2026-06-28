@@ -48,18 +48,20 @@ export function drawGrid(ctx, W, H, zoom, pan, gridFlags = {}) {
   const endX = startX + W / zoom + murbW * 2;
   const endY = startY + H / zoom + murbH * 2;
 
-  // Mustateel grid
+  // Mustateel grid — always visible at any zoom level
   if (showMustateel) {
-    if (zoom > 0.3) {
-      ctx.strokeStyle = "rgba(59,130,246,0.08)";
-      ctx.lineWidth = 0.5 / zoom;
-      ctx.beginPath();
-      for (let x = Math.floor(startX / acreW) * acreW; x < endX; x += acreW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
-      for (let y = Math.floor(startY / acreH) * acreH; y < endY; y += acreH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
-      ctx.stroke();
-    }
-    ctx.strokeStyle = "rgba(239,68,68,0.18)";
-    ctx.lineWidth = 1 / zoom;
+    // Acre sub-grid — subtle, always shown
+    ctx.strokeStyle = "rgba(100,100,100,0.10)";
+    ctx.lineWidth = 0.4 / zoom;
+    ctx.setLineDash([4/zoom, 4/zoom]);
+    ctx.beginPath();
+    for (let x = Math.floor(startX / acreW) * acreW; x < endX; x += acreW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
+    for (let y = Math.floor(startY / acreH) * acreH; y < endY; y += acreH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Mustateel boundary grid — always visible
+    ctx.strokeStyle = "rgba(180,60,60,0.20)";
+    ctx.lineWidth = 0.8 / zoom;
     ctx.beginPath();
     for (let x = Math.floor(startX / mustW) * mustW; x < endX; x += mustW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
     for (let y = Math.floor(startY / mustH) * mustH; y < endY; y += mustH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
@@ -137,15 +139,15 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C) {
   ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
-  // Layer 2: Killa grid (decoupled style state)
-  if (zoom > 0.12) {
-    const alpha = ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.15;
+  // Layer 2: Killa grid — always visible, subtle ink
+  {
+    const alpha = ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.18;
     const ksColor = ks.strokeColor || "#ef4444";
     ctx.strokeStyle = `rgba(${hexToRgb(ksColor)},${alpha})`;
-    ctx.lineWidth = ((ks.strokeWidth || 1)) / zoom;
+    ctx.lineWidth = Math.max(0.3, (ks.strokeWidth || 0.8)) / zoom;
     if (ks.strokeStyle === "dashed") ctx.setLineDash([6/zoom, 3/zoom]);
     else if (ks.strokeStyle === "dotted") ctx.setLineDash([2/zoom, 3/zoom]);
-    else ctx.setLineDash([]);
+    else ctx.setLineDash([4/zoom, 4/zoom]);
 
     const cellW = obj.w / 2, cellH = obj.h / 5;
     ctx.beginPath();
@@ -226,15 +228,15 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C) {
   ctx.lineWidth = (isSelected ? 4 : 3) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
-  // Layer 2: Killa grid (decoupled style state)
-  if (zoom > 0.08) {
-    const alpha = ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.10;
+  // Layer 2: Killa grid — always visible, subtle ink
+  {
+    const alpha = ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.14;
     const ksColor = ks.strokeColor || "#ef4444";
     ctx.strokeStyle = `rgba(${hexToRgb(ksColor)},${alpha})`;
-    ctx.lineWidth = ((ks.strokeWidth || 1)) / zoom;
+    ctx.lineWidth = Math.max(0.3, (ks.strokeWidth || 0.8)) / zoom;
     if (ks.strokeStyle === "dashed") ctx.setLineDash([6/zoom, 3/zoom]);
     else if (ks.strokeStyle === "dotted") ctx.setLineDash([2/zoom, 3/zoom]);
-    else ctx.setLineDash([]);
+    else ctx.setLineDash([4/zoom, 4/zoom]);
 
     const cellW = obj.w / 5, cellH = obj.h / 5;
     ctx.beginPath();

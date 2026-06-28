@@ -6,16 +6,106 @@ import { Shield, LogOut, Globe, Lock } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 
 const MODULES = [
-  { id: "map-editor", label: "MAP EDITOR", labelUrdu: "نقشہ ایڈیٹر", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/b98e0885c_generated_image.png", path: "/map-list", bg: "from-blue-50 to-blue-100", locked: true },
-  { id: "warabandi", label: "WARABANDI PARAT", labelUrdu: "وارہ بندی پرت", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/ddf8bc723_generated_image.png", path: "/parat-warabandi", bg: "from-green-50 to-green-100", locked: true },
-  { id: "khal-mismari", label: "KHAL MISMARI", labelUrdu: "کھال مسماری", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/5e2f34f0a_generated_image.png", path: "/khal-mismari", bg: "from-orange-50 to-orange-100", locked: true },
-  { id: "warashikni", label: "WARASHIKNI", labelUrdu: "واراشکنی", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/187981eaa_generated_image.png", path: "/warashikni", bg: "from-sky-50 to-sky-100", locked: true },
-  { id: "tawan-case", label: "TAWAN CASE DOCUMENT", labelUrdu: "تاوان کیس دستاویز", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/d5b3c8e48_generated_image.png", path: "/tawan-case", bg: "from-purple-50 to-purple-100", locked: true },
-  { id: "ta-form", label: "TA FORM", labelUrdu: "ٹی اے فارم", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/887265e12_generated_image.png", path: "/ta-form", bg: "from-pink-50 to-pink-100", locked: true },
-  { id: "geo-map", label: "GEO MAP", labelUrdu: "جیو میپ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/96bc463c2_generated_image.png", path: "/geo-map", bg: "from-blue-50 to-cyan-100", locked: true },
-  { id: "deputy-collector", label: "DEPUTY COLLECTOR DOCUMENTS", labelUrdu: "ڈپٹی کلکٹر دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/40a685ff8_generated_image.png", path: "/deputy-collector", bg: "from-green-50 to-emerald-100", locked: false },
-  { id: "zilladar", label: "ZILLADAR DOCUMENTS", labelUrdu: "ضلعدار دستاویزات", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/28c493acc_generated_image.png", path: "/zilladar", bg: "from-orange-50 to-amber-100", locked: true },
-  { id: "group-chat", label: "GROUP CHAT", labelUrdu: "گروپ چیٹ", icon: "https://media.base44.com/images/public/6a3c9964ecf8b3a6cde6f09b/61b0a5032_generated_image.png", path: "/group-chat", bg: "from-violet-50 to-purple-100", locked: true },
+  {
+    id: "map-editor",
+    label: "MAP EDITOR",
+    labelUrdu: "نقشہ ایڈیٹر",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/b6f43b131_generated_image.png",
+    path: "/map-list",
+    bg: "from-[#1a8fe3] to-[#0ecad4]",
+    shadow: "shadow-blue-400/40",
+    locked: true,
+  },
+  {
+    id: "warabandi",
+    label: "WARABANDI PARAT",
+    labelUrdu: "وارہ بندی پرت",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/8253b208e_generated_image.png",
+    path: "/parat-warabandi",
+    bg: "from-[#11b98a] to-[#06d69a]",
+    shadow: "shadow-emerald-400/40",
+    locked: true,
+  },
+  {
+    id: "khal-mismari",
+    label: "KHAL MISMARI",
+    labelUrdu: "کھال مسماری",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/ef02ee646_generated_image.png",
+    path: "/khal-mismari",
+    bg: "from-[#f97316] to-[#f59e0b]",
+    shadow: "shadow-orange-400/40",
+    locked: true,
+  },
+  {
+    id: "warashikni",
+    label: "WARASHIKNI",
+    labelUrdu: "واراشکنی",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/47a9f055d_generated_image.png",
+    path: "/warashikni",
+    bg: "from-[#38b6f8] to-[#0ea5e9]",
+    shadow: "shadow-sky-400/40",
+    locked: true,
+  },
+  {
+    id: "tawan-case",
+    label: "TAWAN CASE DOCUMENT",
+    labelUrdu: "تاوان کیس دستاویز",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/39486b11f_generated_image.png",
+    path: "/tawan-case",
+    bg: "from-[#a855f7] to-[#d946ef]",
+    shadow: "shadow-purple-400/40",
+    locked: true,
+  },
+  {
+    id: "ta-form",
+    label: "TA FORM",
+    labelUrdu: "ٹی اے فارم",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/1614fa96e_generated_image.png",
+    path: "/ta-form",
+    bg: "from-[#f43f5e] to-[#fb7185]",
+    shadow: "shadow-rose-400/40",
+    locked: true,
+  },
+  {
+    id: "geo-map",
+    label: "GEO MAP",
+    labelUrdu: "جیو میپ",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/930109477_generated_image.png",
+    path: "/geo-map",
+    bg: "from-[#06b6d4] to-[#3b82f6]",
+    shadow: "shadow-cyan-400/40",
+    locked: true,
+  },
+  {
+    id: "deputy-collector",
+    label: "DEPUTY COLLECTOR",
+    labelUrdu: "ڈپٹی کلکٹر دستاویزات",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/07b58d3d1_generated_image.png",
+    path: "/deputy-collector",
+    bg: "from-[#10b981] to-[#059669]",
+    shadow: "shadow-emerald-400/40",
+    locked: false,
+  },
+  {
+    id: "zilladar",
+    label: "ZILLADAR DOCUMENTS",
+    labelUrdu: "ضلعدار دستاویزات",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/79a49ba3d_generated_image.png",
+    path: "/zilladar",
+    bg: "from-[#f59e0b] to-[#d97706]",
+    shadow: "shadow-amber-400/40",
+    locked: true,
+  },
+  {
+    id: "group-chat",
+    label: "GROUP CHAT",
+    labelUrdu: "گروپ چیٹ",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/1e8a6e3b1_generated_image.png",
+    path: "/group-chat",
+    bg: "from-[#8b5cf6] to-[#6d28d9]",
+    shadow: "shadow-violet-400/40",
+    locked: true,
+  },
 ];
 
 export default function Dashboard() {
@@ -29,13 +119,13 @@ export default function Dashboard() {
   const isAdmin = currentUser?.role === "admin";
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-20 antialiased">
+    <div className="min-h-screen bg-slate-100 text-slate-800 pb-20 antialiased">
       {/* Header */}
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm">
         <div className="max-w-md mx-auto px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/30 ring-1 ring-white/30">
-              <Globe className="w-4.5 h-4.5 text-white" strokeWidth={2.2} />
+              <Globe className="w-5 h-5 text-white" strokeWidth={2.2} />
             </div>
             <div>
               <h1 className="text-sm font-bold font-heading tracking-wide text-slate-800">CHAKBANDI GIS</h1>
@@ -59,9 +149,9 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-md mx-auto px-5 py-6">
+      <main className="max-w-md mx-auto px-4 py-6">
         {/* Greeting */}
-        <div className="mb-6">
+        <div className="mb-5">
           <h2 className="text-lg font-bold font-heading text-slate-800">
             Welcome, {currentUser?.full_name?.split(" ")[0] || "User"}
           </h2>
@@ -77,20 +167,30 @@ export default function Dashboard() {
                 key={mod.id}
                 onClick={() => !isLocked && navigate(mod.path)}
                 disabled={isLocked}
-                className={`group relative rounded-[24px] bg-gradient-to-br ${mod.bg} p-4 shadow-md shadow-slate-200/60 ring-1 ring-slate-200/50 transition-all duration-200 text-center min-h-[150px] flex flex-col items-center justify-center
-                  ${isLocked ? "opacity-50 cursor-not-allowed grayscale" : "hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] cursor-pointer"}`}
+                className={`group relative rounded-[22px] bg-gradient-to-br ${mod.bg} p-4 shadow-lg ${mod.shadow} transition-all duration-200 text-center min-h-[155px] flex flex-col items-center justify-center overflow-hidden
+                  ${isLocked ? "opacity-60 cursor-not-allowed" : "hover:shadow-xl hover:scale-[1.04] active:scale-[0.97] cursor-pointer"}`}
               >
+                {/* Glossy top sheen */}
+                <div className="absolute inset-x-0 top-0 h-1/2 bg-white/15 rounded-t-[22px] pointer-events-none" />
+
                 {isLocked && (
-                  <div className="absolute top-2 right-2 bg-slate-600/80 rounded-full p-1">
+                  <div className="absolute top-2.5 right-2.5 bg-black/30 backdrop-blur-sm rounded-full p-1 z-10">
                     <Lock className="w-3 h-3 text-white" />
                   </div>
                 )}
-                <div className="mb-2 w-16 h-16 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                  <img src={mod.icon} alt={mod.label} className="w-16 h-16 object-contain drop-shadow-sm" />
+
+                {/* 3D Icon — floats above card */}
+                <div className="mb-3 w-[72px] h-[72px] flex items-center justify-center drop-shadow-[0_8px_16px_rgba(0,0,0,0.35)] group-hover:drop-shadow-[0_12px_24px_rgba(0,0,0,0.45)] transition-all duration-200 group-hover:-translate-y-1 group-hover:scale-110">
+                  <img
+                    src={mod.icon}
+                    alt={mod.label}
+                    className="w-[72px] h-[72px] object-contain"
+                  />
                 </div>
-                <div>
-                  <p className="text-[11px] font-bold text-slate-800 tracking-wide leading-tight">{mod.label}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{mod.labelUrdu}</p>
+
+                <div className="relative z-10">
+                  <p className="text-[11px] font-bold text-white tracking-wide leading-tight drop-shadow-sm">{mod.label}</p>
+                  <p className="text-[9px] text-white/80 mt-0.5 drop-shadow-sm" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{mod.labelUrdu}</p>
                 </div>
               </button>
             );
