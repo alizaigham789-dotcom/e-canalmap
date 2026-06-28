@@ -17,8 +17,9 @@ import {
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
 // DamageMarkerDialog removed — damage tool is now a simple line draw
 
@@ -71,6 +72,9 @@ export default function Editor() {
   const [showSnap, setShowSnap] = useState(false);
   const [snapSettings, setSnapSettings] = useState({ gridSnap: true, spineSnap: true, mogaSnap: true });
   const [freehandMode, setFreehandMode] = useState(false);
+  const [gridFlags, setGridFlags] = useState({ showMustateel: true, showMuraba: false });
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
+  const [groupName, setGroupName] = useState("");
   // damage marker is now a simple line — no dialog state needed
   const [canalDraft, setCanalDraft] = useState(null);
   const [chakbandiDraft, setChakbandiDraft] = useState(null);
@@ -477,6 +481,7 @@ export default function Editor() {
             snapSettings={{ ...snapSettings, zoom }}
             onDamageMarkerClick={handleDamageMarkerClick}
             freehandMode={freehandMode}
+            gridFlags={gridFlags}
           />
 
           {/* Top-right toolbar buttons */}
@@ -518,6 +523,30 @@ export default function Editor() {
               onClick={() => setShowPrint(true)}
               title="Print Preview (Ctrl+P)">
               <Printer className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className={`w-9 h-9 border shadow-md transition-all ${gridFlags.showMustateel ? "bg-red-500 border-red-400 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-red-500 hover:bg-red-50"}`}
+              onClick={() => setGridFlags(f => ({ ...f, showMustateel: !f.showMustateel }))}
+              title="Toggle Mustateel Grid">
+              <Grid3x3 className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className={`w-9 h-9 border shadow-md transition-all ${gridFlags.showMuraba ? "bg-orange-500 border-orange-400 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-orange-500 hover:bg-orange-50"}`}
+              onClick={() => setGridFlags(f => ({ ...f, showMuraba: !f.showMuraba }))}
+              title="Toggle Muraba Grid">
+              <Grid3x3 className="w-4 h-4 opacity-70" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-green-600 hover:bg-green-50 shadow-md"
+              onClick={() => { setGroupName(mapData?.title || ""); setShowGroupDialog(true); }}
+              title="Name / Group this map as a Moga">
+              <Group className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shadow-md"
+              onClick={() => handleSave()}
+              title="Save Map (Ctrl+S)">
+              <Save className="w-4 h-4" />
             </Button>
           </div>
 
@@ -590,6 +619,33 @@ export default function Editor() {
       )}
 
       {/* Damage tool is now a simple line drawn directly on canvas — no dialog */}
+
+      {/* Moga Group / Name Dialog */}
+      {showGroupDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-80 space-y-4">
+            <h3 className="text-sm font-bold text-slate-800 font-heading">Name / Group this Map</h3>
+            <p className="text-xs text-slate-500">Assign a Moga name to this map so it can be printed or filtered as a single unit.</p>
+            <Input
+              className="h-9 text-sm border-slate-200"
+              placeholder="e.g. Moga 18500 L"
+              value={groupName}
+              onChange={e => setGroupName(e.target.value)}
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setShowGroupDialog(false)}>Cancel</Button>
+              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => {
+                if (groupName.trim()) {
+                  handleSave({ title: groupName.trim() });
+                  toast.success(`Map grouped as: ${groupName.trim()}`);
+                }
+                setShowGroupDialog(false);
+              }}>Save Group Name</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

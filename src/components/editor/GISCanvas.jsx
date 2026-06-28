@@ -25,6 +25,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     colorSettings, bgColor, snapSettings,
     onDamageMarkerClick,
     freehandMode, // if true: chakbandi/mouza follow mouse without click-per-point
+    gridFlags, // { showMustateel, showMuraba }
   },
   ref
 ) {
@@ -64,7 +65,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     ctx.scale(zoom, zoom);
 
     // Layer 0: Grid (editor only)
-    drawGrid(ctx, W, H, zoom, pan);
+    drawGrid(ctx, W, H, zoom, pan, gridFlags || {});
 
     // Frustum-culled sorted object draw
     const sorted = [...objects].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
@@ -235,7 +236,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
       onSelect(hit ? hit.id : null);
     } else if (activeTool === "eraser") {
-      const hit = hitTest(worldRaw.x, worldRaw.y, objects);
+      const hit = hitTest(worldRaw.x, worldRaw.y, objects, true); // true = eraser mode (boundary-aware)
       if (hit) onAddObject("__delete__", { id: hit.id });
     }
   }, [activeTool, pan, zoom, objects, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd, onMouzaPointAdd, onDamageMarkerClick]);

@@ -68,15 +68,22 @@ export default function ShareholderTable({ rows, onChange }) {
     queryFn: () => base44.entities.FormulaConfig.filter({ enabled: true }),
   });
 
+  // Total week minutes = 7 days × 24 hours × 60 min = 10080 min/week
+  // Water share per acre = 10080 / total_culturable_area (acres)
+  // Default formula: total commanded area is fetched from FormulaConfig "total_area"
+  // Fallback: 6 min/acre (classic Punjab standard)
+  const totalWeekMinutes = 7 * 24 * 60; // 10080
+
   const minutesPerAcre = (() => {
     const f = formulas.find(f => f.formula_key === "water_time_per_acre" && f.enabled);
-    return f ? Number(f.value) : 6;
+    if (f) return Number(f.value);
+    // Auto-calculate from total_area config if available
+    const ta = formulas.find(f => f.formula_key === "total_area" && f.enabled);
+    if (ta && Number(ta.value) > 0) return totalWeekMinutes / Number(ta.value);
+    return 6; // default 6 min/acre
   })();
 
-  const minutesPerKanal = (() => {
-    const f = formulas.find(f => f.formula_key === "water_time_per_kanal" && f.enabled);
-    return f ? Number(f.value) : 0.75;
-  })();
+  const minutesPerKanal = minutesPerAcre / 8; // 1 acre = 8 kanals
 
   const columns = configs.length > 0
     ? configs.filter(c => c.visible !== false)
@@ -95,12 +102,15 @@ export default function ShareholderTable({ rows, onChange }) {
   };
 
   const calculateWaterTime = () => {
+    // Formula: total time per share = (area in acres × minutesPerAcre)
+    // 1 acre = 8 kanals = 160 marlas
     const next = rows.map(row => {
       const acres = parseFloat(row.area_acre) || 0;
       const kanals = parseFloat(row.area_kanal) || 0;
       const marlas = parseFloat(row.area_marla) || 0;
+      // Convert everything to acres
       const totalAcres = acres + (kanals / 8) + (marlas / 160);
-      const totalMinutes = totalAcres * minutesPerAcre + kanals * minutesPerKanal;
+      const totalMinutes = totalAcres * minutesPerAcre;
       const hrs = Math.floor(totalMinutes / 60);
       const mins = Math.round(totalMinutes % 60);
       return { ...row, duration_hours: String(hrs), duration_minutes: String(mins) };
@@ -144,8 +154,9 @@ export default function ShareholderTable({ rows, onChange }) {
             </span>
           </label>
           <Button size="sm" variant="outline" onClick={calculateWaterTime}
-            className="h-7 text-xs border-blue-200 bg-white text-blue-600 hover:bg-blue-50 gap-1">
-            <Calculator className="w-3 h-3" /> Calc ({minutesPerAcre}m/ac)
+            className="h-7 text-xs border-blue-200 bg-white text-blue-600 hover:bg-blue-50 gap-1"
+            title={`Formula: 7×24×60=${totalWeekMinutes} min/week ÷ total area = ${minutesPerAcre.toFixed(2)} min/acre`}>
+            <Calculator className="w-3 h-3" /> حساب ({minutesPerAcre.toFixed(2)}m/ac)
           </Button>
           <Button size="sm" onClick={addRow} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1">
             <Plus className="w-3 h-3" /> Add Row

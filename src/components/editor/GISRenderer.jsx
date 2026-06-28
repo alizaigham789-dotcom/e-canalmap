@@ -35,31 +35,48 @@ function drawSquaredCap(ctx, side, isStart) {
 
 // ============================================================
 // LAYER 0: Grid (editor mode only, stripped in print/export)
+// gridFlags: { showMustateel, showMuraba }
 // ============================================================
-export function drawGrid(ctx, W, H, zoom, pan) {
+export function drawGrid(ctx, W, H, zoom, pan, gridFlags = {}) {
+  const { showMustateel = true, showMuraba = false } = gridFlags;
+
   const acreW = DIMENSIONS.ACRE.width, acreH = DIMENSIONS.ACRE.height;
-  const startX = Math.floor(-pan.x / zoom / acreW) * acreW - acreW;
-  const startY = Math.floor(-pan.y / zoom / acreH) * acreH - acreH;
-  const endX = startX + W / zoom + acreW * 2;
-  const endY = startY + H / zoom + acreH * 2;
+  const mustW = DIMENSIONS.MUSTATEEL.width, mustH = DIMENSIONS.MUSTATEEL.height;
+  const murbW = DIMENSIONS.MURABA.width, murbH = DIMENSIONS.MURABA.height;
+  const startX = Math.floor(-pan.x / zoom / murbW) * murbW - murbW;
+  const startY = Math.floor(-pan.y / zoom / murbH) * murbH - murbH;
+  const endX = startX + W / zoom + murbW * 2;
+  const endY = startY + H / zoom + murbH * 2;
 
-  ctx.lineWidth = 0.5 / zoom;
-
-  if (zoom > 0.3) {
-    ctx.strokeStyle = "rgba(59,130,246,0.10)";
+  // Mustateel grid
+  if (showMustateel) {
+    if (zoom > 0.3) {
+      ctx.strokeStyle = "rgba(59,130,246,0.08)";
+      ctx.lineWidth = 0.5 / zoom;
+      ctx.beginPath();
+      for (let x = Math.floor(startX / acreW) * acreW; x < endX; x += acreW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
+      for (let y = Math.floor(startY / acreH) * acreH; y < endY; y += acreH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
+      ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(239,68,68,0.18)";
+    ctx.lineWidth = 1 / zoom;
     ctx.beginPath();
-    for (let x = startX; x < endX; x += acreW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
-    for (let y = startY; y < endY; y += acreH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
+    for (let x = Math.floor(startX / mustW) * mustW; x < endX; x += mustW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
+    for (let y = Math.floor(startY / mustH) * mustH; y < endY; y += mustH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
     ctx.stroke();
   }
 
-  const mustW = DIMENSIONS.MUSTATEEL.width, mustH = DIMENSIONS.MUSTATEEL.height;
-  ctx.strokeStyle = "rgba(59,130,246,0.20)";
-  ctx.lineWidth = 1 / zoom;
-  ctx.beginPath();
-  for (let x = Math.floor(startX / mustW) * mustW; x < endX; x += mustW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
-  for (let y = Math.floor(startY / mustH) * mustH; y < endY; y += mustH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
-  ctx.stroke();
+  // Muraba grid (coarser)
+  if (showMuraba) {
+    ctx.strokeStyle = "rgba(249,115,22,0.22)";
+    ctx.lineWidth = 2 / zoom;
+    ctx.setLineDash([8/zoom, 4/zoom]);
+    ctx.beginPath();
+    for (let x = Math.floor(startX / murbW) * murbW; x < endX; x += murbW) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
+    for (let y = Math.floor(startY / murbH) * murbH; y < endY; y += murbH) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 }
 
 // ============================================================
@@ -158,19 +175,28 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C) {
     }
   }
 
-  // Layer 5: Center label — centroid-anchored, screen-clamped, in-boundary clipped
+  // Layer 5: Center label — fixed world-unit size so ALL mustateels look same regardless of label length
   {
     const centerX = obj.x + obj.w / 2, centerY = obj.y + obj.h / 2;
     ctx.save();
-    ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
-    ctx.fillStyle = C.labelColor || "#000000";
-    ctx.font = `bold ${screenClampedFont(Math.min(obj.w, obj.h) * 0.16, zoom, 14, 22)}px Rajdhani, sans-serif`;
+    ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
+    ctx.fillStyle = C.labelColor || "#1e293b";
+    // Measure text at a large size, then scale down to fit within boundary
+    const maxFontPx = Math.min(obj.w, obj.h) * 0.38; // world units, ~38% of smallest dim
+    ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
+    const measured = ctx.measureText(obj.label || "");
+    // Scale to fit: ensure text width < 80% of obj.w
+    const fitScale = Math.min(1, (obj.w * 0.80) / (measured.width || 1));
+    const finalFont = maxFontPx * fitScale;
+    ctx.font = `900 ${finalFont}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(obj.label || "", centerX, centerY - (obj.showOwner && obj.ownerName ? 8/zoom : 0));
+    const labelY = (obj.showOwner && obj.ownerName) ? centerY - finalFont * 0.35 : centerY;
+    ctx.fillText(obj.label || "", centerX, labelY);
     if (obj.showOwner && obj.ownerName) {
       ctx.fillStyle = "rgba(100,116,139,0.9)";
-      ctx.font = `${screenClampedFont(Math.min(obj.w, obj.h) * 0.12, zoom, 11, 16)}px Inter, sans-serif`;
-      ctx.fillText(obj.ownerName, centerX, centerY + 10/zoom);
+      const ownerFont = Math.min(obj.w, obj.h) * 0.10;
+      ctx.font = `${ownerFont}px Inter, sans-serif`;
+      ctx.fillText(obj.ownerName, centerX, labelY + finalFont * 0.55);
     }
     ctx.restore();
   }
@@ -235,19 +261,26 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C) {
     }
   }
 
-  // Layer 5: Center label — centroid-anchored, screen-clamped, in-boundary clipped
+  // Layer 5: Center label — uniform world-unit size, boundary-clipped
   {
     const centerX = obj.x + obj.w / 2, centerY = obj.y + obj.h / 2;
     ctx.save();
-    ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
-    ctx.fillStyle = C.labelColor || "#000000";
-    ctx.font = `bold ${screenClampedFont(Math.min(obj.w, obj.h) * 0.16, zoom, 14, 22)}px Rajdhani, sans-serif`;
+    ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
+    ctx.fillStyle = C.labelColor || "#1e293b";
+    const maxFontPx = Math.min(obj.w, obj.h) * 0.30;
+    ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
+    const measured = ctx.measureText(obj.label || "");
+    const fitScale = Math.min(1, (obj.w * 0.75) / (measured.width || 1));
+    const finalFont = maxFontPx * fitScale;
+    ctx.font = `900 ${finalFont}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(obj.label || "", centerX, centerY - (obj.showOwner && obj.ownerName ? 10/zoom : 0));
+    const labelY = (obj.showOwner && obj.ownerName) ? centerY - finalFont * 0.35 : centerY;
+    ctx.fillText(obj.label || "", centerX, labelY);
     if (obj.showOwner && obj.ownerName) {
       ctx.fillStyle = "rgba(100,116,139,0.9)";
-      ctx.font = `${screenClampedFont(Math.min(obj.w, obj.h) * 0.12, zoom, 11, 16)}px Inter, sans-serif`;
-      ctx.fillText(obj.ownerName, centerX, centerY + 13/zoom);
+      const ownerFont = Math.min(obj.w, obj.h) * 0.07;
+      ctx.font = `${ownerFont}px Inter, sans-serif`;
+      ctx.fillText(obj.ownerName, centerX, labelY + finalFont * 0.55);
     }
     ctx.restore();
   }

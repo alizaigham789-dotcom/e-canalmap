@@ -130,10 +130,17 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
     }
   }
 
-  // Canal/road spine snap
+  // Canal/road spine snap — snap to endpoints first (for seamless connection), then spine
   if (spineSnap) {
     for (const o of objects) {
       if (["canal", "khal", "road"].includes(o.type) && o.points?.length >= 2) {
+        // Prefer endpoint snap (start/end of existing canal) for seamless joining
+        const endpoints = [o.points[0], o.points[o.points.length - 1]];
+        for (const ep of endpoints) {
+          const d = Math.hypot(wx - ep.x, wy - ep.y);
+          if (d < threshold * 2 && d < bestDist) { bestX = ep.x; bestY = ep.y; bestDist = d; }
+        }
+        // Also spine snap
         const near = nearestPointOnPolyline(wx, wy, o.points);
         if (near && near.dist < threshold && near.dist < bestDist) {
           bestX = near.x; bestY = near.y; bestDist = near.dist;
@@ -435,40 +442,58 @@ export function rectsOverlap(a, b) {
   return !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
 }
 
-// Snap new parcel to existing boundary edges — no gaps, no overlaps
+// Snap new parcel to existing boundary edges — no gaps, no overlaps, exact edge matching
 export function snapToNearestBoundary(newObj, existingObjects) {
-  const existingParcels = existingObjects.filter(o => ["mustateel", "muraba", "acre"].includes(o.type));
-  if (existingParcels.length === 0) return { x: newObj.x, y: newObj.y };
+  const sameParcels = existingObjects.filter(o => o.type === newObj.type);
+  const allParcels = existingObjects.filter(o => ["mustateel", "muraba", "acre"].includes(o.type));
+  if (allParcels.length === 0) return { x: newObj.x, y: newObj.y };
 
-  let bestX = newObj.x, bestY = newObj.y;
-  let bestXDist = Infinity, bestYDist = Infinity;
-  const snapThresh = Math.min(newObj.w, newObj.h) * 0.6; // generous snap radius
-
-  for (const p of existingParcels) {
-    // Right edge of p → left edge of new
-    const rightToLeft = Math.abs(newObj.x - (p.x + p.w));
-    if (rightToLeft < bestXDist && rightToLeft < snapThresh) { bestX = p.x + p.w; bestXDist = rightToLeft; }
-    // Left edge of p → right edge of new
-    const leftToRight = Math.abs((newObj.x + newObj.w) - p.x);
-    if (leftToRight < bestXDist && leftToRight < snapThresh) { bestX = p.x - newObj.w; bestXDist = leftToRight; }
-    // Align left edges
-    const leftAlign = Math.abs(newObj.x - p.x);
-    if (leftAlign < bestXDist && leftAlign < snapThresh) { bestX = p.x; bestXDist = leftAlign; }
-    // Bottom edge of p → top edge of new
-    const bottomToTop = Math.abs(newObj.y - (p.y + p.h));
-    if (bottomToTop < bestYDist && bottomToTop < snapThresh) { bestY = p.y + p.h; bestYDist = bottomToTop; }
-    // Top edge of p → bottom edge of new
-    const topToBottom = Math.abs((newObj.y + newObj.h) - p.y);
-    if (topToBottom < bestYDist && topToBottom < snapThresh) { bestY = p.y - newObj.h; bestYDist = topToBottom; }
-    // Align top edges
-    const topAlign = Math.abs(newObj.y - p.y);
-    if (topAlign < bestYDist && topAlign < snapThresh) { bestY = p.y; bestYDist = topAlign; }
+  // First: snap to grid for the type
+  let snappedX = newObj.x, snappedY = newObj.y;
+  if (newObj.type === "mustateel" || newObj.type === "acre") {
+    const gw = newObj.w, gh = newObj.h;
+    snappedX = Math.round(newObj.x / gw) * gw;
+    snappedY = Math.round(newObj.y / gh) * gh;
+  } else if (newObj.type === "muraba") {
+    const gw = newObj.w, gh = newObj.h;
+    snappedX = Math.round(newObj.x / gw) * gw;
+    snappedY = Math.round(newObj.y / gh) * gh;
   }
 
-  const snapped = { x: bestX, y: bestY, w: newObj.w, h: newObj.h };
-  // If still overlapping, push out
-  if (existingParcels.some(p => rectsOverlap(snapped, p))) {
-    return findNonOverlappingPosition(snapped, existingObjects);
+  // Second: try to snap to neighboring same-type parcels (exact edge adjacency)
+  let bestX = snappedX, bestY = snappedY;
+  let bestXDelta = Infinity, bestYDelta = Infinity;
+
+  for (const p of sameParcels) {
+    // Place immediately to the right of p
+    const toRight = p.x + p.w;
+    const dRight = Math.abs(snappedX - toRight);
+    if (dRight < bestXDelta) { bestX = toRight; bestXDelta = dRight; }
+    // Place immediately to the left of p
+    const toLeft = p.x - newObj.w;
+    const dLeft = Math.abs(snappedX - toLeft);
+    if (dLeft < bestXDelta) { bestX = toLeft; bestXDelta = dLeft; }
+    // Align same column
+    const dAlignX = Math.abs(snappedX - p.x);
+    if (dAlignX < bestXDelta) { bestX = p.x; bestXDelta = dAlignX; }
+
+    // Place immediately below p
+    const toBottom = p.y + p.h;
+    const dBottom = Math.abs(snappedY - toBottom);
+    if (dBottom < bestYDelta) { bestY = toBottom; bestYDelta = dBottom; }
+    // Place immediately above p
+    const toTop = p.y - newObj.h;
+    const dTop = Math.abs(snappedY - toTop);
+    if (dTop < bestYDelta) { bestY = toTop; bestYDelta = dTop; }
+    // Align same row
+    const dAlignY = Math.abs(snappedY - p.y);
+    if (dAlignY < bestYDelta) { bestY = p.y; bestYDelta = dAlignY; }
+  }
+
+  const candidate = { x: bestX, y: bestY, w: newObj.w, h: newObj.h };
+  // If overlapping after snap, find next free slot
+  if (allParcels.some(p => rectsOverlap(candidate, p))) {
+    return findNonOverlappingPosition(candidate, existingObjects);
   }
   return { x: bestX, y: bestY };
 }
@@ -477,15 +502,19 @@ export function findNonOverlappingPosition(newObj, existingObjects) {
   const existingParcels = existingObjects.filter(o => ["mustateel", "muraba", "acre"].includes(o.type));
   if (existingParcels.length === 0) return { x: newObj.x, y: newObj.y };
   if (!existingParcels.some(p => rectsOverlap(newObj, p))) return { x: newObj.x, y: newObj.y };
+
+  // Search in expanding spiral: right, down, left, up, then diagonals
   const directions = [
-    { dx: newObj.w, dy: 0 }, { dx: -newObj.w, dy: 0 },
-    { dx: 0, dy: newObj.h }, { dx: 0, dy: -newObj.h },
+    { dx: newObj.w, dy: 0 }, { dx: 0, dy: newObj.h },
+    { dx: -newObj.w, dy: 0 }, { dx: 0, dy: -newObj.h },
     { dx: newObj.w, dy: newObj.h }, { dx: -newObj.w, dy: newObj.h },
     { dx: newObj.w, dy: -newObj.h }, { dx: -newObj.w, dy: -newObj.h },
   ];
-  for (const dir of directions) {
-    const candidate = { x: newObj.x + dir.dx, y: newObj.y + dir.dy, w: newObj.w, h: newObj.h };
-    if (!existingParcels.some(p => rectsOverlap(candidate, p))) return { x: candidate.x, y: candidate.y };
+  for (let r = 1; r <= 10; r++) {
+    for (const dir of directions) {
+      const candidate = { x: newObj.x + dir.dx * r, y: newObj.y + dir.dy * r, w: newObj.w, h: newObj.h };
+      if (!existingParcels.some(p => rectsOverlap(candidate, p))) return { x: candidate.x, y: candidate.y };
+    }
   }
   return { x: newObj.x, y: newObj.y };
 }
@@ -589,18 +618,36 @@ export function isInViewport(obj, pan, zoom, canvasW, canvasH, margin = 100) {
 }
 
 // ============================================================
-// HIT TEST
+// HIT TEST — for eraser: boundary-based (click edge or interior)
 // ============================================================
-export function hitTest(wx, wy, objects) {
+export function hitTest(wx, wy, objects, eraser = false) {
+  const BORDER_THRESH = eraser ? 20 : 0; // eraser hits on boundary edge click
   for (let i = objects.length - 1; i >= 0; i--) {
     const o = objects[i];
     if (["acre", "mustateel", "muraba"].includes(o.type)) {
-      if (wx >= o.x && wx <= o.x + o.w && wy >= o.y && wy <= o.y + o.h) return o;
+      if (eraser) {
+        // Hit if click is on boundary (within BORDER_THRESH) OR inside
+        const onBoundary =
+          (wx >= o.x - BORDER_THRESH && wx <= o.x + o.w + BORDER_THRESH &&
+           wy >= o.y - BORDER_THRESH && wy <= o.y + o.h + BORDER_THRESH) &&
+          (wx <= o.x + BORDER_THRESH || wx >= o.x + o.w - BORDER_THRESH ||
+           wy <= o.y + BORDER_THRESH || wy >= o.y + o.h - BORDER_THRESH ||
+           (wx >= o.x && wx <= o.x + o.w && wy >= o.y && wy <= o.y + o.h));
+        if (onBoundary) return o;
+      } else {
+        if (wx >= o.x && wx <= o.x + o.w && wy >= o.y && wy <= o.y + o.h) return o;
+      }
     } else if (o.type === "damageMarker") {
       if (Math.hypot(wx - o.x, wy - o.y) < 12) return o;
+      if (o.points?.length >= 2) {
+        for (let j = 0; j < o.points.length - 1; j++) {
+          if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < 12) return o;
+        }
+      }
     } else if (["canal", "chakbandi", "khal", "road"].includes(o.type)) {
+      const thresh = eraser ? 25 : 15;
       for (let j = 0; j < o.points.length - 1; j++) {
-        if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < 15) return o;
+        if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < thresh) return o;
       }
     } else if (o.type === "outlet") {
       if (distToLineSegment(wx, wy, o.start.x, o.start.y, o.end.x, o.end.y) < 15) return o;
