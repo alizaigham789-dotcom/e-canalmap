@@ -115,7 +115,7 @@ export function drawAcre(ctx, obj, isSelected, zoom, C) {
   }
 }
 
-export function drawMustateel(ctx, obj, isSelected, zoom, C) {
+export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = true) {
   const ks = obj.killaStyle || {};
   const fs = obj.fillStyle || "solid";
 
@@ -158,9 +158,8 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Layer 5: Killa numbers — screen-clamped (min 14px) so they stay readable at any
-    // zoom without blowing up, clipped to the parcel so text never crosses the boundary.
-    {
+    // Layer 5: Killa numbers — screen-clamped (min 14px), toggled by showKillaNumbers
+    if (showKillaNumbers) {
       const grid = getMustateeelKillaGrid();
       ctx.save();
       ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
@@ -204,7 +203,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C) {
   }
 }
 
-export function drawMuraba(ctx, obj, isSelected, zoom, C) {
+export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = true) {
   const ks = obj.killaStyle || {};
   const fs = obj.fillStyle || "solid";
 
@@ -245,8 +244,8 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Always draw killa numbers — screen-clamped (min 14px), in-boundary clipped
-    {
+    // Killa numbers — toggled by showKillaNumbers
+    if (showKillaNumbers) {
       const grid = getMurabaKillaGrid();
       ctx.save();
       ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();

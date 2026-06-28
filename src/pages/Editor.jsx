@@ -10,6 +10,8 @@ import StatusBar from "@/components/editor/StatusBar";
 import EditorHeader from "@/components/editor/EditorHeader";
 import ExportDialog from "@/components/editor/ExportDialog";
 import LegendPanel from "@/components/editor/LegendPanel";
+import MapScanDialog from "@/components/editor/MapScanDialog";
+
 import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
 import PrintPreview from "@/components/editor/PrintPreview";
 import {
@@ -17,7 +19,7 @@ import {
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
@@ -66,6 +68,8 @@ export default function Editor() {
   const [snapPos, setSnapPos] = useState(null);
   const [showLayers, setShowLayers] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
+  const [killaVisibility, setKillaVisibility] = useState({ mustateel: true, muraba: true });
+  const [showScan, setShowScan] = useState(false);
   const [showColors, setShowColors] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
@@ -482,6 +486,7 @@ export default function Editor() {
             onDamageMarkerClick={handleDamageMarkerClick}
             freehandMode={freehandMode}
             gridFlags={gridFlags}
+            killaVisibility={killaVisibility}
           />
 
           {/* Top-right toolbar buttons */}
@@ -548,12 +553,22 @@ export default function Editor() {
               title="Save Map (Ctrl+S)">
               <Save className="w-4 h-4" />
             </Button>
+            <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-amber-600 hover:bg-amber-50 shadow-md"
+              onClick={() => setShowScan(true)}
+              title="Scan Map with Camera / AI">
+              <Camera className="w-4 h-4" />
+            </Button>
           </div>
 
           {/* Panels */}
           {showLegend && (
             <div className="absolute top-[200px] right-3 z-20">
-              <LegendPanel colorSettings={colorSettings} />
+              <LegendPanel
+                colorSettings={colorSettings}
+                killaVisibility={killaVisibility}
+                onKillaVisibilityChange={(type, val) => setKillaVisibility(prev => ({ ...prev, [type]: val }))}
+              />
             </div>
           )}
           {showLayers && (
@@ -619,6 +634,16 @@ export default function Editor() {
           pan={pan}
           onClose={() => setShowPrint(false)}
         />
+      )}
+
+      {/* Scan Map Dialog */}
+      {showScan && (
+        <MapScanDialog onClose={() => setShowScan(false)} onAddObjects={(objs) => {
+          objs.forEach(o => dsmRef.current.add(o));
+          syncObjects();
+          setShowScan(false);
+          toast.success("AI scan complete — objects added to map");
+        }} />
       )}
 
       {/* Damage tool is now a simple line drawn directly on canvas — no dialog */}

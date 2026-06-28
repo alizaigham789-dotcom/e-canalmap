@@ -10,6 +10,7 @@ import WarabandiHeaderBar from "@/components/warabandi/WarabandiHeaderBar";
 import ShareholderTable from "@/components/warabandi/ShareholderTable";
 import WarabandiPrint from "@/components/warabandi/WarabandiPrint";
 import WarabandiParatForm from "@/components/warabandi/WarabandiParatForm";
+import WarabandiTimeSchedule from "@/components/warabandi/WarabandiTimeSchedule";
 import BottomNav from "@/components/BottomNav";
 
 const emptyRow = (sr) => ({
@@ -231,6 +232,7 @@ export default function ParatWarabandi() {
         <WarabandiHeaderBar data={formData} />
         <WarabandiForm data={formData} onChange={setFormData} />
         <ShareholderTable rows={shareholders} onChange={setShareholders} />
+        <WarabandiTimeSchedule rows={shareholders} />
       </main>
 
       {showPrint && (

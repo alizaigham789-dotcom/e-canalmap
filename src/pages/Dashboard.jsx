@@ -179,12 +179,13 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* 3D Icon — floats above card */}
-                <div className="mb-3 w-[72px] h-[72px] flex items-center justify-center drop-shadow-[0_8px_16px_rgba(0,0,0,0.35)] group-hover:drop-shadow-[0_12px_24px_rgba(0,0,0,0.45)] transition-all duration-200 group-hover:-translate-y-1 group-hover:scale-110">
+                {/* Icon — no white box, just the icon with drop-shadow */}
+                <div className="mb-3 w-[72px] h-[72px] flex items-center justify-center transition-all duration-200 group-hover:-translate-y-1.5 group-hover:scale-110">
                   <img
                     src={mod.icon}
                     alt={mod.label}
-                    className="w-[72px] h-[72px] object-contain"
+                    className="w-[68px] h-[68px] object-contain"
+                    style={{ filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.45)) brightness(1.05) contrast(1.05)" }}
                   />
                 </div>
 
