@@ -167,7 +167,7 @@ export default function Dashboard() {
                 key={mod.id}
                 onClick={() => !isLocked && navigate(mod.path)}
                 disabled={isLocked}
-                className={`group relative rounded-[22px] bg-gradient-to-br ${mod.bg} p-4 shadow-lg ${mod.shadow} transition-all duration-200 text-center min-h-[155px] flex flex-col items-center justify-center overflow-hidden
+                className={`group relative rounded-[28px] bg-gradient-to-br ${mod.bg} p-4 shadow-lg ${mod.shadow} transition-all duration-200 text-center min-h-[155px] flex flex-col items-center justify-center overflow-hidden
                   ${isLocked ? "opacity-60 cursor-not-allowed" : "hover:shadow-xl hover:scale-[1.04] active:scale-[0.97] cursor-pointer"}`}
               >
                 {/* Glossy top sheen */}

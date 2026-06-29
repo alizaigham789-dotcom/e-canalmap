@@ -320,11 +320,18 @@ export function isGeometryLocked(type) { return type in LOCKED_DIMS; }
 // ============================================================
 // AUTO-LABEL ENGINE
 // ============================================================
-export function autoAssignLabel(type, existingObjects) {
+export function autoAssignLabel(type, existingObjects, startFrom = null) {
   if (!["mustateel", "muraba"].includes(type)) return "";
   const numbers = existingObjects
     .filter(o => o.type === type && o.label)
     .map(o => { const m = o.label.match(/(\d+)/); return m ? parseInt(m[1], 10) : 0; });
+  if (startFrom !== null && !isNaN(startFrom)) {
+    // Start from user-specified number — find the next unused number >= startFrom
+    const numSet = new Set(numbers);
+    let n = startFrom;
+    while (numSet.has(n)) n++;
+    return String(n);
+  }
   const nextNum = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
   return String(nextNum);
 }

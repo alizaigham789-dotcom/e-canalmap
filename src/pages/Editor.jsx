@@ -19,7 +19,7 @@ import {
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
@@ -69,6 +69,8 @@ export default function Editor() {
   const [showLayers, setShowLayers] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
   const [killaVisibility, setKillaVisibility] = useState({ mustateel: true, muraba: true });
+  const [killaNumbersGlobal, setKillaNumbersGlobal] = useState(true);
+  const [mustateelStartNum, setMustateelStartNum] = useState("");
   const [showScan, setShowScan] = useState(false);
   const [showColors, setShowColors] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -189,7 +191,9 @@ export default function Editor() {
         .some(o => rectsOverlap({ x: snap.x, y: snap.y, w: proto.w, h: proto.h }, o));
       if (wouldOverlap) { toast.warning("Cannot place here — overlaps another parcel"); return; }
       obj = createMustateel(snap.x, snap.y);
-      obj.label = autoAssignLabel("mustateel", dsmRef.current.objects);
+      const startN = mustateelStartNum !== "" ? parseInt(mustateelStartNum, 10) : null;
+      obj.label = autoAssignLabel("mustateel", dsmRef.current.objects, startN);
+      if (startN !== null) setMustateelStartNum(String(parseInt(obj.label, 10) + 1));
     }
     else if (type === "muraba") {
       const proto = createMuraba(0, 0);
@@ -313,6 +317,7 @@ export default function Editor() {
   const handleDamageMarkerClick = () => {}; // no-op: line-based, no dialog
 
   const handleToolChange = (tool) => {
+    if (tool !== "mustateel") setMustateelStartNum("");
     if (activeTool === "canal" && canalDraft && canalDraft.length >= 2) handleCanalFinish();
     else if (activeTool === "canal") setCanalDraft(null);
     if (activeTool === "chakbandi" && chakbandiDraft && chakbandiDraft.length >= 2) handleChakbandiFinish();
@@ -497,7 +502,10 @@ export default function Editor() {
             onDamageMarkerClick={handleDamageMarkerClick}
             freehandMode={freehandMode}
             gridFlags={gridFlags}
-            killaVisibility={killaVisibility}
+            killaVisibility={{
+              mustateel: killaVisibility.mustateel && killaNumbersGlobal,
+              muraba: killaVisibility.muraba && killaNumbersGlobal,
+            }}
           />
 
           {/* Top-right toolbar buttons */}
@@ -570,6 +578,26 @@ export default function Editor() {
               title="Scan Map with Camera / AI">
               <Camera className="w-4 h-4" />
             </Button>
+            {/* Global Killa Numbers toggle */}
+            <Button variant="ghost" size="icon"
+              className={`w-9 h-9 border shadow-md transition-all ${killaNumbersGlobal ? "bg-red-500 border-red-400 text-white" : "bg-white border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50"}`}
+              onClick={() => setKillaNumbersGlobal(v => !v)}
+              title={killaNumbersGlobal ? "Hide All Killa Numbers" : "Show All Killa Numbers"}>
+              {killaNumbersGlobal ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            </Button>
+            {/* Mustateel start number input */}
+            {activeTool === "mustateel" && (
+              <div className="flex flex-col items-center gap-0.5" title="Mustateel numbering start">
+                <span className="text-[8px] text-slate-400 font-mono leading-none">Start#</span>
+                <input
+                  type="number"
+                  value={mustateelStartNum}
+                  onChange={e => setMustateelStartNum(e.target.value)}
+                  placeholder="auto"
+                  className="w-9 h-7 text-[10px] text-center border border-slate-300 rounded bg-white text-slate-700 font-mono focus:outline-none focus:border-blue-400"
+                />
+              </div>
+            )}
           </div>
 
           {/* Panels */}
@@ -643,6 +671,9 @@ export default function Editor() {
           objects={objects}
           zoom={zoom}
           pan={pan}
+          colorSettings={colorSettings}
+          killaNumbersGlobal={killaNumbersGlobal}
+          killaVisibility={killaVisibility}
           onClose={() => setShowPrint(false)}
         />
       )}

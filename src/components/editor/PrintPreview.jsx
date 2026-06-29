@@ -1,74 +1,96 @@
 import React, { useRef, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  drawAcre, drawMustateel, drawMuraba, drawCanal, drawKhal, drawRoad,
+  drawOutlet, drawChakbandi, drawMouza, drawDamageMarker,
+} from "@/components/editor/GISRenderer";
 
-// Compute bounding box of all objects in world coordinates
+const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
+
 function getObjectsBounds(objects) {
   if (!objects || objects.length === 0) return null;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const o of objects) {
     if (["acre", "mustateel", "muraba"].includes(o.type)) {
-      minX = Math.min(minX, o.x);
-      minY = Math.min(minY, o.y);
-      maxX = Math.max(maxX, o.x + o.w);
-      maxY = Math.max(maxY, o.y + o.h);
+      minX = Math.min(minX, o.x); minY = Math.min(minY, o.y);
+      maxX = Math.max(maxX, o.x + o.w); maxY = Math.max(maxY, o.y + o.h);
     } else if (o.points && o.points.length > 0) {
       for (const p of o.points) {
-        minX = Math.min(minX, p.x);
-        minY = Math.min(minY, p.y);
-        maxX = Math.max(maxX, p.x);
-        maxY = Math.max(maxY, p.y);
+        minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
       }
     } else if (o.start && o.end) {
-      minX = Math.min(minX, o.start.x, o.end.x);
-      minY = Math.min(minY, o.start.y, o.end.y);
-      maxX = Math.max(maxX, o.start.x, o.end.x);
-      maxY = Math.max(maxY, o.start.y, o.end.y);
+      minX = Math.min(minX, o.start.x, o.end.x); minY = Math.min(minY, o.start.y, o.end.y);
+      maxX = Math.max(maxX, o.start.x, o.end.x); maxY = Math.max(maxY, o.start.y, o.end.y);
     }
   }
   if (minX === Infinity) return null;
   return { minX, minY, maxX, maxY };
 }
 
-// Crop the source canvas to the bounding box of drawn objects only
-function getCroppedCanvas(sourceCanvas, objects, zoom, pan) {
-  if (!sourceCanvas) return null;
+// Re-render all objects onto a fresh canvas at a chosen scale — gives crisp print quality
+function renderObjectsToCanvas(objects, colorSettings, killaNumbersGlobal, killaVisibility, printScale = 2) {
   const bounds = getObjectsBounds(objects);
-  if (!bounds) return sourceCanvas;
+  if (!bounds) return null;
 
-  const pad = 40; // pixel padding around content
-  const sx1 = Math.max(0, bounds.minX * zoom + pan.x - pad);
-  const sy1 = Math.max(0, bounds.minY * zoom + pan.y - pad);
-  const sx2 = Math.min(sourceCanvas.width, bounds.maxX * zoom + pan.x + pad);
-  const sy2 = Math.min(sourceCanvas.height, bounds.maxY * zoom + pan.y + pad);
-  const cropW = sx2 - sx1;
-  const cropH = sy2 - sy1;
-  if (cropW <= 10 || cropH <= 10) return sourceCanvas;
+  const pad = 60;
+  const worldW = bounds.maxX - bounds.minX + pad * 2;
+  const worldH = bounds.maxY - bounds.minY + pad * 2;
 
-  const temp = document.createElement("canvas");
-  temp.width = Math.ceil(cropW);
-  temp.height = Math.ceil(cropH);
-  const tCtx = temp.getContext("2d");
-  tCtx.fillStyle = "#ffffff";
-  tCtx.fillRect(0, 0, temp.width, temp.height);
-  tCtx.drawImage(sourceCanvas, sx1, sy1, cropW, cropH, 0, 0, cropW, cropH);
-  return temp;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(worldW * printScale);
+  canvas.height = Math.ceil(worldH * printScale);
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Translate so world origin is at top-left with padding
+  ctx.save();
+  ctx.translate((pad - bounds.minX) * printScale, (pad - bounds.minY) * printScale);
+  ctx.scale(printScale, printScale);
+
+  // Use zoom=1 for print — font sizes will be world-unit based
+  const zoom = 1;
+  const C = colorSettings || {};
+
+  const kv = {
+    mustateel: (killaVisibility?.mustateel !== false) && killaNumbersGlobal,
+    muraba: (killaVisibility?.muraba !== false) && killaNumbersGlobal,
+  };
+
+  const sorted = [...objects].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
+
+  for (const obj of sorted) {
+    if (obj.type === "acre") drawAcre(ctx, obj, false, zoom, C);
+    else if (obj.type === "mustateel") drawMustateel(ctx, obj, false, zoom, C, obj.showKillaNumbers !== false && kv.mustateel);
+    else if (obj.type === "muraba") drawMuraba(ctx, obj, false, zoom, C, obj.showKillaNumbers !== false && kv.muraba);
+    else if (obj.type === "canal") drawCanal(ctx, obj, false, zoom, C);
+    else if (obj.type === "khal") drawKhal(ctx, obj, false, zoom, C);
+    else if (obj.type === "road") drawRoad(ctx, obj, false, zoom, C);
+    else if (obj.type === "outlet") drawOutlet(ctx, obj, false, zoom, C);
+    else if (obj.type === "chakbandi") drawChakbandi(ctx, obj, false, zoom, C, true);
+    else if (obj.type === "mouza") drawMouza(ctx, obj, false, zoom, C);
+    else if (obj.type === "damageMarker") drawDamageMarker(ctx, obj, false, zoom);
+  }
+
+  ctx.restore();
+  return canvas;
 }
 
-export default function PrintPreview({ mapData, canvasRef, objects, zoom, pan, onClose }) {
+export default function PrintPreview({ mapData, objects, colorSettings, killaNumbersGlobal = true, killaVisibility, onClose }) {
   const [scale, setScale] = useState(100);
 
-  const croppedCanvas = useMemo(() => {
-    const canvas = canvasRef?.current?.getCanvas?.();
-    if (!canvas) return null;
-    return getCroppedCanvas(canvas, objects, zoom, pan);
-  }, [objects, zoom, pan, canvasRef]);
+  const printCanvas = useMemo(() => {
+    return renderObjectsToCanvas(objects, colorSettings, killaNumbersGlobal, killaVisibility, 2);
+  }, [objects, colorSettings, killaNumbersGlobal, killaVisibility]);
 
-  const dataUrl = croppedCanvas ? croppedCanvas.toDataURL("image/png") : null;
+  const dataUrl = printCanvas ? printCanvas.toDataURL("image/png") : null;
 
   const handlePrint = () => {
-    if (!croppedCanvas) return;
-    const imgDataUrl = croppedCanvas.toDataURL("image/png");
+    if (!printCanvas) return;
+    const imgDataUrl = printCanvas.toDataURL("image/png");
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
@@ -181,6 +203,9 @@ export default function PrintPreview({ mapData, canvasRef, objects, zoom, pan, o
 
             {dataUrl && (
               <img src={dataUrl} alt="Map" style={{ width: "100%", display: "block", borderBottom: "1px solid #ccc" }} />
+            )}
+            {!dataUrl && (
+              <div style={{ padding: 40, textAlign: "center", color: "#999" }}>No objects to print</div>
             )}
 
             <div style={{ padding: "8px 16px", borderTop: "1px solid #999", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
