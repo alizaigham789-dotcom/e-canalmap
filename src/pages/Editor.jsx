@@ -17,7 +17,7 @@ import PrintPreview from "@/components/editor/PrintPreview";
 import {
   DrawingStateManager,
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
-  createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel
+  createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap
 } from "@/lib/gisEngine";
 import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -178,18 +178,29 @@ export default function Editor() {
     }
     if (type === "acre") obj = createAcre(data.x, data.y);
     else if (type === "mustateel") {
+      const proto = createMustateel(0, 0);
       const snap = snapToNearestBoundary(
-        { x: data.x, y: data.y, w: createMustateel(0, 0).w, h: createMustateel(0, 0).h },
+        { x: data.x, y: data.y, w: proto.w, h: proto.h },
         dsmRef.current.objects
       );
+      // Block if overlapping an existing parcel
+      const wouldOverlap = dsmRef.current.objects
+        .filter(o => ["mustateel","muraba","acre"].includes(o.type))
+        .some(o => rectsOverlap({ x: snap.x, y: snap.y, w: proto.w, h: proto.h }, o));
+      if (wouldOverlap) { toast.warning("Cannot place here — overlaps another parcel"); return; }
       obj = createMustateel(snap.x, snap.y);
       obj.label = autoAssignLabel("mustateel", dsmRef.current.objects);
     }
     else if (type === "muraba") {
+      const proto = createMuraba(0, 0);
       const snap = snapToNearestBoundary(
-        { x: data.x, y: data.y, w: createMuraba(0, 0).w, h: createMuraba(0, 0).h },
+        { x: data.x, y: data.y, w: proto.w, h: proto.h },
         dsmRef.current.objects
       );
+      const wouldOverlap = dsmRef.current.objects
+        .filter(o => ["mustateel","muraba","acre"].includes(o.type))
+        .some(o => rectsOverlap({ x: snap.x, y: snap.y, w: proto.w, h: proto.h }, o));
+      if (wouldOverlap) { toast.warning("Cannot place here — overlaps another parcel"); return; }
       obj = createMuraba(snap.x, snap.y);
       obj.label = autoAssignLabel("muraba", dsmRef.current.objects);
     }

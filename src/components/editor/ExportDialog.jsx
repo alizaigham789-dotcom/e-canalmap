@@ -1,89 +1,447 @@
-import React from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Globe, Map, Table2 } from "lucide-react";
-import { DrawingStateManager } from "@/lib/drawingEngine";
+import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
+import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline } from "@/lib/gisEngine";
 
 export default function ExportDialog({ open, onClose, mapData, objects }) {
-  const exportGeoJSON = () => {
-    const features = objects
-      .filter(o => ["acre", "mustateel", "muraba"].includes(o.type))
-      .map(o => ({
-        type: "Feature",
-        properties: {
-          id: o.id,
-          type: o.type,
-          label: o.label || "",
-          ownerName: o.ownerName || "",
-        },
-        geometry: {
-          type: "Polygon",
-          coordinates: [[
-            [o.x, o.y], [o.x + o.w, o.y],
-            [o.x + o.w, o.y + o.h], [o.x, o.y + o.h], [o.x, o.y]
-          ]]
+  const [loading, setLoading] = useState(null);
+
+  // ---- Compute bounding box of all objects ----
+  function getBBox() {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const o of objects) {
+      if (o.x !== undefined) {
+        minX = Math.min(minX, o.x); minY = Math.min(minY, o.y);
+        maxX = Math.max(maxX, o.x + (o.w || 0)); maxY = Math.max(maxY, o.y + (o.h || 0));
+      }
+      if (o.points) {
+        for (const p of o.points) {
+          minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+          maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
         }
-      }));
+      }
+    }
+    if (!isFinite(minX)) return { minX: 0, minY: 0, maxX: 1000, maxY: 1000 };
+    const pad = 80;
+    return { minX: minX - pad, minY: minY - pad, maxX: maxX + pad, maxY: maxY + pad };
+  }
 
-    const geojson = { type: "FeatureCollection", features };
-    downloadJSON(geojson, `${mapData?.title || "map"}.geojson`);
+  // ---- Render all objects to an offscreen canvas ----
+  function renderToCanvas(scale = 1) {
+    const bbox = getBBox();
+    const W = (bbox.maxX - bbox.minX) * scale;
+    const H = (bbox.maxY - bbox.minY) * scale;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(W);
+    canvas.height = Math.ceil(H);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(-bbox.minX * scale, -bbox.minY * scale);
+    ctx.scale(scale, scale);
+
+    const sorted = [...objects].sort((a, b) => {
+      const order = ["mouza","muraba","mustateel","acre","road","canal","khal","chakbandi","outlet","damageMarker"];
+      return order.indexOf(a.type) - order.indexOf(b.type);
+    });
+
+    for (const o of sorted) {
+      drawObj(ctx, o, scale);
+    }
+    ctx.restore();
+    return canvas;
+  }
+
+  function drawObj(ctx, o, scale) {
+    const zoom = scale;
+    if (o.type === "mustateel") {
+      ctx.fillStyle = o.fillColor || "rgba(245,158,11,0.10)";
+      ctx.fillRect(o.x, o.y, o.w, o.h);
+      ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2.5 / zoom; ctx.strokeRect(o.x, o.y, o.w, o.h);
+      // Killa grid
+      const cellW = o.w / 2, cellH = o.h / 5;
+      ctx.strokeStyle = "rgba(239,68,68,0.25)"; ctx.lineWidth = 0.8 / zoom;
+      ctx.setLineDash([4/zoom, 4/zoom]);
+      ctx.beginPath();
+      ctx.moveTo(o.x + cellW, o.y); ctx.lineTo(o.x + cellW, o.y + o.h);
+      for (let r = 1; r < 5; r++) { ctx.moveTo(o.x, o.y + r*cellH); ctx.lineTo(o.x + o.w, o.y + r*cellH); }
+      ctx.stroke(); ctx.setLineDash([]);
+      // Killa numbers
+      if (o.showKillaNumbers !== false) {
+        const grid = getMustateeelKillaGrid();
+        ctx.fillStyle = "rgba(220,38,38,0.85)";
+        ctx.font = `bold ${Math.max(10, cellH * 0.25)}px Rajdhani, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        for (let r = 0; r < 5; r++) for (let c = 0; c < 2; c++) {
+          ctx.fillText(String(grid[r][c]), o.x + c*cellW + cellW/2, o.y + r*cellH + cellH/2);
+        }
+      }
+      // Label
+      if (o.label) {
+        ctx.fillStyle = "#1e293b";
+        ctx.font = `900 ${Math.min(o.w, o.h) * 0.35}px Rajdhani, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(o.label, o.x + o.w/2, o.y + o.h/2);
+      }
+    } else if (o.type === "muraba") {
+      ctx.fillStyle = o.fillColor || "rgba(249,115,22,0.08)";
+      ctx.fillRect(o.x, o.y, o.w, o.h);
+      ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 3 / zoom; ctx.strokeRect(o.x, o.y, o.w, o.h);
+      const cellW = o.w/5, cellH = o.h/5;
+      ctx.strokeStyle = "rgba(239,68,68,0.20)"; ctx.lineWidth = 0.8/zoom;
+      ctx.setLineDash([4/zoom, 4/zoom]); ctx.beginPath();
+      for (let c=1;c<5;c++){ctx.moveTo(o.x+c*cellW,o.y);ctx.lineTo(o.x+c*cellW,o.y+o.h);}
+      for (let r=1;r<5;r++){ctx.moveTo(o.x,o.y+r*cellH);ctx.lineTo(o.x+o.w,o.y+r*cellH);}
+      ctx.stroke(); ctx.setLineDash([]);
+      if (o.label) {
+        ctx.fillStyle = "#1e293b"; ctx.font = `900 ${Math.min(o.w, o.h)*0.28}px Rajdhani, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(o.label, o.x+o.w/2, o.y+o.h/2);
+      }
+    } else if (o.type === "acre") {
+      ctx.fillStyle = o.fillColor || "rgba(234,179,8,0.08)"; ctx.fillRect(o.x,o.y,o.w,o.h);
+      ctx.strokeStyle = "#eab308"; ctx.lineWidth = 1.5/zoom; ctx.strokeRect(o.x,o.y,o.w,o.h);
+    } else if (o.type === "canal" && o.points?.length >= 2) {
+      const halfW = (o.width || 14)/2;
+      const left = getParallelPolyline(o.points, -halfW);
+      const right = getParallelPolyline(o.points, halfW);
+      ctx.fillStyle = "rgba(30,144,255,0.25)";
+      ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
+      for (const p of left) ctx.lineTo(p.x,p.y);
+      ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
+      for (let i=right.length-1;i>=0;i--) ctx.lineTo(right[i].x,right[i].y);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle="#0284c7"; ctx.lineWidth=2/zoom;
+      for (const side of [left,right]){ctx.beginPath();ctx.moveTo(side[0].x,side[0].y);for(const p of side)ctx.lineTo(p.x,p.y);ctx.stroke();}
+    } else if (o.type === "khal" && o.points?.length >= 2) {
+      const halfW = (o.width || 8)/2;
+      const left = getParallelPolyline(o.points,-halfW); const right = getParallelPolyline(o.points,halfW);
+      ctx.fillStyle="rgba(37,99,235,0.2)"; ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
+      for(const p of left)ctx.lineTo(p.x,p.y); ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
+      for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle="#2563eb"; ctx.lineWidth=1.5/zoom;
+      for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
+    } else if (o.type === "road" && o.points?.length >= 2) {
+      const halfW = (o.width||28)/2;
+      const left=getParallelPolyline(o.points,-halfW); const right=getParallelPolyline(o.points,halfW);
+      ctx.fillStyle="#3a3a3a"; ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
+      for(const p of left)ctx.lineTo(p.x,p.y); ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
+      for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle="#b45309"; ctx.lineWidth=2/zoom;
+      for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
+    } else if (o.type === "chakbandi" && o.points?.length >= 2) {
+      ctx.strokeStyle="#22c55e"; ctx.lineWidth=2/zoom;
+      ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
+      for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();
+    } else if (o.type === "mouza" && o.points?.length >= 2) {
+      ctx.strokeStyle="#000"; ctx.lineWidth=1.2/zoom; ctx.setLineDash([3/zoom,4/zoom]);
+      ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
+      for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+
+  // ---- Export as JPG ----
+  const exportJPG = async () => {
+    setLoading("jpg");
+    const canvas = renderToCanvas(2);
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `${mapData?.title || "map"}.jpg`;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      setLoading(null);
+    }, "image/jpeg", 0.95);
   };
 
+  // ---- Export as PDF (raster) ----
+  const exportPDF = async () => {
+    setLoading("pdf");
+    const canvas = renderToCanvas(2);
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    // A3 landscape: 420mm x 297mm at 96dpi
+    const pw = 1191, ph = 842; // A3 landscape px at 96dpi
+    const ratio = Math.min(pw / canvas.width, ph / canvas.height);
+    const iw = canvas.width * ratio, ih = canvas.height * ratio;
+    const ix = (pw - iw) / 2, iy = (ph - ih) / 2;
+
+    const win = window.open("", "_blank");
+    win.document.write(`<!DOCTYPE html><html><head><title>${mapData?.title || "Map"}</title>
+    <style>
+      @page { size: A3 landscape; margin: 0; }
+      body { margin: 0; background: white; }
+      img { width: ${iw}px; height: ${ih}px; margin: ${iy}px ${ix}px; display: block; }
+      @media print { body { margin: 0; } }
+    </style></head><body><img src="${imgData}" /></body></html>`);
+    win.document.close();
+    setTimeout(() => { win.print(); setLoading(null); }, 800);
+  };
+
+  // ---- Export as Vector PDF (SVG in print window) ----
+  const exportVectorPDF = async () => {
+    setLoading("vpdf");
+    const bbox = getBBox();
+    const W = bbox.maxX - bbox.minX;
+    const H = bbox.maxY - bbox.minY;
+    let svgParts = [];
+
+    for (const o of objects) {
+      const sorted = [...objects].sort((a,b)=>{
+        const order=["mouza","muraba","mustateel","acre","road","canal","khal","chakbandi","outlet","damageMarker"];
+        return order.indexOf(a.type)-order.indexOf(b.type);
+      });
+      // done below
+    }
+
+    const svgObjs = [...objects].sort((a,b)=>{
+      const order=["mouza","muraba","mustateel","acre","road","canal","khal","chakbandi","outlet","damageMarker"];
+      return order.indexOf(a.type)-order.indexOf(b.type);
+    }).map(o => objToSVG(o, bbox)).filter(Boolean).join("\n");
+
+    const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+      <rect width="${W}" height="${H}" fill="white"/>
+      <g transform="translate(${-bbox.minX},${-bbox.minY})">
+        ${svgObjs}
+      </g>
+    </svg>`;
+
+    const win = window.open("", "_blank");
+    win.document.write(`<!DOCTYPE html><html><head><title>${mapData?.title||"Map"} — Vector</title>
+    <style>
+      @page { size: A3 landscape; margin: 0; }
+      body { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: white; }
+      svg { max-width: 100vw; max-height: 100vh; }
+    </style></head><body>${svgContent}</body></html>`);
+    win.document.close();
+    setTimeout(() => { win.print(); setLoading(null); }, 800);
+  };
+
+  function objToSVG(o, bbox) {
+    if (o.type === "mustateel") {
+      const cellW = o.w/2, cellH = o.h/5;
+      const grid = getMustateeelKillaGrid();
+      const killaLabels = o.showKillaNumbers !== false ? grid.flatMap((row,r) =>
+        row.map((n,c) => `<text x="${o.x+c*cellW+cellW/2}" y="${o.y+r*cellH+cellH/2}" font-family="sans-serif" font-size="${Math.max(8,cellH*0.22)}" font-weight="bold" fill="rgba(220,38,38,0.8)" text-anchor="middle" dominant-baseline="middle">${n}</text>`)
+      ).join("") : "";
+      const gridLines = [`<line x1="${o.x+cellW}" y1="${o.y}" x2="${o.x+cellW}" y2="${o.y+o.h}" stroke="rgba(239,68,68,0.25)" stroke-width="0.5" stroke-dasharray="4,4"/>`];
+      for (let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="rgba(239,68,68,0.25)" stroke-width="0.5" stroke-dasharray="4,4"/>`);
+      const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="rgba(245,158,11,0.10)" stroke="#ef4444" stroke-width="2"/>${gridLines.join("")}${killaLabels}${lbl}`;
+    }
+    if (o.type === "muraba") {
+      const cellW=o.w/5, cellH=o.h/5;
+      const gridLines=[];
+      for(let c=1;c<5;c++) gridLines.push(`<line x1="${o.x+c*cellW}" y1="${o.y}" x2="${o.x+c*cellW}" y2="${o.y+o.h}" stroke="rgba(239,68,68,0.20)" stroke-width="0.5" stroke-dasharray="4,4"/>`);
+      for(let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="rgba(239,68,68,0.20)" stroke-width="0.5" stroke-dasharray="4,4"/>`);
+      const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="sans-serif" font-size="${Math.min(o.w,o.h)*0.28}" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="rgba(249,115,22,0.08)" stroke="#ef4444" stroke-width="3"/>${gridLines.join("")}${lbl}`;
+    }
+    if (o.type === "acre") {
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="rgba(234,179,8,0.08)" stroke="#eab308" stroke-width="1.5"/>`;
+    }
+    if ((o.type==="canal"||o.type==="khal"||o.type==="road") && o.points?.length>=2) {
+      const pts = o.points.map(p=>`${p.x},${p.y}`).join(" ");
+      const color = o.type==="canal"?"#0284c7":o.type==="khal"?"#2563eb":"#b45309";
+      const w = o.type==="canal"?2:o.type==="khal"?1.5:2;
+      return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${w}"/>`;
+    }
+    if (o.type==="chakbandi" && o.points?.length>=2) {
+      const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
+      return `<polyline points="${pts}" fill="none" stroke="#22c55e" stroke-width="2"/>`;
+    }
+    if (o.type==="mouza" && o.points?.length>=2) {
+      const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
+      return `<polyline points="${pts}" fill="none" stroke="#000" stroke-width="1.2" stroke-dasharray="3,4"/>`;
+    }
+    return null;
+  }
+
+  // ---- Export as Offline HTML Map Viewer (scrollable, zoomable) ----
+  const exportOfflineHTML = async () => {
+    setLoading("html");
+    const canvas = renderToCanvas(1.5);
+    const imgData = canvas.toDataURL("image/png");
+    const bbox = getBBox();
+    const W = canvas.width;
+    const H = canvas.height;
+    const title = mapData?.title || "Chakbandi Map";
+
+    const html = `<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #1a1a2e; font-family: sans-serif; color: white; user-select: none; }
+    #header { background: #16213e; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #0f3460; position: sticky; top: 0; z-index: 10; }
+    #header h1 { font-size: 16px; font-weight: bold; color: #e2e8f0; }
+    #header .info { font-size: 11px; color: #64748b; }
+    #toolbar { background: #16213e; padding: 8px 16px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #0f3460; flex-wrap: wrap; }
+    .btn { background: #0f3460; border: 1px solid #1e40af; color: #93c5fd; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: background 0.15s; }
+    .btn:hover { background: #1e40af; }
+    .btn.active { background: #2563eb; color: white; }
+    #zoom-display { font-size: 12px; color: #64748b; min-width: 50px; text-align: center; }
+    #viewport { overflow: auto; width: 100vw; height: calc(100vh - 90px); cursor: grab; background: #f8fafc; }
+    #viewport.dragging { cursor: grabbing; }
+    #map-container { position: relative; display: inline-block; padding: 40px; min-width: fit-content; }
+    #map-img { display: block; transform-origin: top left; image-rendering: pixelated; transition: transform 0.1s; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    #info-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #16213e; padding: 4px 16px; font-size: 11px; color: #64748b; display: flex; gap: 16px; border-top: 1px solid #0f3460; }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <div>
+      <h1>🗺️ ${title}</h1>
+      <div class="info">${new Date().toLocaleDateString('ur-PK')} — ${objects.filter(o=>o.type==='mustateel').length} Mustateel, ${objects.filter(o=>o.type==='muraba').length} Muraba</div>
+    </div>
+    <div class="info">Chakbandi GIS — Offline Viewer</div>
+  </div>
+  <div id="toolbar">
+    <button class="btn" onclick="setZoom(zoomLevel * 1.25)">+ Zoom In</button>
+    <button class="btn" onclick="setZoom(zoomLevel / 1.25)">- Zoom Out</button>
+    <button class="btn" onclick="setZoom(1)">Reset View</button>
+    <button class="btn" onclick="fitToScreen()">Fit Screen</button>
+    <span id="zoom-display">100%</span>
+    <button class="btn" onclick="window.print()">🖨️ Print</button>
+  </div>
+  <div id="viewport">
+    <div id="map-container">
+      <img id="map-img" src="${imgData}" width="${W}" height="${H}" draggable="false" />
+    </div>
+  </div>
+  <div id="info-bar">
+    <span>📐 Map Size: ${Math.round(bbox.maxX - bbox.minX)} × ${Math.round(bbox.maxY - bbox.minY)} ft</span>
+    <span>🏘️ Objects: ${objects.length}</span>
+    <span>⌨️ Scroll to zoom • Drag to pan</span>
+  </div>
+  <script>
+    let zoomLevel = 1;
+    const img = document.getElementById('map-img');
+    const viewport = document.getElementById('viewport');
+    const zDisp = document.getElementById('zoom-display');
+
+    function setZoom(z) {
+      zoomLevel = Math.max(0.1, Math.min(10, z));
+      img.style.width = (${W} * zoomLevel) + 'px';
+      img.style.height = (${H} * zoomLevel) + 'px';
+      zDisp.textContent = Math.round(zoomLevel * 100) + '%';
+    }
+
+    function fitToScreen() {
+      const vw = viewport.clientWidth - 80;
+      const vh = viewport.clientHeight - 80;
+      const scale = Math.min(vw / ${W}, vh / ${H});
+      setZoom(scale);
+      // Center after fit
+      setTimeout(() => {
+        const iw = ${W} * zoomLevel, ih = ${H} * zoomLevel;
+        viewport.scrollLeft = (iw - vw) / 2;
+        viewport.scrollTop = (ih - vh) / 2;
+      }, 50);
+    }
+
+    // Ctrl+wheel zoom
+    viewport.addEventListener('wheel', function(e) {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const rect = viewport.getBoundingClientRect();
+        const mx = e.clientX - rect.left + viewport.scrollLeft;
+        const my = e.clientY - rect.top + viewport.scrollTop;
+        const oldZoom = zoomLevel;
+        const factor = e.deltaY < 0 ? 1.1 : 0.9;
+        setZoom(zoomLevel * factor);
+        viewport.scrollLeft = mx * (zoomLevel / oldZoom) - (e.clientX - rect.left);
+        viewport.scrollTop = my * (zoomLevel / oldZoom) - (e.clientY - rect.top);
+      }
+    }, { passive: false });
+
+    // Mouse drag pan
+    let isDragging = false, startX, startY, startSL, startST;
+    viewport.addEventListener('mousedown', e => {
+      isDragging = true; startX = e.clientX; startY = e.clientY;
+      startSL = viewport.scrollLeft; startST = viewport.scrollTop;
+      viewport.classList.add('dragging');
+    });
+    document.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      viewport.scrollLeft = startSL - (e.clientX - startX);
+      viewport.scrollTop = startST - (e.clientY - startY);
+    });
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+      viewport.classList.remove('dragging');
+    });
+
+    // Touch pan/pinch
+    let lastTouchDist = null;
+    viewport.addEventListener('touchmove', e => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        if (lastTouchDist) setZoom(zoomLevel * (d / lastTouchDist));
+        lastTouchDist = d;
+      }
+    }, { passive: false });
+    viewport.addEventListener('touchend', () => { lastTouchDist = null; });
+
+    // Start with fit to screen
+    window.addEventListener('load', fitToScreen);
+  </script>
+  <style>@media print { #toolbar, #info-bar, #header { display: none; } #viewport { height: auto; overflow: visible; } }</style>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${title.replace(/\s+/g,"_")}_offline_map.html`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setLoading(null);
+  };
+
+  // ---- GeoJSON, CSV, KML, JSON (original) ----
+  const exportGeoJSON = () => {
+    const features = objects.filter(o=>["acre","mustateel","muraba"].includes(o.type)).map(o=>({
+      type:"Feature", properties:{id:o.id,type:o.type,label:o.label||"",ownerName:o.ownerName||""},
+      geometry:{type:"Polygon",coordinates:[[[o.x,o.y],[o.x+o.w,o.y],[o.x+o.w,o.y+o.h],[o.x,o.y+o.h],[o.x,o.y]]]}
+    }));
+    downloadText(JSON.stringify({type:"FeatureCollection",features},null,2),`${mapData?.title||"map"}.geojson`,"application/json");
+  };
   const exportCSV = () => {
-    const rows = [["id", "type", "x_ft", "y_ft", "width_ft", "height_ft", "label", "owner"]];
-    for (const o of objects) {
-      if (["acre", "mustateel", "muraba"].includes(o.type)) {
-        rows.push([o.id, o.type, Math.round(o.x), Math.round(o.y), o.w, o.h, o.label || "", o.ownerName || ""]);
-      }
-    }
-    const csv = rows.map(r => r.join(",")).join("\n");
-    downloadText(csv, `${mapData?.title || "map"}.csv`, "text/csv");
+    const rows=[["id","type","x_ft","y_ft","width_ft","height_ft","label","owner"]];
+    for(const o of objects) if(["acre","mustateel","muraba"].includes(o.type)) rows.push([o.id,o.type,Math.round(o.x),Math.round(o.y),o.w,o.h,o.label||"",o.ownerName||""]);
+    downloadText(rows.map(r=>r.join(",")).join("\n"),`${mapData?.title||"map"}.csv`,"text/csv");
   };
-
-  const exportKML = () => {
-    let placemarks = "";
-    for (const o of objects) {
-      if (["acre", "mustateel", "muraba"].includes(o.type)) {
-        const coords = [
-          [o.x, o.y], [o.x + o.w, o.y],
-          [o.x + o.w, o.y + o.h], [o.x, o.y + o.h], [o.x, o.y]
-        ].map(c => `${c[0]},${c[1]},0`).join(" ");
-        placemarks += `
-  <Placemark>
-    <name>${o.label || o.type}</name>
-    <description>${o.ownerName || ""}</description>
-    <Polygon><outerBoundaryIs><LinearRing><coordinates>${coords}</coordinates></LinearRing></outerBoundaryIs></Polygon>
-  </Placemark>`;
-      }
-    }
-    const kml = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${mapData?.title || "map"}</name>${placemarks}</Document></kml>`;
-    downloadText(kml, `${mapData?.title || "map"}.kml`, "application/vnd.google-earth.kml+xml");
-  };
-
-  const exportJSON = () => {
-    downloadJSON({ map: mapData, objects }, `${mapData?.title || "map"}_raw.json`);
-  };
+  const exportJSON = () => downloadText(JSON.stringify({map:mapData,objects},null,2),`${mapData?.title||"map"}_raw.json`,"application/json");
 
   const EXPORTS = [
-    { label: "GeoJSON", desc: "Standard GIS vector format", icon: Globe, color: "text-emerald-400", action: exportGeoJSON },
-    { label: "KML", desc: "Google Earth compatible", icon: Map, color: "text-blue-400", action: exportKML },
-    { label: "CSV", desc: "Spreadsheet / tabular data", icon: Table2, color: "text-amber-400", action: exportCSV },
-    { label: "JSON", desc: "Raw drawing data backup", icon: FileText, color: "text-slate-400", action: exportJSON },
+    { label: "JPG Image", desc: "High-res raster image (2×)", icon: Image, color: "text-amber-400", action: exportJPG, key: "jpg" },
+    { label: "PDF (Print)", desc: "Raster PDF, A3 landscape", icon: FileImage, color: "text-red-400", action: exportPDF, key: "pdf" },
+    { label: "Vector PDF", desc: "SVG-based crisp vector PDF", icon: FileText, color: "text-purple-400", action: exportVectorPDF, key: "vpdf" },
+    { label: "Offline HTML Map", desc: "Scrollable viewer, 1000+ objects", icon: Globe, color: "text-emerald-400", action: exportOfflineHTML, key: "html" },
+    { label: "GeoJSON", desc: "Standard GIS vector format", icon: Map, color: "text-blue-400", action: exportGeoJSON, key: "geo" },
+    { label: "CSV", desc: "Spreadsheet / tabular data", icon: Table2, color: "text-cyan-400", action: exportCSV, key: "csv" },
+    { label: "JSON Backup", desc: "Raw drawing data backup", icon: FileText, color: "text-slate-400", action: exportJSON, key: "json" },
   ];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-sm">
         <DialogHeader>
-          <DialogTitle className="font-heading text-white">Export Map</DialogTitle>
+          <DialogTitle className="font-heading text-white">Export / Download Map</DialogTitle>
         </DialogHeader>
-        <div className="space-y-2 py-2">
-          {EXPORTS.map(({ label, desc, icon: Icon, color, action }) => (
-            <button
-              key={label}
-              onClick={() => { action(); onClose(); }}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-700 hover:bg-slate-800 transition-colors text-left"
-            >
+        <div className="space-y-2 py-2 max-h-[70vh] overflow-y-auto">
+          {EXPORTS.map(({ label, desc, icon: Icon, color, action, key }) => (
+            <button key={key} onClick={() => action()}
+              disabled={loading === key}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-700 hover:bg-slate-800 transition-colors text-left disabled:opacity-60">
               <div className={`w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center ${color}`}>
                 <Icon className="w-4 h-4" />
               </div>
@@ -91,17 +449,16 @@ export default function ExportDialog({ open, onClose, mapData, objects }) {
                 <p className="text-sm font-semibold text-white">{label}</p>
                 <p className="text-xs text-slate-500">{desc}</p>
               </div>
-              <Download className="w-4 h-4 text-slate-600 ml-auto" />
+              {loading === key
+                ? <span className="ml-auto text-xs text-blue-400 animate-pulse">...</span>
+                : <Download className="w-4 h-4 text-slate-600 ml-auto" />
+              }
             </button>
           ))}
         </div>
       </DialogContent>
     </Dialog>
   );
-}
-
-function downloadJSON(data, filename) {
-  downloadText(JSON.stringify(data, null, 2), filename, "application/json");
 }
 
 function downloadText(text, filename, mimeType) {

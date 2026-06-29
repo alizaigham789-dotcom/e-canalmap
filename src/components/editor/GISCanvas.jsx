@@ -4,6 +4,7 @@ import {
   snapToAcreGrid, snapToMustateeelGrid, snapToMurabaGrid,
   snapMovePosition, snapToParcelBoundaries, isInViewport,
   DIMENSIONS, distToLineSegment, computeSnapPosition,
+  snapToNearestBoundary, rectsOverlap, createMustateel, createMuraba, createAcre,
 } from "@/lib/gisEngine";
 import {
   drawGrid, drawAcre, drawMustateel, drawMuraba,
@@ -43,6 +44,8 @@ const GISCanvas = forwardRef(function GISCanvas(
   // Damage marker line drawing state
   const damageStartRef = useRef(null);
   const [damageDraft, setDamageDraft] = useState(null);
+  // Mustateel/muraba ghost preview
+  const [ghostPos, setGhostPos] = useState(null);
 
   useImperativeHandle(ref, () => ({ getCanvas: () => canvasRef.current }));
 
@@ -79,7 +82,7 @@ const GISCanvas = forwardRef(function GISCanvas(
 
       const kv = killaVisibility || { mustateel: true, muraba: true };
       if (obj.type === "acre") drawAcre(ctx, obj, isSelected, zoom, C);
-      else if (obj.type === "mustateel") drawMustateel(ctx, obj, isSelected, zoom, C, kv.mustateel !== false);
+      else if (obj.type === "mustateel") drawMustateel(ctx, obj, isSelected, zoom, C, obj.showKillaNumbers !== false && kv.mustateel !== false);
       else if (obj.type === "muraba") drawMuraba(ctx, obj, isSelected, zoom, C, kv.muraba !== false);
       else if (obj.type === "canal") drawCanal(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "khal") drawKhal(ctx, obj, isSelected, zoom, C);
@@ -109,6 +112,36 @@ const GISCanvas = forwardRef(function GISCanvas(
 
     ctx.restore();
 
+    // Ghost preview for mustateel/muraba placement
+    if (ghostPos) {
+      const gx = ghostPos.x * zoom + pan.x;
+      const gy = ghostPos.y * zoom + pan.y;
+      const gw = ghostPos.w * zoom;
+      const gh = ghostPos.h * zoom;
+      ctx.save();
+      if (ghostPos.blocked) {
+        ctx.fillStyle = "rgba(239,68,68,0.18)";
+        ctx.strokeStyle = "rgba(239,68,68,0.75)";
+      } else {
+        ctx.fillStyle = "rgba(59,130,246,0.12)";
+        ctx.strokeStyle = "rgba(59,130,246,0.75)";
+      }
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.fillRect(gx, gy, gw, gh);
+      ctx.strokeRect(gx, gy, gw, gh);
+      ctx.setLineDash([]);
+      // Show blocked label
+      if (ghostPos.blocked) {
+        ctx.fillStyle = "rgba(239,68,68,0.9)";
+        ctx.font = "bold 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("⛔ Overlap", gx + gw / 2, gy + gh / 2);
+      }
+      ctx.restore();
+    }
+
     // Snap indicator overlay
     if (snapPos) {
       const sx = snapPos.x * zoom + pan.x;
@@ -120,7 +153,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       ctx.moveTo(sx, sy - 10); ctx.lineTo(sx, sy + 10);
       ctx.stroke();
     }
-  }, [objects, zoom, pan, layers, selectedId, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft]);
+  }, [objects, zoom, pan, layers, selectedId, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos]);
 
   useEffect(() => {
     const loop = () => { render(); animRef.current = requestAnimationFrame(loop); };
@@ -151,6 +184,21 @@ const GISCanvas = forwardRef(function GISCanvas(
   }, [pan, zoom, activeTool, snapSettings]);
 
   const handleMouseMove = useCallback((e) => {
+    // Ghost preview for mustateel/muraba
+    if (activeTool === "mustateel" || activeTool === "muraba") {
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const world = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
+      const dimW = activeTool === "muraba" ? DIMENSIONS.MURABA.width : DIMENSIONS.MUSTATEEL.width;
+      const dimH = activeTool === "muraba" ? DIMENSIONS.MURABA.height : DIMENSIONS.MUSTATEEL.height;
+      const snap = snapToNearestBoundary({ x: world.x, y: world.y, w: dimW, h: dimH }, objectsRef.current);
+      const wouldOverlap = objectsRef.current
+        .filter(o => ["mustateel","muraba","acre"].includes(o.type))
+        .some(o => rectsOverlap({ x: snap.x, y: snap.y, w: dimW, h: dimH }, o));
+      setGhostPos({ x: snap.x, y: snap.y, w: dimW, h: dimH, blocked: wouldOverlap });
+    } else if (ghostPos) {
+      setGhostPos(null);
+    }
     if (isPanning.current || activeTool === "pan") {
       if (isPanning.current) {
         const dx = e.clientX - lastMouse.current.x;
@@ -185,7 +233,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       return;
     }
     onSnapPosChange(getSnappedWorld(e));
-  }, [activeTool, pan, zoom, getSnappedWorld, onPanChange, onSnapPosChange, onUpdateObject]);
+  }, [activeTool, pan, zoom, getSnappedWorld, onPanChange, onSnapPosChange, onUpdateObject, ghostPos]);
 
   const handleMouseDown = useCallback((e) => {
     if (e.button === 1 || activeTool === "pan") {
