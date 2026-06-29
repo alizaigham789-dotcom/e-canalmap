@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut } from "lucide-react";
 import {
@@ -29,12 +29,12 @@ function getObjectsBounds(objects) {
   return { minX, minY, maxX, maxY };
 }
 
-// Re-render all objects onto a fresh canvas at a chosen scale — gives crisp print quality
-function renderObjectsToCanvas(objects, colorSettings, killaNumbersGlobal, killaVisibility, printScale = 2) {
+// Re-render all objects onto a fresh canvas — print-optimised thick lines, no killa numbers
+function renderObjectsToCanvas(objects, colorSettings, printSettings, printScale = 3) {
   const bounds = getObjectsBounds(objects);
   if (!bounds) return null;
 
-  const pad = 60;
+  const pad = 80;
   const worldW = bounds.maxX - bounds.minX + pad * 2;
   const worldH = bounds.maxY - bounds.minY + pad * 2;
 
@@ -46,45 +46,226 @@ function renderObjectsToCanvas(objects, colorSettings, killaNumbersGlobal, killa
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Translate so world origin is at top-left with padding
   ctx.save();
   ctx.translate((pad - bounds.minX) * printScale, (pad - bounds.minY) * printScale);
   ctx.scale(printScale, printScale);
 
-  // Use zoom=1 for print — font sizes will be world-unit based
-  const zoom = 1;
+  // zoom=1 means lineWidth values from renderer are in world units.
+  // We use a "print zoom" concept: dividing by zoom makes lines THICKER when zoom is small.
+  // Use zoom=0.15 so all /zoom divisions produce thick, print-visible lines.
+  const zoom = 0.15;
   const C = colorSettings || {};
+  const ps = printSettings || {};
 
-  const kv = {
-    mustateel: (killaVisibility?.mustateel !== false) && killaNumbersGlobal,
-    muraba: (killaVisibility?.muraba !== false) && killaNumbersGlobal,
-  };
+  // Override mustateel/muraba boundary thickness via patched objects
+  const mustThick = ps.mustateelThickness || 6;   // world-unit line width at zoom=0.15
+  const chakThick = ps.chakbandiThickness || 5;
+  const killaOpacity = ps.killaGridOpacity || 0.55;
+  const killaWidth = ps.killaGridWidth || 1.2;
 
   const sorted = [...objects].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
 
   for (const obj of sorted) {
-    if (obj.type === "acre") drawAcre(ctx, obj, false, zoom, C);
-    else if (obj.type === "mustateel") drawMustateel(ctx, obj, false, zoom, C, obj.showKillaNumbers !== false && kv.mustateel);
-    else if (obj.type === "muraba") drawMuraba(ctx, obj, false, zoom, C, obj.showKillaNumbers !== false && kv.muraba);
-    else if (obj.type === "canal") drawCanal(ctx, obj, false, zoom, C);
-    else if (obj.type === "khal") drawKhal(ctx, obj, false, zoom, C);
-    else if (obj.type === "road") drawRoad(ctx, obj, false, zoom, C);
-    else if (obj.type === "outlet") drawOutlet(ctx, obj, false, zoom, C);
-    else if (obj.type === "chakbandi") drawChakbandi(ctx, obj, false, zoom, C, true);
-    else if (obj.type === "mouza") drawMouza(ctx, obj, false, zoom, C);
-    else if (obj.type === "damageMarker") drawDamageMarker(ctx, obj, false, zoom);
+    if (obj.type === "acre") {
+      drawAcre(ctx, obj, false, zoom, C);
+    } else if (obj.type === "mustateel") {
+      // patch killaStyle for print: thicker grid lines, more opaque
+      const patched = {
+        ...obj,
+        killaStyle: {
+          ...(obj.killaStyle || {}),
+          strokeOpacity: killaOpacity,
+          strokeWidth: killaWidth,
+          strokeStyle: "solid",
+        },
+        showKillaNumbers: false, // always hide killa numbers in print
+        _printBorderWidth: mustThick,
+      };
+      drawMustateelPrint(ctx, patched, zoom, C);
+    } else if (obj.type === "muraba") {
+      const patched = {
+        ...obj,
+        killaStyle: {
+          ...(obj.killaStyle || {}),
+          strokeOpacity: killaOpacity,
+          strokeWidth: killaWidth,
+          strokeStyle: "solid",
+        },
+        showKillaNumbers: false,
+        _printBorderWidth: mustThick + 2,
+      };
+      drawMurabaPrint(ctx, patched, zoom, C);
+    } else if (obj.type === "canal") {
+      drawCanal(ctx, obj, false, zoom, C);
+    } else if (obj.type === "khal") {
+      drawKhal(ctx, obj, false, zoom, C);
+    } else if (obj.type === "road") {
+      drawRoad(ctx, obj, false, zoom, C);
+    } else if (obj.type === "outlet") {
+      drawOutlet(ctx, obj, false, zoom, C);
+    } else if (obj.type === "chakbandi") {
+      // force cross + thick line for print
+      const patched = { ...obj, crossPattern: true, _printLineWidth: chakThick };
+      drawChakbandiPrint(ctx, patched, zoom, C);
+    } else if (obj.type === "mouza") {
+      drawMouza(ctx, obj, false, zoom, C);
+    } else if (obj.type === "damageMarker") {
+      drawDamageMarker(ctx, obj, false, zoom);
+    }
   }
 
   ctx.restore();
   return canvas;
 }
 
-export default function PrintPreview({ mapData, objects, colorSettings, killaNumbersGlobal = true, killaVisibility, onClose }) {
+// Print-specific mustateel: thick outer border + visible killa grid, no numbers
+function drawMustateelPrint(ctx, obj, zoom, C) {
+  const ks = obj.killaStyle || {};
+  const borderW = obj._printBorderWidth || 6;
+
+  // Fill
+  ctx.fillStyle = obj.fillColor || C.mustateelFill || "rgba(245,158,11,0.08)";
+  ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+
+  // Thick outer boundary
+  ctx.strokeStyle = C.mustateelStroke || "#ef4444";
+  ctx.lineWidth = borderW / zoom;
+  ctx.lineJoin = "miter";
+  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+
+  // Killa grid — solid, clear lines
+  const alpha = ks.strokeOpacity || 0.55;
+  const ksColor = ks.strokeColor || "#ef4444";
+  const rgb = hexToRgbStr(ksColor);
+  ctx.strokeStyle = `rgba(${rgb},${alpha})`;
+  ctx.lineWidth = (ks.strokeWidth || 1.2) / zoom;
+  ctx.setLineDash([]);
+  const cellW = obj.w / 2, cellH = obj.h / 5;
+  ctx.beginPath();
+  ctx.moveTo(obj.x + cellW, obj.y); ctx.lineTo(obj.x + cellW, obj.y + obj.h);
+  for (let r = 1; r < 5; r++) {
+    ctx.moveTo(obj.x, obj.y + r * cellH); ctx.lineTo(obj.x + obj.w, obj.y + r * cellH);
+  }
+  ctx.stroke();
+
+  // Center label
+  if (obj.label) {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
+    ctx.fillStyle = C.labelColor || "#1e293b";
+    const maxFont = Math.min(obj.w, obj.h) * 0.38;
+    ctx.font = `900 ${maxFont}px Rajdhani, Arial, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(obj.label, obj.x + obj.w / 2, obj.y + obj.h / 2);
+    ctx.restore();
+  }
+}
+
+function drawMurabaPrint(ctx, obj, zoom, C) {
+  const ks = obj.killaStyle || {};
+  const borderW = obj._printBorderWidth || 8;
+
+  ctx.fillStyle = obj.fillColor || C.murabaFill || "rgba(249,115,22,0.08)";
+  ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+
+  ctx.strokeStyle = C.murabaStroke || "#ef4444";
+  ctx.lineWidth = borderW / zoom;
+  ctx.lineJoin = "miter";
+  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+
+  const alpha = ks.strokeOpacity || 0.55;
+  const ksColor = ks.strokeColor || "#ef4444";
+  const rgb = hexToRgbStr(ksColor);
+  ctx.strokeStyle = `rgba(${rgb},${alpha})`;
+  ctx.lineWidth = (ks.strokeWidth || 1.2) / zoom;
+  ctx.setLineDash([]);
+  const cellW = obj.w / 5, cellH = obj.h / 5;
+  ctx.beginPath();
+  for (let c = 1; c < 5; c++) { ctx.moveTo(obj.x + c * cellW, obj.y); ctx.lineTo(obj.x + c * cellW, obj.y + obj.h); }
+  for (let r = 1; r < 5; r++) { ctx.moveTo(obj.x, obj.y + r * cellH); ctx.lineTo(obj.x + obj.w, obj.y + r * cellH); }
+  ctx.stroke();
+
+  if (obj.label) {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
+    ctx.fillStyle = C.labelColor || "#1e293b";
+    const maxFont = Math.min(obj.w, obj.h) * 0.30;
+    ctx.font = `900 ${maxFont}px Rajdhani, Arial, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(obj.label, obj.x + obj.w / 2, obj.y + obj.h / 2);
+    ctx.restore();
+  }
+}
+
+// Print chakbandi: ALWAYS shows thick line + crosses
+function drawChakbandiPrint(ctx, obj, zoom, C) {
+  if (!obj.points || obj.points.length < 2) return;
+  const color = C.chakbandiStroke || "#22c55e";
+  const lineW = (obj._printLineWidth || 5) / zoom;
+  const crossSize = 8 / zoom;
+  const spacing = 18 / zoom;
+
+  // Main line
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineW;
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(obj.points[0].x, obj.points[0].y);
+  for (const p of obj.points) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+
+  // Crosses overlay
+  ctx.strokeStyle = color;
+  ctx.lineWidth = (lineW * 0.55);
+  ctx.lineCap = "round";
+  for (let i = 0; i < obj.points.length - 1; i++) {
+    const a = obj.points[i], b = obj.points[i + 1];
+    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+    const steps = Math.max(1, Math.floor(segLen / spacing));
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+      ctx.beginPath();
+      ctx.moveTo(cx - crossSize, cy - crossSize); ctx.lineTo(cx + crossSize, cy + crossSize);
+      ctx.moveTo(cx + crossSize, cy - crossSize); ctx.lineTo(cx - crossSize, cy + crossSize);
+      ctx.stroke();
+    }
+  }
+}
+
+function hexToRgbStr(hex) {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "239,68,68";
+}
+
+function SettingSlider({ label, value, min, max, step, onChange, unit = "" }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] text-slate-400 whitespace-nowrap">{label}</span>
+      <input
+        type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(step < 1 ? parseFloat(e.target.value) : parseInt(e.target.value))}
+        className="w-20 h-1 accent-blue-400 cursor-pointer"
+      />
+      <span className="text-[10px] font-mono text-slate-300 w-8">{value}{unit}</span>
+    </div>
+  );
+}
+
+export default function PrintPreview({ mapData, objects, colorSettings, onClose }) {
   const [scale, setScale] = useState(100);
+  const [printSettings, setPrintSettings] = useState({
+    mustateelThickness: 6,
+    chakbandiThickness: 5,
+    killaGridOpacity: 0.55,
+    killaGridWidth: 1.2,
+  });
+
+  const updatePS = (key, val) => setPrintSettings(prev => ({ ...prev, [key]: val }));
 
   const printCanvas = useMemo(() => {
-    return renderObjectsToCanvas(objects, colorSettings, killaNumbersGlobal, killaVisibility, 2);
-  }, [objects, colorSettings, killaNumbersGlobal, killaVisibility]);
+    return renderObjectsToCanvas(objects, colorSettings, printSettings, 3);
+  }, [objects, colorSettings, printSettings]);
 
   const dataUrl = printCanvas ? printCanvas.toDataURL("image/png") : null;
 
@@ -181,8 +362,18 @@ export default function PrintPreview({ mapData, objects, colorSettings, killaNum
           </div>
         </div>
 
+        {/* Print Settings Panel */}
+        <div className="flex items-center gap-6 px-5 py-2 bg-slate-900 border-b border-slate-700 flex-wrap">
+          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">Print Settings</span>
+          <SettingSlider label="Mustateel Border" value={printSettings.mustateelThickness} min={2} max={16} step={1} onChange={v => updatePS("mustateelThickness", v)} />
+          <SettingSlider label="Chakbandi Line" value={printSettings.chakbandiThickness} min={1} max={12} step={1} onChange={v => updatePS("chakbandiThickness", v)} />
+          <SettingSlider label="Killa Grid Opacity" value={Math.round(printSettings.killaGridOpacity * 100)} min={10} max={100} step={5} onChange={v => updatePS("killaGridOpacity", v / 100)} unit="%" />
+          <SettingSlider label="Killa Grid Width" value={printSettings.killaGridWidth} min={0.5} max={4} step={0.5} onChange={v => updatePS("killaGridWidth", v)} unit="px" />
+          <div className="text-[9px] text-slate-500 ml-auto">Killa numbers always hidden in print</div>
+        </div>
+
         <div className="flex-1 overflow-auto bg-slate-950 p-6 flex items-start justify-center">
-          <div className="bg-white shadow-2xl" style={{ width: `${scale}%`, minWidth: 400 }}>
+          <div className="bg-white shadow-2xl" style={{ width: `${scale}%`, minWidth: 500 }}>
             <div style={{ padding: "12px 16px", borderBottom: "2px solid #000", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
               <div>
                 <div style={{ fontSize: 16, fontWeight: "bold", fontFamily: "serif", textTransform: "uppercase", letterSpacing: 2, color: "#000" }}>
