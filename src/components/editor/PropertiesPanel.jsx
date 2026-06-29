@@ -3,18 +3,21 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock } from "lucide-react";
+import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
-const KILLA_STROKE_COLORS = ["#ef4444","#000000","#ffffff","#9ca3af","#22c55e","#3b82f6","#a16207","#eab308","custom"];
 const KILLA_STROKE_STYLES = ["solid", "dashed", "dotted"];
 
 export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClose }) {
   const [local, setLocal] = useState({});
+  const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
-    if (selectedObj) setLocal({ ...selectedObj });
+    if (selectedObj) {
+      setLocal({ ...selectedObj });
+      setCollapsed(true); // auto-collapse on new selection so it doesn't block drawing
+    }
   }, [selectedObj?.id]);
 
   if (!selectedObj) return null;
@@ -40,10 +43,20 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
   }[selectedObj.type] || "text-slate-500";
 
   return (
-    <div className="w-64 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-200 bg-slate-50">
-        <span className={`text-xs font-bold font-heading tracking-wider uppercase ${typeColor}`}>{typeLabel}</span>
-        <div className="flex items-center gap-1">
+    <div className="w-56 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+      {/* Header — always visible, click to toggle expand */}
+      <div
+        className="flex items-center justify-between px-3 py-2 bg-slate-50 cursor-pointer select-none"
+        onClick={() => setCollapsed(v => !v)}
+      >
+        <div className="flex items-center gap-1.5 min-w-0">
+          {collapsed
+            ? <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+            : <ChevronUp className="w-3 h-3 text-slate-400 shrink-0" />
+          }
+          <span className={`text-[11px] font-bold font-heading tracking-wider uppercase truncate ${typeColor}`}>{typeLabel}</span>
+        </div>
+        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
           <Button variant="ghost" size="icon" className="w-6 h-6 text-red-400 hover:text-red-600 hover:bg-red-50"
             onClick={() => onDelete(selectedObj.id)}>
             <Trash2 className="w-3.5 h-3.5" />
@@ -55,241 +68,210 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
         </div>
       </div>
 
-      <div className="p-3 space-y-3 max-h-[500px] overflow-y-auto">
-        <div>
-          <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Object ID</label>
-          <p className="text-[10px] font-mono text-slate-400 truncate">{selectedObj.id}</p>
-        </div>
+      {/* Body — only visible when expanded */}
+      {!collapsed && (
+        <div className="p-3 space-y-3 max-h-[420px] overflow-y-auto border-t border-slate-200">
+          <div>
+            <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Object ID</label>
+            <p className="text-[10px] font-mono text-slate-400 truncate">{selectedObj.id}</p>
+          </div>
 
-        {selectedObj.type === "damageMarker" && (
-          <>
-            <Separator className="bg-slate-100" />
-            <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-xs font-semibold text-red-700">{local.damage_category}</p>
-              <p className="text-[10px] text-red-500 mt-0.5">Severity: <span className="font-bold">{local.severity}</span></p>
-              {local.description && <p className="text-[10px] text-slate-500 mt-1">{local.description}</p>}
-              {local.responsible_person && <p className="text-[10px] text-slate-500">Resp: {local.responsible_person}</p>}
-              {local.date && <p className="text-[10px] text-slate-400 font-mono">{new Date(local.date).toLocaleDateString()}</p>}
-            </div>
-            <p className="text-[9px] text-blue-500">Double-click marker on map to edit details</p>
-          </>
-        )}
-
-        {selectedObj.type === "acre" && (
-          <>
-            <Separator className="bg-slate-100" />
-            <Field label="Label" value={local.label || ""} onChange={v => commit("label", v)} placeholder="Optional label" />
-            <FillStyleControl local={local} commit={commit} />
-            <div className="text-[10px] text-slate-400 font-mono">220 ft × 198 ft</div>
-          </>
-        )}
-
-        {selectedObj.type === "mustateel" && (
-          <>
-            <Separator className="bg-slate-100" />
-            <Field label="Label / Survey No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 1" hint="Double-click plot on map to edit label at centroid" />
-            <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-slate-600">Show Owner</label>
-              <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
-              <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
-            </div>
-            <FillStyleControl local={local} commit={commit} />
-            <KillaStyleControl local={local} commit={commit} />
-            <div className="text-[10px] text-slate-400 font-mono">440 ft × 990 ft • 10 Killas</div>
-          </>
-        )}
-
-        {selectedObj.type === "muraba" && (
-          <>
-            <Separator className="bg-slate-100" />
-            <Field label="Muraba No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 1" hint="Double-click plot on map to edit label at centroid" />
-            <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-slate-600">Show Owner</label>
-              <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
-              <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
-            </div>
-            <FillStyleControl local={local} commit={commit} />
-            <KillaStyleControl local={local} commit={commit} />
-            <div className="text-[10px] text-slate-400 font-mono">1100 ft × 990 ft • 25 Killas</div>
-          </>
-        )}
-
-        {selectedObj.type === "canal" && (
-          <>
-            <Separator className="bg-slate-100" />
-            <Field label="Canal Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Nurpur Distry" />
-            <SpacingControl
-              label="Line Spacing"
-              value={local.width || 14}
-              min={2} max={150} step={2}
-              onChange={v => commit("width", v)}
-              unit="ft"
-            />
-            <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
-          </>
-        )}
-
-        {(selectedObj.type === "khal") && (
-          <>
-            <Separator className="bg-slate-100" />
-            <Field label="Khal Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Khal 1" />
-            <SpacingControl
-              label="Line Spacing"
-              value={local.width || 8}
-              min={2} max={60} step={1}
-              onChange={v => commit("width", v)}
-              unit="ft"
-            />
-            <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
-          </>
-        )}
-
-        {(selectedObj.type === "road") && (
-          <>
-            <Separator className="bg-slate-100" />
-            <Field label="Road Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Main Road" />
-            <SpacingControl
-              label="Line Spacing"
-              value={local.width || 28}
-              min={4} max={150} step={2}
-              onChange={v => commit("width", v)}
-              unit="ft"
-            />
-            <div className="text-[10px] text-amber-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
-          </>
-        )}
-
-        {selectedObj.type === "chakbandi" && (
-          <>
-            <Separator className="bg-slate-100" />
-            <Field label="Chakbandi Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Chakbandi Boundary 1" />
-            <div className="flex items-center justify-between mt-2">
-              <label className="text-xs text-slate-600">Cross Pattern (× × ×)</label>
-              <Switch checked={!!local.crossPattern} onCheckedChange={v => commit("crossPattern", v)} className="scale-75" />
-            </div>
-            {local.crossPattern && (
-              <>
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Cross Size</label>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                      onClick={() => commit("crossSize", Math.max(4, (local.crossSize || 8) - 2))}>−</Button>
-                    <span className="text-xs text-slate-600 font-mono w-8 text-center">{local.crossSize || 8}</span>
-                    <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                      onClick={() => commit("crossSize", Math.min(40, (local.crossSize || 8) + 2))}>+</Button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Cross Spacing</label>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                      onClick={() => commit("crossSpacing", Math.max(10, (local.crossSpacing || 40) - 10))}>−</Button>
-                    <span className="text-xs text-slate-600 font-mono w-8 text-center">{local.crossSpacing || 40}</span>
-                    <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                      onClick={() => commit("crossSpacing", Math.min(200, (local.crossSpacing || 40) + 10))}>+</Button>
-                  </div>
-                </div>
-              </>
-            )}
-            <div className="text-[10px] text-green-600 font-mono">{local.crossPattern ? "Cross pattern" : "Solid line"} • {selectedObj.points?.length || 0} points</div>
-          </>
-        )}
-
-        {selectedObj.type === "mouza" && (
-          <>
-            <Separator className="bg-slate-100" />
-            <Field label="Mouza Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="حد بندی موضع" />
-            <div className="text-[10px] text-slate-600 font-mono">Dotted boundary • {selectedObj.points?.length || 0} points</div>
-          </>
-        )}
-
-        {selectedObj.type === "outlet" && (
-          <>
-            <Separator className="bg-slate-100" />
-            <Field label="Mogha Name (موگہ نام)" value={local.mogha_name || ""} onChange={v => commit("mogha_name", v)} placeholder="e.g. Mogha Ali" />
-            <div>
-              <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Mogha Number (موگہ نمبری)</label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  value={local.mogha_number || ""}
-                  onChange={e => commit("mogha_number", e.target.value)}
-                  placeholder="e.g. 18500"
-                  className="h-7 flex-1 text-xs bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500 font-mono"
-                />
-                <Select value={local.mogha_side || ""} onValueChange={v => commit("mogha_side", v)}>
-                  <SelectTrigger className="h-7 w-16 text-xs bg-slate-50 border-slate-200">
-                    <SelectValue placeholder="L/R" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="L">L</SelectItem>
-                    <SelectItem value="R">R</SelectItem>
-                  </SelectContent>
-                </Select>
+          {selectedObj.type === "damageMarker" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-xs font-semibold text-red-700">{local.damage_category}</p>
+                <p className="text-[10px] text-red-500 mt-0.5">Severity: <span className="font-bold">{local.severity}</span></p>
+                {local.description && <p className="text-[10px] text-slate-500 mt-1">{local.description}</p>}
+                {local.responsible_person && <p className="text-[10px] text-slate-500">Resp: {local.responsible_person}</p>}
+                {local.date && <p className="text-[10px] text-slate-400 font-mono">{new Date(local.date).toLocaleDateString()}</p>}
               </div>
-              {(local.mogha_number || local.mogha_side) && (
-                <div className="mt-1 px-2 py-1 bg-cyan-50 border border-cyan-200 rounded text-[10px] font-mono text-cyan-700">
-                  {[local.mogha_number, local.mogha_side].filter(Boolean).join("/")}
-                </div>
+              <p className="text-[9px] text-blue-500">Double-click marker on map to edit details</p>
+            </>
+          )}
+
+          {selectedObj.type === "acre" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <Field label="Label" value={local.label || ""} onChange={v => commit("label", v)} placeholder="Optional label" />
+              <FillStyleControl local={local} commit={commit} />
+              <div className="text-[10px] text-slate-400 font-mono">220 ft × 198 ft</div>
+            </>
+          )}
+
+          {selectedObj.type === "mustateel" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <Field label="Label / Survey No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 1" hint="Double-click plot on map to edit label at centroid" />
+              <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-slate-600">Show Owner</label>
+                <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
+              </div>
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
+                <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
+              </div>
+              <FillStyleControl local={local} commit={commit} />
+              <KillaStyleControl local={local} commit={commit} />
+              <div className="text-[10px] text-slate-400 font-mono">440 ft × 990 ft • 10 Killas</div>
+            </>
+          )}
+
+          {selectedObj.type === "muraba" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <Field label="Muraba No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 1" hint="Double-click plot on map to edit label at centroid" />
+              <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-slate-600">Show Owner</label>
+                <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
+              </div>
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
+                <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
+              </div>
+              <FillStyleControl local={local} commit={commit} />
+              <KillaStyleControl local={local} commit={commit} />
+              <div className="text-[10px] text-slate-400 font-mono">1100 ft × 990 ft • 25 Killas</div>
+            </>
+          )}
+
+          {selectedObj.type === "canal" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <Field label="Canal Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Nurpur Distry" />
+              <SpacingControl label="Line Spacing" value={local.width || 14} min={2} max={150} step={2} onChange={v => commit("width", v)} unit="ft" />
+              <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
+            </>
+          )}
+
+          {selectedObj.type === "khal" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <Field label="Khal Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Khal 1" />
+              <SpacingControl label="Line Spacing" value={local.width || 8} min={2} max={60} step={1} onChange={v => commit("width", v)} unit="ft" />
+              <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
+            </>
+          )}
+
+          {selectedObj.type === "road" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <Field label="Road Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Main Road" />
+              <SpacingControl label="Line Spacing" value={local.width || 28} min={4} max={150} step={2} onChange={v => commit("width", v)} unit="ft" />
+              <div className="text-[10px] text-amber-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
+            </>
+          )}
+
+          {selectedObj.type === "chakbandi" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <Field label="Chakbandi Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Chakbandi Boundary 1" />
+              <div className="flex items-center justify-between mt-2">
+                <label className="text-xs text-slate-600">Cross Pattern (× × ×)</label>
+                <Switch checked={!!local.crossPattern} onCheckedChange={v => commit("crossPattern", v)} className="scale-75" />
+              </div>
+              {local.crossPattern && (
+                <>
+                  <div>
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Cross Size</label>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                        onClick={() => commit("crossSize", Math.max(4, (local.crossSize || 8) - 2))}>−</Button>
+                      <span className="text-xs text-slate-600 font-mono w-8 text-center">{local.crossSize || 8}</span>
+                      <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                        onClick={() => commit("crossSize", Math.min(40, (local.crossSize || 8) + 2))}>+</Button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Cross Spacing</label>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                        onClick={() => commit("crossSpacing", Math.max(10, (local.crossSpacing || 40) - 10))}>−</Button>
+                      <span className="text-xs text-slate-600 font-mono w-8 text-center">{local.crossSpacing || 40}</span>
+                      <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                        onClick={() => commit("crossSpacing", Math.min(200, (local.crossSpacing || 40) + 10))}>+</Button>
+                    </div>
+                  </div>
+                </>
               )}
-            </div>
-            <SpacingControl
-              label="Block Size"
-              value={local.blockSize || 20}
-              min={8} max={80} step={2}
-              onChange={v => commit("blockSize", v)}
-              unit="ft"
-            />
-            <div>
-              <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Arrow Scale</label>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  onClick={() => commit("arrowScale", Math.max(0.5, (local.arrowScale || 1) - 0.25))}>−</Button>
-                <input
-                  type="range"
-                  min={0.5}
-                  max={5}
-                  step={0.25}
-                  value={local.arrowScale || 1}
-                  onChange={e => commit("arrowScale", parseFloat(e.target.value))}
-                  className="flex-1 h-1 accent-cyan-500 cursor-pointer"
-                />
-                <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  onClick={() => commit("arrowScale", Math.min(5, (local.arrowScale || 1) + 0.25))}>+</Button>
-                <span className="text-xs text-slate-600 font-mono w-10 text-center">{(local.arrowScale || 1).toFixed(2)}×</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
-              <ArrowUpDown className="w-3 h-3" /> Block at start → arrow to end
-            </div>
-          </>
-        )}
+              <div className="text-[10px] text-green-600 font-mono">{local.crossPattern ? "Cross pattern" : "Solid line"} • {selectedObj.points?.length || 0} points</div>
+            </>
+          )}
 
-        {(selectedObj.x !== undefined) && (
-          <>
-            <Separator className="bg-slate-100" />
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Position (ft)</div>
-            <div className="grid grid-cols-2 gap-2">
+          {selectedObj.type === "mouza" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <Field label="Mouza Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="حد بندی موضع" />
+              <div className="text-[10px] text-slate-600 font-mono">Dotted boundary • {selectedObj.points?.length || 0} points</div>
+            </>
+          )}
+
+          {selectedObj.type === "outlet" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <Field label="Mogha Name (موگہ نام)" value={local.mogha_name || ""} onChange={v => commit("mogha_name", v)} placeholder="e.g. Mogha Ali" />
               <div>
-                <label className="text-[10px] text-slate-400">X</label>
-                <p className="text-xs font-mono text-slate-600">{Math.round(selectedObj.x)}</p>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Mogha Number (موگہ نمبری)</label>
+                <div className="flex gap-2">
+                  <Input type="number" value={local.mogha_number || ""} onChange={e => commit("mogha_number", e.target.value)}
+                    placeholder="e.g. 18500"
+                    className="h-7 flex-1 text-xs bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500 font-mono" />
+                  <Select value={local.mogha_side || ""} onValueChange={v => commit("mogha_side", v)}>
+                    <SelectTrigger className="h-7 w-16 text-xs bg-slate-50 border-slate-200">
+                      <SelectValue placeholder="L/R" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="L">L</SelectItem>
+                      <SelectItem value="R">R</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {(local.mogha_number || local.mogha_side) && (
+                  <div className="mt-1 px-2 py-1 bg-cyan-50 border border-cyan-200 rounded text-[10px] font-mono text-cyan-700">
+                    {[local.mogha_number, local.mogha_side].filter(Boolean).join("/")}
+                  </div>
+                )}
               </div>
+              <SpacingControl label="Block Size" value={local.blockSize || 20} min={8} max={80} step={2} onChange={v => commit("blockSize", v)} unit="ft" />
               <div>
-                <label className="text-[10px] text-slate-400">Y</label>
-                <p className="text-xs font-mono text-slate-600">{Math.round(selectedObj.y)}</p>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Arrow Scale</label>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                    onClick={() => commit("arrowScale", Math.max(0.5, (local.arrowScale || 1) - 0.25))}>−</Button>
+                  <input type="range" min={0.5} max={5} step={0.25} value={local.arrowScale || 1}
+                    onChange={e => commit("arrowScale", parseFloat(e.target.value))}
+                    className="flex-1 h-1 accent-cyan-500 cursor-pointer" />
+                  <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                    onClick={() => commit("arrowScale", Math.min(5, (local.arrowScale || 1) + 0.25))}>+</Button>
+                  <span className="text-xs text-slate-600 font-mono w-10 text-center">{(local.arrowScale || 1).toFixed(2)}×</span>
+                </div>
               </div>
-            </div>
-          </>
-        )}
-      </div>
+              <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
+                <ArrowUpDown className="w-3 h-3" /> Block at start → arrow to end
+              </div>
+            </>
+          )}
+
+          {selectedObj.x !== undefined && (
+            <>
+              <Separator className="bg-slate-100" />
+              <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Position (ft)</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-400">X</label>
+                  <p className="text-xs font-mono text-slate-600">{Math.round(selectedObj.x)}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400">Y</label>
+                  <p className="text-xs font-mono text-slate-600">{Math.round(selectedObj.y)}</p>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -300,12 +282,8 @@ function Field({ label, value, onChange, placeholder, icon, hint }) {
       <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">{label}</label>
       <div className="relative">
         {icon && <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400">{icon}</span>}
-        <Input
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={`h-7 text-xs bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500 ${icon ? "pl-6" : ""}`}
-        />
+        <Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+          className={`h-7 text-xs bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500 ${icon ? "pl-6" : ""}`} />
       </div>
       {hint && <p className="text-[9px] text-blue-400 mt-0.5">{hint}</p>}
     </div>
@@ -319,15 +297,9 @@ function SpacingControl({ label, value, min, max, step, onChange, unit }) {
       <div className="flex items-center gap-2">
         <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
           onClick={() => onChange(Math.max(min, value - step))}>−</Button>
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
+        <input type="range" min={min} max={max} step={step} value={value}
           onChange={e => onChange(parseInt(e.target.value, 10))}
-          className="flex-1 h-1 accent-blue-500 cursor-pointer"
-        />
+          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
         <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
           onClick={() => onChange(Math.min(max, value + step))}>+</Button>
         <span className="text-xs text-slate-600 font-mono w-10 text-center">{value}{unit}</span>
@@ -344,8 +316,7 @@ function FillStyleControl({ local, commit }) {
       </label>
       <div className="flex flex-wrap gap-1 mb-2">
         {FILL_STYLES.map(fs => (
-          <button key={fs}
-            onClick={() => commit("fillStyle", fs)}
+          <button key={fs} onClick={() => commit("fillStyle", fs)}
             className={`px-2 py-0.5 text-[9px] rounded border font-medium transition-colors ${
               (local.fillStyle || "solid") === fs
                 ? "bg-blue-600 text-white border-blue-500"
@@ -364,9 +335,9 @@ function FillStyleControl({ local, commit }) {
         <input type="range" min={0} max={1} step={0.05} value={local.fillOpacity || 0.35}
           onChange={e => commit("fillOpacity", parseFloat(e.target.value))}
           className="flex-1 h-1 accent-blue-500 cursor-pointer" />
-        <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((local.fillOpacity || 0.35)*100)}%</span>
+        <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((local.fillOpacity || 0.35) * 100)}%</span>
       </div>
-      {(local.fillStyle !== "solid" && local.fillStyle) && (
+      {local.fillStyle !== "solid" && local.fillStyle && (
         <div className="flex items-center gap-2 mt-1">
           <label className="text-[9px] text-slate-400 shrink-0">Spacing</label>
           <input type="range" min={4} max={24} step={2} value={local.fillSpacing || 8}
@@ -392,9 +363,7 @@ function KillaStyleControl({ local, commit }) {
         <div className="flex items-center gap-2">
           <label className="text-[9px] text-slate-400 w-12 shrink-0">Stroke</label>
           <Select value={ks.strokeStyle || "solid"} onValueChange={v => updateKs("strokeStyle", v)}>
-            <SelectTrigger className="h-5 text-[9px] flex-1 border-slate-200">
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger className="h-5 text-[9px] flex-1 border-slate-200"><SelectValue /></SelectTrigger>
             <SelectContent>
               {KILLA_STROKE_STYLES.map(s => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
             </SelectContent>
@@ -415,7 +384,7 @@ function KillaStyleControl({ local, commit }) {
           <input type="range" min={0} max={1} step={0.05} value={ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.15}
             onChange={e => updateKs("strokeOpacity", parseFloat(e.target.value))}
             className="flex-1 h-1 accent-blue-500 cursor-pointer" />
-          <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.15)*100)}%</span>
+          <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.15) * 100)}%</span>
         </div>
         <div className="flex items-center gap-2">
           <label className="text-[9px] text-slate-400 w-12 shrink-0">Label</label>
