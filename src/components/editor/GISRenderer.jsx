@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath } from "@/lib/gisEngine";
 
 // ---- Anti-aliased zoom-clamped font size ----
 // For print: use a larger effective min so labels are always readable regardless of zoom
@@ -296,32 +296,30 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  // Water fill — closed polygon with squared ends
+  // Water fill — smooth closed polygon
   ctx.fillStyle = C.canalFill || "rgba(30,144,255,0.25)";
   ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y);
-  for (const p of left) ctx.lineTo(p.x, p.y);
-  // Squared end cap at finish
+  drawSmoothPath(ctx, left);
   ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
-  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
-  // Squared end cap at start
+  const rightRev = [...right].reverse();
+  drawSmoothPath(ctx, rightRev);
   ctx.closePath();
   ctx.fill();
 
-  // Bank lines — squared ends
+  // Bank lines — smooth curves
   const bankColor = isSelected ? "#93c5fd" : (C.canalStroke || "#0284c7");
   ctx.strokeStyle = bankColor;
   ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
-  ctx.lineCap = "butt";
-  ctx.lineJoin = "miter";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
   for (const side of [left, right]) {
     ctx.beginPath();
-    ctx.moveTo(side[0].x, side[0].y);
-    for (const p of side) ctx.lineTo(p.x, p.y);
+    drawSmoothPath(ctx, side);
     ctx.stroke();
   }
-  // Perpendicular end caps (squared rectangular ends)
+  // End caps
   ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
+  ctx.lineCap = "butt";
   ctx.beginPath();
   ctx.moveTo(left[0].x, left[0].y); ctx.lineTo(right[0].x, right[0].y);
   ctx.moveTo(left[left.length-1].x, left[left.length-1].y);
@@ -353,24 +351,21 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  // Water fill with squared ends
+  // Water fill — smooth
   const khalColor = isSelected ? "#93c5fd" : (C.khalStroke || "#2563eb");
   ctx.fillStyle = `${khalColor}33`;
   ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y);
-  for (const p of left) ctx.lineTo(p.x, p.y);
+  drawSmoothPath(ctx, left);
   ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
-  for (let i = right.length-1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  drawSmoothPath(ctx, [...right].reverse());
   ctx.closePath(); ctx.fill();
 
   ctx.strokeStyle = khalColor;
   ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
-  ctx.lineCap = "butt";
-  ctx.lineJoin = "miter";
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const side of [left, right]) {
     ctx.beginPath();
-    ctx.moveTo(side[0].x, side[0].y);
-    for (const p of side) ctx.lineTo(p.x, p.y);
+    drawSmoothPath(ctx, side);
     ctx.stroke();
   }
 
@@ -406,25 +401,22 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  // Asphalt fill — closed polygon with squared ends
+  // Asphalt fill — smooth
   ctx.fillStyle = "#3a3a3a";
   ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y);
-  for (const p of left) ctx.lineTo(p.x, p.y);
+  drawSmoothPath(ctx, left);
   ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
-  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  drawSmoothPath(ctx, [...right].reverse());
   ctx.closePath(); ctx.fill();
 
-  // Casing edges — squared ends
+  // Casing edges — smooth
   const edgeColor = isSelected ? "#fcd34d" : (C.roadStroke || "#b45309");
   ctx.strokeStyle = edgeColor;
   ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
-  ctx.lineCap = "butt";
-  ctx.lineJoin = "miter";
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const side of [left, right]) {
     ctx.beginPath();
-    ctx.moveTo(side[0].x, side[0].y);
-    for (const p of side) ctx.lineTo(p.x, p.y);
+    drawSmoothPath(ctx, side);
     ctx.stroke();
   }
   // Rectangular end caps
@@ -435,13 +427,13 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
   ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
   ctx.stroke();
 
-  // Dashed center divider
+  // Dashed center divider — smooth
   ctx.strokeStyle = "#fbbf24";
   ctx.lineWidth = 1.5 / zoom;
+  ctx.lineCap = "round";
   ctx.setLineDash([10/zoom, 6/zoom]);
   ctx.beginPath();
-  ctx.moveTo(obj.points[0].x, obj.points[0].y);
-  for (const p of obj.points) ctx.lineTo(p.x, p.y);
+  drawSmoothPath(ctx, obj.points);
   ctx.stroke();
   ctx.setLineDash([]);
 
