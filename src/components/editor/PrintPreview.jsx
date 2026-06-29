@@ -114,7 +114,7 @@ export default function PrintPreview({ mapData, canvasRef, objects, zoom, pan, o
                 <div class="legend-item"><span class="legend-box" style="background:#ef4444;height:3px;"></span>Mustateel/Muraba (Red)</div>
                 <div class="legend-item"><span class="legend-box" style="background:#eab308;height:2px;"></span>Acre (Yellow)</div>
                 <div class="legend-item"><span class="legend-box" style="background:#3b82f6;height:2px;"></span>Canal (Blue)</div>
-                <div class="legend-item"><span class="legend-box" style="background:#22c55e;height:3px;"></span>Chakbandi (Green)</div>
+                <div class="legend-item" style="display:flex;align-items:center;gap:5px;"><svg width="30" height="10" viewBox="0 0 30 10"><line x1="0" y1="5" x2="30" y2="5" stroke="#22c55e" stroke-width="2"/><line x1="7" y1="1" x2="7" y2="9" stroke="#22c55e" stroke-width="1.5"/><line x1="15" y1="1" x2="15" y2="9" stroke="#22c55e" stroke-width="1.5"/><line x1="23" y1="1" x2="23" y2="9" stroke="#22c55e" stroke-width="1.5"/></svg>Chakbandi (Green)</div>
                 <div class="legend-item"><span class="legend-box" style="background:#06b6d4;height:2px;"></span>Outlet</div>
               </div>
             </div>

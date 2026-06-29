@@ -132,6 +132,10 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
                 <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
               </div>
               <div className="flex items-center justify-between">
+                <label className="text-xs text-slate-600">Show Killa Numbers</label>
+                <Switch checked={local.showKillaNumbers !== false} onCheckedChange={v => commit("showKillaNumbers", v)} className="scale-75" />
+              </div>
+              <div className="flex items-center justify-between">
                 <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
                 <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
               </div>

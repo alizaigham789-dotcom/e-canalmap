@@ -561,12 +561,21 @@ export function drawDamageMarker(ctx, obj, isSelected, zoom) {
 // ============================================================
 // LAYER 2: Chakbandi
 // ============================================================
-export function drawChakbandi(ctx, obj, isSelected, zoom, C) {
+export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false) {
   if (obj.points.length < 2) return;
   const color = C.chakbandiStroke || "#22c55e";
-  if (obj.crossPattern) {
+  if (obj.crossPattern || forceCross) {
     const crossSize = (obj.crossSize || 6) / zoom;
     const spacing = (obj.crossSpacing || 20) / zoom; // denser alignment tracks
+    ctx.strokeStyle = isSelected ? "#86efac" : color;
+    ctx.lineWidth = 1.8 / zoom;
+    // First draw the main line so the chakbandi nishan stays clear
+    ctx.lineWidth = (isSelected ? 3.5 : 3) / zoom;
+    ctx.beginPath();
+    ctx.moveTo(obj.points[0].x, obj.points[0].y);
+    for (const p of obj.points) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    // Then overlay the crosses
     ctx.strokeStyle = isSelected ? "#86efac" : color;
     ctx.lineWidth = 1.8 / zoom;
     for (let i = 0; i < obj.points.length - 1; i++) {

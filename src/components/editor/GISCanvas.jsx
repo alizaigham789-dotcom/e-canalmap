@@ -83,12 +83,12 @@ const GISCanvas = forwardRef(function GISCanvas(
       const kv = killaVisibility || { mustateel: true, muraba: true };
       if (obj.type === "acre") drawAcre(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "mustateel") drawMustateel(ctx, obj, isSelected, zoom, C, obj.showKillaNumbers !== false && kv.mustateel !== false);
-      else if (obj.type === "muraba") drawMuraba(ctx, obj, isSelected, zoom, C, kv.muraba !== false);
+      else if (obj.type === "muraba") drawMuraba(ctx, obj, isSelected, zoom, C, obj.showKillaNumbers !== false && kv.muraba !== false);
       else if (obj.type === "canal") drawCanal(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "khal") drawKhal(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "road") drawRoad(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "outlet") drawOutlet(ctx, obj, isSelected, zoom, C);
-      else if (obj.type === "chakbandi") drawChakbandi(ctx, obj, isSelected, zoom, C);
+      else if (obj.type === "chakbandi") drawChakbandi(ctx, obj, isSelected, zoom, C, true);
       else if (obj.type === "mouza") drawMouza(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "damageMarker") drawDamageMarker(ctx, obj, isSelected, zoom);
     }
