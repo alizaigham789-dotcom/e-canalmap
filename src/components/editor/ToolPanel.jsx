@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Square, RectangleVertical, RectangleHorizontal,
   MousePointer2, Hand, Eraser,
-  RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Move, Waves, AlertTriangle
+  RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Move, Waves, AlertTriangle, Ruler
 } from "lucide-react";
 
 // ---- Custom SVG Icons matching technical tool names ----
@@ -70,6 +70,7 @@ const TOOLS = [
   { id: "road", label: "Road (R)", icon: RoadIcon, group: "draw", color: "text-amber-400" },
   { id: "mouza", label: "Mouza Boundary (U)", icon: MouzaIcon, group: "draw", color: "text-slate-700" },
   { id: "damageMarker", label: "Canal Damage Marker (G)", icon: AlertTriangle, group: "draw", color: "text-red-500" },
+  { id: "measure", label: "Measure Distance (X)", icon: Ruler, group: "draw", color: "text-purple-500" },
   null,
   { id: "eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
 ];

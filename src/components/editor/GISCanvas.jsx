@@ -46,6 +46,12 @@ const GISCanvas = forwardRef(function GISCanvas(
   const [damageDraft, setDamageDraft] = useState(null);
   // Mustateel/muraba ghost preview
   const [ghostPos, setGhostPos] = useState(null);
+  // Measurement tool state
+  const measureStartRef = useRef(null);
+  const [measureDraft, setMeasureDraft] = useState(null); // { start, end }
+  const [measureResult, setMeasureResult] = useState(null); // { ft, m, midScreen }
+  // 1 world unit = 1 foot (DIMENSIONS.ACRE.width = 220ft, etc.)
+  const FT_PER_UNIT = 1;
 
   useImperativeHandle(ref, () => ({ getCanvas: () => canvasRef.current }));
 
@@ -110,6 +116,22 @@ const GISCanvas = forwardRef(function GISCanvas(
       ctx.stroke(); ctx.setLineDash([]);
     }
 
+    // Measurement tool draft line
+    if (measureDraft) {
+      const end = measureDraft.end || snapPos || measureDraft.start;
+      ctx.strokeStyle = "#a855f7"; ctx.lineWidth = 2 / zoom;
+      ctx.lineCap = "round"; ctx.setLineDash([8/zoom, 4/zoom]);
+      ctx.beginPath();
+      ctx.moveTo(measureDraft.start.x, measureDraft.start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke(); ctx.setLineDash([]);
+      // endpoint dots
+      for (const pt of [measureDraft.start, end]) {
+        ctx.fillStyle = "#a855f7";
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, 5/zoom, 0, Math.PI*2); ctx.fill();
+      }
+    }
+
     ctx.restore();
 
     // Ghost preview for mustateel/muraba placement
@@ -153,7 +175,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       ctx.moveTo(sx, sy - 10); ctx.lineTo(sx, sy + 10);
       ctx.stroke();
     }
-  }, [objects, zoom, pan, layers, selectedId, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos]);
+  }, [objects, zoom, pan, layers, selectedId, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measureDraft]);
 
   useEffect(() => {
     const loop = () => { render(); animRef.current = requestAnimationFrame(loop); };
@@ -198,6 +220,10 @@ const GISCanvas = forwardRef(function GISCanvas(
       setGhostPos({ x: snap.x, y: snap.y, w: dimW, h: dimH, blocked: wouldOverlap });
     } else if (ghostPos) {
       setGhostPos(null);
+    }
+    // Live measurement preview — update end point while dragging first point
+    if (activeTool === "measure" && measureStartRef.current && snapPos) {
+      setMeasureDraft({ start: measureStartRef.current, end: snapPos });
     }
     if (isPanning.current || activeTool === "pan") {
       if (isPanning.current) {
@@ -247,6 +273,24 @@ const GISCanvas = forwardRef(function GISCanvas(
     const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
     const snapped = getSnappedWorld(e);
 
+    if (activeTool === "measure") {
+      if (!measureStartRef.current) {
+        // First click — set start
+        measureStartRef.current = { x: worldRaw.x, y: worldRaw.y };
+        setMeasureDraft({ start: { x: worldRaw.x, y: worldRaw.y }, end: null });
+        setMeasureResult(null);
+      } else {
+        // Second click — finalise
+        const start = measureStartRef.current;
+        const distFt = Math.hypot(worldRaw.x - start.x, worldRaw.y - start.y) * FT_PER_UNIT;
+        const distM = distFt * 0.3048;
+        const midScreen = worldToScreen((start.x + worldRaw.x)/2, (start.y + worldRaw.y)/2, pan.x, pan.y, zoom);
+        setMeasureDraft({ start, end: worldRaw });
+        setMeasureResult({ ft: distFt, m: distM, midScreen });
+        measureStartRef.current = null;
+      }
+      return;
+    }
     if (activeTool === "move") {
       const hit = hitTest(worldRaw.x, worldRaw.y, objects);
       if (hit && ["mustateel", "muraba"].includes(hit.type)) {
@@ -343,12 +387,29 @@ const GISCanvas = forwardRef(function GISCanvas(
     onZoomChange(newZoom, { x: newPanX, y: newPanY });
   }, [zoom, pan, onZoomChange]);
 
+  // Reset measure state when tool changes away
+  const prevToolRef = useRef(activeTool);
+  if (prevToolRef.current !== activeTool) {
+    prevToolRef.current = activeTool;
+    if (activeTool !== "measure") {
+      measureStartRef.current = null;
+      // can't call setState here; use effect instead
+    }
+  }
+  useEffect(() => {
+    if (activeTool !== "measure") {
+      measureStartRef.current = null;
+      setMeasureDraft(null);
+      setMeasureResult(null);
+    }
+  }, [activeTool]);
+
   const cursorClass = {
     select: "cursor-default", pan: "cursor-grab", eraser: "cursor-cell",
     canal: "cursor-crosshair", chakbandi: "cursor-crosshair", outlet: "cursor-crosshair",
     khal: "cursor-crosshair", road: "cursor-crosshair", mouza: "cursor-crosshair",
     acre: "cursor-crosshair", mustateel: "cursor-crosshair", muraba: "cursor-crosshair",
-    move: "cursor-move", damageMarker: "cursor-crosshair",
+    move: "cursor-move", damageMarker: "cursor-crosshair", measure: "cursor-crosshair",
   }[activeTool] || "cursor-crosshair";
 
   const editingObj = editingLabel ? objects.find(o => o.id === editingLabel.id) : null;
@@ -366,6 +427,35 @@ const GISCanvas = forwardRef(function GISCanvas(
         onWheel={handleWheel}
         style={{ display: "block" }}
       />
+      {/* Measurement result bubble */}
+      {measureResult && (
+        <div
+          className="absolute z-50 pointer-events-none select-none"
+          style={{ left: measureResult.midScreen.x, top: measureResult.midScreen.y, transform: "translate(-50%, -120%)" }}
+        >
+          <div className="bg-purple-700 text-white rounded-xl shadow-2xl px-3 py-2 text-center border border-purple-400">
+            <div className="text-xs font-bold font-mono">{measureResult.ft.toFixed(1)} ft</div>
+            <div className="text-xs font-mono opacity-80">{measureResult.m.toFixed(1)} m</div>
+            <div className="text-[9px] opacity-60 mt-0.5">{(measureResult.ft / 220).toFixed(2)} killas</div>
+          </div>
+          <div className="w-0 h-0 mx-auto border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-purple-700" />
+        </div>
+      )}
+      {/* Measure in-progress hint */}
+      {activeTool === "measure" && measureStartRef.current && !measureResult && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+          <div className="bg-purple-800/90 text-white text-xs rounded-lg px-3 py-1.5 shadow border border-purple-500">
+            Click to set end point
+          </div>
+        </div>
+      )}
+      {activeTool === "measure" && !measureStartRef.current && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+          <div className="bg-purple-800/90 text-white text-xs rounded-lg px-3 py-1.5 shadow border border-purple-500">
+            Click start point to measure
+          </div>
+        </div>
+      )}
       {editingLabel && labelPos && (
         <input
           autoFocus
