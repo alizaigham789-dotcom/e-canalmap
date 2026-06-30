@@ -83,9 +83,42 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
           if (tool === null) return <Separator key={`sep-${i}`} className="bg-slate-200 my-0.5" />;
           const Icon = tool.icon;
           const isActive = activeTool === tool.id;
-          const activeClass = tool.id === "chakbandi"
-            ? "bg-green-700 text-white hover:bg-green-600 shadow-lg shadow-green-500/20"
-            : "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20";
+          const isChakbandi = tool.id === "chakbandi";
+
+          if (isChakbandi) {
+            return (
+              <Tooltip key={tool.id}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onToolChange(tool.id)}
+                    className={`
+                      relative w-[72px] h-[72px] rounded-2xl transition-all duration-200 flex flex-col items-center justify-center gap-1.5
+                      border-2 shadow-xl overflow-hidden group
+                      ${isActive
+                        ? "bg-gradient-to-br from-green-500 to-emerald-700 border-green-400 text-white shadow-green-500/40"
+                        : "bg-gradient-to-br from-green-50 to-emerald-100 border-green-300 text-green-700 hover:from-green-500 hover:to-emerald-700 hover:text-white hover:border-green-400 hover:shadow-green-500/40"
+                      }
+                    `}
+                    style={{ minWidth: 72, minHeight: 72 }}
+                  >
+                    {/* Animated background ring on active */}
+                    {isActive && (
+                      <span className="absolute inset-0 rounded-2xl bg-white/10 animate-pulse pointer-events-none" />
+                    )}
+                    <Icon className="w-8 h-8 drop-shadow-sm" />
+                    <span className={`text-[9px] font-bold leading-none tracking-wide uppercase ${isActive ? "text-green-100" : "text-green-600 group-hover:text-green-100"}`}>
+                      Chakbandi
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="bg-green-900 text-white text-xs border-green-700 font-semibold">
+                  {tool.label}
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+
+          const activeClass = "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20";
           return (
             <Tooltip key={tool.id}>
               <TooltipTrigger asChild>
