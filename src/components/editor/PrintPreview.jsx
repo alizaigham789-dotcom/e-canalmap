@@ -144,16 +144,17 @@ function svgAcre(obj, C, idx) {
 </g>`;
 }
 
-function svgChakbandi(obj, C, idx) {
+function svgChakbandi(obj, C, idx, viewW) {
   if (!obj.points || obj.points.length < 2) return "";
-  const color = "#000000";
-  const crossSize = 6;
-  const spacing = 22;
+  const color = C.chakbandiStroke || "#000000";
+  // crossSize and spacing are in world units — same as canvas draws them
+  // Canvas uses: crossSize = (obj.crossSize||6)/zoom, spacing = (obj.crossSpacing||20)/zoom
+  // In SVG world coords, world units are 1:1, so we match canvas world-unit values
+  const crossSize = obj.crossSize || 6;
+  const spacing = obj.crossSpacing || 20;
 
-  // Straight polyline segments — no curves, exact like editor
-  const pts = obj.points.map(p => `${p.x},${p.y}`).join(" ");
+  const pts = obj.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 
-  // Rotated X crosses per segment
   let crosses = "";
   for (let i = 0; i < obj.points.length - 1; i++) {
     const a = obj.points[i], b = obj.points[i+1];
@@ -165,6 +166,7 @@ function svgChakbandi(obj, C, idx) {
       const t = s / steps;
       const cx = a.x + (b.x - a.x) * t;
       const cy = a.y + (b.y - a.y) * t;
+      // Exact same formula as GISRenderer.jsx drawChakbandi
       const x1 = (cx + (-crossSize*cos - -crossSize*sin)).toFixed(1);
       const y1 = (cy + (-crossSize*sin + -crossSize*cos)).toFixed(1);
       const x2 = (cx + ( crossSize*cos -  crossSize*sin)).toFixed(1);
@@ -173,19 +175,18 @@ function svgChakbandi(obj, C, idx) {
       const y3 = (cy + ( crossSize*sin + -crossSize*cos)).toFixed(1);
       const x4 = (cx + (-crossSize*cos -  crossSize*sin)).toFixed(1);
       const y4 = (cy + (-crossSize*sin +  crossSize*cos)).toFixed(1);
-      crosses += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`;
-      crosses += `<line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`;
+      crosses += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="1.8" stroke-linecap="round"/>`;
+      crosses += `<line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" stroke="${color}" stroke-width="1.8" stroke-linecap="round"/>`;
     }
   }
 
-  const label = obj.name ? obj.name : (obj.mogaNumber ? `Moga ${obj.mogaNumber}` : "");
+  const label = obj.name || "";
   const midPt = obj.points[Math.floor(obj.points.length/2)];
 
-  return `
-<g key="cbnd_${idx}">
-  <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="miter"/>
+  return `<g>
+  <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="miter"/>
   ${crosses}
-  ${label && midPt ? `<text x="${midPt.x}" y="${midPt.y - 10}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="14" fill="${color}">${label}</text>` : ""}
+  ${label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${color}">${label}</text>` : ""}
 </g>`;
 }
 
@@ -276,7 +277,7 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}) {
       case "mustateel": svgParts.push(svgMustateel(obj, C, idx, showKillaMustateel)); break;
       case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba)); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
-      case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx)); break;
+      case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW)); break;
       case "canal":     svgParts.push(svgCanal(obj, C, idx)); break;
       case "khal":      svgParts.push(svgKhal(obj, C, idx)); break;
       case "road":      svgParts.push(svgRoad(obj, C, idx)); break;
@@ -332,8 +333,9 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 </svg>`
     : null;
 
-  const svgDataUrl = svgString
-    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`
+  // Inline SVG markup for preview (preserves exact vector scaling)
+  const inlineSvgMarkup = svgData
+    ? `<rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>${svgData.svgBody}`
     : null;
 
   // ─── VECTOR PRINT ─────────────────────────────────────────────────────────────
@@ -378,7 +380,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       </div>
       <div class="map-wrap">
         <svg xmlns="http://www.w3.org/2000/svg"
-             viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}">
+             viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
+             style="width:100%;height:auto;display:block;">
           <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
           ${svgData.svgBody}
         </svg>
@@ -493,12 +496,13 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               </div>
             </div>
 
-            {/* SVG Map — pure vector */}
-            {svgDataUrl ? (
-              <img
-                src={svgDataUrl}
-                alt="Map"
+            {/* SVG Map — pure inline vector (no img tag, preserves cross sizes exactly) */}
+            {inlineSvgMarkup ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox={`${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}`}
                 style={{ width:"100%", display:"block" }}
+                dangerouslySetInnerHTML={{ __html: inlineSvgMarkup }}
               />
             ) : (
               <div style={{ padding:40, textAlign:"center", color:"#999" }}>No objects to print</div>
