@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Printer, ZoomIn, ZoomOut } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS } from "@/lib/gisEngine";
+import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath } from "@/lib/gisEngine";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
@@ -17,7 +17,7 @@ function getObjectsBounds(objects) {
     if (["acre", "mustateel", "muraba"].includes(o.type)) {
       minX = Math.min(minX, o.x); minY = Math.min(minY, o.y);
       maxX = Math.max(maxX, o.x + o.w); maxY = Math.max(maxY, o.y + o.h);
-    } else if (o.points && o.points.length > 0) {
+    } else if (o.points?.length > 0) {
       for (const p of o.points) {
         minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
         maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
@@ -31,278 +31,228 @@ function getObjectsBounds(objects) {
   return { minX, minY, maxX, maxY };
 }
 
-// ─── PRINT DRAW FUNCTIONS ──────────────────────────────────────────────────
-// All lineWidth values are in SCREEN PIXELS (the canvas is already scaled via ctx.scale).
-// Do NOT divide by zoom — we render at a fixed print scale.
+// ─── SVG PATH HELPERS ─────────────────────────────────────────────────────────
+function pointsToSmoothPath(points, tension = 0.4) {
+  if (!points || points.length < 2) return "";
+  if (points.length === 2) return `M${points[0].x},${points[0].y} L${points[1].x},${points[1].y}`;
+  let d = `M${points[0].x},${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(i - 1, 0)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(i + 2, points.length - 1)];
+    const cp1x = p1.x + (p2.x - p0.x) * tension / 2;
+    const cp1y = p1.y + (p2.y - p0.y) * tension / 2;
+    const cp2x = p2.x - (p3.x - p1.x) * tension / 2;
+    const cp2y = p2.y - (p3.y - p1.y) * tension / 2;
+    d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+  }
+  return d;
+}
 
-function printMustateel(ctx, obj, C, ps) {
-  const borderPx = ps.mustateelThickness;
-  const gridOpacity = ps.killaGridOpacity;
-  const gridPx = ps.killaGridWidth;
+function parallelSmoothClosedPath(pts, offset) {
+  if (!pts || pts.length < 2) return "";
+  const left = getParallelPolyline(pts, -offset);
+  const right = getParallelPolyline(pts, offset);
+  const rightRev = [...right].reverse();
+  const leftPath = pointsToSmoothPath(left);
+  const rightRevPart = pointsToSmoothPath(rightRev).replace(/^M[\d.,\s-]+/, "");
+  return `${leftPath} L${rightRev[0].x},${rightRev[0].y} ${rightRevPart} Z`;
+}
 
-  // Fill
-  ctx.fillStyle = obj.fillColor || C.mustateelFill || "rgba(245,158,11,0.07)";
-  ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
-
-  // Killa internal grid — BEFORE outer border so border paints over grid edges
-  const ksColor = (obj.killaStyle || {}).strokeColor || C.mustateelStroke || "#ef4444";
-  const rgb = hexToRgbStr(ksColor);
-  ctx.strokeStyle = `rgba(${rgb},${gridOpacity})`;
-  ctx.lineWidth = gridPx;
-  ctx.setLineDash([]);
+// ─── SVG OBJECT RENDERERS ─────────────────────────────────────────────────────
+function svgMustateel(obj, C, idx) {
   const cellW = obj.w / 2, cellH = obj.h / 5;
-  ctx.beginPath();
-  // vertical centre line
-  ctx.moveTo(obj.x + cellW, obj.y); ctx.lineTo(obj.x + cellW, obj.y + obj.h);
-  // horizontal dividers (4 inner lines = 5 rows)
+  const strokeColor = C.mustateelStroke || "#ef4444";
+  const fillColor = obj.fillColor || C.mustateelFill || "rgba(245,158,11,0.10)";
+  const fontSize = Math.min(obj.w * 0.30, obj.h * 0.30);
+  const killaGrid = getMustateeelKillaGrid();
+
+  // Grid lines
+  let gridLines = "";
+  // vertical centre
+  gridLines += `<line x1="${obj.x + cellW}" y1="${obj.y}" x2="${obj.x + cellW}" y2="${obj.y + obj.h}" stroke="${strokeColor}" stroke-opacity="0.18" stroke-width="0.5"/>`;
   for (let r = 1; r < 5; r++) {
-    ctx.moveTo(obj.x, obj.y + r * cellH); ctx.lineTo(obj.x + obj.w, obj.y + r * cellH);
+    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-opacity="0.18" stroke-width="0.5"/>`;
   }
-  ctx.stroke();
 
-  // Outer boundary — thick red
-  ctx.strokeStyle = C.mustateelStroke || "#ef4444";
-  ctx.lineWidth = borderPx;
-  ctx.lineJoin = "miter";
-  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+  const label = obj.label || "";
+  const labelY = obj.y + obj.h / 2;
 
-  // Center survey number label
-  if (obj.label) {
-    ctx.save();
-    ctx.beginPath(); ctx.rect(obj.x + 1, obj.y + 1, obj.w - 2, obj.h - 2); ctx.clip();
-    ctx.fillStyle = C.labelColor || "#1e293b";
-    const fSize = Math.min(obj.w * 0.36, obj.h * 0.36);
-    ctx.font = `900 ${fSize}px Rajdhani, Arial, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(obj.label, obj.x + obj.w / 2, obj.y + obj.h / 2);
-    ctx.restore();
-  }
+  return `
+<g key="must_${idx}">
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="${fillColor}" />
+  ${gridLines}
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="3" stroke-linejoin="miter"/>
+  ${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}
+</g>`;
 }
 
-function printMuraba(ctx, obj, C, ps) {
-  const borderPx = ps.mustateelThickness + 1.5;
-  const gridOpacity = ps.killaGridOpacity;
-  const gridPx = ps.killaGridWidth;
-
-  ctx.fillStyle = obj.fillColor || C.murabaFill || "rgba(249,115,22,0.06)";
-  ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
-
-  const ksColor = (obj.killaStyle || {}).strokeColor || C.murabaStroke || "#ef4444";
-  const rgb = hexToRgbStr(ksColor);
-  ctx.strokeStyle = `rgba(${rgb},${gridOpacity})`;
-  ctx.lineWidth = gridPx;
-  ctx.setLineDash([]);
+function svgMuraba(obj, C, idx) {
   const cellW = obj.w / 5, cellH = obj.h / 5;
-  ctx.beginPath();
-  for (let c = 1; c < 5; c++) { ctx.moveTo(obj.x + c * cellW, obj.y); ctx.lineTo(obj.x + c * cellW, obj.y + obj.h); }
-  for (let r = 1; r < 5; r++) { ctx.moveTo(obj.x, obj.y + r * cellH); ctx.lineTo(obj.x + obj.w, obj.y + r * cellH); }
-  ctx.stroke();
+  const strokeColor = C.murabaStroke || "#ef4444";
+  const fillColor = obj.fillColor || C.murabaFill || "rgba(249,115,22,0.08)";
+  const fontSize = Math.min(obj.w * 0.22, obj.h * 0.22);
 
-  ctx.strokeStyle = C.murabaStroke || "#ef4444";
-  ctx.lineWidth = borderPx;
-  ctx.lineJoin = "miter";
-  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
-
-  if (obj.label) {
-    ctx.save();
-    ctx.beginPath(); ctx.rect(obj.x + 1, obj.y + 1, obj.w - 2, obj.h - 2); ctx.clip();
-    ctx.fillStyle = C.labelColor || "#1e293b";
-    const fSize = Math.min(obj.w * 0.28, obj.h * 0.28);
-    ctx.font = `900 ${fSize}px Rajdhani, Arial, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(obj.label, obj.x + obj.w / 2, obj.y + obj.h / 2);
-    ctx.restore();
+  let gridLines = "";
+  for (let c = 1; c < 5; c++) {
+    gridLines += `<line x1="${obj.x + c*cellW}" y1="${obj.y}" x2="${obj.x + c*cellW}" y2="${obj.y + obj.h}" stroke="${strokeColor}" stroke-opacity="0.15" stroke-width="0.5"/>`;
   }
+  for (let r = 1; r < 5; r++) {
+    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-opacity="0.15" stroke-width="0.5"/>`;
+  }
+
+  const label = obj.label || "";
+  return `
+<g key="murb_${idx}">
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="${fillColor}" />
+  ${gridLines}
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="4" stroke-linejoin="miter"/>
+  ${label ? `<text x="${obj.x + obj.w/2}" y="${obj.y + obj.h/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}
+</g>`;
 }
 
-function printChakbandi(ctx, obj, C, ps) {
-  if (!obj.points || obj.points.length < 2) return;
+function svgAcre(obj, C, idx) {
+  const fillColor = obj.fillColor || C.acreFill || "rgba(234,179,8,0.08)";
+  const strokeColor = C.acreStroke || "#eab308";
+  const fontSize = Math.min(obj.w, obj.h) * 0.22;
+  return `
+<g key="acre_${idx}">
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1"/>
+  ${obj.label ? `<text x="${obj.x + obj.w/2}" y="${obj.y + obj.h/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${obj.label}</text>` : ""}
+</g>`;
+}
+
+function svgChakbandi(obj, C, idx) {
+  if (!obj.points || obj.points.length < 2) return "";
   const color = C.chakbandiStroke || "#22c55e";
-  const linePx = ps.chakbandiThickness;
-  const crossPx = linePx * 3.5;   // cross arm half-length in pixels
-  const spacingPx = crossPx * 3;  // spacing between crosses
+  const mainPath = pointsToSmoothPath(obj.points);
+  const crossSize = 8;
+  const spacing = 40;
 
-  // Main green line
-  ctx.strokeStyle = color;
-  ctx.lineWidth = linePx;
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.moveTo(obj.points[0].x, obj.points[0].y);
-  for (const p of obj.points) ctx.lineTo(p.x, p.y);
-  ctx.stroke();
-
-  // Crosses — always in print
-  ctx.strokeStyle = color;
-  ctx.lineWidth = linePx * 0.7;
-  ctx.lineCap = "round";
+  // Build crosses along each segment
+  let crosses = "";
   for (let i = 0; i < obj.points.length - 1; i++) {
-    const a = obj.points[i], b = obj.points[i + 1];
+    const a = obj.points[i], b = obj.points[i+1];
     const segLen = Math.hypot(b.x - a.x, b.y - a.y);
-    const steps = Math.max(1, Math.floor(segLen / spacingPx));
+    const steps = Math.max(1, Math.floor(segLen / spacing));
     for (let s = 0; s <= steps; s++) {
       const t = s / steps;
       const cx = a.x + (b.x - a.x) * t;
       const cy = a.y + (b.y - a.y) * t;
-      ctx.beginPath();
-      ctx.moveTo(cx - crossPx, cy - crossPx); ctx.lineTo(cx + crossPx, cy + crossPx);
-      ctx.moveTo(cx + crossPx, cy - crossPx); ctx.lineTo(cx - crossPx, cy + crossPx);
-      ctx.stroke();
+      crosses += `<line x1="${cx-crossSize}" y1="${cy-crossSize}" x2="${cx+crossSize}" y2="${cy+crossSize}" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>`;
+      crosses += `<line x1="${cx+crossSize}" y1="${cy-crossSize}" x2="${cx-crossSize}" y2="${cy+crossSize}" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>`;
     }
   }
+
+  const label = obj.name || obj.mogaNumber ? `Moga ${obj.mogaNumber || ""}` : "";
+  const midPt = obj.points[Math.floor(obj.points.length/2)];
+
+  return `
+<g key="cbnd_${idx}">
+  <path d="${mainPath}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  ${crosses}
+  ${label && midPt ? `<text x="${midPt.x}" y="${midPt.y - 10}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="14" fill="${color}">${label}</text>` : ""}
+</g>`;
 }
 
-function printAcre(ctx, obj, C) {
-  ctx.fillStyle = obj.fillColor || C.acreFill || "rgba(234,179,8,0.07)";
-  ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
-  ctx.strokeStyle = C.acreStroke || "#eab308";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
-  if (obj.label) {
-    ctx.fillStyle = C.labelColor || "#000";
-    const fSize = Math.min(obj.w, obj.h) * 0.22;
-    ctx.font = `bold ${fSize}px Rajdhani, Arial, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(obj.label, obj.x + obj.w / 2, obj.y + obj.h / 2);
-  }
-}
-
-function printCanal(ctx, obj, C) {
-  if (!obj.points || obj.points.length < 2) return;
+function svgCanal(obj, C, idx) {
+  if (!obj.points || obj.points.length < 2) return "";
   const halfW = (obj.width || DIMENSIONS.CANAL_WIDTH) / 2;
+  const fillPath = parallelSmoothClosedPath(obj.points, halfW);
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
-  ctx.fillStyle = C.canalFill || "rgba(30,144,255,0.20)";
-  ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y);
-  for (const p of left) ctx.lineTo(p.x, p.y);
-  ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
-  for (let i = right.length-1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = C.canalStroke || "#0284c7";
-  ctx.lineWidth = 2;
-  ctx.lineCap = "butt"; ctx.lineJoin = "miter";
-  for (const side of [left, right]) {
-    ctx.beginPath(); ctx.moveTo(side[0].x, side[0].y);
-    for (const p of side) ctx.lineTo(p.x, p.y); ctx.stroke();
-  }
-  ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y); ctx.lineTo(right[0].x, right[0].y);
-  ctx.moveTo(left[left.length-1].x, left[left.length-1].y); ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
-  ctx.stroke();
-  if (obj.name) {
-    const mid = Math.floor(obj.points.length / 2);
-    const p = obj.points[mid], p2 = obj.points[Math.min(mid+1, obj.points.length-1)];
-    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.atan2(p2.y-p.y, p2.x-p.x));
-    ctx.fillStyle = "#dc2626"; ctx.font = "bold 14px Rajdhani, Arial, sans-serif";
-    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(obj.name, 0, 0); ctx.restore();
-  }
+  const fillColor = C.canalFill || "rgba(30,144,255,0.25)";
+  const strokeColor = C.canalStroke || "#0284c7";
+  return `
+<g key="canal_${idx}">
+  <path d="${fillPath}" fill="${fillColor}" />
+  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  ${obj.name ? `<text x="${obj.points[Math.floor(obj.points.length/2)].x}" y="${obj.points[Math.floor(obj.points.length/2)].y}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="14" fill="#dc2626">${obj.name}</text>` : ""}
+</g>`;
 }
 
-function printKhal(ctx, obj, C) {
-  if (!obj.points || obj.points.length < 2) return;
+function svgKhal(obj, C, idx) {
+  if (!obj.points || obj.points.length < 2) return "";
   const halfW = (obj.width || DIMENSIONS.KHAL_WIDTH) / 2;
+  const fillPath = parallelSmoothClosedPath(obj.points, halfW);
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
   const color = C.khalStroke || "#2563eb";
-  ctx.fillStyle = `${color}22`;
-  ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y);
-  for (const p of left) ctx.lineTo(p.x, p.y);
-  ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
-  for (let i = right.length-1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.lineCap = "butt"; ctx.lineJoin = "miter";
-  for (const side of [left, right]) {
-    ctx.beginPath(); ctx.moveTo(side[0].x, side[0].y);
-    for (const p of side) ctx.lineTo(p.x, p.y); ctx.stroke();
-  }
+  return `
+<g key="khal_${idx}">
+  <path d="${fillPath}" fill="${color}22" />
+  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>`;
 }
 
-function printRoad(ctx, obj, C) {
-  if (!obj.points || obj.points.length < 2) return;
+function svgRoad(obj, C, idx) {
+  if (!obj.points || obj.points.length < 2) return "";
   const halfW = (obj.width || DIMENSIONS.ROAD_WIDTH) / 2;
+  const fillPath = parallelSmoothClosedPath(obj.points, halfW);
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
-  ctx.fillStyle = "#3a3a3a";
-  ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y);
-  for (const p of left) ctx.lineTo(p.x, p.y);
-  ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
-  for (let i = right.length-1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = C.roadStroke || "#b45309"; ctx.lineWidth = 2;
-  ctx.lineCap = "butt"; ctx.lineJoin = "miter";
-  for (const side of [left, right]) {
-    ctx.beginPath(); ctx.moveTo(side[0].x, side[0].y);
-    for (const p of side) ctx.lineTo(p.x, p.y); ctx.stroke();
-  }
+  const color = C.roadStroke || "#b45309";
+  const centerDash = pointsToSmoothPath(obj.points);
+  return `
+<g key="road_${idx}">
+  <path d="${fillPath}" fill="#3a3a3a" />
+  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${centerDash}" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="10,6" stroke-linecap="round"/>
+</g>`;
 }
 
-function printMouza(ctx, obj, C) {
-  if (!obj.points || obj.points.length < 2) return;
-  ctx.strokeStyle = C.mouzaStroke || "#000"; ctx.lineWidth = 1;
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath(); ctx.moveTo(obj.points[0].x, obj.points[0].y);
-  for (const p of obj.points) ctx.lineTo(p.x, p.y);
-  ctx.stroke(); ctx.setLineDash([]);
+function svgMouza(obj, C, idx) {
+  if (!obj.points || obj.points.length < 2) return "";
+  const pts = obj.points.map(p => `${p.x},${p.y}`).join(" ");
+  return `<polyline key="mouza_${idx}" points="${pts}" fill="none" stroke="${C.mouzaStroke || '#000'}" stroke-width="1" stroke-dasharray="4,4"/>`;
 }
 
-// ─── MAIN RENDER ──────────────────────────────────────────────────────────
-function renderObjectsToCanvas(objects, colorSettings, printSettings) {
+// ─── MAIN SVG GENERATOR ───────────────────────────────────────────────────────
+function buildSVG(objects, colorSettings, filterMoga) {
+  const C = colorSettings || {};
   const bounds = getObjectsBounds(objects);
   if (!bounds) return null;
 
-  // printScale: how many canvas pixels per world unit
   const pad = 80;
-  const worldW = bounds.maxX - bounds.minX + pad * 2;
-  const worldH = bounds.maxY - bounds.minY + pad * 2;
+  const viewX = bounds.minX - pad;
+  const viewY = bounds.minY - pad;
+  const viewW = (bounds.maxX - bounds.minX) + pad * 2;
+  const viewH = (bounds.maxY - bounds.minY) + pad * 2;
 
-  // Target ~2400px wide for crisp A4 print at 300dpi
-  const printScale = Math.min(4, Math.max(0.5, 2400 / worldW));
+  // Filter objects by moga if needed
+  const filtered = filterMoga
+    ? objects.filter(o => {
+        if (o.type === "chakbandi") return o.mogaNumber === filterMoga;
+        if (o.type === "mustateel") return o.mogaNumber === filterMoga || !o.mogaNumber;
+        return true; // canals, roads, mouza always shown
+      })
+    : objects;
 
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.ceil(worldW * printScale);
-  canvas.height = Math.ceil(worldH * printScale);
-  const ctx = canvas.getContext("2d");
+  const sorted = [...filtered].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Scale so world coords map directly to pixels
-  ctx.save();
-  ctx.translate((pad - bounds.minX) * printScale, (pad - bounds.minY) * printScale);
-  ctx.scale(printScale, printScale);
-
-  const C = colorSettings || {};
-  const ps = {
-    mustateelThickness: (printSettings?.mustateelThickness || 3) / printScale,  // convert slider px → world units
-    chakbandiThickness: (printSettings?.chakbandiThickness || 2) / printScale,
-    killaGridOpacity: printSettings?.killaGridOpacity || 0.55,
-    killaGridWidth: (printSettings?.killaGridWidth || 0.8) / printScale,
-  };
-
-  const sorted = [...objects].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
-
-  for (const obj of sorted) {
+  let svgParts = [];
+  sorted.forEach((obj, idx) => {
     switch (obj.type) {
-      case "acre":         printAcre(ctx, obj, C); break;
-      case "mustateel":    printMustateel(ctx, obj, C, ps); break;
-      case "muraba":       printMuraba(ctx, obj, C, ps); break;
-      case "canal":        printCanal(ctx, obj, C); break;
-      case "khal":         printKhal(ctx, obj, C); break;
-      case "road":         printRoad(ctx, obj, C); break;
-      case "chakbandi":    printChakbandi(ctx, obj, C, ps); break;
-      case "mouza":        printMouza(ctx, obj, C); break;
+      case "mustateel": svgParts.push(svgMustateel(obj, C, idx)); break;
+      case "muraba":    svgParts.push(svgMuraba(obj, C, idx)); break;
+      case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
+      case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx)); break;
+      case "canal":     svgParts.push(svgCanal(obj, C, idx)); break;
+      case "khal":      svgParts.push(svgKhal(obj, C, idx)); break;
+      case "road":      svgParts.push(svgRoad(obj, C, idx)); break;
+      case "mouza":     svgParts.push(svgMouza(obj, C, idx)); break;
       default: break;
     }
-  }
+  });
 
-  ctx.restore();
-  return canvas;
+  return { svgBody: svgParts.join("\n"), viewX, viewY, viewW, viewH };
 }
 
-// ─── SLIDER HELPER ─────────────────────────────────────────────────────────
+// ─── SLIDER HELPER ─────────────────────────────────────────────────────────────
 function SettingSlider({ label, value, min, max, step, onChange, unit = "" }) {
   return (
     <div className="flex items-center gap-2">
@@ -317,52 +267,71 @@ function SettingSlider({ label, value, min, max, step, onChange, unit = "" }) {
   );
 }
 
-// ─── COMPONENT ─────────────────────────────────────────────────────────────
-export default function PrintPreview({ mapData, objects, colorSettings, onClose }) {
+// ─── COMPONENT ─────────────────────────────────────────────────────────────────
+export default function PrintPreview({ mapData, objects, colorSettings, onClose, selectedMogaFilter }) {
   const [scale, setScale] = useState(100);
-  const [printSettings, setPrintSettings] = useState({
-    mustateelThickness: 3,
-    chakbandiThickness: 2,
-    killaGridOpacity: 0.55,
-    killaGridWidth: 0.8,
-  });
+  const [mogaFilter, setMogaFilter] = useState(selectedMogaFilter || "");
 
-  const updatePS = (key, val) => setPrintSettings(prev => ({ ...prev, [key]: val }));
+  // Extract all mogas from objects
+  const availableMogas = useMemo(() => {
+    const s = new Set();
+    for (const o of objects) {
+      if ((o.type === "chakbandi" || o.type === "mustateel") && o.mogaNumber) s.add(o.mogaNumber);
+    }
+    return [...s].sort((a, b) => parseInt(a) - parseInt(b));
+  }, [objects]);
 
-  const printCanvas = useMemo(
-    () => renderObjectsToCanvas(objects, colorSettings, printSettings),
-    [objects, colorSettings, printSettings]
+  const svgData = useMemo(
+    () => buildSVG(objects, colorSettings, mogaFilter || null),
+    [objects, colorSettings, mogaFilter]
   );
 
-  const dataUrl = printCanvas ? printCanvas.toDataURL("image/png") : null;
+  const svgString = svgData
+    ? `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
+     width="${svgData.viewW}" height="${svgData.viewH}">
+  <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
+  ${svgData.svgBody}
+</svg>`
+    : null;
 
+  const svgDataUrl = svgString
+    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`
+    : null;
+
+  // ─── VECTOR PRINT ─────────────────────────────────────────────────────────────
   const handlePrint = () => {
-    if (!printCanvas) return;
-    const imgDataUrl = printCanvas.toDataURL("image/png");
+    if (!svgData) return;
+    const title = `${mapData?.title || "Chakbandi Map"}${mogaFilter ? ` — Moga ${mogaFilter}` : ""}`;
+
     const win = window.open("", "_blank");
     if (!win) return;
     win.document.write(`<!DOCTYPE html><html><head>
-      <title>${mapData?.title || "Chakbandi Map"} - Print</title>
+      <title>${title}</title>
       <style>
         @page { margin: 8mm; size: A4 landscape; }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { background:#fff; font-family: Arial, sans-serif; }
-        .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between; }
+        body { background:#fff; font-family: Rajdhani, Arial, sans-serif; }
+        .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:flex-start; }
         .title { font-size:18px; font-weight:bold; text-transform:uppercase; letter-spacing:2px; }
-        .map-img { max-width:100%; height:auto; border:1px solid #999; display:block; }
+        .map-wrap { width:100%; }
+        .map-wrap svg { width:100%; height:auto; display:block; }
         .footer { border-top:1px solid #aaa; margin-top:6px; padding-top:5px; display:flex; justify-content:space-between; font-size:9px; color:#555; }
         .legend { display:flex; gap:12px; flex-wrap:wrap; }
         .li { display:flex; align-items:center; gap:4px; font-size:9px; }
         .lb { display:inline-block; width:20px; height:3px; border-radius:1px; }
+        @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
       </style>
     </head><body>
       <div class="header">
         <div>
-          <div class="title">CHAKBANDI GIS — ${mapData?.title || "Cadastral Map"}</div>
+          <div class="title">CHAKBANDI GIS — ${title}</div>
           <div style="font-size:10px;color:#444;margin-top:2px;">
             ${mapData?.village ? `Village: <b>${mapData.village}</b>` : ""}
             ${mapData?.tehsil ? ` | Sub Division: <b>${mapData.tehsil}</b>` : ""}
             ${mapData?.district ? ` | Division: <b>${mapData.district}</b>` : ""}
+            ${mogaFilter ? ` | <b>Moga ${mogaFilter}</b>` : ""}
           </div>
         </div>
         <div style="font-size:10px;color:#555;text-align:right;">
@@ -371,7 +340,13 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose 
           Parcels: ${mapData?.total_parcels || 0}
         </div>
       </div>
-      <img class="map-img" src="${imgDataUrl}" />
+      <div class="map-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}">
+          <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
+          ${svgData.svgBody}
+        </svg>
+      </div>
       <div class="footer">
         <div class="legend">
           <div class="li"><span class="lb" style="background:#ef4444"></span>Mustateel/Muraba</div>
@@ -380,11 +355,23 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose 
           <div class="li"><span class="lb" style="background:#22c55e"></span>Chakbandi</div>
           <div class="li"><span class="lb" style="background:#06b6d4"></span>Outlet</div>
         </div>
-        <div>Survey-grade Cadastral | Chakbandi GIS | 1 Killa = 220×198 ft</div>
+        <div>Vector SVG | Chakbandi GIS | 1 Killa = 220×198 ft</div>
       </div>
     </body></html>`);
     win.document.close();
     win.onload = () => win.print();
+  };
+
+  // ─── SVG DOWNLOAD ────────────────────────────────────────────────────────────
+  const handleDownloadSVG = () => {
+    if (!svgString) return;
+    const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${mapData?.title || "map"}${mogaFilter ? `_moga_${mogaFilter}` : ""}.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -395,10 +382,11 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose 
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-700">
           <div className="flex items-center gap-3">
             <Printer className="w-4 h-4 text-blue-400" />
-            <span className="text-sm font-bold text-white font-heading tracking-wider">PRINT PREVIEW</span>
+            <span className="text-sm font-bold text-white font-heading tracking-wider">VECTOR PRINT PREVIEW</span>
             <span className="text-xs text-slate-500">{mapData?.title}</span>
           </div>
           <div className="flex items-center gap-2">
+            {/* Zoom */}
             <div className="flex items-center gap-1 bg-slate-800 rounded-lg px-2 py-1">
               <Button variant="ghost" size="icon" className="w-6 h-6 text-slate-400 hover:text-white"
                 onClick={() => setScale(s => Math.max(25, s - 10))}><ZoomOut className="w-3 h-3" /></Button>
@@ -406,8 +394,15 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose 
               <Button variant="ghost" size="icon" className="w-6 h-6 text-slate-400 hover:text-white"
                 onClick={() => setScale(s => Math.min(200, s + 10))}><ZoomIn className="w-3 h-3" /></Button>
             </div>
+            {/* SVG Download */}
+            <Button size="sm" variant="outline"
+              className="h-8 border-slate-600 text-slate-300 hover:text-white hover:bg-slate-700 text-xs gap-1"
+              onClick={handleDownloadSVG}>
+              <FileText className="w-3.5 h-3.5" /> SVG
+            </Button>
+            {/* Print */}
             <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-500 text-white text-xs gap-1" onClick={handlePrint}>
-              <Printer className="w-3.5 h-3.5" /> Print / Save PDF
+              <Printer className="w-3.5 h-3.5" /> Print / PDF
             </Button>
             <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-white" onClick={onClose}>
               <X className="w-4 h-4" />
@@ -415,23 +410,40 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose 
           </div>
         </div>
 
-        {/* Settings */}
-        <div className="flex items-center gap-5 px-5 py-2 bg-slate-900 border-b border-slate-700 flex-wrap">
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono shrink-0">Print Settings</span>
-          <SettingSlider label="Mustateel Border" value={printSettings.mustateelThickness} min={1} max={10} step={0.5} onChange={v => updatePS("mustateelThickness", v)} unit="px" />
-          <SettingSlider label="Chakbandi Line" value={printSettings.chakbandiThickness} min={0.5} max={8} step={0.5} onChange={v => updatePS("chakbandiThickness", v)} unit="px" />
-          <SettingSlider label="Killa Grid" value={Math.round(printSettings.killaGridOpacity * 100)} min={10} max={100} step={5} onChange={v => updatePS("killaGridOpacity", v / 100)} unit="%" />
-          <SettingSlider label="Killa Width" value={printSettings.killaGridWidth} min={0.2} max={3} step={0.2} onChange={v => updatePS("killaGridWidth", v)} unit="px" />
-          <span className="text-[9px] text-slate-500 ml-auto">Killa numbers always hidden in print</span>
+        {/* Moga filter bar */}
+        <div className="flex items-center gap-3 px-5 py-2 bg-slate-900 border-b border-slate-700 flex-wrap">
+          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono shrink-0">Print Mode</span>
+          <button
+            onClick={() => setMogaFilter("")}
+            className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${!mogaFilter ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}
+          >
+            Full Map
+          </button>
+          {availableMogas.map(m => (
+            <button key={m}
+              onClick={() => setMogaFilter(mogaFilter === m ? "" : m)}
+              className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${mogaFilter === m ? "bg-green-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}
+            >
+              Moga {m}
+            </button>
+          ))}
+          {availableMogas.length === 0 && (
+            <span className="text-[10px] text-slate-500 italic">
+              Assign Moga Numbers to Chakbandi lines to enable single-Moga printing
+            </span>
+          )}
+          <span className="text-[9px] text-green-500 ml-auto font-mono">⬡ Vector SVG — Sharp at any scale</span>
         </div>
 
-        {/* Preview */}
+        {/* Preview Area */}
         <div className="flex-1 overflow-auto bg-slate-950 p-6 flex items-start justify-center">
           <div className="bg-white shadow-2xl" style={{ width: `${scale}%`, minWidth: 500 }}>
+            {/* Map header */}
             <div style={{ padding:"10px 14px", borderBottom:"2px solid #000", display:"flex", justifyContent:"space-between" }}>
               <div>
-                <div style={{ fontSize:15, fontWeight:"bold", textTransform:"uppercase", letterSpacing:2 }}>
+                <div style={{ fontSize:15, fontWeight:"bold", textTransform:"uppercase", letterSpacing:2, fontFamily:"Rajdhani,Arial,sans-serif" }}>
                   CHAKBANDI GIS — {mapData?.title || "Cadastral Map"}
+                  {mogaFilter && <span style={{ color:"#16a34a", marginLeft:8 }}>| Moga {mogaFilter}</span>}
                 </div>
                 <div style={{ fontSize:10, color:"#444", marginTop:2 }}>
                   {mapData?.village && `Village: ${mapData.village}`}
@@ -445,20 +457,27 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose 
               </div>
             </div>
 
-            {dataUrl
-              ? <img src={dataUrl} alt="Map" style={{ width:"100%", display:"block" }} />
-              : <div style={{ padding:40, textAlign:"center", color:"#999" }}>No objects to print</div>
-            }
+            {/* SVG Map — pure vector */}
+            {svgDataUrl ? (
+              <img
+                src={svgDataUrl}
+                alt="Map"
+                style={{ width:"100%", display:"block" }}
+              />
+            ) : (
+              <div style={{ padding:40, textAlign:"center", color:"#999" }}>No objects to print</div>
+            )}
 
+            {/* Footer legend */}
             <div style={{ padding:"6px 14px", borderTop:"1px solid #bbb", display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6 }}>
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-                {[["Mustateel/Muraba","#ef4444"],["Acre","#eab308"],["Canal","#3b82f6"],["Chakbandi","#22c55e"],["Outlet","#06b6d4"]].map(([label,color]) => (
+                {[["Mustateel","#ef4444"],["Acre","#eab308"],["Canal","#3b82f6"],["Chakbandi","#22c55e"],["Road","#b45309"]].map(([label,color]) => (
                   <div key={label} style={{ display:"flex", alignItems:"center", gap:4, fontSize:9, color:"#333" }}>
                     <span style={{ display:"inline-block", width:18, height:3, background:color, borderRadius:1 }}></span>{label}
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize:9, color:"#777" }}>Survey-grade Cadastral | Chakbandi GIS</div>
+              <div style={{ fontSize:9, color:"#777" }}>Vector SVG | Survey-grade Cadastral | Chakbandi GIS</div>
             </div>
           </div>
         </div>

@@ -6,6 +6,7 @@ import GISCanvas from "@/components/editor/GISCanvas";
 import ToolPanel from "@/components/editor/ToolPanel";
 import PropertiesPanel from "@/components/editor/PropertiesPanel";
 import LayerPanel from "@/components/editor/LayerPanel";
+import MogaFilterPanel from "@/components/editor/MogaFilterPanel";
 import StatusBar from "@/components/editor/StatusBar";
 import EditorHeader from "@/components/editor/EditorHeader";
 import ExportDialog from "@/components/editor/ExportDialog";
@@ -67,6 +68,8 @@ export default function Editor() {
   const [selectedId, setSelectedId] = useState(null);
   const [snapPos, setSnapPos] = useState(null);
   const [showLayers, setShowLayers] = useState(false);
+  const [visibleMogas, setVisibleMogas] = useState({});
+  const [printMogaFilter, setPrintMogaFilter] = useState("");
   const [showLegend, setShowLegend] = useState(false);
   const [killaVisibility, setKillaVisibility] = useState({ mustateel: true, muraba: true });
   const [killaNumbersGlobal, setKillaNumbersGlobal] = useState(true);
@@ -465,7 +468,14 @@ export default function Editor() {
         <div className="flex-1 relative overflow-hidden">
           <GISCanvas
             ref={canvasRef}
-            objects={objects}
+            objects={objects.filter(o => {
+              // Moga visibility filter: if any mogas have explicit visibility set,
+              // hide chakbandi/mustateel that belong to hidden mogas
+              if ((o.type === "chakbandi" || o.type === "mustateel") && o.mogaNumber) {
+                return visibleMogas[o.mogaNumber] !== false;
+              }
+              return true;
+            })}
             activeTool={activeTool}
             zoom={zoom}
             pan={pan}
@@ -612,7 +622,22 @@ export default function Editor() {
           )}
           {showLayers && (
             <div className="absolute top-[200px] right-3 z-20">
-              <LayerPanel layers={layers} onLayerChange={handleLayerChange} />
+              <MogaFilterPanel
+                objects={objects}
+                layers={layers}
+                onLayerChange={handleLayerChange}
+                visibleMogas={visibleMogas}
+                onMogaVisibilityChange={(moga, vis) => setVisibleMogas(prev => ({ ...prev, [moga]: vis }))}
+                onZoomToMoga={(moga) => {
+                  const pts = objects.filter(o => o.mogaNumber === moga && o.points).flatMap(o => o.points);
+                  if (pts.length === 0) return;
+                  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+                  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+                  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+                  setPan({ x: -cx * zoom + 400, y: -cy * zoom + 300 });
+                }}
+                onPrintMoga={(moga) => { setPrintMogaFilter(moga); setShowPrint(true); }}
+              />
             </div>
           )}
           {showColors && (
@@ -667,14 +692,10 @@ export default function Editor() {
       {showPrint && (
         <PrintPreview
           mapData={mapData}
-          canvasRef={canvasRef}
           objects={objects}
-          zoom={zoom}
-          pan={pan}
           colorSettings={colorSettings}
-          killaNumbersGlobal={killaNumbersGlobal}
-          killaVisibility={killaVisibility}
-          onClose={() => setShowPrint(false)}
+          selectedMogaFilter={printMogaFilter}
+          onClose={() => { setShowPrint(false); setPrintMogaFilter(""); }}
         />
       )}
 

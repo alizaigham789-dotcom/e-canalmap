@@ -116,6 +116,15 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
                 <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
                 <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
               </div>
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Moga Number</label>
+                <Input
+                  value={local.mogaNumber || ""}
+                  onChange={e => commit("mogaNumber", e.target.value)}
+                  placeholder="e.g. 1, 2, 3…"
+                  className="h-7 text-xs bg-green-50 border-green-200 text-green-800 placeholder:text-green-300 focus:border-green-500 font-mono"
+                />
+              </div>
               <FillStyleControl local={local} commit={commit} />
               <KillaStyleControl local={local} commit={commit} />
               <div className="text-[10px] text-slate-400 font-mono">440 ft × 990 ft • 10 Killas</div>
@@ -176,6 +185,16 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
             <>
               <Separator className="bg-slate-100" />
               <Field label="Chakbandi Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Chakbandi Boundary 1" />
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Moga Number <span className="text-green-500">★</span></label>
+                <Input
+                  value={local.mogaNumber || ""}
+                  onChange={e => commit("mogaNumber", e.target.value)}
+                  placeholder="e.g. 1, 2, 3…"
+                  className="h-7 text-xs bg-green-50 border-green-200 text-green-800 placeholder:text-green-300 focus:border-green-500 font-mono"
+                />
+                <p className="text-[9px] text-green-500 mt-0.5">Assign a Moga # to filter/print this boundary separately</p>
+              </div>
               <div className="flex items-center justify-between mt-2">
                 <label className="text-xs text-slate-600">Cross Pattern (× × ×)</label>
                 <Switch checked={!!local.crossPattern} onCheckedChange={v => commit("crossPattern", v)} className="scale-75" />
