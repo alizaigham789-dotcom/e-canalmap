@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Eye, EyeOff, Layers, ZoomIn, Printer, CheckSquare, Square } from "lucide-react";
+import { Eye, EyeOff, Layers, ZoomIn, Printer, CheckSquare, Square, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Extract unique moga numbers from chakbandi objects
@@ -21,14 +21,19 @@ function extractMogas(objects) {
 }
 
 const GENERAL_LAYERS = [
-  { id: "mustateel", label: "Khasra Boundaries", color: "#ef4444" },
-  { id: "killa_numbers", label: "Killa Numbers", color: "#dc2626" },
+  { id: "mustateel", label: "Khasra Boundaries (Mustateel)", color: "#ef4444" },
   { id: "muraba", label: "Muraba", color: "#f97316" },
+  { id: "acre", label: "Acre Grid", color: "#d97706" },
   { id: "road", label: "Roads", color: "#b45309" },
-  { id: "canal", label: "Watercourses", color: "#2563eb" },
+  { id: "canal", label: "Watercourses / Canal", color: "#2563eb" },
   { id: "khal", label: "Khal", color: "#3b82f6" },
   { id: "chakbandi", label: "Chakbandi Boundaries", color: "#22c55e" },
   { id: "outlet", label: "Outlets / Moga", color: "#06b6d4" },
+];
+
+const KILLA_LAYERS = [
+  { id: "mustateel", label: "Mustateel Killa Numbers", color: "#dc2626" },
+  { id: "muraba", label: "Muraba Killa Numbers", color: "#f97316" },
 ];
 
 export default function MogaFilterPanel({
@@ -39,6 +44,9 @@ export default function MogaFilterPanel({
   onMogaVisibilityChange,
   onZoomToMoga,
   onPrintMoga,
+  onClose,
+  killaVisibility,
+  onKillaVisibilityChange,
 }) {
   const mogas = useMemo(() => extractMogas(objects), [objects]);
   const allVisible = mogas.every(m => visibleMogas[m] !== false);
@@ -60,7 +68,12 @@ export default function MogaFilterPanel({
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-200 bg-slate-50">
         <Layers className="w-3.5 h-3.5 text-blue-600" />
-        <span className="font-bold text-slate-800 font-heading tracking-wider">LAYERS & MOGA FILTER</span>
+        <span className="font-bold text-slate-800 font-heading tracking-wider flex-1">LAYERS & MOGA FILTER</span>
+        {onClose && (
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors p-0.5 rounded">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* General Layers */}
@@ -85,6 +98,34 @@ export default function MogaFilterPanel({
           );
         })}
       </div>
+
+      {/* Killa Boundaries section */}
+      {onKillaVisibilityChange && (
+        <>
+          <div className="border-t border-slate-100 mx-2 my-1" />
+          <div className="px-2 pb-1">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1 mb-1">Killa Numbers</div>
+            {KILLA_LAYERS.map(layer => {
+              const visible = killaVisibility?.[layer.id] !== false;
+              return (
+                <div key={layer.id}
+                  className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer"
+                  onClick={() => onKillaVisibilityChange(layer.id, !visible)}
+                >
+                  <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: layer.color }} />
+                  <span className={`flex-1 truncate font-medium ${visible ? "text-slate-700" : "text-slate-400 line-through"}`}>
+                    {layer.label}
+                  </span>
+                  {visible
+                    ? <Eye className="w-3 h-3 text-slate-400 shrink-0" />
+                    : <EyeOff className="w-3 h-3 text-slate-300 shrink-0" />
+                  }
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Divider */}
       <div className="border-t border-slate-100 mx-2 my-1" />

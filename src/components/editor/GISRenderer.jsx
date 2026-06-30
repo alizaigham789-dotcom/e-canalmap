@@ -134,9 +134,9 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     }
   }
 
-  // Layer 2: Outer boundary — RED, thick
+  // Layer 2: Outer boundary — RED, thick (4× bolder)
   ctx.strokeStyle = isSelected ? "#60a5fa" : (C.mustateelStroke || "#ef4444");
-  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
+  ctx.lineWidth = (isSelected ? 12 : 10) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
   // Layer 2: Killa grid — always visible, subtle ink
@@ -556,12 +556,12 @@ export function drawDamageMarker(ctx, obj, isSelected, zoom) {
 export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false) {
   if (obj.points.length < 2) return;
   const color = C.chakbandiStroke || "#22c55e";
-  const crossSize = (obj.crossSize || 6) / zoom;
-  const spacing = (obj.crossSpacing || 20) / zoom;
+  const crossSize = (obj.crossSize || 60) / zoom;
+  const spacing = (obj.crossSpacing || 80) / zoom;
 
-  // Always draw straight segments (no curves) — chakbandi is a hard boundary
+  // Always draw straight segments (no curves) — chakbandi is a hard boundary (10× thicker)
   ctx.strokeStyle = isSelected ? "#86efac" : color;
-  ctx.lineWidth = (isSelected ? 3.5 : 3) / zoom;
+  ctx.lineWidth = (isSelected ? 35 : 30) / zoom;
   ctx.lineCap = "round";
   ctx.lineJoin = "miter";
   ctx.setLineDash([]);
@@ -572,7 +572,7 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false)
 
   // Always draw X crosses along each segment (rotated with segment direction)
   ctx.strokeStyle = isSelected ? "#86efac" : color;
-  ctx.lineWidth = (isSelected ? 2 : 1.8) / zoom;
+  ctx.lineWidth = (isSelected ? 20 : 18) / zoom;
   ctx.lineCap = "round";
   for (let i = 0; i < obj.points.length - 1; i++) {
     const a = obj.points[i], b = obj.points[i+1];
@@ -707,18 +707,18 @@ export function drawChakbandiDraft(ctx, chakbandiDraft, snapPos, zoom, C) {
   const color = C.chakbandiStroke || "#22c55e";
   const draftPts = [...chakbandiDraft];
   if (snapPos) draftPts.push(snapPos);
-  const crossSize = 6/zoom, spacing = 20/zoom;
+  const crossSize = 60/zoom, spacing = 80/zoom;
 
-  // Straight line (no curves)
-  ctx.strokeStyle = color; ctx.lineWidth = 3/zoom; ctx.lineCap = "round"; ctx.lineJoin = "miter";
+  // Straight line (no curves) — 10× thicker
+  ctx.strokeStyle = color; ctx.lineWidth = 30/zoom; ctx.lineCap = "round"; ctx.lineJoin = "miter";
   ctx.setLineDash([]);
   ctx.beginPath();
   ctx.moveTo(draftPts[0].x, draftPts[0].y);
   for (const p of draftPts) ctx.lineTo(p.x, p.y);
   ctx.stroke();
 
-  // Rotated X crosses
-  ctx.strokeStyle = color; ctx.lineWidth = 1.8/zoom; ctx.lineCap = "round";
+  // Rotated X crosses — 10× thicker
+  ctx.strokeStyle = color; ctx.lineWidth = 18/zoom; ctx.lineCap = "round";
   for (let i = 0; i < draftPts.length - 1; i++) {
     const a = draftPts[i], b = draftPts[i+1];
     const segLen = Math.hypot(b.x-a.x, b.y-a.y);

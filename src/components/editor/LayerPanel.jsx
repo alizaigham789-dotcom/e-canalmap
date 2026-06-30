@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, EyeOff, Lock, Unlock, Layers } from "lucide-react";
+import { Eye, EyeOff, Lock, Unlock, Layers, X } from "lucide-react";
 
 const LAYER_DEFS = [
   { id: "muraba", label: "Muraba", color: "#dc2626" },
@@ -13,12 +13,17 @@ const LAYER_DEFS = [
   { id: "grass", label: "Tree Effect", color: "#16a34a" },
 ];
 
-export default function LayerPanel({ layers, onLayerChange }) {
+export default function LayerPanel({ layers, onLayerChange, onClose }) {
   return (
     <div className="w-56 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-200 bg-slate-50">
         <Layers className="w-3.5 h-3.5 text-blue-600" />
-        <span className="text-xs font-bold text-slate-800 font-heading tracking-wider">LAYERS</span>
+        <span className="text-xs font-bold text-slate-800 font-heading tracking-wider flex-1">LAYERS</span>
+        {onClose && (
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors p-0.5 rounded">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
       <div className="p-2 space-y-0.5">
         {LAYER_DEFS.map(layer => {

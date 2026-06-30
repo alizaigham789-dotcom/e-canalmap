@@ -80,8 +80,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
           ctx.fillText(String(grid[r][c]), o.x + c*cellW + cellW/2, o.y + r*cellH + cellH/2);
         }
       }
-      // Bold outer boundary
-      ctx.strokeStyle = "#000000"; ctx.lineWidth = 3.5; ctx.strokeRect(o.x, o.y, o.w, o.h);
+      // Bold outer boundary (4× bolder)
+      ctx.strokeStyle = "#000000"; ctx.lineWidth = 14; ctx.strokeRect(o.x, o.y, o.w, o.h);
       // Label
       if (o.label) {
         ctx.fillStyle = "#1e293b";
@@ -137,14 +137,14 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.strokeStyle="#b45309"; ctx.lineWidth=2/zoom;
       for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
     } else if (o.type === "chakbandi" && o.points?.length >= 2) {
-      // Bold black line + X crosses like real cadastral maps
-      ctx.strokeStyle="#000000"; ctx.lineWidth=3.5;
+      // Bold black line + X crosses — 10× thicker for print clarity
+      ctx.strokeStyle="#000000"; ctx.lineWidth=35;
       ctx.lineCap="round"; ctx.lineJoin="round";
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();
       // Draw X crosses along each segment
-      const crossSize = 6, spacing = 22;
-      ctx.strokeStyle="#000000"; ctx.lineWidth=2; ctx.lineCap="round";
+      const crossSize = 60, spacing = 80;
+      ctx.strokeStyle="#000000"; ctx.lineWidth=20; ctx.lineCap="round";
       for (let i = 0; i < o.points.length - 1; i++) {
         const a = o.points[i], b = o.points[i+1];
         const segLen = Math.hypot(b.x-a.x, b.y-a.y);
@@ -283,9 +283,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${w}"/>`;
     }
     if (o.type==="chakbandi" && o.points?.length>=2) {
-      // Bold black line + X crosses
+      // Bold black line + X crosses — 10× thicker
       let crossSVG = "";
-      const crossSize = 6, spacing = 22;
+      const crossSize = 60, spacing = 80;
       for (let i = 0; i < o.points.length - 1; i++) {
         const a = o.points[i], b = o.points[i+1];
         const segLen = Math.hypot(b.x-a.x, b.y-a.y);
@@ -299,12 +299,12 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
           const x2=(cx+(crossSize*cos-crossSize*sin)).toFixed(1), y2=(cy+(crossSize*sin+crossSize*cos)).toFixed(1);
           const x3=(cx+(crossSize*cos- -crossSize*sin)).toFixed(1), y3=(cy+(crossSize*sin+ -crossSize*cos)).toFixed(1);
           const x4=(cx+(-crossSize*cos-crossSize*sin)).toFixed(1), y4=(cy+(-crossSize*sin+crossSize*cos)).toFixed(1);
-          crossSVG += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="2" stroke-linecap="round"/>`;
-          crossSVG += `<line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" stroke="#000" stroke-width="2" stroke-linecap="round"/>`;
+          crossSVG += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="18" stroke-linecap="round"/>`;
+          crossSVG += `<line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" stroke="#000" stroke-width="18" stroke-linecap="round"/>`;
         }
       }
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
-      return `<polyline points="${pts}" fill="none" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>${crossSVG}`;
+      return `<polyline points="${pts}" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>${crossSVG}`;
     }
     if (o.type==="mouza" && o.points?.length>=2) {
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");

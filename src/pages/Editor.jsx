@@ -637,6 +637,9 @@ export default function Editor() {
                   setPan({ x: -cx * zoom + 400, y: -cy * zoom + 300 });
                 }}
                 onPrintMoga={(moga) => { setPrintMogaFilter(moga); setShowPrint(true); }}
+                onClose={() => setShowLayers(false)}
+                killaVisibility={killaVisibility}
+                onKillaVisibilityChange={(type, val) => setKillaVisibility(prev => ({ ...prev, [type]: val }))}
               />
             </div>
           )}

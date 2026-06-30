@@ -562,7 +562,7 @@ export default function EditorPro() {
 
           {/* Panels */}
           {showLegend && <div className="absolute top-[220px] right-3 z-20"><LegendPanel colorSettings={colorSettings} /></div>}
-          {showLayers && <div className="absolute top-[220px] right-3 z-20"><LayerPanel layers={layers} onLayerChange={handleLayerChange} /></div>}
+          {showLayers && <div className="absolute top-[220px] right-3 z-20"><LayerPanel layers={layers} onLayerChange={handleLayerChange} onClose={() => setShowLayers(false)} /></div>}
           {showColors && (
             <div className="absolute top-[220px] right-3 z-20">
               <ColorSettingsPanel colorSettings={colorSettings} onColorChange={handleColorChange} bgColor={bgColor} onBgColorChange={setBgColor} onClose={() => setShowColors(false)} />
