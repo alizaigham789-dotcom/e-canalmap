@@ -63,17 +63,24 @@ function parallelSmoothClosedPath(pts, offset) {
 // ─── SVG OBJECT RENDERERS ─────────────────────────────────────────────────────
 function svgMustateel(obj, C, idx) {
   const cellW = obj.w / 2, cellH = obj.h / 5;
-  const strokeColor = C.mustateelStroke || "#ef4444";
-  const fillColor = obj.fillColor || C.mustateelFill || "rgba(245,158,11,0.10)";
+  const strokeColor = C.mustateelStroke || "#000000";
   const fontSize = Math.min(obj.w * 0.30, obj.h * 0.30);
   const killaGrid = getMustateeelKillaGrid();
 
-  // Grid lines
+  // Killa grid lines — solid, slightly thinner than boundary
   let gridLines = "";
-  // vertical centre
-  gridLines += `<line x1="${obj.x + cellW}" y1="${obj.y}" x2="${obj.x + cellW}" y2="${obj.y + obj.h}" stroke="${strokeColor}" stroke-opacity="0.18" stroke-width="0.5"/>`;
+  gridLines += `<line x1="${obj.x + cellW}" y1="${obj.y}" x2="${obj.x + cellW}" y2="${obj.y + obj.h}" stroke="${strokeColor}" stroke-width="1.2"/>`;
   for (let r = 1; r < 5; r++) {
-    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-opacity="0.18" stroke-width="0.5"/>`;
+    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-width="1.2"/>`;
+  }
+
+  // Killa numbers in each cell
+  let killaLabels = "";
+  const killaFontSize = Math.max(6, Math.min(cellW, cellH) * 0.28);
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 2; c++) {
+      killaLabels += `<text x="${obj.x + c*cellW + cellW/2}" y="${obj.y + r*cellH + cellH/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${killaFontSize}" fill="${strokeColor}" fill-opacity="0.75">${killaGrid[r][c]}</text>`;
+    }
   }
 
   const label = obj.label || "";
@@ -81,33 +88,33 @@ function svgMustateel(obj, C, idx) {
 
   return `
 <g key="must_${idx}">
-  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="${fillColor}" />
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
-  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="3" stroke-linejoin="miter"/>
+  ${killaLabels}
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="3.5" stroke-linejoin="miter"/>
   ${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}
 </g>`;
 }
 
 function svgMuraba(obj, C, idx) {
   const cellW = obj.w / 5, cellH = obj.h / 5;
-  const strokeColor = C.murabaStroke || "#ef4444";
-  const fillColor = obj.fillColor || C.murabaFill || "rgba(249,115,22,0.08)";
+  const strokeColor = C.murabaStroke || "#000000";
   const fontSize = Math.min(obj.w * 0.22, obj.h * 0.22);
 
   let gridLines = "";
   for (let c = 1; c < 5; c++) {
-    gridLines += `<line x1="${obj.x + c*cellW}" y1="${obj.y}" x2="${obj.x + c*cellW}" y2="${obj.y + obj.h}" stroke="${strokeColor}" stroke-opacity="0.15" stroke-width="0.5"/>`;
+    gridLines += `<line x1="${obj.x + c*cellW}" y1="${obj.y}" x2="${obj.x + c*cellW}" y2="${obj.y + obj.h}" stroke="${strokeColor}" stroke-width="1.2"/>`;
   }
   for (let r = 1; r < 5; r++) {
-    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-opacity="0.15" stroke-width="0.5"/>`;
+    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-width="1.2"/>`;
   }
 
   const label = obj.label || "";
   return `
 <g key="murb_${idx}">
-  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="${fillColor}" />
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
-  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="4" stroke-linejoin="miter"/>
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="4.5" stroke-linejoin="miter"/>
   ${label ? `<text x="${obj.x + obj.w/2}" y="${obj.y + obj.h/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}
 </g>`;
 }
@@ -125,32 +132,43 @@ function svgAcre(obj, C, idx) {
 
 function svgChakbandi(obj, C, idx) {
   if (!obj.points || obj.points.length < 2) return "";
-  const color = C.chakbandiStroke || "#22c55e";
+  const color = "#000000"; // black like real cadastral maps
   const mainPath = pointsToSmoothPath(obj.points);
-  const crossSize = 8;
-  const spacing = 40;
+  const crossSize = 6;
+  const spacing = 22; // dense crosses like the photo
 
-  // Build crosses along each segment
+  // Build X crosses along each segment — rotated to be perpendicular to the line
   let crosses = "";
   for (let i = 0; i < obj.points.length - 1; i++) {
     const a = obj.points[i], b = obj.points[i+1];
     const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+    const angle = Math.atan2(b.y - a.y, b.x - a.x);
     const steps = Math.max(1, Math.floor(segLen / spacing));
     for (let s = 0; s <= steps; s++) {
       const t = s / steps;
       const cx = a.x + (b.x - a.x) * t;
       const cy = a.y + (b.y - a.y) * t;
-      crosses += `<line x1="${cx-crossSize}" y1="${cy-crossSize}" x2="${cx+crossSize}" y2="${cy+crossSize}" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>`;
-      crosses += `<line x1="${cx+crossSize}" y1="${cy-crossSize}" x2="${cx-crossSize}" y2="${cy+crossSize}" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>`;
+      // Rotated X cross aligned with segment direction
+      const cos = Math.cos(angle), sin = Math.sin(angle);
+      const x1 = cx + (-crossSize * cos - -crossSize * sin);
+      const y1 = cy + (-crossSize * sin + -crossSize * cos);
+      const x2 = cx + (crossSize * cos - crossSize * sin);
+      const y2 = cy + (crossSize * sin + crossSize * cos);
+      const x3 = cx + (crossSize * cos - -crossSize * sin);
+      const y3 = cy + (crossSize * sin + -crossSize * cos);
+      const x4 = cx + (-crossSize * cos - crossSize * sin);
+      const y4 = cy + (-crossSize * sin + crossSize * cos);
+      crosses += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`;
+      crosses += `<line x1="${x3.toFixed(1)}" y1="${y3.toFixed(1)}" x2="${x4.toFixed(1)}" y2="${y4.toFixed(1)}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`;
     }
   }
 
-  const label = obj.name || obj.mogaNumber ? `Moga ${obj.mogaNumber || ""}` : "";
+  const label = obj.name ? obj.name : (obj.mogaNumber ? `Moga ${obj.mogaNumber}` : "");
   const midPt = obj.points[Math.floor(obj.points.length/2)];
 
   return `
 <g key="cbnd_${idx}">
-  <path d="${mainPath}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${mainPath}" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
   ${crosses}
   ${label && midPt ? `<text x="${midPt.x}" y="${midPt.y - 10}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="14" fill="${color}">${label}</text>` : ""}
 </g>`;

@@ -58,27 +58,27 @@ export default function ExportDialog({ open, onClose, mapData, objects }) {
   function drawObj(ctx, o, scale) {
     const zoom = scale;
     if (o.type === "mustateel") {
-      ctx.fillStyle = o.fillColor || "rgba(245,158,11,0.10)";
+      // No shade fill — white background
+      ctx.fillStyle = "#ffffff";
       ctx.fillRect(o.x, o.y, o.w, o.h);
-      ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2.5 / zoom; ctx.strokeRect(o.x, o.y, o.w, o.h);
-      // Killa grid
+      // Killa grid — solid lines, slightly thinner than boundary
       const cellW = o.w / 2, cellH = o.h / 5;
-      ctx.strokeStyle = "rgba(239,68,68,0.25)"; ctx.lineWidth = 0.8 / zoom;
-      ctx.setLineDash([4/zoom, 4/zoom]);
+      ctx.strokeStyle = "#000000"; ctx.lineWidth = 1.2;
+      ctx.setLineDash([]);
       ctx.beginPath();
       ctx.moveTo(o.x + cellW, o.y); ctx.lineTo(o.x + cellW, o.y + o.h);
       for (let r = 1; r < 5; r++) { ctx.moveTo(o.x, o.y + r*cellH); ctx.lineTo(o.x + o.w, o.y + r*cellH); }
-      ctx.stroke(); ctx.setLineDash([]);
+      ctx.stroke();
       // Killa numbers
-      if (o.showKillaNumbers !== false) {
-        const grid = getMustateeelKillaGrid();
-        ctx.fillStyle = "rgba(220,38,38,0.85)";
-        ctx.font = `bold ${Math.max(10, cellH * 0.25)}px Rajdhani, sans-serif`;
-        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        for (let r = 0; r < 5; r++) for (let c = 0; c < 2; c++) {
-          ctx.fillText(String(grid[r][c]), o.x + c*cellW + cellW/2, o.y + r*cellH + cellH/2);
-        }
+      const grid = getMustateeelKillaGrid();
+      ctx.fillStyle = "rgba(0,0,0,0.70)";
+      ctx.font = `bold ${Math.max(8, Math.min(cellW, cellH) * 0.28)}px Rajdhani, sans-serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 2; c++) {
+        ctx.fillText(String(grid[r][c]), o.x + c*cellW + cellW/2, o.y + r*cellH + cellH/2);
       }
+      // Bold outer boundary
+      ctx.strokeStyle = "#000000"; ctx.lineWidth = 3.5; ctx.strokeRect(o.x, o.y, o.w, o.h);
       // Label
       if (o.label) {
         ctx.fillStyle = "#1e293b";
@@ -87,15 +87,16 @@ export default function ExportDialog({ open, onClose, mapData, objects }) {
         ctx.fillText(o.label, o.x + o.w/2, o.y + o.h/2);
       }
     } else if (o.type === "muraba") {
-      ctx.fillStyle = o.fillColor || "rgba(249,115,22,0.08)";
+      ctx.fillStyle = "#ffffff";
       ctx.fillRect(o.x, o.y, o.w, o.h);
-      ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 3 / zoom; ctx.strokeRect(o.x, o.y, o.w, o.h);
       const cellW = o.w/5, cellH = o.h/5;
-      ctx.strokeStyle = "rgba(239,68,68,0.20)"; ctx.lineWidth = 0.8/zoom;
-      ctx.setLineDash([4/zoom, 4/zoom]); ctx.beginPath();
+      ctx.strokeStyle = "#000000"; ctx.lineWidth = 1.2; ctx.setLineDash([]);
+      ctx.beginPath();
       for (let c=1;c<5;c++){ctx.moveTo(o.x+c*cellW,o.y);ctx.lineTo(o.x+c*cellW,o.y+o.h);}
       for (let r=1;r<5;r++){ctx.moveTo(o.x,o.y+r*cellH);ctx.lineTo(o.x+o.w,o.y+r*cellH);}
-      ctx.stroke(); ctx.setLineDash([]);
+      ctx.stroke();
+      // Bold outer boundary (thicker than mustateel)
+      ctx.strokeStyle = "#000000"; ctx.lineWidth = 4.5; ctx.strokeRect(o.x, o.y, o.w, o.h);
       if (o.label) {
         ctx.fillStyle = "#1e293b"; ctx.font = `900 ${Math.min(o.w, o.h)*0.28}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -133,9 +134,33 @@ export default function ExportDialog({ open, onClose, mapData, objects }) {
       ctx.strokeStyle="#b45309"; ctx.lineWidth=2/zoom;
       for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
     } else if (o.type === "chakbandi" && o.points?.length >= 2) {
-      ctx.strokeStyle="#22c55e"; ctx.lineWidth=2/zoom;
+      // Bold black line + X crosses like real cadastral maps
+      ctx.strokeStyle="#000000"; ctx.lineWidth=3.5;
+      ctx.lineCap="round"; ctx.lineJoin="round";
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();
+      // Draw X crosses along each segment
+      const crossSize = 6, spacing = 22;
+      ctx.strokeStyle="#000000"; ctx.lineWidth=2; ctx.lineCap="round";
+      for (let i = 0; i < o.points.length - 1; i++) {
+        const a = o.points[i], b = o.points[i+1];
+        const segLen = Math.hypot(b.x-a.x, b.y-a.y);
+        const angle = Math.atan2(b.y-a.y, b.x-a.x);
+        const steps = Math.max(1, Math.floor(segLen / spacing));
+        for (let s = 0; s <= steps; s++) {
+          const t = s/steps;
+          const cx = a.x+(b.x-a.x)*t, cy = a.y+(b.y-a.y)*t;
+          const cos = Math.cos(angle), sin = Math.sin(angle);
+          ctx.beginPath();
+          ctx.moveTo(cx+(-crossSize*cos- -crossSize*sin), cy+(-crossSize*sin+ -crossSize*cos));
+          ctx.lineTo(cx+(crossSize*cos-crossSize*sin), cy+(crossSize*sin+crossSize*cos));
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(cx+(crossSize*cos- -crossSize*sin), cy+(crossSize*sin+ -crossSize*cos));
+          ctx.lineTo(cx+(-crossSize*cos-crossSize*sin), cy+(-crossSize*sin+crossSize*cos));
+          ctx.stroke();
+        }
+      }
     } else if (o.type === "mouza" && o.points?.length >= 2) {
       ctx.strokeStyle="#000"; ctx.lineWidth=1.2/zoom; ctx.setLineDash([3/zoom,4/zoom]);
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
@@ -223,24 +248,25 @@ export default function ExportDialog({ open, onClose, mapData, objects }) {
     if (o.type === "mustateel") {
       const cellW = o.w/2, cellH = o.h/5;
       const grid = getMustateeelKillaGrid();
-      const killaLabels = o.showKillaNumbers !== false ? grid.flatMap((row,r) =>
-        row.map((n,c) => `<text x="${o.x+c*cellW+cellW/2}" y="${o.y+r*cellH+cellH/2}" font-family="sans-serif" font-size="${Math.max(8,cellH*0.22)}" font-weight="bold" fill="rgba(220,38,38,0.8)" text-anchor="middle" dominant-baseline="middle">${n}</text>`)
-      ).join("") : "";
-      const gridLines = [`<line x1="${o.x+cellW}" y1="${o.y}" x2="${o.x+cellW}" y2="${o.y+o.h}" stroke="rgba(239,68,68,0.25)" stroke-width="0.5" stroke-dasharray="4,4"/>`];
-      for (let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="rgba(239,68,68,0.25)" stroke-width="0.5" stroke-dasharray="4,4"/>`);
-      const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
-      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="rgba(245,158,11,0.10)" stroke="#ef4444" stroke-width="2"/>${gridLines.join("")}${killaLabels}${lbl}`;
+      const killaFontSize = Math.max(6, Math.min(cellW, cellH) * 0.28);
+      const killaLabels = grid.flatMap((row,r) =>
+        row.map((n,c) => `<text x="${o.x+c*cellW+cellW/2}" y="${o.y+r*cellH+cellH/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${killaFontSize}" font-weight="bold" fill="rgba(0,0,0,0.70)" text-anchor="middle" dominant-baseline="middle">${n}</text>`)
+      ).join("");
+      const gridLines = [`<line x1="${o.x+cellW}" y1="${o.y}" x2="${o.x+cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`];
+      for (let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="1.2"/>`);
+      const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#000" stroke-width="3.5" stroke-linejoin="miter"/>${lbl}`;
     }
     if (o.type === "muraba") {
       const cellW=o.w/5, cellH=o.h/5;
       const gridLines=[];
-      for(let c=1;c<5;c++) gridLines.push(`<line x1="${o.x+c*cellW}" y1="${o.y}" x2="${o.x+c*cellW}" y2="${o.y+o.h}" stroke="rgba(239,68,68,0.20)" stroke-width="0.5" stroke-dasharray="4,4"/>`);
-      for(let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="rgba(239,68,68,0.20)" stroke-width="0.5" stroke-dasharray="4,4"/>`);
-      const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="sans-serif" font-size="${Math.min(o.w,o.h)*0.28}" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
-      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="rgba(249,115,22,0.08)" stroke="#ef4444" stroke-width="3"/>${gridLines.join("")}${lbl}`;
+      for(let c=1;c<5;c++) gridLines.push(`<line x1="${o.x+c*cellW}" y1="${o.y}" x2="${o.x+c*cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`);
+      for(let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="1.2"/>`);
+      const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.28}" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#000" stroke-width="4.5" stroke-linejoin="miter"/>${lbl}`;
     }
     if (o.type === "acre") {
-      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="rgba(234,179,8,0.08)" stroke="#eab308" stroke-width="1.5"/>`;
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#555" stroke-width="1"/>`;
     }
     if ((o.type==="canal"||o.type==="khal"||o.type==="road") && o.points?.length>=2) {
       const pts = o.points.map(p=>`${p.x},${p.y}`).join(" ");
@@ -249,8 +275,28 @@ export default function ExportDialog({ open, onClose, mapData, objects }) {
       return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${w}"/>`;
     }
     if (o.type==="chakbandi" && o.points?.length>=2) {
+      // Bold black line + X crosses
+      let crossSVG = "";
+      const crossSize = 6, spacing = 22;
+      for (let i = 0; i < o.points.length - 1; i++) {
+        const a = o.points[i], b = o.points[i+1];
+        const segLen = Math.hypot(b.x-a.x, b.y-a.y);
+        const angle = Math.atan2(b.y-a.y, b.x-a.x);
+        const steps = Math.max(1, Math.floor(segLen / spacing));
+        for (let s = 0; s <= steps; s++) {
+          const t = s/steps;
+          const cx = a.x+(b.x-a.x)*t, cy = a.y+(b.y-a.y)*t;
+          const cos = Math.cos(angle), sin = Math.sin(angle);
+          const x1=(cx+(-crossSize*cos- -crossSize*sin)).toFixed(1), y1=(cy+(-crossSize*sin+ -crossSize*cos)).toFixed(1);
+          const x2=(cx+(crossSize*cos-crossSize*sin)).toFixed(1), y2=(cy+(crossSize*sin+crossSize*cos)).toFixed(1);
+          const x3=(cx+(crossSize*cos- -crossSize*sin)).toFixed(1), y3=(cy+(crossSize*sin+ -crossSize*cos)).toFixed(1);
+          const x4=(cx+(-crossSize*cos-crossSize*sin)).toFixed(1), y4=(cy+(-crossSize*sin+crossSize*cos)).toFixed(1);
+          crossSVG += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="2" stroke-linecap="round"/>`;
+          crossSVG += `<line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" stroke="#000" stroke-width="2" stroke-linecap="round"/>`;
+        }
+      }
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
-      return `<polyline points="${pts}" fill="none" stroke="#22c55e" stroke-width="2"/>`;
+      return `<polyline points="${pts}" fill="none" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>${crossSVG}`;
     }
     if (o.type==="mouza" && o.points?.length>=2) {
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
