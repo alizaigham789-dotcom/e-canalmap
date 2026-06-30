@@ -93,7 +93,7 @@ function svgMustateel(obj, C, idx, showKilla = true) {
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
   ${killaLabels}
-  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="3.5" stroke-linejoin="miter"/>
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="5.5" stroke-linejoin="miter"/>
   ${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}
 </g>`;
 }
@@ -128,7 +128,7 @@ function svgMuraba(obj, C, idx, showKilla = true) {
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
   ${killaLabels}
-  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="4.5" stroke-linejoin="miter"/>
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="6.5" stroke-linejoin="miter"/>
   ${label ? `<text x="${obj.x + obj.w/2}" y="${obj.y + obj.h/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}
 </g>`;
 }
@@ -308,6 +308,7 @@ function SettingSlider({ label, value, min, max, step, onChange, unit = "" }) {
 export default function PrintPreview({ mapData, objects, colorSettings, onClose, selectedMogaFilter, killaVisibility = {} }) {
   const [scale, setScale] = useState(100);
   const [mogaFilter, setMogaFilter] = useState(selectedMogaFilter || "");
+  const [bwMode, setBwMode] = useState(false);
 
   // Extract all mogas from objects
   const availableMogas = useMemo(() => {
@@ -318,9 +319,26 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     return [...s].sort((a, b) => parseInt(a) - parseInt(b));
   }, [objects]);
 
+  // In B&W mode, override all colors to black/grey
+  const effectiveColors = useMemo(() => {
+    if (!bwMode) return colorSettings || {};
+    return {
+      mustateelStroke: "#000000", mustateelFill: "none",
+      murabaStroke: "#000000", murabaFill: "none",
+      acreStroke: "#555555", acreFill: "none",
+      canalStroke: "#333333", canalFill: "rgba(0,0,0,0.08)",
+      khalStroke: "#444444",
+      roadStroke: "#222222",
+      chakbandiStroke: "#000000",
+      mouzaStroke: "#000000",
+      labelColor: "#000000",
+      outletStroke: "#333333",
+    };
+  }, [bwMode, colorSettings]);
+
   const svgData = useMemo(
-    () => buildSVG(objects, colorSettings, mogaFilter || null, killaVisibility),
-    [objects, colorSettings, mogaFilter, killaVisibility]
+    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility),
+    [objects, effectiveColors, mogaFilter, killaVisibility]
   );
 
   const svgString = svgData
@@ -433,6 +451,14 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               <Button variant="ghost" size="icon" className="w-6 h-6 text-slate-400 hover:text-white"
                 onClick={() => setScale(s => Math.min(200, s + 10))}><ZoomIn className="w-3 h-3" /></Button>
             </div>
+            {/* B&W Toggle */}
+            <button
+              onClick={() => setBwMode(v => !v)}
+              className={`h-8 px-3 rounded-md text-xs font-bold border transition-all ${bwMode ? "bg-white text-black border-white" : "bg-slate-800 text-slate-300 border-slate-600 hover:text-white"}`}
+              title="Black & White Mode"
+            >
+              {bwMode ? "🎨 Colour" : "⬛ B&W"}
+            </button>
             {/* SVG Download */}
             <Button size="sm" variant="outline"
               className="h-8 border-slate-600 text-slate-300 hover:text-white hover:bg-slate-700 text-xs gap-1"
