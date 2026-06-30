@@ -687,6 +687,7 @@ export default function Editor() {
         onClose={() => setShowExport(false)}
         mapData={mapData}
         objects={objects}
+        killaVisibility={{ mustateel: killaVisibility.mustateel && killaNumbersGlobal, muraba: killaVisibility.muraba && killaNumbersGlobal }}
       />
 
       {showPrint && (
@@ -695,6 +696,7 @@ export default function Editor() {
           objects={objects}
           colorSettings={colorSettings}
           selectedMogaFilter={printMogaFilter}
+          killaVisibility={{ mustateel: killaVisibility.mustateel && killaNumbersGlobal, muraba: killaVisibility.muraba && killaNumbersGlobal }}
           onClose={() => { setShowPrint(false); setPrintMogaFilter(""); }}
         />
       )}

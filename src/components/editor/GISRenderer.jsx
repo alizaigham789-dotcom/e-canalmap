@@ -556,40 +556,43 @@ export function drawDamageMarker(ctx, obj, isSelected, zoom) {
 export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false) {
   if (obj.points.length < 2) return;
   const color = C.chakbandiStroke || "#22c55e";
-  if (obj.crossPattern || forceCross) {
-    const crossSize = (obj.crossSize || 6) / zoom;
-    const spacing = (obj.crossSpacing || 20) / zoom; // denser alignment tracks
-    ctx.strokeStyle = isSelected ? "#86efac" : color;
-    ctx.lineWidth = 1.8 / zoom;
-    // First draw the main line so the chakbandi nishan stays clear
-    ctx.lineWidth = (isSelected ? 3.5 : 3) / zoom;
-    ctx.beginPath();
-    ctx.moveTo(obj.points[0].x, obj.points[0].y);
-    for (const p of obj.points) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    // Then overlay the crosses
-    ctx.strokeStyle = isSelected ? "#86efac" : color;
-    ctx.lineWidth = 1.8 / zoom;
-    for (let i = 0; i < obj.points.length - 1; i++) {
-      const a = obj.points[i], b = obj.points[i+1];
-      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
-      const steps = Math.max(1, Math.floor(segLen / spacing));
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps;
-        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
-        ctx.beginPath();
-        ctx.moveTo(cx - crossSize, cy - crossSize); ctx.lineTo(cx + crossSize, cy + crossSize);
-        ctx.moveTo(cx + crossSize, cy - crossSize); ctx.lineTo(cx - crossSize, cy + crossSize);
-        ctx.stroke();
-      }
+  const crossSize = (obj.crossSize || 6) / zoom;
+  const spacing = (obj.crossSpacing || 20) / zoom;
+
+  // Always draw straight segments (no curves) — chakbandi is a hard boundary
+  ctx.strokeStyle = isSelected ? "#86efac" : color;
+  ctx.lineWidth = (isSelected ? 3.5 : 3) / zoom;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "miter";
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(obj.points[0].x, obj.points[0].y);
+  for (const p of obj.points) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+
+  // Always draw X crosses along each segment (rotated with segment direction)
+  ctx.strokeStyle = isSelected ? "#86efac" : color;
+  ctx.lineWidth = (isSelected ? 2 : 1.8) / zoom;
+  ctx.lineCap = "round";
+  for (let i = 0; i < obj.points.length - 1; i++) {
+    const a = obj.points[i], b = obj.points[i+1];
+    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+    const angle = Math.atan2(b.y - a.y, b.x - a.x);
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    const steps = Math.max(1, Math.floor(segLen / spacing));
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+      // X rotated along segment direction
+      ctx.beginPath();
+      ctx.moveTo(cx + (-crossSize*cos - -crossSize*sin), cy + (-crossSize*sin + -crossSize*cos));
+      ctx.lineTo(cx + ( crossSize*cos -  crossSize*sin), cy + ( crossSize*sin +  crossSize*cos));
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + ( crossSize*cos - -crossSize*sin), cy + ( crossSize*sin + -crossSize*cos));
+      ctx.lineTo(cx + (-crossSize*cos -  crossSize*sin), cy + (-crossSize*sin +  crossSize*cos));
+      ctx.stroke();
     }
-  } else {
-    ctx.strokeStyle = isSelected ? "#86efac" : color;
-    ctx.lineWidth = (isSelected ? 4 : 3.5) / zoom;
-    ctx.beginPath();
-    ctx.moveTo(obj.points[0].x, obj.points[0].y);
-    for (const p of obj.points) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
   }
   if (obj.name && zoom > 0.3) {
     const mid = Math.floor(obj.points.length / 2);
@@ -704,23 +707,36 @@ export function drawChakbandiDraft(ctx, chakbandiDraft, snapPos, zoom, C) {
   const color = C.chakbandiStroke || "#22c55e";
   const draftPts = [...chakbandiDraft];
   if (snapPos) draftPts.push(snapPos);
-  const crossSize = 6/zoom, spacing = 20/zoom; // denser alignment tracks
-  ctx.strokeStyle = color; ctx.lineWidth = 1.8/zoom;
+  const crossSize = 6/zoom, spacing = 20/zoom;
+
+  // Straight line (no curves)
+  ctx.strokeStyle = color; ctx.lineWidth = 3/zoom; ctx.lineCap = "round"; ctx.lineJoin = "miter";
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(draftPts[0].x, draftPts[0].y);
+  for (const p of draftPts) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+
+  // Rotated X crosses
+  ctx.strokeStyle = color; ctx.lineWidth = 1.8/zoom; ctx.lineCap = "round";
   for (let i = 0; i < draftPts.length - 1; i++) {
     const a = draftPts[i], b = draftPts[i+1];
     const segLen = Math.hypot(b.x-a.x, b.y-a.y);
+    const angle = Math.atan2(b.y-a.y, b.x-a.x);
+    const cos = Math.cos(angle), sin = Math.sin(angle);
     const steps = Math.max(1, Math.floor(segLen/spacing));
     for (let s = 0; s <= steps; s++) {
       const t = s/steps;
       const cx = a.x + (b.x-a.x)*t, cy = a.y + (b.y-a.y)*t;
       ctx.beginPath();
-      ctx.moveTo(cx-crossSize, cy-crossSize); ctx.lineTo(cx+crossSize, cy+crossSize);
-      ctx.moveTo(cx+crossSize, cy-crossSize); ctx.lineTo(cx-crossSize, cy+crossSize);
+      ctx.moveTo(cx+(-crossSize*cos- -crossSize*sin), cy+(-crossSize*sin+ -crossSize*cos));
+      ctx.lineTo(cx+( crossSize*cos-  crossSize*sin), cy+( crossSize*sin+  crossSize*cos));
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx+( crossSize*cos- -crossSize*sin), cy+( crossSize*sin+ -crossSize*cos));
+      ctx.lineTo(cx+(-crossSize*cos-  crossSize*sin), cy+(-crossSize*sin+  crossSize*cos));
       ctx.stroke();
     }
-  }
-  for (const pt of chakbandiDraft) {
-    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(pt.x, pt.y, 4/zoom, 0, Math.PI*2); ctx.fill();
   }
 }
 

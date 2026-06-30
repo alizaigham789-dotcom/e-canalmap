@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
 import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline } from "@/lib/gisEngine";
 
-export default function ExportDialog({ open, onClose, mapData, objects }) {
+
+export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {} }) {
   const [loading, setLoading] = useState(null);
 
   // ---- Compute bounding box of all objects ----
@@ -69,13 +70,15 @@ export default function ExportDialog({ open, onClose, mapData, objects }) {
       ctx.moveTo(o.x + cellW, o.y); ctx.lineTo(o.x + cellW, o.y + o.h);
       for (let r = 1; r < 5; r++) { ctx.moveTo(o.x, o.y + r*cellH); ctx.lineTo(o.x + o.w, o.y + r*cellH); }
       ctx.stroke();
-      // Killa numbers
-      const grid = getMustateeelKillaGrid();
-      ctx.fillStyle = "rgba(0,0,0,0.70)";
-      ctx.font = `bold ${Math.max(8, Math.min(cellW, cellH) * 0.28)}px Rajdhani, sans-serif`;
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      for (let r = 0; r < 5; r++) for (let c = 0; c < 2; c++) {
-        ctx.fillText(String(grid[r][c]), o.x + c*cellW + cellW/2, o.y + r*cellH + cellH/2);
+      // Killa numbers — respect killaVisibility
+      if (killaVisibility.mustateel !== false) {
+        const grid = getMustateeelKillaGrid();
+        ctx.fillStyle = "rgba(0,0,0,0.70)";
+        ctx.font = `bold ${Math.max(8, Math.min(cellW, cellH) * 0.28)}px Rajdhani, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        for (let r = 0; r < 5; r++) for (let c = 0; c < 2; c++) {
+          ctx.fillText(String(grid[r][c]), o.x + c*cellW + cellW/2, o.y + r*cellH + cellH/2);
+        }
       }
       // Bold outer boundary
       ctx.strokeStyle = "#000000"; ctx.lineWidth = 3.5; ctx.strokeRect(o.x, o.y, o.w, o.h);
@@ -249,9 +252,9 @@ export default function ExportDialog({ open, onClose, mapData, objects }) {
       const cellW = o.w/2, cellH = o.h/5;
       const grid = getMustateeelKillaGrid();
       const killaFontSize = Math.max(6, Math.min(cellW, cellH) * 0.28);
-      const killaLabels = grid.flatMap((row,r) =>
+      const killaLabels = killaVisibility.mustateel !== false ? grid.flatMap((row,r) =>
         row.map((n,c) => `<text x="${o.x+c*cellW+cellW/2}" y="${o.y+r*cellH+cellH/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${killaFontSize}" font-weight="bold" fill="rgba(0,0,0,0.70)" text-anchor="middle" dominant-baseline="middle">${n}</text>`)
-      ).join("");
+      ).join("") : "";
       const gridLines = [`<line x1="${o.x+cellW}" y1="${o.y}" x2="${o.x+cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`];
       for (let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="1.2"/>`);
       const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
@@ -259,11 +262,16 @@ export default function ExportDialog({ open, onClose, mapData, objects }) {
     }
     if (o.type === "muraba") {
       const cellW=o.w/5, cellH=o.h/5;
+      const grid = getMurabaKillaGrid();
+      const killaFontSize = Math.max(5, Math.min(cellW, cellH) * 0.24);
+      const killaLabels = killaVisibility.muraba !== false ? grid.flatMap((row,r) =>
+        row.map((n,c) => `<text x="${o.x+c*cellW+cellW/2}" y="${o.y+r*cellH+cellH/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${killaFontSize}" font-weight="bold" fill="rgba(0,0,0,0.65)" text-anchor="middle" dominant-baseline="middle">${n}</text>`)
+      ).join("") : "";
       const gridLines=[];
       for(let c=1;c<5;c++) gridLines.push(`<line x1="${o.x+c*cellW}" y1="${o.y}" x2="${o.x+c*cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`);
       for(let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="1.2"/>`);
       const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.28}" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
-      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#000" stroke-width="4.5" stroke-linejoin="miter"/>${lbl}`;
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#000" stroke-width="4.5" stroke-linejoin="miter"/>${lbl}`;
     }
     if (o.type === "acre") {
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#555" stroke-width="1"/>`;

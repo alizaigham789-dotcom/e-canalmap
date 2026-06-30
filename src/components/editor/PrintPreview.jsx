@@ -61,7 +61,7 @@ function parallelSmoothClosedPath(pts, offset) {
 }
 
 // ─── SVG OBJECT RENDERERS ─────────────────────────────────────────────────────
-function svgMustateel(obj, C, idx) {
+function svgMustateel(obj, C, idx, showKilla = true) {
   const cellW = obj.w / 2, cellH = obj.h / 5;
   const strokeColor = C.mustateelStroke || "#000000";
   const fontSize = Math.min(obj.w * 0.30, obj.h * 0.30);
@@ -74,12 +74,14 @@ function svgMustateel(obj, C, idx) {
     gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-width="1.2"/>`;
   }
 
-  // Killa numbers in each cell
+  // Killa numbers — only if showKilla is true
   let killaLabels = "";
-  const killaFontSize = Math.max(6, Math.min(cellW, cellH) * 0.28);
-  for (let r = 0; r < 5; r++) {
-    for (let c = 0; c < 2; c++) {
-      killaLabels += `<text x="${obj.x + c*cellW + cellW/2}" y="${obj.y + r*cellH + cellH/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${killaFontSize}" fill="${strokeColor}" fill-opacity="0.75">${killaGrid[r][c]}</text>`;
+  if (showKilla) {
+    const killaFontSize = Math.max(6, Math.min(cellW, cellH) * 0.28);
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 2; c++) {
+        killaLabels += `<text x="${obj.x + c*cellW + cellW/2}" y="${obj.y + r*cellH + cellH/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${killaFontSize}" fill="${strokeColor}" fill-opacity="0.75">${killaGrid[r][c]}</text>`;
+      }
     }
   }
 
@@ -96,10 +98,11 @@ function svgMustateel(obj, C, idx) {
 </g>`;
 }
 
-function svgMuraba(obj, C, idx) {
+function svgMuraba(obj, C, idx, showKilla = true) {
   const cellW = obj.w / 5, cellH = obj.h / 5;
   const strokeColor = C.murabaStroke || "#000000";
   const fontSize = Math.min(obj.w * 0.22, obj.h * 0.22);
+  const killaGrid = getMurabaKillaGrid();
 
   let gridLines = "";
   for (let c = 1; c < 5; c++) {
@@ -109,11 +112,22 @@ function svgMuraba(obj, C, idx) {
     gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-width="1.2"/>`;
   }
 
+  let killaLabels = "";
+  if (showKilla) {
+    const killaFontSize = Math.max(5, Math.min(cellW, cellH) * 0.24);
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        killaLabels += `<text x="${obj.x + c*cellW + cellW/2}" y="${obj.y + r*cellH + cellH/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${killaFontSize}" fill="${strokeColor}" fill-opacity="0.70">${killaGrid[r][c]}</text>`;
+      }
+    }
+  }
+
   const label = obj.label || "";
   return `
 <g key="murb_${idx}">
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
+  ${killaLabels}
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="4.5" stroke-linejoin="miter"/>
   ${label ? `<text x="${obj.x + obj.w/2}" y="${obj.y + obj.h/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}
 </g>`;
@@ -132,34 +146,35 @@ function svgAcre(obj, C, idx) {
 
 function svgChakbandi(obj, C, idx) {
   if (!obj.points || obj.points.length < 2) return "";
-  const color = "#000000"; // black like real cadastral maps
-  const mainPath = pointsToSmoothPath(obj.points);
+  const color = "#000000";
   const crossSize = 6;
-  const spacing = 22; // dense crosses like the photo
+  const spacing = 22;
 
-  // Build X crosses along each segment — rotated to be perpendicular to the line
+  // Straight polyline segments — no curves, exact like editor
+  const pts = obj.points.map(p => `${p.x},${p.y}`).join(" ");
+
+  // Rotated X crosses per segment
   let crosses = "";
   for (let i = 0; i < obj.points.length - 1; i++) {
     const a = obj.points[i], b = obj.points[i+1];
     const segLen = Math.hypot(b.x - a.x, b.y - a.y);
     const angle = Math.atan2(b.y - a.y, b.x - a.x);
+    const cos = Math.cos(angle), sin = Math.sin(angle);
     const steps = Math.max(1, Math.floor(segLen / spacing));
     for (let s = 0; s <= steps; s++) {
       const t = s / steps;
       const cx = a.x + (b.x - a.x) * t;
       const cy = a.y + (b.y - a.y) * t;
-      // Rotated X cross aligned with segment direction
-      const cos = Math.cos(angle), sin = Math.sin(angle);
-      const x1 = cx + (-crossSize * cos - -crossSize * sin);
-      const y1 = cy + (-crossSize * sin + -crossSize * cos);
-      const x2 = cx + (crossSize * cos - crossSize * sin);
-      const y2 = cy + (crossSize * sin + crossSize * cos);
-      const x3 = cx + (crossSize * cos - -crossSize * sin);
-      const y3 = cy + (crossSize * sin + -crossSize * cos);
-      const x4 = cx + (-crossSize * cos - crossSize * sin);
-      const y4 = cy + (-crossSize * sin + crossSize * cos);
-      crosses += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`;
-      crosses += `<line x1="${x3.toFixed(1)}" y1="${y3.toFixed(1)}" x2="${x4.toFixed(1)}" y2="${y4.toFixed(1)}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`;
+      const x1 = (cx + (-crossSize*cos - -crossSize*sin)).toFixed(1);
+      const y1 = (cy + (-crossSize*sin + -crossSize*cos)).toFixed(1);
+      const x2 = (cx + ( crossSize*cos -  crossSize*sin)).toFixed(1);
+      const y2 = (cy + ( crossSize*sin +  crossSize*cos)).toFixed(1);
+      const x3 = (cx + ( crossSize*cos - -crossSize*sin)).toFixed(1);
+      const y3 = (cy + ( crossSize*sin + -crossSize*cos)).toFixed(1);
+      const x4 = (cx + (-crossSize*cos -  crossSize*sin)).toFixed(1);
+      const y4 = (cy + (-crossSize*sin +  crossSize*cos)).toFixed(1);
+      crosses += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`;
+      crosses += `<line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`;
     }
   }
 
@@ -168,7 +183,7 @@ function svgChakbandi(obj, C, idx) {
 
   return `
 <g key="cbnd_${idx}">
-  <path d="${mainPath}" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="miter"/>
   ${crosses}
   ${label && midPt ? `<text x="${midPt.x}" y="${midPt.y - 10}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="14" fill="${color}">${label}</text>` : ""}
 </g>`;
@@ -230,7 +245,7 @@ function svgMouza(obj, C, idx) {
 }
 
 // ─── MAIN SVG GENERATOR ───────────────────────────────────────────────────────
-function buildSVG(objects, colorSettings, filterMoga) {
+function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}) {
   const C = colorSettings || {};
   const bounds = getObjectsBounds(objects);
   if (!bounds) return null;
@@ -241,12 +256,15 @@ function buildSVG(objects, colorSettings, filterMoga) {
   const viewW = (bounds.maxX - bounds.minX) + pad * 2;
   const viewH = (bounds.maxY - bounds.minY) + pad * 2;
 
+  const showKillaMustateel = killaVisibility.mustateel !== false;
+  const showKillaMuraba = killaVisibility.muraba !== false;
+
   // Filter objects by moga if needed
   const filtered = filterMoga
     ? objects.filter(o => {
         if (o.type === "chakbandi") return o.mogaNumber === filterMoga;
         if (o.type === "mustateel") return o.mogaNumber === filterMoga || !o.mogaNumber;
-        return true; // canals, roads, mouza always shown
+        return true;
       })
     : objects;
 
@@ -255,8 +273,8 @@ function buildSVG(objects, colorSettings, filterMoga) {
   let svgParts = [];
   sorted.forEach((obj, idx) => {
     switch (obj.type) {
-      case "mustateel": svgParts.push(svgMustateel(obj, C, idx)); break;
-      case "muraba":    svgParts.push(svgMuraba(obj, C, idx)); break;
+      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, showKillaMustateel)); break;
+      case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba)); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
       case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx)); break;
       case "canal":     svgParts.push(svgCanal(obj, C, idx)); break;
@@ -286,7 +304,7 @@ function SettingSlider({ label, value, min, max, step, onChange, unit = "" }) {
 }
 
 // ─── COMPONENT ─────────────────────────────────────────────────────────────────
-export default function PrintPreview({ mapData, objects, colorSettings, onClose, selectedMogaFilter }) {
+export default function PrintPreview({ mapData, objects, colorSettings, onClose, selectedMogaFilter, killaVisibility = {} }) {
   const [scale, setScale] = useState(100);
   const [mogaFilter, setMogaFilter] = useState(selectedMogaFilter || "");
 
@@ -300,8 +318,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   }, [objects]);
 
   const svgData = useMemo(
-    () => buildSVG(objects, colorSettings, mogaFilter || null),
-    [objects, colorSettings, mogaFilter]
+    () => buildSVG(objects, colorSettings, mogaFilter || null, killaVisibility),
+    [objects, colorSettings, mogaFilter, killaVisibility]
   );
 
   const svgString = svgData
