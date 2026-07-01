@@ -125,6 +125,7 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
                   className="h-7 text-xs bg-green-50 border-green-200 text-green-800 placeholder:text-green-300 focus:border-green-500 font-mono"
                 />
               </div>
+              <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 5} min={1} max={10} step={1} onChange={v => commit("boundaryThickness", v)} />
               <FillStyleControl local={local} commit={commit} />
               <KillaStyleControl local={local} commit={commit} />
               <div className="text-[10px] text-slate-400 font-mono">440 ft × 990 ft • 10 Killas</div>
@@ -195,34 +196,18 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
                 />
                 <p className="text-[9px] text-green-500 mt-0.5">Assign a Moga # to filter/print this boundary separately</p>
               </div>
+              <SpacingControl label="Line Thickness" value={local.lineThickness || 6} min={1} max={10} step={1} onChange={v => commit("lineThickness", v)} />
               <div className="flex items-center justify-between mt-2">
                 <label className="text-xs text-slate-600">Cross Pattern (× × ×)</label>
                 <Switch checked={!!local.crossPattern} onCheckedChange={v => commit("crossPattern", v)} className="scale-75" />
               </div>
               {local.crossPattern && (
                 <>
-                  <div>
-                    <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Cross Size</label>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                        onClick={() => commit("crossSize", Math.max(4, (local.crossSize || 8) - 2))}>−</Button>
-                      <span className="text-xs text-slate-600 font-mono w-8 text-center">{local.crossSize || 8}</span>
-                      <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                        onClick={() => commit("crossSize", Math.min(40, (local.crossSize || 8) + 2))}>+</Button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Cross Spacing</label>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                        onClick={() => commit("crossSpacing", Math.max(10, (local.crossSpacing || 40) - 10))}>−</Button>
-                      <span className="text-xs text-slate-600 font-mono w-8 text-center">{local.crossSpacing || 40}</span>
-                      <Button size="sm" variant="outline" className="h-6 px-2 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                        onClick={() => commit("crossSpacing", Math.min(200, (local.crossSpacing || 40) + 10))}>+</Button>
-                    </div>
-                  </div>
+                  <SpacingControl label="Cross Size" value={local.crossSize || 3} min={1} max={10} step={1} onChange={v => commit("crossSize", v)} />
+                  <SpacingControl label="Cross Spacing" value={local.crossSpacing || 2} min={1} max={10} step={1} onChange={v => commit("crossSpacing", v)} />
                 </>
               )}
+              <p className="text-[9px] text-slate-400">Sizes here apply identically in Print Preview & Export</p>
               <div className="text-[10px] text-green-600 font-mono">{local.crossPattern ? "Cross pattern" : "Solid line"} • {selectedObj.points?.length || 0} points</div>
             </>
           )}

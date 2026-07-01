@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE } from "@/lib/gisEngine";
 
 // ---- Anti-aliased zoom-clamped font size ----
 // For print: use a larger effective min so labels are always readable regardless of zoom
@@ -134,9 +134,9 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     }
   }
 
-  // Layer 2: Outer boundary — RED, thick
+  // Layer 2: Outer boundary — RED, thick (world-unit thickness, matches print/export)
   ctx.strokeStyle = isSelected ? "#60a5fa" : (C.mustateelStroke || "#ef4444");
-  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
+  ctx.lineWidth = (MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness) + (isSelected ? 3 : 0)) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
   // Layer 2: Killa grid — always visible, subtle ink
@@ -556,12 +556,14 @@ export function drawDamageMarker(ctx, obj, isSelected, zoom) {
 export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false) {
   if (obj.points.length < 2) return;
   const color = C.chakbandiStroke || "#22c55e";
-  const crossSize = (obj.crossSize || 6) / zoom;
-  const spacing = (obj.crossSpacing || 20) / zoom;
+  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness);
+  const crossSize = CHAKBANDI_SCALE.crossSize(obj.crossSize) / zoom;
+  const spacing = CHAKBANDI_SCALE.crossSpacing(obj.crossSpacing) / zoom;
 
   // Always draw straight segments (no curves) — chakbandi is a hard boundary
+  // World-unit thickness, matches print/export exactly
   ctx.strokeStyle = isSelected ? "#86efac" : color;
-  ctx.lineWidth = (isSelected ? 3.5 : 3) / zoom;
+  ctx.lineWidth = (lineW + (isSelected ? 3 : 0)) / zoom;
   ctx.lineCap = "round";
   ctx.lineJoin = "miter";
   ctx.setLineDash([]);
@@ -572,7 +574,7 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false)
 
   // Always draw X crosses along each segment (rotated with segment direction)
   ctx.strokeStyle = isSelected ? "#86efac" : color;
-  ctx.lineWidth = (isSelected ? 2 : 1.8) / zoom;
+  ctx.lineWidth = (lineW * 0.6 + (isSelected ? 2 : 0)) / zoom;
   ctx.lineCap = "round";
   for (let i = 0; i < obj.points.length - 1; i++) {
     const a = obj.points[i], b = obj.points[i+1];
@@ -707,10 +709,11 @@ export function drawChakbandiDraft(ctx, chakbandiDraft, snapPos, zoom, C) {
   const color = C.chakbandiStroke || "#22c55e";
   const draftPts = [...chakbandiDraft];
   if (snapPos) draftPts.push(snapPos);
-  const crossSize = 6/zoom, spacing = 20/zoom;
+  const lineW = CHAKBANDI_SCALE.lineWidth();
+  const crossSize = CHAKBANDI_SCALE.crossSize()/zoom, spacing = CHAKBANDI_SCALE.crossSpacing()/zoom;
 
   // Straight line (no curves)
-  ctx.strokeStyle = color; ctx.lineWidth = 3/zoom; ctx.lineCap = "round"; ctx.lineJoin = "miter";
+  ctx.strokeStyle = color; ctx.lineWidth = lineW/zoom; ctx.lineCap = "round"; ctx.lineJoin = "miter";
   ctx.setLineDash([]);
   ctx.beginPath();
   ctx.moveTo(draftPts[0].x, draftPts[0].y);
@@ -718,7 +721,7 @@ export function drawChakbandiDraft(ctx, chakbandiDraft, snapPos, zoom, C) {
   ctx.stroke();
 
   // Rotated X crosses
-  ctx.strokeStyle = color; ctx.lineWidth = 1.8/zoom; ctx.lineCap = "round";
+  ctx.strokeStyle = color; ctx.lineWidth = (lineW*0.6)/zoom; ctx.lineCap = "round";
   for (let i = 0; i < draftPts.length - 1; i++) {
     const a = draftPts[i], b = draftPts[i+1];
     const segLen = Math.hypot(b.x-a.x, b.y-a.y);

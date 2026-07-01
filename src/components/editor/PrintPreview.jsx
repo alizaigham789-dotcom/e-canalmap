@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE } from "@/lib/gisEngine";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
@@ -93,7 +93,7 @@ function svgMustateel(obj, C, idx, showKilla = true) {
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
   ${killaLabels}
-  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="220" stroke-linejoin="miter"/>
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness)}" stroke-linejoin="miter"/>
   ${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}
 </g>`;
 }
@@ -147,9 +147,10 @@ function svgAcre(obj, C, idx) {
 function svgChakbandi(obj, C, idx, viewW) {
   if (!obj.points || obj.points.length < 2) return "";
   const color = C.chakbandiStroke || "#000000";
-  // crossSize and spacing are in world units — 10× thicker for print clarity
-  const crossSize = obj.crossSize || 60;
-  const spacing = obj.crossSpacing || 80;
+  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness);
+  const crossW = lineW * 0.6;
+  const crossSize = CHAKBANDI_SCALE.crossSize(obj.crossSize);
+  const spacing = CHAKBANDI_SCALE.crossSpacing(obj.crossSpacing);
 
   const pts = obj.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 
@@ -173,8 +174,8 @@ function svgChakbandi(obj, C, idx, viewW) {
       const y3 = (cy + ( crossSize*sin + -crossSize*cos)).toFixed(1);
       const x4 = (cx + (-crossSize*cos -  crossSize*sin)).toFixed(1);
       const y4 = (cy + (-crossSize*sin +  crossSize*cos)).toFixed(1);
-      crosses += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="180" stroke-linecap="round"/>`;
-      crosses += `<line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" stroke="${color}" stroke-width="180" stroke-linecap="round"/>`;
+      crosses += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${crossW}" stroke-linecap="round"/>`;
+      crosses += `<line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" stroke="${color}" stroke-width="${crossW}" stroke-linecap="round"/>`;
     }
   }
 
@@ -182,7 +183,7 @@ function svgChakbandi(obj, C, idx, viewW) {
   const midPt = obj.points[Math.floor(obj.points.length/2)];
 
   return `<g>
-  <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="300" stroke-linecap="round" stroke-linejoin="miter"/>
+  <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${lineW}" stroke-linecap="round" stroke-linejoin="miter"/>
   ${crosses}
   ${label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${color}">${label}</text>` : ""}
 </g>`;

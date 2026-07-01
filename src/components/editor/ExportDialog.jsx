@@ -1,12 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
-import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE } from "@/lib/gisEngine";
 
 
-export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {} }) {
+export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {} }) {
   const [loading, setLoading] = useState(null);
+  const C = colorSettings || {};
+  const previewCanvasRef = useRef(null);
+
+  // Live preview — shows exactly how the export will look before downloading
+  useEffect(() => {
+    if (!open || !previewCanvasRef.current) return;
+    const bbox = getBBox();
+    const scale = Math.min(600 / (bbox.maxX - bbox.minX || 1), 400 / (bbox.maxY - bbox.minY || 1), 1.5);
+    const src = renderToCanvas(scale);
+    const dest = previewCanvasRef.current;
+    dest.width = src.width; dest.height = src.height;
+    dest.getContext("2d").drawImage(src, 0, 0);
+  }, [open, objects, colorSettings, killaVisibility]);
 
   // ---- Compute bounding box of all objects ----
   function getBBox() {
@@ -80,11 +93,11 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
           ctx.fillText(String(grid[r][c]), o.x + c*cellW + cellW/2, o.y + r*cellH + cellH/2);
         }
       }
-      // Bold outer boundary (4× bolder)
-      ctx.strokeStyle = "#000000"; ctx.lineWidth = 14; ctx.strokeRect(o.x, o.y, o.w, o.h);
+      // Bold outer boundary — user's colour + thickness setting, same as editor/print
+      ctx.strokeStyle = C.mustateelStroke || "#000000"; ctx.lineWidth = MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness); ctx.strokeRect(o.x, o.y, o.w, o.h);
       // Label
       if (o.label) {
-        ctx.fillStyle = "#1e293b";
+        ctx.fillStyle = C.labelColor || "#1e293b";
         ctx.font = `900 ${Math.min(o.w, o.h) * 0.35}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(o.label, o.x + o.w/2, o.y + o.h/2);
@@ -99,26 +112,26 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       for (let r=1;r<5;r++){ctx.moveTo(o.x,o.y+r*cellH);ctx.lineTo(o.x+o.w,o.y+r*cellH);}
       ctx.stroke();
       // Bold outer boundary (thicker than mustateel)
-      ctx.strokeStyle = "#000000"; ctx.lineWidth = 4.5; ctx.strokeRect(o.x, o.y, o.w, o.h);
+      ctx.strokeStyle = C.murabaStroke || "#000000"; ctx.lineWidth = 4.5; ctx.strokeRect(o.x, o.y, o.w, o.h);
       if (o.label) {
-        ctx.fillStyle = "#1e293b"; ctx.font = `900 ${Math.min(o.w, o.h)*0.28}px Rajdhani, sans-serif`;
+        ctx.fillStyle = C.labelColor || "#1e293b"; ctx.font = `900 ${Math.min(o.w, o.h)*0.28}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(o.label, o.x+o.w/2, o.y+o.h/2);
       }
     } else if (o.type === "acre") {
-      ctx.fillStyle = o.fillColor || "rgba(234,179,8,0.08)"; ctx.fillRect(o.x,o.y,o.w,o.h);
-      ctx.strokeStyle = "#eab308"; ctx.lineWidth = 1.5/zoom; ctx.strokeRect(o.x,o.y,o.w,o.h);
+      ctx.fillStyle = o.fillColor || C.acreFill || "rgba(234,179,8,0.08)"; ctx.fillRect(o.x,o.y,o.w,o.h);
+      ctx.strokeStyle = C.acreStroke || "#eab308"; ctx.lineWidth = 1.5/zoom; ctx.strokeRect(o.x,o.y,o.w,o.h);
     } else if (o.type === "canal" && o.points?.length >= 2) {
       const halfW = (o.width || 14)/2;
       const left = getParallelPolyline(o.points, -halfW);
       const right = getParallelPolyline(o.points, halfW);
-      ctx.fillStyle = "rgba(30,144,255,0.25)";
+      ctx.fillStyle = C.canalFill || "rgba(30,144,255,0.25)";
       ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
       for (const p of left) ctx.lineTo(p.x,p.y);
       ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
       for (let i=right.length-1;i>=0;i--) ctx.lineTo(right[i].x,right[i].y);
       ctx.closePath(); ctx.fill();
-      ctx.strokeStyle="#0284c7"; ctx.lineWidth=2/zoom;
+      ctx.strokeStyle=C.canalStroke || "#0284c7"; ctx.lineWidth=2/zoom;
       for (const side of [left,right]){ctx.beginPath();ctx.moveTo(side[0].x,side[0].y);for(const p of side)ctx.lineTo(p.x,p.y);ctx.stroke();}
     } else if (o.type === "khal" && o.points?.length >= 2) {
       const halfW = (o.width || 8)/2;
@@ -126,7 +139,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.fillStyle="rgba(37,99,235,0.2)"; ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
       for(const p of left)ctx.lineTo(p.x,p.y); ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
       for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle="#2563eb"; ctx.lineWidth=1.5/zoom;
+      ctx.strokeStyle=C.khalStroke || "#2563eb"; ctx.lineWidth=1.5/zoom;
       for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
     } else if (o.type === "road" && o.points?.length >= 2) {
       const halfW = (o.width||28)/2;
@@ -134,17 +147,19 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.fillStyle="#3a3a3a"; ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
       for(const p of left)ctx.lineTo(p.x,p.y); ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
       for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle="#b45309"; ctx.lineWidth=2/zoom;
+      ctx.strokeStyle=C.roadStroke || "#b45309"; ctx.lineWidth=2/zoom;
       for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
     } else if (o.type === "chakbandi" && o.points?.length >= 2) {
-      // Bold black line + X crosses — 10× thicker for print clarity
-      ctx.strokeStyle="#000000"; ctx.lineWidth=35;
+      // Bold line + X crosses — colour & thickness match editor/print exactly
+      const chColor = C.chakbandiStroke || "#000000";
+      const lineW = CHAKBANDI_SCALE.lineWidth(o.lineThickness);
+      ctx.strokeStyle=chColor; ctx.lineWidth=lineW;
       ctx.lineCap="round"; ctx.lineJoin="round";
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();
       // Draw X crosses along each segment
-      const crossSize = 60, spacing = 80;
-      ctx.strokeStyle="#000000"; ctx.lineWidth=20; ctx.lineCap="round";
+      const crossSize = CHAKBANDI_SCALE.crossSize(o.crossSize), spacing = CHAKBANDI_SCALE.crossSpacing(o.crossSpacing);
+      ctx.strokeStyle=chColor; ctx.lineWidth=lineW*0.6; ctx.lineCap="round";
       for (let i = 0; i < o.points.length - 1; i++) {
         const a = o.points[i], b = o.points[i+1];
         const segLen = Math.hypot(b.x-a.x, b.y-a.y);
@@ -165,7 +180,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         }
       }
     } else if (o.type === "mouza" && o.points?.length >= 2) {
-      ctx.strokeStyle="#000"; ctx.lineWidth=1.2/zoom; ctx.setLineDash([3/zoom,4/zoom]);
+      ctx.strokeStyle=C.mouzaStroke || "#000"; ctx.lineWidth=1.2/zoom; ctx.setLineDash([3/zoom,4/zoom]);
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke(); ctx.setLineDash([]);
     }
@@ -257,8 +272,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ).join("") : "";
       const gridLines = [`<line x1="${o.x+cellW}" y1="${o.y}" x2="${o.x+cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`];
       for (let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="1.2"/>`);
-      const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
-      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#000" stroke-width="3.5" stroke-linejoin="miter"/>${lbl}`;
+      const strokeColor = C.mustateelStroke || "#000";
+      const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;
     }
     if (o.type === "muraba") {
       const cellW=o.w/5, cellH=o.h/5;
@@ -274,18 +290,21 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#000" stroke-width="4.5" stroke-linejoin="miter"/>${lbl}`;
     }
     if (o.type === "acre") {
-      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#555" stroke-width="1"/>`;
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${C.acreStroke || "#555"}" stroke-width="1"/>`;
     }
     if ((o.type==="canal"||o.type==="khal"||o.type==="road") && o.points?.length>=2) {
       const pts = o.points.map(p=>`${p.x},${p.y}`).join(" ");
-      const color = o.type==="canal"?"#0284c7":o.type==="khal"?"#2563eb":"#b45309";
+      const color = o.type==="canal"?(C.canalStroke||"#0284c7"):o.type==="khal"?(C.khalStroke||"#2563eb"):(C.roadStroke||"#b45309");
       const w = o.type==="canal"?2:o.type==="khal"?1.5:2;
       return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${w}"/>`;
     }
     if (o.type==="chakbandi" && o.points?.length>=2) {
-      // Bold black line + X crosses — 10× thicker
+      // Bold line + X crosses — colour & thickness match editor/print exactly
+      const chColor = C.chakbandiStroke || "#000";
+      const lineW = CHAKBANDI_SCALE.lineWidth(o.lineThickness);
+      const crossW = lineW * 0.6;
       let crossSVG = "";
-      const crossSize = 60, spacing = 80;
+      const crossSize = CHAKBANDI_SCALE.crossSize(o.crossSize), spacing = CHAKBANDI_SCALE.crossSpacing(o.crossSpacing);
       for (let i = 0; i < o.points.length - 1; i++) {
         const a = o.points[i], b = o.points[i+1];
         const segLen = Math.hypot(b.x-a.x, b.y-a.y);
@@ -299,16 +318,16 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
           const x2=(cx+(crossSize*cos-crossSize*sin)).toFixed(1), y2=(cy+(crossSize*sin+crossSize*cos)).toFixed(1);
           const x3=(cx+(crossSize*cos- -crossSize*sin)).toFixed(1), y3=(cy+(crossSize*sin+ -crossSize*cos)).toFixed(1);
           const x4=(cx+(-crossSize*cos-crossSize*sin)).toFixed(1), y4=(cy+(-crossSize*sin+crossSize*cos)).toFixed(1);
-          crossSVG += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="18" stroke-linecap="round"/>`;
-          crossSVG += `<line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" stroke="#000" stroke-width="18" stroke-linecap="round"/>`;
+          crossSVG += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${chColor}" stroke-width="${crossW}" stroke-linecap="round"/>`;
+          crossSVG += `<line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" stroke="${chColor}" stroke-width="${crossW}" stroke-linecap="round"/>`;
         }
       }
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
-      return `<polyline points="${pts}" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>${crossSVG}`;
+      return `<polyline points="${pts}" fill="none" stroke="${chColor}" stroke-width="${lineW}" stroke-linecap="round" stroke-linejoin="round"/>${crossSVG}`;
     }
     if (o.type==="mouza" && o.points?.length>=2) {
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
-      return `<polyline points="${pts}" fill="none" stroke="#000" stroke-width="1.2" stroke-dasharray="3,4"/>`;
+      return `<polyline points="${pts}" fill="none" stroke="${C.mouzaStroke || "#000"}" stroke-width="1.2" stroke-dasharray="3,4"/>`;
     }
     return null;
   }
@@ -491,6 +510,10 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         <DialogHeader>
           <DialogTitle className="font-heading text-white">Export / Download Map</DialogTitle>
         </DialogHeader>
+        <div className="rounded-lg overflow-hidden border border-slate-700 bg-white flex items-center justify-center p-1">
+          <canvas ref={previewCanvasRef} className="max-w-full max-h-48 object-contain" />
+        </div>
+        <p className="text-[10px] text-slate-500 text-center -mt-1">Live preview — this is exactly how your export will look</p>
         <div className="space-y-2 py-2 max-h-[70vh] overflow-y-auto">
           {EXPORTS.map(({ label, desc, icon: Icon, color, action, key }) => (
             <button key={key} onClick={() => action()}

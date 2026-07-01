@@ -381,6 +381,7 @@ export function createMustateel(wx, wy, ownerName = "") {
     fillStyle: "solid", fillColor: "rgba(245,158,11,0.10)", fillOpacity: 0.10, fillSpacing: 8,
     killaStyle: { strokeColor: "#ef4444", strokeWidth: 1, strokeOpacity: 0.15, strokeStyle: "solid", labelColor: "rgba(220,38,38,0.9)" },
     lockSizeShape: true,
+    boundaryThickness: 5, // 1-10 scale — used identically in editor, print & export
   };
 }
 
@@ -430,11 +431,23 @@ export function createOutlet(canalId, startPt, endPt, label = "") {
   };
 }
 
+// Chakbandi size fields use a 1-10 level scale, converted to world units at render time
+// via CHAKBANDI_SCALE — kept identical across editor canvas, print preview & export.
+export const CHAKBANDI_SCALE = {
+  lineWidth: (level) => (level || 6) * 3,       // spine + cross stroke thickness
+  crossSize: (level) => (level || 3) * 6,       // cross arm length
+  crossSpacing: (level) => (level || 2) * 20,   // distance between crosses
+};
+export const MUSTATEEL_SCALE = {
+  boundaryWidth: (level) => (level || 5) * 3,
+};
+
 export function createChakbandi(points, name = "") {
   return {
     id: `chakbandi_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "chakbandi", points: points.map(p => ({ ...p })), name,
-    width: DIMENSIONS.CANAL_WIDTH, crossPattern: true, crossSize: 8, crossSpacing: 40,
+    width: DIMENSIONS.CANAL_WIDTH, crossPattern: true,
+    crossSize: 3, crossSpacing: 2, lineThickness: 6, // 1-10 levels
   };
 }
 

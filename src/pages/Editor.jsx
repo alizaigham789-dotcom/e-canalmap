@@ -691,6 +691,7 @@ export default function Editor() {
         mapData={mapData}
         objects={objects}
         killaVisibility={{ mustateel: killaVisibility.mustateel && killaNumbersGlobal, muraba: killaVisibility.muraba && killaNumbersGlobal }}
+        colorSettings={colorSettings}
       />
 
       {showPrint && (
