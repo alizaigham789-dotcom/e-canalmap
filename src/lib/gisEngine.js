@@ -760,8 +760,9 @@ export function hitTest(wx, wy, objects, eraser = false) {
     } else if (o.type === "outlet") {
       if (distToLineSegment(wx, wy, o.start.x, o.start.y, o.end.x, o.end.y) < 15) return o;
     } else if (o.type === "mouza") {
+      const thresh = eraser ? 25 : 12;
       for (let j = 0; j < o.points.length - 1; j++) {
-        if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < 12) return o;
+        if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < thresh) return o;
       }
     }
   }
