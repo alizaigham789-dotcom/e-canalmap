@@ -697,15 +697,18 @@ export function getMustateelMouzaSplit(obj, mouzaObjects) {
       if (segMaxX < obj.x || segMinX > obj.x + obj.w || segMaxY < obj.y || segMinY > obj.y + obj.h) continue;
 
       const pts = [];
-      for (const [e1, e2] of edges) {
+      edges.forEach(([e1, e2], edgeIdx) => {
         const ip = segIntersect(a, b, e1, e2);
-        if (ip) pts.push(ip);
-      }
+        if (ip) pts.push({ ...ip, edgeIdx });
+      });
       const uniq = [];
       for (const p of pts) {
         if (!uniq.some(u => Math.hypot(u.x - p.x, u.y - p.y) < 0.01)) uniq.push(p);
       }
-      if (uniq.length === 2) {
+      // Only a valid split if the line truly crosses the rectangle through two different edges —
+      // if both intersections land on the same edge (a bend/graze near a corner), skip it so the
+      // parcel keeps its normal single centered label instead of a broken/degenerate split.
+      if (uniq.length === 2 && uniq[0].edgeIdx !== uniq[1].edgeIdx) {
         const [i1, i2] = uniq;
         const sideOf = (p) => lineSide(p.x, p.y, i1.x, i1.y, i2.x, i2.y);
         const sideA = corners.filter(c => sideOf(c) >= 0);

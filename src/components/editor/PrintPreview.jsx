@@ -250,7 +250,7 @@ function svgRoad(obj, C, idx) {
 function svgMouza(obj, C, idx) {
   if (!obj.points || obj.points.length < 2) return "";
   const pts = obj.points.map(p => `${p.x},${p.y}`).join(" ");
-  const mouzaWidth = CHAKBANDI_SCALE.lineWidth() / 2;
+  const mouzaWidth = CHAKBANDI_SCALE.lineWidth() * 5;
   return `<polyline key="mouza_${idx}" points="${pts}" fill="none" stroke="${C.mouzaStroke || '#000'}" stroke-width="${mouzaWidth}" stroke-linecap="round"/>`;
 }
 

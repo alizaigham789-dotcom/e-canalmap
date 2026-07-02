@@ -187,7 +187,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         }
       }
     } else if (o.type === "mouza" && o.points?.length >= 2) {
-      ctx.strokeStyle=C.mouzaStroke || "#000"; ctx.lineWidth=CHAKBANDI_SCALE.lineWidth()/2; ctx.lineCap="round"; ctx.setLineDash([]);
+      ctx.strokeStyle=C.mouzaStroke || "#000"; ctx.lineWidth=CHAKBANDI_SCALE.lineWidth()*5; ctx.lineCap="round"; ctx.setLineDash([]);
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();
     }
@@ -341,7 +341,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }
     if (o.type==="mouza" && o.points?.length>=2) {
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
-      return `<polyline points="${pts}" fill="none" stroke="${C.mouzaStroke || "#000"}" stroke-width="${CHAKBANDI_SCALE.lineWidth()/2}" stroke-linecap="round"/>`;
+      return `<polyline points="${pts}" fill="none" stroke="${C.mouzaStroke || "#000"}" stroke-width="${CHAKBANDI_SCALE.lineWidth()*5}" stroke-linecap="round"/>`;
     }
     return null;
   }

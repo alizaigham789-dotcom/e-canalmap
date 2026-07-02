@@ -38,6 +38,8 @@ const GISCanvas = forwardRef(function GISCanvas(
   const movingObjId = useRef(null);
   const moveOffset = useRef({ x: 0, y: 0 });
   const lastMouse = useRef({ x: 0, y: 0 });
+  const longPressTimer = useRef(null);
+  const touchMoved = useRef(false);
   const animRef = useRef(null);
   const objectsRef = useRef(objects);
   objectsRef.current = objects;
@@ -377,6 +379,56 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (editingLabel) { onUpdateObject(editingLabel.id, { label: editingLabel.value }); setEditingLabel(null); }
   }, [editingLabel, onUpdateObject]);
 
+  // ---- Touch support (mobile) — tap to draw/select, long-press + drag to move a parcel ----
+  const getTouchPoint = (e) => {
+    const t = e.touches?.[0] || e.changedTouches?.[0];
+    return t ? { clientX: t.clientX, clientY: t.clientY, button: 0 } : null;
+  };
+
+  const clearLongPress = () => {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+  };
+
+  const handleTouchStart = useCallback((e) => {
+    const touch = getTouchPoint(e);
+    if (!touch) return;
+    touchMoved.current = false;
+    if (activeTool === "select" || activeTool === "move") {
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const worldRaw = screenToWorld(touch.clientX - rect.left, touch.clientY - rect.top, pan.x, pan.y, zoom);
+      const hit = hitTest(worldRaw.x, worldRaw.y, objectsRef.current);
+      if (hit && ["mustateel", "muraba"].includes(hit.type)) {
+        clearLongPress();
+        longPressTimer.current = setTimeout(() => {
+          if (touchMoved.current) return;
+          isMoving.current = true;
+          movingObjId.current = hit.id;
+          moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
+          onSelect(hit.id);
+          if (navigator.vibrate) navigator.vibrate(30);
+        }, 450);
+      }
+    }
+    handleMouseDown(touch);
+  }, [activeTool, pan, zoom, handleMouseDown, onSelect]);
+
+  const handleTouchMove = useCallback((e) => {
+    e.preventDefault();
+    const touch = getTouchPoint(e);
+    if (!touch) return;
+    touchMoved.current = true;
+    if (!isMoving.current) clearLongPress();
+    lastMouse.current = { x: touch.clientX, y: touch.clientY };
+    handleMouseMove(touch);
+  }, [handleMouseMove]);
+
+  const handleTouchEnd = useCallback((e) => {
+    clearLongPress();
+    const touch = getTouchPoint(e) || lastMouse.current;
+    handleMouseUp(touch);
+  }, [handleMouseUp]);
+
   const handleWheel = useCallback((e) => {
     e.preventDefault();
     const canvas = canvasRef.current;
@@ -427,7 +479,11 @@ const GISCanvas = forwardRef(function GISCanvas(
         onMouseUp={handleMouseUp}
         onDoubleClick={handleDblClick}
         onWheel={handleWheel}
-        style={{ display: "block" }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        style={{ display: "block", touchAction: "none" }}
       />
       {/* Measurement result bubble */}
       {measureResult && (
