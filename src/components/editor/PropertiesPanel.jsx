@@ -103,6 +103,7 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
             <>
               <Separator className="bg-slate-100" />
               <Field label="Label / Survey No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 1" hint="Double-click plot on map to edit label at centroid" />
+              <Field label="Label 2 (below Mouza line)" value={local.label2 || ""} onChange={v => commit("label2", v)} placeholder="e.g. 1-A" hint="Shown only when a Mouza boundary splits this parcel into 2 mouzas" />
               <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
               <div className="flex items-center justify-between">
                 <label className="text-xs text-slate-600">Show Owner</label>

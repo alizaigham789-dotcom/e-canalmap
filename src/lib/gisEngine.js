@@ -660,6 +660,72 @@ export function isInViewport(obj, pan, zoom, canvasW, canvasH, margin = 100) {
 }
 
 // ============================================================
+// MOUZA / MUSTATEEL SPLIT DETECTION
+// When a mouza boundary line passes through a mustateel rectangle,
+// the parcel is considered split into two mouzas — needs 2 labels,
+// one above and one below the crossing line.
+// ============================================================
+function segIntersect(p1, p2, p3, p4) {
+  const d1x = p2.x - p1.x, d1y = p2.y - p1.y;
+  const d2x = p4.x - p3.x, d2y = p4.y - p3.y;
+  const denom = d1x * d2y - d1y * d2x;
+  if (Math.abs(denom) < 1e-9) return null;
+  const t = ((p3.x - p1.x) * d2y - (p3.y - p1.y) * d2x) / denom;
+  const u = ((p3.x - p1.x) * d1y - (p3.y - p1.y) * d1x) / denom;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+  return { x: p1.x + t * d1x, y: p1.y + t * d1y };
+}
+
+function lineSide(px, py, ax, ay, bx, by) {
+  return (bx - ax) * (py - ay) - (by - ay) * (px - ax);
+}
+
+export function getMustateelMouzaSplit(obj, mouzaObjects) {
+  if (!mouzaObjects || mouzaObjects.length === 0) return null;
+  const corners = [
+    { x: obj.x, y: obj.y }, { x: obj.x + obj.w, y: obj.y },
+    { x: obj.x + obj.w, y: obj.y + obj.h }, { x: obj.x, y: obj.y + obj.h },
+  ];
+  const edges = [[corners[0], corners[1]], [corners[1], corners[2]], [corners[2], corners[3]], [corners[3], corners[0]]];
+
+  for (const mouza of mouzaObjects) {
+    if (!mouza.points || mouza.points.length < 2) continue;
+    for (let i = 0; i < mouza.points.length - 1; i++) {
+      const a = mouza.points[i], b = mouza.points[i + 1];
+      const segMinX = Math.min(a.x, b.x), segMaxX = Math.max(a.x, b.x);
+      const segMinY = Math.min(a.y, b.y), segMaxY = Math.max(a.y, b.y);
+      if (segMaxX < obj.x || segMinX > obj.x + obj.w || segMaxY < obj.y || segMinY > obj.y + obj.h) continue;
+
+      const pts = [];
+      for (const [e1, e2] of edges) {
+        const ip = segIntersect(a, b, e1, e2);
+        if (ip) pts.push(ip);
+      }
+      const uniq = [];
+      for (const p of pts) {
+        if (!uniq.some(u => Math.hypot(u.x - p.x, u.y - p.y) < 0.01)) uniq.push(p);
+      }
+      if (uniq.length === 2) {
+        const [i1, i2] = uniq;
+        const sideOf = (p) => lineSide(p.x, p.y, i1.x, i1.y, i2.x, i2.y);
+        const sideA = corners.filter(c => sideOf(c) >= 0);
+        const sideB = corners.filter(c => sideOf(c) < 0);
+        if (sideA.length === 0 || sideB.length === 0) continue;
+        const centroid = (poly) => ({
+          x: poly.reduce((s, p) => s + p.x, 0) / poly.length,
+          y: poly.reduce((s, p) => s + p.y, 0) / poly.length,
+        });
+        const cA = centroid([...sideA, i1, i2]);
+        const cB = centroid([...sideB, i1, i2]);
+        const [top, bottom] = cA.y <= cB.y ? [cA, cB] : [cB, cA];
+        return { mouzaId: mouza.id, topCenter: top, bottomCenter: bottom };
+      }
+    }
+  }
+  return null;
+}
+
+// ============================================================
 // HIT TEST — for eraser: boundary-based (click edge or interior)
 // ============================================================
 export function hitTest(wx, wy, objects, eraser = false) {

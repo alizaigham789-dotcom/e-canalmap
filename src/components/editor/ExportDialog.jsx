@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
-import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit } from "@/lib/gisEngine";
 
 
 export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {} }) {
@@ -95,9 +95,16 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       }
       // Bold outer boundary — user's colour + thickness setting, same as editor/print
       ctx.strokeStyle = C.mustateelStroke || "#000000"; ctx.lineWidth = MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness); ctx.strokeRect(o.x, o.y, o.w, o.h);
-      // Label
-      if (o.label) {
-        ctx.fillStyle = C.labelColor || "#1e293b";
+      // Label(s) — split above/below if a mouza line crosses this parcel
+      const mSplit = getMustateelMouzaSplit(o, objects.filter(m => m.type === "mouza"));
+      ctx.fillStyle = C.labelColor || "#1e293b";
+      if (mSplit) {
+        const splitFont = Math.min(o.w, o.h) * 0.26;
+        ctx.font = `900 ${splitFont}px Rajdhani, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        if (o.label) ctx.fillText(o.label, mSplit.topCenter.x, mSplit.topCenter.y);
+        if (o.label2) ctx.fillText(o.label2, mSplit.bottomCenter.x, mSplit.bottomCenter.y);
+      } else if (o.label) {
         ctx.font = `900 ${Math.min(o.w, o.h) * 0.35}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(o.label, o.x + o.w/2, o.y + o.h/2);
@@ -273,7 +280,14 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const gridLines = [`<line x1="${o.x+cellW}" y1="${o.y}" x2="${o.x+cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`];
       for (let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="1.2"/>`);
       const strokeColor = C.mustateelStroke || "#000";
-      const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
+      const mSplit = getMustateelMouzaSplit(o, objects.filter(m => m.type === "mouza"));
+      let lbl;
+      if (mSplit) {
+        const splitFont = Math.min(o.w, o.h) * 0.26;
+        lbl = `${o.label ? `<text x="${mSplit.topCenter.x}" y="${mSplit.topCenter.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${o.label2 ? `<text x="${mSplit.bottomCenter.x}" y="${mSplit.bottomCenter.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label2}</text>` : ""}`;
+      } else {
+        lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
+      }
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;
     }
     if (o.type === "muraba") {

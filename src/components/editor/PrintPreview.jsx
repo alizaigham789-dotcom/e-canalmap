@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit } from "@/lib/gisEngine";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
@@ -61,7 +61,7 @@ function parallelSmoothClosedPath(pts, offset) {
 }
 
 // ─── SVG OBJECT RENDERERS ─────────────────────────────────────────────────────
-function svgMustateel(obj, C, idx, showKilla = true) {
+function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
   const cellW = obj.w / 2, cellH = obj.h / 5;
   const strokeColor = C.mustateelStroke || "#000000";
   const fontSize = Math.min(obj.w * 0.30, obj.h * 0.30);
@@ -88,13 +88,22 @@ function svgMustateel(obj, C, idx, showKilla = true) {
   const label = obj.label || "";
   const labelY = obj.y + obj.h / 2;
 
+  let labelSvg;
+  if (mouzaSplit) {
+    const splitFont = Math.min(obj.w, obj.h) * 0.26;
+    const lbl2 = obj.label2 || "";
+    labelSvg = `${label ? `<text x="${mouzaSplit.topCenter.x}" y="${mouzaSplit.topCenter.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${lbl2 ? `<text x="${mouzaSplit.bottomCenter.x}" y="${mouzaSplit.bottomCenter.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${lbl2}</text>` : ""}`;
+  } else {
+    labelSvg = label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : "";
+  }
+
   return `
 <g key="must_${idx}">
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
   ${killaLabels}
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness)}" stroke-linejoin="miter"/>
-  ${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}
+  ${labelSvg}
 </g>`;
 }
 
@@ -269,11 +278,12 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}) {
     : objects;
 
   const sorted = [...filtered].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
+  const mouzaObjects = objects.filter(o => o.type === "mouza");
 
   let svgParts = [];
   sorted.forEach((obj, idx) => {
     switch (obj.type) {
-      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, showKillaMustateel)); break;
+      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects))); break;
       case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba)); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
       case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW)); break;

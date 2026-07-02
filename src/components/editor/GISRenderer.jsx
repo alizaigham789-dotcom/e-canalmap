@@ -115,7 +115,7 @@ export function drawAcre(ctx, obj, isSelected, zoom, C) {
   }
 }
 
-export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = true) {
+export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = true, mouzaSplit = null) {
   const ks = obj.killaStyle || {};
   const fs = obj.fillStyle || "solid";
 
@@ -176,8 +176,27 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     }
   }
 
-  // Layer 5: Center label — fixed world-unit size so ALL mustateels look same regardless of label length
-  {
+  // Layer 5: Center label(s) — fixed world-unit size so ALL mustateels look same regardless of label length
+  // If a mouza boundary splits this parcel, draw 2 labels (above/below the mouza line) instead of 1
+  if (mouzaSplit) {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
+    ctx.fillStyle = C.labelColor || "#1e293b";
+    const maxFontPx = Math.min(obj.w, obj.h) * 0.26;
+    const drawSplitLabel = (text, center) => {
+      if (!text) return;
+      ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
+      const measured = ctx.measureText(text);
+      const fitScale = Math.min(1, (obj.w * 0.75) / (measured.width || 1));
+      const finalFont = maxFontPx * fitScale;
+      ctx.font = `900 ${finalFont}px Rajdhani, sans-serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(text, center.x, center.y);
+    };
+    drawSplitLabel(obj.label || "", mouzaSplit.topCenter);
+    drawSplitLabel(obj.label2 || "", mouzaSplit.bottomCenter);
+    ctx.restore();
+  } else {
     const centerX = obj.x + obj.w / 2, centerY = obj.y + obj.h / 2;
     ctx.save();
     ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
