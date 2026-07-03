@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMogaColor } from "@/lib/gisEngine";
 
 // ---- Anti-aliased zoom-clamped font size ----
 // For print: use a larger effective min so labels are always readable regardless of zoom
@@ -218,11 +218,10 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
       ctx.font = `${ownerFont}px Inter, sans-serif`;
       ctx.fillText(obj.ownerName, centerX, labelY + finalFont * 0.55);
     }
-    // Moga number — blue, 2× killa font, top-left corner
+    // Moga number — same font size as mustateel label, blue (or black if label is non-black)
     if (obj.mogaNumber) {
-      ctx.fillStyle = "#2563eb";
-      const mogaFont = screenClampedFont(Math.min(obj.w, obj.h) * 0.12, zoom, 18, 32);
-      ctx.font = `bold ${mogaFont}px Rajdhani, sans-serif`;
+      ctx.fillStyle = getMogaColor(C.labelColor);
+      ctx.font = `bold ${maxFontPx}px Rajdhani, sans-serif`;
       ctx.textAlign = "left"; ctx.textBaseline = "top";
       ctx.fillText(`M${obj.mogaNumber}`, obj.x + 4/zoom, obj.y + 4/zoom);
     }
@@ -543,8 +542,8 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
     ctx.fillText(moghaNum, sx, sy - blockSize/2 - 4/zoom);
   }
   if (obj.mogha_name) {
-    ctx.fillStyle = "#0e7490";
-    ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
+    ctx.fillStyle = getMogaColor(C.labelColor);
+    ctx.font = `bold ${screenClampedFont(DIMENSIONS.MUSTATEEL.width * 0.15, zoom, 20, 56)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(obj.mogha_name, sx, sy + blockSize/2 + 4/zoom);
   }

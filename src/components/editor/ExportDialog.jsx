@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
-import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML } from "@/lib/gisEngine";
 
 
 export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {} }) {
@@ -69,6 +69,31 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     for (const o of sorted) {
       drawObj(ctx, o, scale);
     }
+
+    // Auto-calculated CCA/GCA labels at chakbandi centroids
+    const _mustateels = objects.filter(o => o.type === "mustateel");
+    const _chakbandis = objects.filter(o => o.type === "chakbandi");
+    for (const ch of _chakbandis) {
+      if (ch.points?.length >= 3) {
+        const gca = calculateChakbandiGCA(ch, _mustateels);
+        if (gca > 0) {
+          const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length;
+          const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length;
+          const lblText = `(${gca}/${gca})`;
+          const lblFont = 16;
+          ctx.font = `bold ${lblFont}px Rajdhani, sans-serif`;
+          const tw = ctx.measureText(lblText).width + 12;
+          ctx.fillStyle = "rgba(255,255,255,0.92)";
+          ctx.fillRect(cx - tw/2, cy - lblFont/2 - 3, tw, lblFont + 6);
+          ctx.strokeStyle = C.chakbandiStroke || "#000"; ctx.lineWidth = 1.5;
+          ctx.strokeRect(cx - tw/2, cy - lblFont/2 - 3, tw, lblFont + 6);
+          ctx.fillStyle = "#166534";
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.fillText(lblText, cx, cy);
+        }
+      }
+    }
+
     ctx.restore();
     return canvas;
   }
@@ -133,7 +158,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.fillStyle = o.fillColor || C.acreFill || "rgba(234,179,8,0.08)"; ctx.fillRect(o.x,o.y,o.w,o.h);
       ctx.strokeStyle = C.acreStroke || "#eab308"; ctx.lineWidth = 1.5/zoom; ctx.strokeRect(o.x,o.y,o.w,o.h);
     } else if (o.type === "canal" && o.points?.length >= 2) {
-      const halfW = (o.width || 14)/2;
+      const halfW = (o.width || DIMENSIONS.CANAL_WIDTH)/2;
       const left = getParallelPolyline(o.points, -halfW);
       const right = getParallelPolyline(o.points, halfW);
       ctx.fillStyle = C.canalFill || "rgba(30,144,255,0.25)";
@@ -142,8 +167,27 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
       for (let i=right.length-1;i>=0;i--) ctx.lineTo(right[i].x,right[i].y);
       ctx.closePath(); ctx.fill();
-      ctx.strokeStyle=C.canalStroke || "#0284c7"; ctx.lineWidth=2/zoom;
+      ctx.strokeStyle=C.canalStroke || "#0284c7"; ctx.lineWidth=2.5/zoom;
+      ctx.lineCap="round"; ctx.lineJoin="round";
       for (const side of [left,right]){ctx.beginPath();ctx.moveTo(side[0].x,side[0].y);for(const p of side)ctx.lineTo(p.x,p.y);ctx.stroke();}
+      // End caps
+      ctx.lineWidth = 2/zoom; ctx.lineCap = "butt";
+      ctx.beginPath();
+      ctx.moveTo(left[0].x,left[0].y); ctx.lineTo(right[0].x,right[0].y);
+      ctx.moveTo(left[left.length-1].x,left[left.length-1].y);
+      ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
+      ctx.stroke();
+      if (o.name) {
+        const mid = Math.floor(o.points.length / 2);
+        const p = o.points[mid], p2 = o.points[Math.min(mid + 1, o.points.length - 1)];
+        const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(angle);
+        ctx.fillStyle = "#dc2626";
+        ctx.font = `bold 14px Rajdhani, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(o.name, 0, 0);
+        ctx.restore();
+      }
     } else if (o.type === "khal" && o.points?.length >= 2) {
       const halfW = (o.width || 8)/2;
       const left = getParallelPolyline(o.points,-halfW); const right = getParallelPolyline(o.points,halfW);
@@ -222,10 +266,10 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(o.centerLabel, cx, cy);
     }
-    // Moga number on mustateel (canvas path)
+    // Moga number on mustateel — same font as label, blue (or black if label is non-black)
     if (o.type === "mustateel" && o.mogaNumber) {
-      ctx.fillStyle = "#2563eb";
-      ctx.font = `bold ${Math.max(14, Math.min(o.w, o.h) * 0.12)}px Rajdhani, sans-serif`;
+      ctx.fillStyle = getMogaColor(C.labelColor);
+      ctx.font = `bold ${Math.min(o.w, o.h) * 0.35}px Rajdhani, sans-serif`;
       ctx.textAlign = "left"; ctx.textBaseline = "top";
       ctx.fillText(`M${o.mogaNumber}`, o.x + 4, o.y + 4);
     } else if (o.type === "outlet" && o.start && o.end) {
@@ -246,15 +290,15 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.lineTo(ex - headLen * Math.cos(ang) - headW * Math.sin(ang), ey - headLen * Math.sin(ang) + headW * Math.cos(ang));
       ctx.lineTo(ex - headLen * Math.cos(ang) + headW * Math.sin(ang), ey - headLen * Math.sin(ang) - headW * Math.cos(ang));
       ctx.closePath(); ctx.fill();
-      // Moga number ABOVE block — blue, 2× font size
+      // Moga number ABOVE block — blue (or black if label is non-black)
       const num = [o.mogha_number, o.mogha_side].filter(Boolean).join("/");
       if (num) {
-        ctx.fillStyle = "#2563eb"; ctx.font = `bold 22px Rajdhani, sans-serif`;
+        ctx.fillStyle = getMogaColor(C.labelColor); ctx.font = `bold 22px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "bottom";
         ctx.fillText(num, sx, sy - half - 3);
       }
       if (o.mogha_name) {
-        ctx.fillStyle = "#0e7490"; ctx.font = `bold 11px Rajdhani, sans-serif`;
+        ctx.fillStyle = getMogaColor(C.labelColor); ctx.font = `bold ${DIMENSIONS.MUSTATEEL.width * 0.15}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "top";
         ctx.fillText(o.mogha_name, sx, sy + half + 3);
       }
@@ -275,43 +319,62 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }, "image/jpeg", 0.95);
   };
 
-  // ---- Export as PDF (raster) ----
+  // ---- Export as PDF (raster) — single page, Urdu header ----
   const exportPDF = async () => {
     setLoading("pdf");
     const canvas = renderToCanvas(2);
     const imgData = canvas.toDataURL("image/jpeg", 0.95);
-    // A3 landscape: 420mm x 297mm at 96dpi
-    const pw = 1191, ph = 842; // A3 landscape px at 96dpi
-    const ratio = Math.min(pw / canvas.width, ph / canvas.height);
+    const totalGCA = calculateTotalGCA(objects);
+    const headerHTML = buildPrintHeaderHTML(mapData, null, totalGCA);
+    // A4 landscape: fit map on single page with header
+    const pw = 1123, ph = 794; // A4 landscape px at 96dpi (with 6mm margin)
+    const headerH = 90;
+    const mapAreaH = ph - headerH;
+    const ratio = Math.min(pw / canvas.width, mapAreaH / canvas.height);
     const iw = canvas.width * ratio, ih = canvas.height * ratio;
-    const ix = (pw - iw) / 2, iy = (ph - ih) / 2;
+    const ix = (pw - iw) / 2;
 
     const win = window.open("", "_blank");
-    win.document.write(`<!DOCTYPE html><html><head><title>${mapData?.title || "Map"}</title>
+    win.document.write(`<!DOCTYPE html><html><head><title>Khaka Dasti</title>
     <style>
-      @page { size: A3 landscape; margin: 0; }
-      body { margin: 0; background: white; }
-      img { width: ${iw}px; height: ${ih}px; margin: ${iy}px ${ix}px; display: block; }
-      @media print { body { margin: 0; } }
-    </style></head><body><img src="${imgData}" /></body></html>`);
+      @page { size: A4 landscape; margin: 6mm; }
+      * { margin:0; padding:0; box-sizing:border-box; }
+      html, body { width:100%; height:100%; overflow:hidden; background:white; font-family:Rajdhani,Arial,sans-serif; }
+      .map-area { width:100%; height:calc(100vh - ${headerH}px); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+      .map-area img { max-width:100%; max-height:100%; width:auto; height:auto; }
+      @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .map-area { height:calc(100vh - ${headerH}px); } }
+    </style></head><body>
+    ${headerHTML}
+    <div class="map-area"><img src="${imgData}" style="max-width:100%;max-height:100%;width:${iw}px;height:${ih}px;" /></div>
+    </body></html>`);
     win.document.close();
     setTimeout(() => { win.print(); setLoading(null); }, 800);
   };
 
-  // ---- Export as Vector PDF (SVG in print window) ----
+  // ---- Export as Vector PDF (SVG in print window) — single page, Urdu header ----
   const exportVectorPDF = async () => {
     setLoading("vpdf");
     const bbox = getBBox();
     const W = bbox.maxX - bbox.minX;
     const H = bbox.maxY - bbox.minY;
-    let svgParts = [];
+    const totalGCA = calculateTotalGCA(objects);
+    const headerHTML = buildPrintHeaderHTML(mapData, null, totalGCA);
 
-    for (const o of objects) {
-      const sorted = [...objects].sort((a,b)=>{
-        const order=["mouza","muraba","mustateel","acre","road","canal","khal","chakbandi","outlet","damageMarker"];
-        return order.indexOf(a.type)-order.indexOf(b.type);
-      });
-      // done below
+    // Auto-calculate CCA/GCA labels for chakbandis
+    const mustateels = objects.filter(o => o.type === "mustateel");
+    const chakbandis = objects.filter(o => o.type === "chakbandi");
+    let gcaLabels = "";
+    for (const ch of chakbandis) {
+      if (ch.points?.length >= 3) {
+        const gca = calculateChakbandiGCA(ch, mustateels);
+        if (gca > 0) {
+          const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length - bbox.minX;
+          const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length - bbox.minY;
+          const lblText = `(${gca}/${gca})`;
+          const tw = lblText.length * 16 * 0.6 + 12;
+          gcaLabels += `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - 12).toFixed(1)}" width="${tw.toFixed(1)}" height="22" fill="rgba(255,255,255,0.92)" stroke="${C.chakbandiStroke || '#000'}" stroke-width="1.5"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="16" fill="#166534">${lblText}</text>`;
+        }
+      }
     }
 
     const svgObjs = [...objects].sort((a,b)=>{
@@ -323,16 +386,23 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       <rect width="${W}" height="${H}" fill="white"/>
       <g transform="translate(${-bbox.minX},${-bbox.minY})">
         ${svgObjs}
+        ${gcaLabels}
       </g>
     </svg>`;
 
     const win = window.open("", "_blank");
-    win.document.write(`<!DOCTYPE html><html><head><title>${mapData?.title||"Map"} — Vector</title>
+    win.document.write(`<!DOCTYPE html><html><head><title>Khaka Dasti</title>
     <style>
-      @page { size: A3 landscape; margin: 0; }
-      body { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: white; }
-      svg { max-width: 100vw; max-height: 100vh; }
-    </style></head><body>${svgContent}</body></html>`);
+      @page { size: A4 landscape; margin: 6mm; }
+      * { margin:0; padding:0; box-sizing:border-box; }
+      html, body { width:100%; height:100%; overflow:hidden; background:white; font-family:Rajdhani,Arial,sans-serif; }
+      .map-wrap { width:100%; height:calc(100vh - 100px); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+      .map-wrap svg { max-width:100%; max-height:100%; width:auto; height:auto; display:block; }
+      @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .map-wrap { height:calc(100vh - 100px); } }
+    </style></head><body>
+    ${headerHTML}
+    <div class="map-wrap">${svgContent}</div>
+    </body></html>`);
     win.document.close();
     setTimeout(() => { win.print(); setLoading(null); }, 800);
   };
@@ -354,7 +424,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const splitFont = Math.min(o.w, o.h) * 0.26;
         lbl = `${o.label ? `<text x="${mSplit.centerA.x}" y="${mSplit.centerA.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${o.label2 ? `<text x="${mSplit.centerB.x}" y="${mSplit.centerB.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label2}</text>` : ""}`;
       } else {
-        const mogaLbl = o.mogaNumber ? `<text x="${o.x+4}" y="${o.y+4}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.max(14, Math.min(o.w,o.h)*0.12)}" font-weight="bold" fill="#2563eb" text-anchor="start" dominant-baseline="hanging">M${o.mogaNumber}</text>` : "";
+        const _mogaClr = getMogaColor(C.labelColor);
+      const mogaLbl = o.mogaNumber ? `<text x="${o.x+4}" y="${o.y+4}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="bold" fill="${_mogaClr}" text-anchor="start" dominant-baseline="hanging">M${o.mogaNumber}</text>` : "";
         lbl = `${mogaLbl}${o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}`;
       }
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;
@@ -375,26 +446,54 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     if (o.type === "acre") {
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${C.acreStroke || "#555"}" stroke-width="1"/>`;
     }
-    if ((o.type==="canal"||o.type==="khal"||o.type==="road") && o.points?.length>=2) {
-      const pts = o.points.map(p=>`${p.x},${p.y}`).join(" ");
-      const color = o.type==="canal"?(C.canalStroke||"#0284c7"):o.type==="khal"?(C.khalStroke||"#2563eb"):(C.roadStroke||"#b45309");
-      const w = o.type==="canal"?2:o.type==="khal"?1.5:2;
-      let arrow = "";
-      if (o.type === "khal") {
-        const khHalfW = (o.width || DIMENSIONS.KHAL_WIDTH) / 2;
-        const last = o.points[o.points.length-1];
-        let prev = o.points[0];
-        for(let i=o.points.length-2;i>=0;i--){const p=o.points[i];if(Math.hypot(last.x-p.x,last.y-p.y)>khHalfW*2){prev=p;break;}}
-        const ang = Math.atan2(last.y-prev.y, last.x-prev.x);
-        const aLen = khHalfW * 12.5; // 5× original
-        const aW = khHalfW * 5;      // 5× tail width
-        const p1x=(last.x - aLen*Math.cos(ang) - aW*Math.sin(ang)).toFixed(1);
-        const p1y=(last.y - aLen*Math.sin(ang) + aW*Math.cos(ang)).toFixed(1);
-        const p2x=(last.x - aLen*Math.cos(ang) + aW*Math.sin(ang)).toFixed(1);
-        const p2y=(last.y - aLen*Math.sin(ang) - aW*Math.cos(ang)).toFixed(1);
-        arrow = `<polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>`;
+    if (o.type === "canal" && o.points?.length >= 2) {
+      // Canal — bilateral buffer with water fill + two bank lines (matches editor/print)
+      const halfW = (o.width || DIMENSIONS.CANAL_WIDTH) / 2;
+      const left = getParallelPolyline(o.points, -halfW);
+      const right = getParallelPolyline(o.points, halfW);
+      const fillColor = C.canalFill || "rgba(30,144,255,0.25)";
+      const strokeColor = C.canalStroke || "#0284c7";
+      const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      let nameSvg = "";
+      if (o.name) {
+        const mid = o.points[Math.floor(o.points.length/2)];
+        nameSvg = `<text x="${mid.x.toFixed(1)}" y="${mid.y.toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="14" fill="#dc2626">${o.name}</text>`;
       }
-      return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${w}"/>${arrow}`;
+      return `<g><polygon points="${fillPts}" fill="${fillColor}"/><polyline points="${leftPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
+    }
+    if (o.type === "khal" && o.points?.length >= 2) {
+      // Khal — bilateral buffer + flow arrow at end
+      const halfW = (o.width || DIMENSIONS.KHAL_WIDTH) / 2;
+      const left = getParallelPolyline(o.points, -halfW);
+      const right = getParallelPolyline(o.points, halfW);
+      const color = C.khalStroke || "#2563eb";
+      const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      const last = o.points[o.points.length-1];
+      let prev = o.points[0];
+      for(let i=o.points.length-2;i>=0;i--){const p=o.points[i];if(Math.hypot(last.x-p.x,last.y-p.y)>halfW*2){prev=p;break;}}
+      const ang = Math.atan2(last.y-prev.y, last.x-prev.x);
+      const aLen = halfW * 12.5, aW = halfW * 5;
+      const p1x=(last.x - aLen*Math.cos(ang) - aW*Math.sin(ang)).toFixed(1);
+      const p1y=(last.y - aLen*Math.sin(ang) + aW*Math.cos(ang)).toFixed(1);
+      const p2x=(last.x - aLen*Math.cos(ang) + aW*Math.sin(ang)).toFixed(1);
+      const p2y=(last.y - aLen*Math.sin(ang) - aW*Math.cos(ang)).toFixed(1);
+      return `<g><polygon points="${fillPts}" fill="${color}22"/><polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/></g>`;
+    }
+    if (o.type === "road" && o.points?.length >= 2) {
+      // Road — bilateral buffer + center dash
+      const halfW = (o.width || DIMENSIONS.ROAD_WIDTH) / 2;
+      const left = getParallelPolyline(o.points, -halfW);
+      const right = getParallelPolyline(o.points, halfW);
+      const color = C.roadStroke || "#b45309";
+      const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      const centerPts = o.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      return `<g><polygon points="${fillPts}" fill="#3a3a3a"/><polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="10,6" stroke-linecap="round"/></g>`;
     }
     if (o.type==="chakbandi" && o.points?.length>=2) {
       // Bold line + X crosses — colour & thickness match editor/print exactly
@@ -447,8 +546,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const h2x=(ex - headLen*Math.cos(ang) + headW*Math.sin(ang)).toFixed(1);
       const h2y=(ey - headLen*Math.sin(ang) - headW*Math.cos(ang)).toFixed(1);
       const num = [o.mogha_number, o.mogha_side].filter(Boolean).join("/");
-      const numLbl = num ? `<text x="${sx.toFixed(1)}" y="${(sy-half-3).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="22" fill="#2563eb">${num}</text>` : "";
-      const nameLbl = o.mogha_name ? `<text x="${sx.toFixed(1)}" y="${(sy+half+14).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="11" fill="#0e7490">${o.mogha_name}</text>` : "";
+      const _outletMogaClr = getMogaColor(C.labelColor);
+      const numLbl = num ? `<text x="${sx.toFixed(1)}" y="${(sy-half-3).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="22" fill="${_outletMogaClr}">${num}</text>` : "";
+      const nameLbl = o.mogha_name ? `<text x="${sx.toFixed(1)}" y="${(sy+half+14).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(DIMENSIONS.MUSTATEEL.width * 0.15).toFixed(0)}" fill="${_outletMogaClr}">${o.mogha_name}</text>` : "";
       return `<g>
         <rect x="${(sx-half).toFixed(1)}" y="${(sy-half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
         <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size*0.25).toFixed(1)}" stroke-linecap="round"/>

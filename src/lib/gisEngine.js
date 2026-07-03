@@ -796,6 +796,99 @@ export function getMustateelMouzaSplit(obj, mouzaObjects) {
 }
 
 // ============================================================
+// POINT-IN-POLYGON — ray casting algorithm
+// ============================================================
+export function pointInPolygon(point, polygon) {
+  if (!polygon || polygon.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
+    const intersect = ((yi > point.y) !== (yj > point.y))
+      && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// ============================================================
+// CCA / GCA CALCULATION
+// GCA = total killas inside chakbandi boundary (each mustateel = 10 killas)
+// CCA = same as GCA by default (user can override via centerLabel)
+// ============================================================
+export function calculateChakbandiGCA(chakbandi, mustateels) {
+  if (!chakbandi.points || chakbandi.points.length < 3) return 0;
+  const polygon = chakbandi.points;
+  let count = 0;
+  for (const m of mustateels) {
+    const cx = m.x + m.w / 2;
+    const cy = m.y + m.h / 2;
+    if (pointInPolygon({ x: cx, y: cy }, polygon)) count++;
+  }
+  return count * 10; // each mustateel = 10 killas
+}
+
+export function calculateTotalGCA(objects) {
+  const chakbandis = objects.filter(o => o.type === "chakbandi");
+  const mustateels = objects.filter(o => o.type === "mustateel");
+  let total = 0;
+  for (const ch of chakbandis) {
+    total += calculateChakbandiGCA(ch, mustateels);
+  }
+  return total;
+}
+
+// ============================================================
+// MOGA NAME COLOR LOGIC
+// Blue if label color is default/black; black if label is any other color
+// ============================================================
+export function getMogaColor(labelColor) {
+  const c = labelColor || "#1e293b";
+  const isBlackDefault = !labelColor || c === "#1e293b" || c === "#000000" || c === "#000" || c === "black";
+  return isBlackDefault ? "#2563eb" : "#000000";
+}
+
+// ============================================================
+// PRINT HEADER BUILDER — Urdu "Khaka Dasti" header for print/export
+// ============================================================
+export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
+  const mouza = mapData?.village || "";
+  const section = mapData?.section || "";
+  const subDiv = mapData?.tehsil || "";
+  const division = mapData?.district || "";
+  const mogaNum = mogaFilter || mapData?.mouza_number || "";
+  const gcaText = totalGCA ? `(${totalGCA}/${totalGCA})` : "";
+
+  return `
+  <div style="border:2px solid #000; padding:6px 10px; margin-bottom:6px; font-family:'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:16px; font-weight:bold; color:#000;">خاکہ دستی</span>
+        <span style="font-size:10px; color:#555;">(Khaka Dasti)</span>
+      </div>
+      <div style="border:1.5px solid #000; padding:2px 8px; min-width:60px; text-align:center;">
+        <span style="font-size:9px; color:#555;">موگہ نمبر</span><br/>
+        <span style="font-size:13px; font-weight:bold;">${mogaNum || "—"}</span>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:space-between; gap:6px; margin-top:4px; font-size:10px;">
+      <span>موضع: <b>${mouza || "—"}</b></span>
+      <span>سیکشن: <b>${section || "—"}</b></span>
+      <span>سب ڈویژن: <b>${subDiv || "—"}</b></span>
+      <span>ڈویژن: <b>${division || "—"}</b></span>
+      ${gcaText ? `<span style="font-weight:bold; color:#166534;">GCA: ${gcaText}</span>` : ""}
+    </div>
+    <div style="display:flex; justify-content:space-between; gap:6px; margin-top:2px; font-size:9px; color:#666;">
+      <span>Mouza: <b>${mouza || "—"}</b></span>
+      <span>Section: <b>${section || "—"}</b></span>
+      <span>Sub-Division: <b>${subDiv || "—"}</b></span>
+      <span>Division: <b>${division || "—"}</b></span>
+      <span>Date: <b>${new Date().toLocaleDateString()}</b></span>
+    </div>
+  </div>`;
+}
+
+// ============================================================
 // HIT TEST — for eraser: boundary-based (click edge or interior)
 // ============================================================
 export function hitTest(wx, wy, objects, eraser = false) {

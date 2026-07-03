@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML } from "@/lib/gisEngine";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
@@ -94,7 +94,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
     const lbl2 = obj.label2 || "";
     labelSvg = `${label ? `<text x="${mouzaSplit.centerA.x}" y="${mouzaSplit.centerA.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${lbl2 ? `<text x="${mouzaSplit.centerB.x}" y="${mouzaSplit.centerB.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${lbl2}</text>` : ""}`;
   } else {
-    const mogaNumSvg = obj.mogaNumber ? `<text x="${obj.x + 4}" y="${obj.y + 4}" text-anchor="start" dominant-baseline="hanging" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${Math.max(14, Math.min(obj.w, obj.h) * 0.12)}" fill="#2563eb">M${obj.mogaNumber}</text>` : "";
+    const mogaNumSvg = obj.mogaNumber ? `<text x="${obj.x + 4}" y="${obj.y + 4}" text-anchor="start" dominant-baseline="hanging" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize}" fill="${getMogaColor(C.labelColor)}">M${obj.mogaNumber}</text>` : "";
     labelSvg = `${mogaNumSvg}${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
   }
 
@@ -294,7 +294,7 @@ function svgOutlet(obj, C, idx) {
   const num = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
   // Moga number ABOVE block — blue, 2× mustateel killa font (print killa font ~11pt → 22pt)
   const numLabel = num ? `<text x="${sx.toFixed(1)}" y="${(sy - half - 3).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="22" fill="#2563eb">${num}</text>` : "";
-  const nameLabel = obj.mogha_name ? `<text x="${sx.toFixed(1)}" y="${(sy + half + 14).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="11" fill="#0e7490">${obj.mogha_name}</text>` : "";
+  const nameLabel = obj.mogha_name ? `<text x="${sx.toFixed(1)}" y="${(sy + half + 14).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${DIMENSIONS.MUSTATEEL.width * 0.15}" fill="${getMogaColor(C.labelColor)}">${obj.mogha_name}</text>` : "";
   return `<g key="outlet_${idx}">
     <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
     <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size * 0.25).toFixed(1)}" stroke-linecap="round"/>
@@ -408,6 +408,26 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     [objects, effectiveColors, mogaFilter, killaVisibility]
   );
 
+  // Auto-calculate CCA/GCA per chakbandi
+  const gcaData = useMemo(() => {
+    const mustateels = objects.filter(o => o.type === "mustateel");
+    const chakbandis = objects.filter(o => o.type === "chakbandi");
+    const results = [];
+    let total = 0;
+    for (const ch of chakbandis) {
+      if (ch.points?.length >= 3) {
+        const gca = calculateChakbandiGCA(ch, mustateels);
+        if (gca > 0) {
+          const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length;
+          const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length;
+          results.push({ cx, cy, gca, text: `(${gca}/${gca})` });
+          total += gca;
+        }
+      }
+    }
+    return { results, total };
+  }, [objects]);
+
   const svgString = svgData
     ? `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
@@ -419,67 +439,65 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     : null;
 
   // Inline SVG markup for preview (preserves exact vector scaling)
+  const gcaSvgLabels = useMemo(() => {
+    if (!gcaData.results.length) return "";
+    const ch = effectiveColors.chakbandiStroke || "#000";
+    return gcaData.results.map(({ cx, cy, text }) => {
+      const tw = text.length * 16 * 0.6 + 12;
+      return `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - 12).toFixed(1)}" width="${tw.toFixed(1)}" height="22" fill="rgba(255,255,255,0.92)" stroke="${ch}" stroke-width="1.5"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="16" fill="#166534">${text}</text>`;
+    }).join("");
+  }, [gcaData, effectiveColors]);
+
   const inlineSvgMarkup = svgData
-    ? `<rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>${svgData.svgBody}`
+    ? `<rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>${svgData.svgBody}${gcaSvgLabels}`
     : null;
 
-  // ─── VECTOR PRINT ─────────────────────────────────────────────────────────────
+  // ─── VECTOR PRINT — single page, Urdu header ─────────────────────────────────
   const handlePrint = () => {
     if (!svgData) return;
-    const title = `${mapData?.title || "Chakbandi Map"}${mogaFilter ? ` — Moga ${mogaFilter}` : ""}`;
+    const totalGCA = calculateTotalGCA(objects);
+    const headerHTML = buildPrintHeaderHTML(mapData, mogaFilter, totalGCA);
+
+    // Auto-calculate CCA/GCA for each chakbandi and inject into SVG
+    const mustateels = objects.filter(o => o.type === "mustateel");
+    const chakbandis = objects.filter(o => o.type === "chakbandi");
+    let gcaLabels = "";
+    for (const ch of chakbandis) {
+      if (ch.points?.length >= 3) {
+        const gca = calculateChakbandiGCA(ch, mustateels);
+        if (gca > 0) {
+          const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length;
+          const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length;
+          const lblText = `(${gca}/${gca})`;
+          const tw = lblText.length * 13 * 0.6 + 12;
+          gcaLabels += `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - 12).toFixed(1)}" width="${tw.toFixed(1)}" height="22" fill="rgba(255,255,255,0.92)" stroke="${effectiveColors.chakbandiStroke || '#000'}" stroke-width="1.5"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="16" fill="#166534">${lblText}</text>`;
+        }
+      }
+    }
 
     const win = window.open("", "_blank");
     if (!win) return;
     win.document.write(`<!DOCTYPE html><html><head>
-      <title>${title}</title>
+      <title>Khaka Dasti</title>
       <style>
-        @page { margin: 8mm; size: A4 landscape; }
+        @page { margin: 6mm; size: A4 landscape; }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { background:#fff; font-family: Rajdhani, Arial, sans-serif; }
-        .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:flex-start; }
-        .title { font-size:18px; font-weight:bold; text-transform:uppercase; letter-spacing:2px; }
-        .map-wrap { width:100%; }
-        .map-wrap svg { width:100%; height:auto; display:block; }
-        .footer { border-top:1px solid #aaa; margin-top:6px; padding-top:5px; display:flex; justify-content:space-between; font-size:9px; color:#555; }
-        .legend { display:flex; gap:12px; flex-wrap:wrap; }
-        .li { display:flex; align-items:center; gap:4px; font-size:9px; }
-        .lb { display:inline-block; width:20px; height:3px; border-radius:1px; }
-        @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+        html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; }
+        .map-wrap { width:100%; height:calc(100vh - 100px); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+        .map-wrap svg { max-width:100%; max-height:100%; width:auto; height:auto; display:block; }
+        @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .map-wrap { height:100vh; } }
       </style>
     </head><body>
-      <div class="header">
-        <div>
-          <div class="title">CHAKBANDI GIS — ${title}</div>
-          <div style="font-size:10px;color:#444;margin-top:2px;">
-            ${mapData?.village ? `Village: <b>${mapData.village}</b>` : ""}
-            ${mapData?.tehsil ? ` | Sub Division: <b>${mapData.tehsil}</b>` : ""}
-            ${mapData?.district ? ` | Division: <b>${mapData.district}</b>` : ""}
-            ${mogaFilter ? ` | <b>Moga ${mogaFilter}</b>` : ""}
-          </div>
-        </div>
-        <div style="font-size:10px;color:#555;text-align:right;">
-          Status: <b>${(mapData?.status||"draft").toUpperCase()}</b><br/>
-          Date: ${new Date().toLocaleDateString()}<br/>
-          Parcels: ${mapData?.total_parcels || 0}
-        </div>
-      </div>
+      ${headerHTML}
       <div class="map-wrap">
         <svg xmlns="http://www.w3.org/2000/svg"
              viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
-             style="width:100%;height:auto;display:block;">
+             preserveAspectRatio="xMidYMid meet"
+             style="max-width:100%;max-height:100%;display:block;">
           <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
           ${svgData.svgBody}
+          ${gcaLabels}
         </svg>
-      </div>
-      <div class="footer">
-        <div class="legend">
-          <div class="li"><span class="lb" style="background:#ef4444"></span>Mustateel/Muraba</div>
-          <div class="li"><span class="lb" style="background:#eab308"></span>Acre</div>
-          <div class="li"><span class="lb" style="background:#3b82f6"></span>Canal</div>
-          <div class="li"><span class="lb" style="background:#22c55e"></span>Chakbandi</div>
-          <div class="li"><span class="lb" style="background:#06b6d4"></span>Outlet</div>
-        </div>
-        <div>Vector SVG | Chakbandi GIS | 1 Killa = 220×198 ft</div>
       </div>
     </body></html>`);
     win.document.close();
@@ -570,24 +588,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         {/* Preview Area */}
         <div className="flex-1 overflow-auto bg-slate-950 p-6 flex items-start justify-center">
           <div className="bg-white shadow-2xl" style={{ width: `${scale}%`, minWidth: 500 }}>
-            {/* Map header */}
-            <div style={{ padding:"10px 14px", borderBottom:"2px solid #000", display:"flex", justifyContent:"space-between" }}>
-              <div>
-                <div style={{ fontSize:15, fontWeight:"bold", textTransform:"uppercase", letterSpacing:2, fontFamily:"Rajdhani,Arial,sans-serif" }}>
-                  CHAKBANDI GIS — {mapData?.title || "Cadastral Map"}
-                  {mogaFilter && <span style={{ color:"#16a34a", marginLeft:8 }}>| Moga {mogaFilter}</span>}
-                </div>
-                <div style={{ fontSize:10, color:"#444", marginTop:2 }}>
-                  {mapData?.village && `Village: ${mapData.village}`}
-                  {mapData?.tehsil && ` | Sub Division: ${mapData.tehsil}`}
-                  {mapData?.district && ` | Division: ${mapData.district}`}
-                </div>
-              </div>
-              <div style={{ fontSize:10, color:"#555", textAlign:"right" }}>
-                <div>Status: <b>{(mapData?.status||"draft").toUpperCase()}</b></div>
-                <div>Date: {new Date().toLocaleDateString()}</div>
-              </div>
-            </div>
+            {/* Urdu header — Khaka Dasti */}
+            <div dangerouslySetInnerHTML={{ __html: buildPrintHeaderHTML(mapData, mogaFilter, gcaData.total) }} />
 
             {/* SVG Map — pure inline vector (no img tag, preserves cross sizes exactly) */}
             {inlineSvgMarkup ? (
@@ -601,16 +603,10 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               <div style={{ padding:40, textAlign:"center", color:"#999" }}>No objects to print</div>
             )}
 
-            {/* Footer legend */}
-            <div style={{ padding:"6px 14px", borderTop:"1px solid #bbb", display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6 }}>
-              <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-                {[["Mustateel","#ef4444"],["Acre","#eab308"],["Canal","#3b82f6"],["Chakbandi","#22c55e"],["Road","#b45309"]].map(([label,color]) => (
-                  <div key={label} style={{ display:"flex", alignItems:"center", gap:4, fontSize:9, color:"#333" }}>
-                    <span style={{ display:"inline-block", width:18, height:3, background:color, borderRadius:1 }}></span>{label}
-                  </div>
-                ))}
-              </div>
-              <div style={{ fontSize:9, color:"#777" }}>Vector SVG | Survey-grade Cadastral | Chakbandi GIS</div>
+            {/* Footer */}
+            <div style={{ padding:"6px 14px", borderTop:"1px solid #bbb", display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6, fontSize:9, color:"#777" }}>
+              <span>1 Killa = 220×198 ft | 1 Mustateel = 10 Killas</span>
+              {gcaData.total > 0 && <span style={{ fontWeight:"bold", color:"#166534" }}>Total GCA: ({gcaData.total}/{gcaData.total})</span>}
             </div>
           </div>
         </div>
