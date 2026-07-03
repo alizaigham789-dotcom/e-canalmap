@@ -478,6 +478,28 @@ export function createDamageMarkerLine(startPt, endPt) {
 }
 
 // ============================================================
+// DUPLICATE / COPY-PASTE
+// ============================================================
+export function duplicateObjects(objects, offsetX = 30, offsetY = 30) {
+  return objects.map(o => {
+    const copy = JSON.parse(JSON.stringify(o));
+    copy.id = `${o.type || 'obj'}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    if (["acre", "mustateel", "muraba", "damageMarker"].includes(o.type)) {
+      copy.x = (copy.x || 0) + offsetX;
+      copy.y = (copy.y || 0) + offsetY;
+    }
+    if (copy.points) {
+      copy.points = copy.points.map(p => ({ x: p.x + offsetX, y: p.y + offsetY }));
+    }
+    if (copy.start && copy.end) {
+      copy.start = { x: copy.start.x + offsetX, y: copy.start.y + offsetY };
+      copy.end = { x: copy.end.x + offsetX, y: copy.end.y + offsetY };
+    }
+    return copy;
+  });
+}
+
+// ============================================================
 // COLLISION & PLACEMENT
 // ============================================================
 export function rectsOverlap(a, b) {

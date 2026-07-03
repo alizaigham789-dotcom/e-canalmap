@@ -15,9 +15,9 @@ import ExportProDialog from "@/components/editor/ExportProDialog";
 import {
   DrawingStateManager,
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
-  createDamageMarker, createDamageMarkerLine, snapToNearestBoundary, autoAssignLabel
+  createDamageMarker, createDamageMarkerLine, snapToNearestBoundary, autoAssignLabel, duplicateObjects
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Download } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Download, Copy, Clipboard, SquareStack } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
@@ -95,6 +95,7 @@ export default function EditorPro() {
   const dsmRef = useRef(new DrawingStateManager([]));
   const autoSaveTimer = useRef(null);
   const canvasRef = useRef(null);
+  const clipboardRef = useRef([]);
   const zoomRef = useRef(zoom);
   const panRef = useRef(pan);
   zoomRef.current = zoom;
@@ -360,6 +361,29 @@ export default function EditorPro() {
     syncObjects();
   };
 
+  const handleCopy = () => {
+    if (selectedObj) {
+      clipboardRef.current = [JSON.parse(JSON.stringify(selectedObj))];
+    } else {
+      clipboardRef.current = dsmRef.current.objects.map(o => JSON.parse(JSON.stringify(o)));
+    }
+    toast.success(`${clipboardRef.current.length} object(s) copied`);
+  };
+
+  const handleSelectAll = () => {
+    clipboardRef.current = dsmRef.current.objects.map(o => JSON.parse(JSON.stringify(o)));
+    toast.success(`${clipboardRef.current.length} object(s) selected — press Ctrl+V to paste`);
+  };
+
+  const handlePaste = () => {
+    if (clipboardRef.current.length === 0) { toast.warning("Clipboard is empty"); return; }
+    const dupes = duplicateObjects(clipboardRef.current);
+    dupes.forEach(o => dsmRef.current.add(o));
+    syncObjects();
+    if (dupes.length > 0) setSelectedId(dupes[0].id);
+    toast.success(`${dupes.length} object(s) pasted`);
+  };
+
   const handleLayerChange = (layerId, changes) => {
     setLayers(prev => ({ ...prev, [layerId]: { ...prev[layerId], ...changes } }));
   };
@@ -392,6 +416,9 @@ export default function EditorPro() {
       if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.shiftKey && e.key === "z"))) { e.preventDefault(); handleRedo(); }
       if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); handleSave(); }
       if ((e.ctrlKey || e.metaKey) && e.key === "p") { e.preventDefault(); setShowPrint(true); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "a") { e.preventDefault(); handleSelectAll(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "c") { e.preventDefault(); handleCopy(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "v") { e.preventDefault(); handlePaste(); }
       if (e.key === "Escape") handleStopDrawing();
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedId) handleDeleteObject(selectedId);
@@ -581,6 +608,24 @@ export default function EditorPro() {
               onClick={() => { setGroupName(mapData?.title || ""); setShowGroupDialog(true); }}
               title="Group / Name Map">
               <Group className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-green-600 hover:bg-green-50 shadow-md"
+              onClick={handleSelectAll}
+              title="Select All (Ctrl+A)">
+              <SquareStack className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-green-600 hover:bg-green-50 shadow-md"
+              onClick={handleCopy}
+              title="Copy (Ctrl+C)">
+              <Copy className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-green-600 hover:bg-green-50 shadow-md"
+              onClick={handlePaste}
+              title="Paste (Ctrl+V)">
+              <Clipboard className="w-4 h-4" />
             </Button>
           </div>
 
