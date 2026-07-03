@@ -5,7 +5,7 @@ import {
   snapMovePosition, snapToParcelBoundaries, isInViewport,
   DIMENSIONS, distToLineSegment, computeSnapPosition,
   snapToNearestBoundary, rectsOverlap, createMustateel, createMuraba, createAcre,
-  getMustateelMouzaSplit,
+  getMustateelMouzaSplit, getObjectsInBox,
 } from "@/lib/gisEngine";
 import { applyOrthoConstraint, segmentAngleDeg, findNearbyEndpoint, isLineTool } from "@/lib/drawingAssist";
 import {
@@ -31,6 +31,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     gridFlags, // { showMustateel, showMuraba }
     killaVisibility, // { mustateel: bool, muraba: bool }
     orthoMode, // CAD-style H/V angle constraint while drawing line tools
+    onBoxSelect, // callback(selectedObjects[]) when box-select completes
   },
   ref
 ) {
@@ -57,6 +58,9 @@ const GISCanvas = forwardRef(function GISCanvas(
   const [measureResult, setMeasureResult] = useState(null); // { ft, m, midScreen }
   // Endpoint-snap highlight target (for continuous drawing)
   const [endpointSnap, setEndpointSnap] = useState(null);
+  // Box-select state
+  const boxSelectStart = useRef(null);
+  const [boxSelectDraft, setBoxSelectDraft] = useState(null);
   // 1 world unit = 1 foot (DIMENSIONS.ACRE.width = 220ft, etc.)
   const FT_PER_UNIT = 1;
 
@@ -132,6 +136,21 @@ const GISCanvas = forwardRef(function GISCanvas(
       ctx.moveTo(damageDraft.x, damageDraft.y);
       ctx.lineTo(snapPos.x, snapPos.y);
       ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    // Box-select draft rectangle
+    if (boxSelectDraft) {
+      const minX = Math.min(boxSelectDraft.x1, boxSelectDraft.x2);
+      const minY = Math.min(boxSelectDraft.y1, boxSelectDraft.y2);
+      const w = Math.abs(boxSelectDraft.x2 - boxSelectDraft.x1);
+      const h = Math.abs(boxSelectDraft.y2 - boxSelectDraft.y1);
+      ctx.strokeStyle = "#3b82f6";
+      ctx.fillStyle = "rgba(59,130,246,0.10)";
+      ctx.lineWidth = 1.5 / zoom;
+      ctx.setLineDash([8/zoom, 4/zoom]);
+      ctx.fillRect(minX, minY, w, h);
+      ctx.strokeRect(minX, minY, w, h);
+      ctx.setLineDash([]);
     }
 
     // Measurement tool draft line
@@ -296,6 +315,14 @@ const GISCanvas = forwardRef(function GISCanvas(
         else if (activeTool === "mouza") onMouzaPointAdd(worldRaw);
       }
     }
+    // Box-select: update draft rectangle while dragging
+    if (activeTool === "boxSelect" && boxSelectStart.current) {
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
+      setBoxSelectDraft({ x1: boxSelectStart.current.x, y1: boxSelectStart.current.y, x2: worldRaw.x, y2: worldRaw.y });
+      return;
+    }
     if (isMoving.current && movingObjId.current && activeTool === "move") {
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
@@ -375,7 +402,10 @@ const GISCanvas = forwardRef(function GISCanvas(
     } else if (activeTool === "khal") onKhalPointAdd(snapped);
     else if (activeTool === "road") onRoadPointAdd(snapped);
     else if (activeTool === "mouza") onMouzaPointAdd(snapped);
-    else if (activeTool === "select") {
+    else if (activeTool === "boxSelect") {
+      boxSelectStart.current = { x: worldRaw.x, y: worldRaw.y };
+      setBoxSelectDraft({ x1: worldRaw.x, y1: worldRaw.y, x2: worldRaw.x, y2: worldRaw.y });
+    } else if (activeTool === "select") {
       const hit = hitTest(worldRaw.x, worldRaw.y, objects);
       if (hit?.type === "damageMarker" && onDamageMarkerClick) {
         onDamageMarkerClick(hit);
@@ -388,6 +418,17 @@ const GISCanvas = forwardRef(function GISCanvas(
   }, [activeTool, pan, zoom, objects, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd, onMouzaPointAdd, onDamageMarkerClick]);
 
   const handleMouseUp = useCallback((e) => {
+    // Finish box-select
+    if (activeTool === "boxSelect" && boxSelectStart.current) {
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
+      const box = { x1: boxSelectStart.current.x, y1: boxSelectStart.current.y, x2: worldRaw.x, y2: worldRaw.y };
+      const selected = getObjectsInBox(objects, box);
+      if (onBoxSelect) onBoxSelect(selected);
+      boxSelectStart.current = null;
+      setBoxSelectDraft(null);
+    }
     isPanning.current = false; isMoving.current = false; movingObjId.current = null;
     // Finish damage marker line on mouse up
     if (activeTool === "damageMarker" && damageStartRef.current) {
@@ -401,7 +442,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       damageStartRef.current = null;
       setDamageDraft(null);
     }
-  }, [activeTool, pan, zoom, onAddObject]);
+  }, [activeTool, pan, zoom, onAddObject, onBoxSelect, objects]);
 
   const handleDblClick = useCallback((e) => {
     if (activeTool === "canal") onCanalFinish();
@@ -512,6 +553,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     khal: "cursor-crosshair", road: "cursor-crosshair", mouza: "cursor-crosshair",
     acre: "cursor-crosshair", mustateel: "cursor-crosshair", muraba: "cursor-crosshair",
     move: "cursor-move", damageMarker: "cursor-crosshair", measure: "cursor-crosshair",
+    boxSelect: "cursor-crosshair",
   }[activeTool] || "cursor-crosshair";
 
   const editingObj = editingLabel ? objects.find(o => o.id === editingLabel.id) : null;

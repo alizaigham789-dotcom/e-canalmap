@@ -18,9 +18,10 @@ import PrintPreview from "@/components/editor/PrintPreview";
 import {
   DrawingStateManager,
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
-  createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects
+  createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
+  saveToClipboard, loadFromClipboard, hasClipboard,
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
@@ -395,26 +396,86 @@ export default function Editor() {
   };
 
   const handleCopy = () => {
+    let toCopy;
     if (selectedObj) {
-      clipboardRef.current = [JSON.parse(JSON.stringify(selectedObj))];
+      toCopy = [JSON.parse(JSON.stringify(selectedObj))];
     } else {
-      clipboardRef.current = dsmRef.current.objects.map(o => JSON.parse(JSON.stringify(o)));
+      toCopy = dsmRef.current.objects.map(o => JSON.parse(JSON.stringify(o)));
     }
-    toast.success(`${clipboardRef.current.length} object(s) copied`);
+    clipboardRef.current = toCopy;
+    saveToClipboard(toCopy);
+    toast.success(`${toCopy.length} object(s) copied — paste anywhere, even on another map`);
   };
 
   const handleSelectAll = () => {
-    clipboardRef.current = dsmRef.current.objects.map(o => JSON.parse(JSON.stringify(o)));
-    toast.success(`${clipboardRef.current.length} object(s) selected — press Ctrl+V to paste`);
+    const all = dsmRef.current.objects.map(o => JSON.parse(JSON.stringify(o)));
+    clipboardRef.current = all;
+    saveToClipboard(all);
+    toast.success(`${all.length} object(s) copied — paste anywhere, even on another map`);
+  };
+
+  const handleBoxSelect = (selectedObjects) => {
+    if (selectedObjects.length === 0) { toast.info("No objects in selection box"); return; }
+    const copies = selectedObjects.map(o => JSON.parse(JSON.stringify(o)));
+    clipboardRef.current = copies;
+    saveToClipboard(copies);
+    toast.success(`${copies.length} object(s) copied — paste anywhere, even on another map`);
   };
 
   const handlePaste = () => {
-    if (clipboardRef.current.length === 0) { toast.warning("Clipboard is empty"); return; }
-    const dupes = duplicateObjects(clipboardRef.current);
+    // Load from cross-map clipboard (localStorage) — works even after navigating to another map
+    const clip = loadFromClipboard();
+    if (clip.length === 0) { toast.warning("Clipboard is empty — copy something first"); return; }
+    const dupes = duplicateObjects(clip);
     dupes.forEach(o => dsmRef.current.add(o));
     syncObjects();
     if (dupes.length > 0) setSelectedId(dupes[0].id);
     toast.success(`${dupes.length} object(s) pasted`);
+  };
+
+  // Download map as JSON — re-uploadable to recreate same map
+  const handleDownloadJSON = () => {
+    const data = {
+      format: "chakbandi_gis_map",
+      version: 1,
+      mapData: {
+        title: mapData?.title || "Untitled",
+        village: mapData?.village || "",
+        tehsil: mapData?.tehsil || "",
+        district: mapData?.district || "",
+        status: mapData?.status || "draft",
+      },
+      objects: dsmRef.current.objects,
+      viewport: { zoom, pan },
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${mapData?.title || "map"}.chakbandi.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Map downloaded — upload it later to recreate");
+  };
+
+  // Upload JSON to import objects into this map
+  const handleUploadJSON = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        const objs = data.objects || data;
+        if (!Array.isArray(objs)) throw new Error("Invalid format");
+        objs.forEach(o => dsmRef.current.add(o));
+        syncObjects();
+        toast.success(`${objs.length} object(s) imported from file`);
+      } catch {
+        toast.error("Invalid map file — must be a .chakbandi.json export");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   };
 
   const handleLayerChange = (layerId, changes) => {
@@ -457,7 +518,7 @@ export default function Editor() {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedId) handleDeleteObject(selectedId);
       }
-      const shortcuts = { v: "select", h: "pan", d: "move", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", u: "mouza", g: "damageMarker", x: "measure", e: "eraser", f: "fitView" };
+      const shortcuts = { v: "select", h: "pan", d: "move", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", u: "mouza", g: "damageMarker", x: "measure", e: "eraser", f: "fitView", q: "boxSelect" };
       if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) {
         if (e.key === "f") handleFitView();
         else handleToolChange(shortcuts[e.key]);
@@ -560,6 +621,7 @@ export default function Editor() {
               mustateel: killaVisibility.mustateel && killaNumbersGlobal,
               muraba: killaVisibility.muraba && killaNumbersGlobal,
             }}
+            onBoxSelect={handleBoxSelect}
           />
 
           {/* Top-right toolbar buttons */}
@@ -644,6 +706,22 @@ export default function Editor() {
               title="Paste (Ctrl+V)">
               <Clipboard className="w-4 h-4" />
             </Button>
+            <Button variant="ghost" size="icon"
+              className={`w-9 h-9 border shadow-md transition-all ${activeTool === "boxSelect" ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
+              onClick={() => handleToolChange("boxSelect")}
+              title="Box Select (Q) — drag to select area, then paste">
+              <BoxSelect className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 shadow-md"
+              onClick={handleDownloadJSON}
+              title="Download Map (.json)">
+              <FileDown className="w-4 h-4" />
+            </Button>
+            <label className="w-9 h-9 bg-white border border-slate-200 rounded-md flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 shadow-md cursor-pointer transition-all" title="Upload Map (.json)">
+              <Upload className="w-4 h-4" />
+              <input type="file" accept=".json,.chakbandi.json" onChange={handleUploadJSON} className="hidden" />
+            </label>
             <Button variant="ghost" size="icon"
               className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-amber-600 hover:bg-amber-50 shadow-md"
               onClick={() => setShowScan(true)}

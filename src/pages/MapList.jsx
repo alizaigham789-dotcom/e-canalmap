@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Link, useNavigate } from "react-router-dom";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Search, Map, Calendar, MapPin, Layers } from "lucide-react";
+import { ArrowLeft, Plus, Search, Map, Calendar, MapPin, Layers, Trash2, Upload, Download } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 
 const STATUS_COLORS = {
@@ -31,6 +31,50 @@ export default function MapList() {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [newMap, setNewMap] = useState({ title: "", village: "", district: "", tehsil: "" });
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const fileInputRef = useRef(null);
+  const [uploadTitle, setUploadTitle] = useState("");
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.LandMap.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maps"] });
+      setDeleteTarget(null);
+      toast.success("Map deleted");
+    },
+    onError: () => toast.error("Delete failed"),
+  });
+
+  const handleUploadMap = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        const objs = data.objects || data;
+        if (!Array.isArray(objs)) throw new Error("Invalid");
+        const title = data.mapData?.title || file.name.replace(/\.chakbandi\.json$|\.json$/i, "");
+        const created = await base44.entities.LandMap.create({
+          title,
+          village: data.mapData?.village || "",
+          tehsil: data.mapData?.tehsil || "",
+          district: data.mapData?.district || "",
+          status: data.mapData?.status || "draft",
+          drawing_data: JSON.stringify(objs),
+          total_parcels: objs.filter(o => ["mustateel","muraba"].includes(o.type)).length,
+          viewport: data.viewport ? JSON.stringify(data.viewport) : undefined,
+        });
+        queryClient.invalidateQueries({ queryKey: ["maps"] });
+        toast.success(`Map imported: ${title}`);
+        navigate(`/editor-pro?id=${created.id}`);
+      } catch {
+        toast.error("Invalid map file — must be a .chakbandi.json export");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   const { data: maps = [], isLoading } = useQuery({
     queryKey: ["maps"],
@@ -70,9 +114,15 @@ export default function MapList() {
               <p className="text-[9px] text-slate-400 font-mono uppercase tracking-widest">Cadastral Maps</p>
             </div>
           </div>
-          <Button onClick={() => setShowCreate(true)} size="sm" className="bg-blue-600 hover:bg-blue-500 text-white gap-1.5 text-xs">
-            <Plus className="w-3.5 h-3.5" /> New
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button onClick={() => fileInputRef.current?.click()} size="sm" variant="outline" className="text-xs gap-1.5 border-slate-300">
+              <Upload className="w-3.5 h-3.5" /> Import
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".json,.chakbandi.json" onChange={handleUploadMap} className="hidden" />
+            <Button onClick={() => setShowCreate(true)} size="sm" className="bg-blue-600 hover:bg-blue-500 text-white gap-1.5 text-xs">
+              <Plus className="w-3.5 h-3.5" /> New
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -143,6 +193,13 @@ export default function MapList() {
                       ✦ Editor Pro
                     </button>
                   </Link>
+                  <button
+                    onClick={() => setDeleteTarget(map)}
+                    className="px-2.5 py-1.5 text-[10px] font-semibold rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
+                    title="Delete this map"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -182,6 +239,28 @@ export default function MapList() {
               className="bg-blue-600 hover:bg-blue-500 gap-2"
             >
               <Plus className="w-4 h-4" /> Create & Open
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-base text-red-600">Delete Map?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-600 py-2">
+            Are you sure you want to permanently delete <b>{deleteTarget?.title || "Untitled Map"}</b>? This cannot be undone.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)} className="text-slate-500">Cancel</Button>
+            <Button
+              onClick={() => deleteMutation.mutate(deleteTarget.id)}
+              disabled={deleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-500 gap-2"
+            >
+              <Trash2 className="w-4 h-4" /> Delete Permanently
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -500,6 +500,50 @@ export function duplicateObjects(objects, offsetX = 30, offsetY = 30) {
 }
 
 // ============================================================
+// CROSS-MAP CLIPBOARD (localStorage)
+// ============================================================
+const CLIPBOARD_KEY = "chakbandi_gis_clipboard";
+
+export function saveToClipboard(objects) {
+  try {
+    localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(objects));
+    return true;
+  } catch { return false; }
+}
+
+export function loadFromClipboard() {
+  try {
+    const raw = localStorage.getItem(CLIPBOARD_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+export function hasClipboard() {
+  try { return !!localStorage.getItem(CLIPBOARD_KEY); } catch { return false; }
+}
+
+// ============================================================
+// BOX SELECT — find all objects intersecting a rectangle
+// ============================================================
+export function getObjectsInBox(objects, box) {
+  const minX = Math.min(box.x1, box.x2), maxX = Math.max(box.x1, box.x2);
+  const minY = Math.min(box.y1, box.y2), maxY = Math.max(box.y1, box.y2);
+  return objects.filter(o => {
+    if (["acre", "mustateel", "muraba", "damageMarker"].includes(o.type)) {
+      return !(o.x + (o.w||0) < minX || o.x > maxX || o.y + (o.h||0) < minY || o.y > maxY);
+    }
+    if (o.points && o.points.length > 0) {
+      return o.points.some(p => p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY);
+    }
+    if (o.start && o.end) {
+      const pts = [o.start, o.end];
+      return pts.some(p => p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY);
+    }
+    return false;
+  });
+}
+
+// ============================================================
 // COLLISION & PLACEMENT
 // ============================================================
 export function rectsOverlap(a, b) {
