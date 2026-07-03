@@ -95,6 +95,23 @@ export default function EditorPro() {
   const dsmRef = useRef(new DrawingStateManager([]));
   const autoSaveTimer = useRef(null);
   const canvasRef = useRef(null);
+  const zoomRef = useRef(zoom);
+  const panRef = useRef(pan);
+  zoomRef.current = zoom;
+  panRef.current = pan;
+
+  // Always-current save function — avoids stale closures in debounced autosave & unmount
+  const saveRef = useRef(() => {});
+  saveRef.current = () => {
+    if (!mapId) return;
+    const parcels = dsmRef.current.getByType("mustateel").length +
+      dsmRef.current.getByType("muraba").length;
+    saveMutation.mutate({
+      drawing_data: dsmRef.current.serialize(),
+      total_parcels: parcels,
+      viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+    });
+  };
 
   const { data: mapData } = useQuery({
     queryKey: ["map-pro", mapId],
@@ -137,18 +154,16 @@ export default function EditorPro() {
 
   const scheduleAutoSave = () => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => {
-      if (mapId) {
-        const parcels = dsmRef.current.getByType("mustateel").length +
-          dsmRef.current.getByType("muraba").length;
-        saveMutation.mutate({
-          drawing_data: dsmRef.current.serialize(),
-          total_parcels: parcels,
-          viewport: JSON.stringify({ zoom, pan }),
-        });
-      }
-    }, 2500);
+    autoSaveTimer.current = setTimeout(() => saveRef.current(), 1000);
   };
+
+  // Save on unmount / navigate away — never lose drawn objects
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      saveRef.current();
+    };
+  }, []);
 
   const handleAddObject = useCallback((type, data) => {
     if (type === "__delete__") {

@@ -100,6 +100,25 @@ export default function Editor() {
   const dsmRef = useRef(new DrawingStateManager([]));
   const autoSaveTimer = useRef(null);
   const canvasRef = useRef(null);
+  const zoomRef = useRef(zoom);
+  const panRef = useRef(pan);
+  const mustateelStartNumRef = useRef(mustateelStartNum);
+  zoomRef.current = zoom;
+  panRef.current = pan;
+  mustateelStartNumRef.current = mustateelStartNum;
+
+  // Always-current save function — avoids stale closures in debounced autosave & unmount
+  const saveRef = useRef(() => {});
+  saveRef.current = () => {
+    if (!mapId) return;
+    const parcels = dsmRef.current.getByType("mustateel").length +
+      dsmRef.current.getByType("muraba").length;
+    saveMutation.mutate({
+      drawing_data: dsmRef.current.serialize(),
+      total_parcels: parcels,
+      viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+    });
+  };
 
   const { data: mapData } = useQuery({
     queryKey: ["map", mapId],
@@ -142,18 +161,16 @@ export default function Editor() {
 
   const scheduleAutoSave = () => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => {
-      if (mapId) {
-        const parcels = dsmRef.current.getByType("mustateel").length +
-          dsmRef.current.getByType("muraba").length;
-        saveMutation.mutate({
-          drawing_data: dsmRef.current.serialize(),
-          total_parcels: parcels,
-          viewport: JSON.stringify({ zoom, pan }),
-        });
-      }
-    }, 2500);
+    autoSaveTimer.current = setTimeout(() => saveRef.current(), 1000);
   };
+
+  // Save on unmount / navigate away — never lose drawn objects
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      saveRef.current();
+    };
+  }, []);
 
   const handleAddObject = useCallback((type, data) => {
     if (type === "__delete__") {
@@ -194,7 +211,7 @@ export default function Editor() {
         .some(o => rectsOverlap({ x: snap.x, y: snap.y, w: proto.w, h: proto.h }, o));
       if (wouldOverlap) { toast.warning("Cannot place here — overlaps another parcel"); return; }
       obj = createMustateel(snap.x, snap.y);
-      const startN = mustateelStartNum !== "" ? parseInt(mustateelStartNum, 10) : null;
+      const startN = mustateelStartNumRef.current !== "" ? parseInt(mustateelStartNumRef.current, 10) : null;
       obj.label = autoAssignLabel("mustateel", dsmRef.current.objects, startN);
       if (startN !== null) setMustateelStartNum(String(parseInt(obj.label, 10) + 1));
     }
