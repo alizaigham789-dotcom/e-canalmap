@@ -74,6 +74,7 @@ export default function EditorPro() {
   const [showSnap, setShowSnap] = useState(false);
   const [snapSettings, setSnapSettings] = useState({ gridSnap: true, spineSnap: true, mogaSnap: true });
   const [freehandMode, setFreehandMode] = useState(false);
+  const [orthoMode, setOrthoMode] = useState(false);
   const [gridFlags, setGridFlags] = useState({ showMustateel: true, showMuraba: false });
   const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [groupName, setGroupName] = useState("");
@@ -381,6 +382,7 @@ export default function EditorPro() {
         if (selectedId) handleDeleteObject(selectedId);
       }
       const shortcuts = { v: "select", h: "pan", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", u: "mouza", g: "damageMarker", e: "eraser" };
+      if (!e.ctrlKey && !e.metaKey && e.key === "l") { e.preventDefault(); setOrthoMode(v => !v); }
       if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) {
         if (e.key === "f") handleFitView();
         else handleToolChange(shortcuts[e.key]);
@@ -504,6 +506,7 @@ export default function EditorPro() {
             onDamageMarkerClick={() => {}}
             freehandMode={freehandMode}
             gridFlags={gridFlags}
+            orthoMode={orthoMode}
           />
 
           {/* Layers panel — top right like reference */}
@@ -540,6 +543,12 @@ export default function EditorPro() {
                 <Pen className="w-4 h-4" />
               </Button>
             )}
+            <Button variant="ghost" size="icon"
+              className={`w-9 h-9 border shadow-md transition-all ${orthoMode ? "bg-indigo-600 border-indigo-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"}`}
+              onClick={() => setOrthoMode(v => !v)}
+              title="Ortho Mode (L) — straight-line / H-V constraint">
+              <span className="text-[10px] font-bold font-mono">90°</span>
+            </Button>
             <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${gridFlags.showMustateel ? "bg-red-500 border-red-400 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-red-500 hover:bg-red-50"}`}
               onClick={() => setGridFlags(f => ({ ...f, showMustateel: !f.showMustateel }))}

@@ -7,6 +7,7 @@ import {
   snapToNearestBoundary, rectsOverlap, createMustateel, createMuraba, createAcre,
   getMustateelMouzaSplit,
 } from "@/lib/gisEngine";
+import { applyOrthoConstraint, segmentAngleDeg, findNearbyEndpoint, isLineTool } from "@/lib/drawingAssist";
 import {
   drawGrid, drawAcre, drawMustateel, drawMuraba,
   drawCanal, drawKhal, drawRoad, drawOutlet, drawChakbandi, drawMouza, drawDamageMarker,
@@ -29,6 +30,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     freehandMode, // if true: chakbandi/mouza follow mouse without click-per-point
     gridFlags, // { showMustateel, showMuraba }
     killaVisibility, // { mustateel: bool, muraba: bool }
+    orthoMode, // CAD-style H/V angle constraint while drawing line tools
   },
   ref
 ) {
@@ -53,8 +55,20 @@ const GISCanvas = forwardRef(function GISCanvas(
   const measureStartRef = useRef(null);
   const [measureDraft, setMeasureDraft] = useState(null); // { start, end }
   const [measureResult, setMeasureResult] = useState(null); // { ft, m, midScreen }
+  // Endpoint-snap highlight target (for continuous drawing)
+  const [endpointSnap, setEndpointSnap] = useState(null);
   // 1 world unit = 1 foot (DIMENSIONS.ACRE.width = 220ft, etc.)
   const FT_PER_UNIT = 1;
+
+  // Last point of the active draft — used as the ortho anchor + angle origin
+  const getDraftAnchor = () => {
+    if (activeTool === "canal") return canalDraft?.[canalDraft.length - 1];
+    if (activeTool === "khal") return khalDraft?.[khalDraft.length - 1];
+    if (activeTool === "road") return roadDraft?.[roadDraft.length - 1];
+    if (activeTool === "mouza") return mouzaDraft?.[mouzaDraft.length - 1];
+    if (activeTool === "chakbandi") return chakbandiDraft?.[chakbandiDraft.length - 1];
+    return null;
+  };
 
   useImperativeHandle(ref, () => ({ getCanvas: () => canvasRef.current }));
 
@@ -179,7 +193,33 @@ const GISCanvas = forwardRef(function GISCanvas(
       ctx.moveTo(sx, sy - 10); ctx.lineTo(sx, sy + 10);
       ctx.stroke();
     }
-  }, [objects, zoom, pan, layers, selectedId, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measureDraft]);
+
+    // Endpoint-snap highlight — shows where continuous drawing will connect
+    if (endpointSnap) {
+      const ex = endpointSnap.point.x * zoom + pan.x;
+      const ey = endpointSnap.point.y * zoom + pan.y;
+      ctx.fillStyle = "rgba(34,211,238,0.30)";
+      ctx.strokeStyle = "#22d3ee"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(ex, ey, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+
+    // Ortho angle readout + guide line while drawing
+    if (orthoMode && isLineTool(activeTool) && snapPos) {
+      const anchor = getDraftAnchor();
+      if (anchor) {
+        const ang = segmentAngleDeg(anchor, snapPos);
+        const ax = anchor.x * zoom + pan.x, ay = anchor.y * zoom + pan.y;
+        const sx = snapPos.x * zoom + pan.x, sy = snapPos.y * zoom + pan.y;
+        ctx.strokeStyle = "rgba(99,102,241,0.55)"; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(sx, sy); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(99,102,241,0.92)";
+        ctx.fillRect(sx + 12, sy - 24, 58, 18);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 11px monospace"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillText(`${ang.toFixed(0)}°`, sx + 18, sy - 15);
+      }
+    }
+  }, [objects, zoom, pan, layers, selectedId, activeTool, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measureDraft, endpointSnap, orthoMode]);
 
   useEffect(() => {
     const loop = () => { render(); animRef.current = requestAnimationFrame(loop); };
@@ -206,8 +246,16 @@ const GISCanvas = forwardRef(function GISCanvas(
     const rect = canvas.getBoundingClientRect();
     const world = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
     const snap = snapSettings || { gridSnap: true, spineSnap: true, mogaSnap: true, zoom };
-    return computeSnapPosition(world.x, world.y, activeTool, objectsRef.current, { ...snap, zoom });
-  }, [pan, zoom, activeTool, snapSettings]);
+    let result = computeSnapPosition(world.x, world.y, activeTool, objectsRef.current, { ...snap, zoom });
+    // CAD Ortho — constrain to H/V relative to the last draft point
+    if (orthoMode && isLineTool(activeTool)) {
+      const anchor = getDraftAnchor();
+      if (anchor) result = applyOrthoConstraint(anchor, result, 90);
+    }
+    // Endpoint-snap highlight for continuous drawing
+    setEndpointSnap(findNearbyEndpoint(world.x, world.y, objectsRef.current, 10, zoom));
+    return result;
+  }, [pan, zoom, activeTool, snapSettings, orthoMode, canalDraft, khalDraft, roadDraft, mouzaDraft, chakbandiDraft]);
 
   const handleMouseMove = useCallback((e) => {
     // Ghost preview for mustateel/muraba

@@ -222,11 +222,21 @@ function svgKhal(obj, C, idx) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
   const color = C.khalStroke || "#2563eb";
+  // Flow arrow at the ending point
+  const last = obj.points[obj.points.length - 1];
+  const prev = obj.points[obj.points.length - 2];
+  const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
+  const a = 11;
+  const p1x = (last.x - a * Math.cos(ang) - a * 0.6 * Math.sin(ang)).toFixed(1);
+  const p1y = (last.y - a * Math.sin(ang) + a * 0.6 * Math.cos(ang)).toFixed(1);
+  const p2x = (last.x - a * Math.cos(ang) + a * 0.6 * Math.sin(ang)).toFixed(1);
+  const p2y = (last.y - a * Math.sin(ang) - a * 0.6 * Math.cos(ang)).toFixed(1);
   return `
 <g key="khal_${idx}">
   <path d="${fillPath}" fill="${color}22" />
   <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>
 </g>`;
 }
 

@@ -143,11 +143,19 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     } else if (o.type === "khal" && o.points?.length >= 2) {
       const halfW = (o.width || 8)/2;
       const left = getParallelPolyline(o.points,-halfW); const right = getParallelPolyline(o.points,halfW);
+      const kColor = C.khalStroke || "#2563eb";
       ctx.fillStyle="rgba(37,99,235,0.2)"; ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
       for(const p of left)ctx.lineTo(p.x,p.y); ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
       for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle=C.khalStroke || "#2563eb"; ctx.lineWidth=1.5/zoom;
+      ctx.strokeStyle=kColor; ctx.lineWidth=1.5/zoom;
       for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
+      // Flow arrow at end
+      const last=o.points[o.points.length-1], prev=o.points[o.points.length-2];
+      const fA=Math.atan2(last.y-prev.y,last.x-prev.x), aS=11;
+      ctx.save(); ctx.translate(last.x,last.y); ctx.rotate(fA);
+      ctx.fillStyle=kColor; ctx.beginPath();
+      ctx.moveTo(0,0); ctx.lineTo(-aS,-aS*0.6); ctx.lineTo(-aS,aS*0.6); ctx.closePath(); ctx.fill();
+      ctx.restore();
     } else if (o.type === "road" && o.points?.length >= 2) {
       const halfW = (o.width||28)/2;
       const left=getParallelPolyline(o.points,-halfW); const right=getParallelPolyline(o.points,halfW);
@@ -310,7 +318,17 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const pts = o.points.map(p=>`${p.x},${p.y}`).join(" ");
       const color = o.type==="canal"?(C.canalStroke||"#0284c7"):o.type==="khal"?(C.khalStroke||"#2563eb"):(C.roadStroke||"#b45309");
       const w = o.type==="canal"?2:o.type==="khal"?1.5:2;
-      return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${w}"/>`;
+      let arrow = "";
+      if (o.type === "khal") {
+        const last = o.points[o.points.length-1], prev = o.points[o.points.length-2];
+        const ang = Math.atan2(last.y-prev.y, last.x-prev.x), a = 11;
+        const p1x=(last.x - a*Math.cos(ang) - a*0.6*Math.sin(ang)).toFixed(1);
+        const p1y=(last.y - a*Math.sin(ang) + a*0.6*Math.cos(ang)).toFixed(1);
+        const p2x=(last.x - a*Math.cos(ang) + a*0.6*Math.sin(ang)).toFixed(1);
+        const p2y=(last.y - a*Math.sin(ang) - a*0.6*Math.cos(ang)).toFixed(1);
+        arrow = `<polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>`;
+      }
+      return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${w}"/>${arrow}`;
     }
     if (o.type==="chakbandi" && o.points?.length>=2) {
       // Bold line + X crosses — colour & thickness match editor/print exactly
