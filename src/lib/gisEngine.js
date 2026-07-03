@@ -813,27 +813,92 @@ export function pointInPolygon(point, polygon) {
 
 // ============================================================
 // CCA / GCA CALCULATION
-// GCA = total killas inside chakbandi boundary (each mustateel = 10 killas)
-// CCA = same as GCA by default (user can override via centerLabel)
+// GCA = total acres inside chakbandi boundary (partial area per mustateel)
+// Each mustateel = 10 acres; canal crossing a mustateel → count half
+// Where no chakbandi exists, canal buffer polygon acts as boundary
 // ============================================================
-export function calculateChakbandiGCA(chakbandi, mustateels) {
-  if (!chakbandi.points || chakbandi.points.length < 3) return 0;
-  const polygon = chakbandi.points;
-  let count = 0;
-  for (const m of mustateels) {
-    const cx = m.x + m.w / 2;
-    const cy = m.y + m.h / 2;
-    if (pointInPolygon({ x: cx, y: cy }, polygon)) count++;
+
+// Fraction (0–1) of a rectangle that lies inside a polygon — point-sampling
+export function rectAreaFractionInPolygon(rect, polygon) {
+  if (!polygon || polygon.length < 3) return 0;
+  const SAMPLES = 16;
+  let inside = 0;
+  const total = SAMPLES * SAMPLES;
+  for (let i = 0; i < SAMPLES; i++) {
+    for (let j = 0; j < SAMPLES; j++) {
+      const px = rect.x + (i + 0.5) * rect.w / SAMPLES;
+      const py = rect.y + (j + 0.5) * rect.h / SAMPLES;
+      if (pointInPolygon({ x: px, y: py }, polygon)) inside++;
+    }
   }
-  return count * 10; // each mustateel = 10 killas
+  return inside / total;
 }
 
+// Does a canal (polyline) pass through a mustateel rectangle?
+export function doesCanalCrossMustateel(canal, mustateel) {
+  if (!canal.points || canal.points.length < 2) return false;
+  const rectContains = (p) =>
+    p.x >= mustateel.x && p.x <= mustateel.x + mustateel.w &&
+    p.y >= mustateel.y && p.y <= mustateel.y + mustateel.h;
+  const corners = [
+    { x: mustateel.x, y: mustateel.y },
+    { x: mustateel.x + mustateel.w, y: mustateel.y },
+    { x: mustateel.x + mustateel.w, y: mustateel.y + mustateel.h },
+    { x: mustateel.x, y: mustateel.y + mustateel.h },
+  ];
+  for (let i = 0; i < canal.points.length - 1; i++) {
+    const a = canal.points[i], b = canal.points[i + 1];
+    if (rectContains(a) || rectContains(b)) return true;
+    for (let j = 0; j < 4; j++) {
+      if (segIntersect(a, b, corners[j], corners[(j + 1) % 4])) return true;
+    }
+  }
+  return false;
+}
+
+// GCA for a chakbandi: sum partial mustateel acres inside, canal-crossed → half
+export function calculateChakbandiGCA(chakbandi, mustateels, canals = []) {
+  if (!chakbandi.points || chakbandi.points.length < 3) return 0;
+  const polygon = chakbandi.points;
+  const ACRES_PER_MUSTATEEL = 10;
+  let totalAcres = 0;
+  for (const m of mustateels) {
+    const fraction = rectAreaFractionInPolygon(m, polygon);
+    if (fraction <= 0) continue;
+    let acres = fraction * ACRES_PER_MUSTATEEL;
+    // Canal passing through mustateel center → count half
+    const canalCrosses = canals.length > 0 && canals.some(c => doesCanalCrossMustateel(c, m));
+    if (canalCrosses) acres *= 0.5;
+    totalAcres += acres;
+  }
+  return Math.round(totalAcres * 10) / 10;
+}
+
+// GCA using canal buffer polygon as boundary (when no chakbandi exists)
+export function calculateCanalBoundaryGCA(canal, mustateels, otherCanals = []) {
+  if (!canal.points || canal.points.length < 2) return 0;
+  const halfW = (canal.width || DIMENSIONS.CANAL_WIDTH) / 2;
+  const left = getParallelPolyline(canal.points, -halfW);
+  const right = getParallelPolyline(canal.points, halfW);
+  const polygon = [...left, ...right.reverse()];
+  if (polygon.length < 3) return 0;
+  return calculateChakbandiGCA({ points: polygon }, mustateels, otherCanals);
+}
+
+// Total GCA: chakbandi boundaries first; if none, fall back to canal boundaries
 export function calculateTotalGCA(objects) {
   const chakbandis = objects.filter(o => o.type === "chakbandi");
   const mustateels = objects.filter(o => o.type === "mustateel");
+  const canals = objects.filter(o => o.type === "canal");
   let total = 0;
-  for (const ch of chakbandis) {
-    total += calculateChakbandiGCA(ch, mustateels);
+  if (chakbandis.length > 0) {
+    for (const ch of chakbandis) {
+      total += calculateChakbandiGCA(ch, mustateels, canals);
+    }
+  } else {
+    for (const canal of canals) {
+      total += calculateCanalBoundaryGCA(canal, mustateels, canals.filter(c => c.id !== canal.id));
+    }
   }
   return total;
 }

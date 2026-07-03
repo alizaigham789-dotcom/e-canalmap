@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
-import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintHeaderHTML } from "@/lib/gisEngine";
 
 
 export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {} }) {
@@ -72,10 +72,11 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
 
     // Auto-calculated CCA/GCA labels at chakbandi centroids
     const _mustateels = objects.filter(o => o.type === "mustateel");
+    const _canals = objects.filter(o => o.type === "canal");
     const _chakbandis = objects.filter(o => o.type === "chakbandi");
     for (const ch of _chakbandis) {
       if (ch.points?.length >= 3) {
-        const gca = calculateChakbandiGCA(ch, _mustateels);
+        const gca = calculateChakbandiGCA(ch, _mustateels, _canals);
         if (gca > 0) {
           const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length;
           const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length;
@@ -362,11 +363,12 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
 
     // Auto-calculate CCA/GCA labels for chakbandis
     const mustateels = objects.filter(o => o.type === "mustateel");
+    const canals = objects.filter(o => o.type === "canal");
     const chakbandis = objects.filter(o => o.type === "chakbandi");
     let gcaLabels = "";
     for (const ch of chakbandis) {
       if (ch.points?.length >= 3) {
-        const gca = calculateChakbandiGCA(ch, mustateels);
+        const gca = calculateChakbandiGCA(ch, mustateels, canals);
         if (gca > 0) {
           const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length - bbox.minX;
           const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length - bbox.minY;

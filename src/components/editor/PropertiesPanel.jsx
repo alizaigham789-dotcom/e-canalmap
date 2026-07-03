@@ -3,13 +3,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { calculateChakbandiGCA } from "@/lib/gisEngine";
 
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
 const KILLA_STROKE_STYLES = ["solid", "dashed", "dotted"];
 
-export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClose }) {
+export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate, onDelete, onClose }) {
   const [local, setLocal] = useState({});
   const [collapsed, setCollapsed] = useState(true);
 
@@ -26,6 +27,13 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
     const next = { ...local, [key]: val };
     setLocal(next);
     onUpdate(selectedObj.id, { [key]: val });
+  };
+
+  // Commit multiple fields at once — used for CCA/GCA where centerLabel depends on both
+  const commitMultiple = (changes) => {
+    const next = { ...local, ...changes };
+    setLocal(next);
+    onUpdate(selectedObj.id, changes);
   };
 
   const typeLabel = {
@@ -197,7 +205,40 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
                 />
                 <p className="text-[9px] text-green-500 mt-0.5">Assign a Moga # to filter/print this boundary separately</p>
               </div>
-              <Field label="CCA / GCA Label (center)" value={local.centerLabel || ""} onChange={v => commit("centerLabel", v)} placeholder="e.g. CCA, GCA…" hint="Shown at the center of this boundary area" />
+              <div className="p-2 bg-green-50 border border-green-200 rounded-lg space-y-2">
+                <div className="flex items-center gap-1">
+                  <Calculator className="w-3 h-3 text-green-600" />
+                  <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider">CCA / GCA (Acres)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[9px] text-slate-400 uppercase">CCA</label>
+                    <Input type="number" value={local.cca ?? ""} onChange={e => {
+                      const v = e.target.value;
+                      const gca = local.gca ?? "";
+                      commitMultiple({ cca: v, centerLabel: v || gca ? `(${v}/${gca})` : "" });
+                    }} placeholder="auto" className="h-7 text-xs font-mono bg-white border-green-200 text-green-800 focus:border-green-500" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-slate-400 uppercase">GCA</label>
+                    <Input type="number" value={local.gca ?? ""} onChange={e => {
+                      const v = e.target.value;
+                      const cca = local.cca ?? "";
+                      commitMultiple({ gca: v, centerLabel: cca || v ? `(${cca}/${v})` : "" });
+                    }} placeholder="auto" className="h-7 text-xs font-mono bg-white border-green-200 text-green-800 focus:border-green-500" />
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" className="w-full h-6 text-[10px] border-green-300 text-green-700 hover:bg-green-100"
+                  onClick={() => {
+                    const mustateels = allObjects.filter(o => o.type === "mustateel");
+                    const canals = allObjects.filter(o => o.type === "canal");
+                    const gca = calculateChakbandiGCA(selectedObj, mustateels, canals);
+                    commitMultiple({ cca: String(gca), gca: String(gca), centerLabel: `(${gca}/${gca})` });
+                  }}>
+                  <Calculator className="w-3 h-3 mr-1" /> Auto Calculate
+                </Button>
+                <p className="text-[9px] text-green-600">Counts partial mustateels inside boundary; canal-crossed parcels count half. Each mustateel = 10 acres.</p>
+              </div>
               <SpacingControl label="Line Thickness" value={local.lineThickness || 6} min={1} max={10} step={1} onChange={v => commit("lineThickness", v)} />
               <div className="flex items-center justify-between mt-2">
                 <label className="text-xs text-slate-600">Cross Pattern (× × ×)</label>

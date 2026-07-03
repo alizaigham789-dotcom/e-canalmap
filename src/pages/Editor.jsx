@@ -130,7 +130,10 @@ export default function Editor() {
 
   const saveMutation = useMutation({
     mutationFn: (data) => base44.entities.LandMap.update(mapId, data),
-    onSuccess: () => toast.success("Map saved", { duration: 1500 }),
+    onSuccess: () => {
+      toast.success("Map saved", { duration: 1500 });
+      queryClient.invalidateQueries({ queryKey: ["map", mapId] });
+    },
     onError: () => toast.error("Save failed"),
   });
 
@@ -166,11 +169,18 @@ export default function Editor() {
     autoSaveTimer.current = setTimeout(() => saveRef.current(), 1000);
   };
 
-  // Save on unmount / navigate away — never lose drawn objects
+  // Save on unmount / navigate away — direct API call so it survives unmount
   useEffect(() => {
     return () => {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-      saveRef.current();
+      if (!mapId) return;
+      const parcels = dsmRef.current.getByType("mustateel").length +
+        dsmRef.current.getByType("muraba").length;
+      base44.entities.LandMap.update(mapId, {
+        drawing_data: dsmRef.current.serialize(),
+        total_parcels: parcels,
+        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+      }).catch(() => {});
     };
   }, []);
 
@@ -809,6 +819,7 @@ export default function Editor() {
             max-sm:right-auto max-sm:left-2 max-sm:top-auto max-sm:bottom-16 max-sm:translate-y-0 max-sm:translate-x-0">
             <PropertiesPanel
               selectedObj={selectedObj}
+              allObjects={objects}
               onUpdate={handleUpdateObject}
               onDelete={handleDeleteObject}
               onClose={() => setSelectedId(null)}
