@@ -257,6 +257,29 @@ function svgRoad(obj, C, idx) {
 </g>`;
 }
 
+function svgOutlet(obj, C, idx) {
+  if (!obj.start || !obj.end) return "";
+  const color = C.outletStroke || "#06b6d4";
+  const size = DIMENSIONS.CANAL_WIDTH; // moga print size = canal size
+  const half = size / 2;
+  const { x: sx, y: sy } = obj.start;
+  const { x: ex, y: ey } = obj.end;
+  const angle = Math.atan2(ey - sy, ex - sx);
+  const headLen = size * 1.6, headW = size;
+  const h1x = (ex - headLen * Math.cos(angle) - headW * Math.sin(angle)).toFixed(1);
+  const h1y = (ey - headLen * Math.sin(angle) + headW * Math.cos(angle)).toFixed(1);
+  const h2x = (ex - headLen * Math.cos(angle) + headW * Math.sin(angle)).toFixed(1);
+  const h2y = (ey - headLen * Math.sin(angle) - headW * Math.cos(angle)).toFixed(1);
+  const num = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
+  const label = [obj.mogha_name, num].filter(Boolean).join(" ") || obj.label || "";
+  return `<g key="outlet_${idx}">
+    <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
+    <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size * 0.25).toFixed(1)}" stroke-linecap="round"/>
+    <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
+    ${label ? `<text x="${sx.toFixed(1)}" y="${(sy - half - 2).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="11" fill="#0e7490">${label}</text>` : ""}
+  </g>`;
+}
+
 function svgMouza(obj, C, idx) {
   if (!obj.points || obj.points.length < 2) return "";
   const pts = obj.points.map(p => `${p.x},${p.y}`).join(" ");
@@ -302,6 +325,7 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}) {
       case "khal":      svgParts.push(svgKhal(obj, C, idx)); break;
       case "road":      svgParts.push(svgRoad(obj, C, idx)); break;
       case "mouza":     svgParts.push(svgMouza(obj, C, idx)); break;
+      case "outlet":    svgParts.push(svgOutlet(obj, C, idx)); break;
       default: break;
     }
   });
