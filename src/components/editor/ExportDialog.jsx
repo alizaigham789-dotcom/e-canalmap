@@ -153,13 +153,14 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y); ctx.closePath(); ctx.fill();
       ctx.strokeStyle=kColor; ctx.lineWidth=1.5/zoom;
       for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
-      // Flow arrow at end
+      // Flow arrow at end — 5× size, head at end point, tail behind
       const last=o.points[o.points.length-1], prev=o.points[o.points.length-2];
       const fA=Math.atan2(last.y-prev.y,last.x-prev.x);
-      const aLen = Math.max(halfW * 2.5, 12);
+      const aLen = halfW * 12.5;   // 5× original
+      const aW = halfW * 5;        // 5× tail width
       ctx.save(); ctx.translate(last.x,last.y); ctx.rotate(fA);
       ctx.fillStyle=kColor; ctx.beginPath();
-      ctx.moveTo(0,0); ctx.lineTo(-aLen,-halfW); ctx.lineTo(-aLen,halfW); ctx.closePath(); ctx.fill();
+      ctx.moveTo(0,0); ctx.lineTo(-aLen,-aW); ctx.lineTo(-aLen,aW); ctx.closePath(); ctx.fill();
       ctx.restore();
     } else if (o.type === "road" && o.points?.length >= 2) {
       const halfW = (o.width||28)/2;
@@ -200,12 +201,12 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         }
       }
     } else if (o.type === "mouza" && o.points?.length >= 2) {
-      ctx.strokeStyle=C.mouzaStroke || "#000"; ctx.lineWidth=CHAKBANDI_SCALE.lineWidth()*5; ctx.lineCap="round"; ctx.setLineDash([]);
+      ctx.strokeStyle=C.mouzaStroke || "#000"; ctx.lineWidth=(CHAKBANDI_SCALE.lineWidth()*5)/3; ctx.lineCap="round"; ctx.setLineDash([]);
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();
     } else if (o.type === "outlet" && o.start && o.end) {
       // Moga — size 10× canal width for print/export legibility
-      const color = C.outletStroke || "#06b6d4";
+      const color = o.outletColor || C.outletStroke || "#06b6d4";
       const size = DIMENSIONS.CANAL_WIDTH * 10;
       const half = size / 2;
       const { x: sx, y: sy } = o.start;
@@ -221,12 +222,17 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.lineTo(ex - headLen * Math.cos(ang) - headW * Math.sin(ang), ey - headLen * Math.sin(ang) + headW * Math.cos(ang));
       ctx.lineTo(ex - headLen * Math.cos(ang) + headW * Math.sin(ang), ey - headLen * Math.sin(ang) - headW * Math.cos(ang));
       ctx.closePath(); ctx.fill();
+      // Moga number ABOVE block — blue, 2× font size
       const num = [o.mogha_number, o.mogha_side].filter(Boolean).join("/");
-      const lbl = [o.mogha_name, num].filter(Boolean).join(" ") || o.label || "";
-      if (lbl) {
-        ctx.fillStyle = "#0e7490"; ctx.font = `bold 11px Rajdhani, sans-serif`;
+      if (num) {
+        ctx.fillStyle = "#2563eb"; ctx.font = `bold 22px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-        ctx.fillText(lbl, sx, sy - half - 2);
+        ctx.fillText(num, sx, sy - half - 3);
+      }
+      if (o.mogha_name) {
+        ctx.fillStyle = "#0e7490"; ctx.font = `bold 11px Rajdhani, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "top";
+        ctx.fillText(o.mogha_name, sx, sy + half + 3);
       }
     }
   }
@@ -352,11 +358,13 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       if (o.type === "khal") {
         const khHalfW = (o.width || DIMENSIONS.KHAL_WIDTH) / 2;
         const last = o.points[o.points.length-1], prev = o.points[o.points.length-2];
-        const ang = Math.atan2(last.y-prev.y, last.x-prev.x), aLen = Math.max(khHalfW * 2.5, 12);
-        const p1x=(last.x - aLen*Math.cos(ang) - khHalfW*Math.sin(ang)).toFixed(1);
-        const p1y=(last.y - aLen*Math.sin(ang) + khHalfW*Math.cos(ang)).toFixed(1);
-        const p2x=(last.x - aLen*Math.cos(ang) + khHalfW*Math.sin(ang)).toFixed(1);
-        const p2y=(last.y - aLen*Math.sin(ang) - khHalfW*Math.cos(ang)).toFixed(1);
+        const ang = Math.atan2(last.y-prev.y, last.x-prev.x);
+        const aLen = khHalfW * 12.5; // 5× original
+        const aW = khHalfW * 5;      // 5× tail width
+        const p1x=(last.x - aLen*Math.cos(ang) - aW*Math.sin(ang)).toFixed(1);
+        const p1y=(last.y - aLen*Math.sin(ang) + aW*Math.cos(ang)).toFixed(1);
+        const p2x=(last.x - aLen*Math.cos(ang) + aW*Math.sin(ang)).toFixed(1);
+        const p2y=(last.y - aLen*Math.sin(ang) - aW*Math.cos(ang)).toFixed(1);
         arrow = `<polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>`;
       }
       return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${w}"/>${arrow}`;
@@ -390,10 +398,10 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }
     if (o.type==="mouza" && o.points?.length>=2) {
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
-      return `<polyline points="${pts}" fill="none" stroke="${C.mouzaStroke || "#000"}" stroke-width="${CHAKBANDI_SCALE.lineWidth()*5}" stroke-linecap="round"/>`;
+      return `<polyline points="${pts}" fill="none" stroke="${C.mouzaStroke || "#000"}" stroke-width="${(CHAKBANDI_SCALE.lineWidth()*5)/3}" stroke-linecap="round"/>`;
     }
     if (o.type==="outlet" && o.start && o.end) {
-      const color = C.outletStroke || "#06b6d4";
+      const color = o.outletColor || C.outletStroke || "#06b6d4";
       const size = DIMENSIONS.CANAL_WIDTH * 10;
       const half = size / 2;
       const { x: sx, y: sy } = o.start;
@@ -405,12 +413,13 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const h2x=(ex - headLen*Math.cos(ang) + headW*Math.sin(ang)).toFixed(1);
       const h2y=(ey - headLen*Math.sin(ang) - headW*Math.cos(ang)).toFixed(1);
       const num = [o.mogha_number, o.mogha_side].filter(Boolean).join("/");
-      const lbl = [o.mogha_name, num].filter(Boolean).join(" ") || o.label || "";
+      const numLbl = num ? `<text x="${sx.toFixed(1)}" y="${(sy-half-3).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="22" fill="#2563eb">${num}</text>` : "";
+      const nameLbl = o.mogha_name ? `<text x="${sx.toFixed(1)}" y="${(sy+half+14).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="11" fill="#0e7490">${o.mogha_name}</text>` : "";
       return `<g>
         <rect x="${(sx-half).toFixed(1)}" y="${(sy-half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
         <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size*0.25).toFixed(1)}" stroke-linecap="round"/>
         <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
-        ${lbl ? `<text x="${sx.toFixed(1)}" y="${(sy-half-2).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="11" fill="#0e7490">${lbl}</text>` : ""}
+        ${numLbl}${nameLbl}
       </g>`;
     }
     return null;

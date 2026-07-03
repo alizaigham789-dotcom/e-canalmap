@@ -224,6 +224,15 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
           {selectedObj.type === "outlet" && (
             <>
               <Separator className="bg-slate-100" />
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Moga Colour</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={local.outletColor || "#06b6d4"}
+                    onChange={e => commit("outletColor", e.target.value)}
+                    className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
+                  <span className="text-xs text-slate-600">Block &amp; arrow colour</span>
+                </div>
+              </div>
               <Field label="Mogha Name (موگہ نام)" value={local.mogha_name || ""} onChange={v => commit("mogha_name", v)} placeholder="e.g. Mogha Ali" />
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Mogha Number (موگہ نمبری)</label>

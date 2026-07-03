@@ -218,24 +218,29 @@ function svgCanal(obj, C, idx) {
 function svgKhal(obj, C, idx) {
   if (!obj.points || obj.points.length < 2) return "";
   const halfW = (obj.width || DIMENSIONS.KHAL_WIDTH) / 2;
-  const fillPath = parallelSmoothClosedPath(obj.points, halfW);
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
   const color = C.khalStroke || "#2563eb";
-  // Flow arrow at the ending point
+  // Straight polylines (no smooth curve — matches editor exactly)
+  const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  // Closed fill path — straight segments
+  const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  // Flow arrow at the ending point — 5× size, head at end, tail behind
   const last = obj.points[obj.points.length - 1];
   const prev = obj.points[obj.points.length - 2];
   const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
-  const aLen = Math.max(halfW * 2.5, 12);
-  const p1x = (last.x - aLen * Math.cos(ang) - halfW * Math.sin(ang)).toFixed(1);
-  const p1y = (last.y - aLen * Math.sin(ang) + halfW * Math.cos(ang)).toFixed(1);
-  const p2x = (last.x - aLen * Math.cos(ang) + halfW * Math.sin(ang)).toFixed(1);
-  const p2y = (last.y - aLen * Math.sin(ang) - halfW * Math.cos(ang)).toFixed(1);
+  const aLen = halfW * 12.5;   // 5× original
+  const aW = halfW * 5;        // 5× tail width
+  const p1x = (last.x - aLen * Math.cos(ang) - aW * Math.sin(ang)).toFixed(1);
+  const p1y = (last.y - aLen * Math.sin(ang) + aW * Math.cos(ang)).toFixed(1);
+  const p2x = (last.x - aLen * Math.cos(ang) + aW * Math.sin(ang)).toFixed(1);
+  const p2y = (last.y - aLen * Math.sin(ang) - aW * Math.cos(ang)).toFixed(1);
   return `
 <g key="khal_${idx}">
-  <path d="${fillPath}" fill="${color}22" />
-  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="${fillPts}" fill="${color}22" />
+  <polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>
 </g>`;
 }
@@ -259,8 +264,8 @@ function svgRoad(obj, C, idx) {
 
 function svgOutlet(obj, C, idx) {
   if (!obj.start || !obj.end) return "";
-  const color = C.outletStroke || "#06b6d4";
-  const size = DIMENSIONS.CANAL_WIDTH * 10; // moga print size 10× (print/export only)
+  const color = obj.outletColor || C.outletStroke || "#06b6d4";
+  const size = DIMENSIONS.CANAL_WIDTH * 10;
   const half = size / 2;
   const { x: sx, y: sy } = obj.start;
   const { x: ex, y: ey } = obj.end;
@@ -271,19 +276,21 @@ function svgOutlet(obj, C, idx) {
   const h2x = (ex - headLen * Math.cos(angle) + headW * Math.sin(angle)).toFixed(1);
   const h2y = (ey - headLen * Math.sin(angle) - headW * Math.cos(angle)).toFixed(1);
   const num = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
-  const label = [obj.mogha_name, num].filter(Boolean).join(" ") || obj.label || "";
+  // Moga number ABOVE block — blue, 2× mustateel killa font (print killa font ~11pt → 22pt)
+  const numLabel = num ? `<text x="${sx.toFixed(1)}" y="${(sy - half - 3).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="22" fill="#2563eb">${num}</text>` : "";
+  const nameLabel = obj.mogha_name ? `<text x="${sx.toFixed(1)}" y="${(sy + half + 14).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="11" fill="#0e7490">${obj.mogha_name}</text>` : "";
   return `<g key="outlet_${idx}">
     <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
     <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size * 0.25).toFixed(1)}" stroke-linecap="round"/>
     <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
-    ${label ? `<text x="${sx.toFixed(1)}" y="${(sy - half - 2).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="11" fill="#0e7490">${label}</text>` : ""}
+    ${numLabel}${nameLabel}
   </g>`;
 }
 
 function svgMouza(obj, C, idx) {
   if (!obj.points || obj.points.length < 2) return "";
   const pts = obj.points.map(p => `${p.x},${p.y}`).join(" ");
-  const mouzaWidth = CHAKBANDI_SCALE.lineWidth() * 5;
+  const mouzaWidth = (CHAKBANDI_SCALE.lineWidth() * 5) / 3; // 3× thinner
   return `<polyline key="mouza_${idx}" points="${pts}" fill="none" stroke="${C.mouzaStroke || '#000'}" stroke-width="${mouzaWidth}" stroke-linecap="round"/>`;
 }
 

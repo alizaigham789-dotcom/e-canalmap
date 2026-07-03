@@ -370,13 +370,14 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  // Water fill — smooth
+  // Water fill — straight segments (matches print/export exactly, no curve overshoot)
   const khalColor = isSelected ? "#93c5fd" : (C.khalStroke || "#2563eb");
   ctx.fillStyle = `${khalColor}33`;
   ctx.beginPath();
-  drawSmoothPath(ctx, left);
+  ctx.moveTo(left[0].x, left[0].y);
+  for (const p of left) ctx.lineTo(p.x, p.y);
   ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
-  drawSmoothPath(ctx, [...right].reverse());
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
   ctx.closePath(); ctx.fill();
 
   ctx.strokeStyle = khalColor;
@@ -384,7 +385,8 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
   ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const side of [left, right]) {
     ctx.beginPath();
-    drawSmoothPath(ctx, side);
+    ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y);
     ctx.stroke();
   }
 
@@ -396,19 +398,20 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
   ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
   ctx.stroke();
 
-  // Flow-direction arrowhead at the khal's ending point
-  // Head (tip) at end point, tail behind toward start, tail width = khal width
+  // Flow-direction arrowhead at the khal's ending point — 5× size
+  // Head (tip) at end point, tail behind toward start, tail width = 5× khal width
   const last = obj.points[obj.points.length - 1];
   const prev = obj.points[obj.points.length - 2];
   const fAng = Math.atan2(last.y - prev.y, last.x - prev.x);
-  const arrowLen = Math.max(halfW * 2.5, 12 / zoom);
+  const arrowLen = halfW * 12.5;   // 5× original (2.5 × 5)
+  const arrowWidth = halfW * 5;    // 5× tail width
   ctx.save();
   ctx.translate(last.x, last.y); ctx.rotate(fAng);
   ctx.fillStyle = khalColor;
   ctx.beginPath();
   ctx.moveTo(0, 0);
-  ctx.lineTo(-arrowLen, -halfW);
-  ctx.lineTo(-arrowLen, halfW);
+  ctx.lineTo(-arrowLen, -arrowWidth);
+  ctx.lineTo(-arrowLen, arrowWidth);
   ctx.closePath(); ctx.fill();
   ctx.restore();
 
@@ -497,7 +500,7 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
   const { x: ex, y: ey } = obj.end;
   const angle = Math.atan2(ey - sy, ex - sx);
   const len = Math.hypot(ex - sx, ey - sy);
-  const color = isSelected ? "#67e8f9" : (C.outletStroke || "#06b6d4");
+  const color = isSelected ? "#67e8f9" : (obj.outletColor || C.outletStroke || "#06b6d4");
   const half = blockSize / 2;
 
   ctx.fillStyle = color;
@@ -516,23 +519,22 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
   ctx.lineTo(len - (22*scale)/zoom, (14*scale)/zoom);
   ctx.closePath(); ctx.fill();
 
+  ctx.restore(); // end rotated arrow context
+
+  // Moga number ABOVE the block — blue, 2× mustateel killa-number font size
+  const moghaNum = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
+  if (moghaNum) {
+    ctx.fillStyle = "#2563eb";
+    ctx.font = `bold ${scaledFont(28, zoom, 20, 48)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(moghaNum, sx, sy - blockSize/2 - 4/zoom);
+  }
   if (obj.mogha_name) {
-    ctx.save(); ctx.translate(sx, sy);
     ctx.fillStyle = "#0e7490";
     ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-    ctx.fillText(obj.mogha_name, 0, -blockSize/2 - 4/zoom);
-    ctx.restore();
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillText(obj.mogha_name, sx, sy + blockSize/2 + 4/zoom);
   }
-  const moghaNum = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
-  const labelToUse = moghaNum || obj.label || "";
-  if (labelToUse) {
-    ctx.fillStyle = "#0e7490";
-    ctx.font = `bold ${scaledFont(12, zoom)}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-    ctx.fillText(labelToUse, len/2, -(14*scale)/zoom);
-  }
-  ctx.restore();
 }
 
 // ============================================================
@@ -652,7 +654,7 @@ export function drawMouza(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const color = C.mouzaStroke || "#000000";
   ctx.strokeStyle = isSelected ? "#6366f1" : color;
-  ctx.lineWidth = (isSelected ? 2 : 1.2) / zoom;
+  ctx.lineWidth = (isSelected ? 0.67 : 0.4) / zoom; // 3× thinner than before
   ctx.setLineDash([3/zoom, 4/zoom]); ctx.lineCap = "round";
   ctx.beginPath();
   ctx.moveTo(obj.points[0].x, obj.points[0].y);
