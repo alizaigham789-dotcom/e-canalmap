@@ -106,8 +106,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const splitFont = Math.min(o.w, o.h) * 0.26;
         ctx.font = `900 ${splitFont}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        if (o.label) ctx.fillText(o.label, mSplit.topCenter.x, mSplit.topCenter.y);
-        if (o.label2) ctx.fillText(o.label2, mSplit.bottomCenter.x, mSplit.bottomCenter.y);
+        if (o.label) ctx.fillText(o.label, mSplit.centerA.x, mSplit.centerA.y);
+        if (o.label2) ctx.fillText(o.label2, mSplit.centerB.x, mSplit.centerB.y);
       } else if (o.label) {
         ctx.font = `900 ${Math.min(o.w, o.h) * 0.35}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -154,7 +154,10 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.strokeStyle=kColor; ctx.lineWidth=1.5/zoom;
       for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
       // Flow arrow at end — 5× size, head at end point, tail behind
-      const last=o.points[o.points.length-1], prev=o.points[o.points.length-2];
+      // Use last segment with meaningful length to avoid double-click noise
+      const last=o.points[o.points.length-1];
+      let prev=o.points[0];
+      for(let i=o.points.length-2;i>=0;i--){const p=o.points[i];if(Math.hypot(last.x-p.x,last.y-p.y)>halfW*2){prev=p;break;}}
       const fA=Math.atan2(last.y-prev.y,last.x-prev.x);
       const aLen = halfW * 12.5;   // 5× original
       const aW = halfW * 5;        // 5× tail width
@@ -204,6 +207,27 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.strokeStyle=C.mouzaStroke || "#000"; ctx.lineWidth=(CHAKBANDI_SCALE.lineWidth()*5)/3; ctx.lineCap="round"; ctx.setLineDash([]);
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();
+    }
+    // CCA/GCA center label for chakbandi (canvas path)
+    if (o.type === "chakbandi" && o.centerLabel && o.points?.length >= 2) {
+      const cx = o.points.reduce((s,p)=>s+p.x,0)/o.points.length;
+      const cy = o.points.reduce((s,p)=>s+p.y,0)/o.points.length;
+      ctx.font = `bold 13px Rajdhani, sans-serif`;
+      const tw = ctx.measureText(o.centerLabel).width + 12;
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.fillRect(cx - tw/2, cy - 9, tw, 19);
+      ctx.strokeStyle = C.chakbandiStroke || "#000"; ctx.lineWidth = 1.5;
+      ctx.strokeRect(cx - tw/2, cy - 9, tw, 19);
+      ctx.fillStyle = "#166534";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(o.centerLabel, cx, cy);
+    }
+    // Moga number on mustateel (canvas path)
+    if (o.type === "mustateel" && o.mogaNumber) {
+      ctx.fillStyle = "#2563eb";
+      ctx.font = `bold ${Math.max(14, Math.min(o.w, o.h) * 0.12)}px Rajdhani, sans-serif`;
+      ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillText(`M${o.mogaNumber}`, o.x + 4, o.y + 4);
     } else if (o.type === "outlet" && o.start && o.end) {
       // Moga — size 10× canal width for print/export legibility
       const color = o.outletColor || C.outletStroke || "#06b6d4";
@@ -328,9 +352,10 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       let lbl;
       if (mSplit) {
         const splitFont = Math.min(o.w, o.h) * 0.26;
-        lbl = `${o.label ? `<text x="${mSplit.topCenter.x}" y="${mSplit.topCenter.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${o.label2 ? `<text x="${mSplit.bottomCenter.x}" y="${mSplit.bottomCenter.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label2}</text>` : ""}`;
+        lbl = `${o.label ? `<text x="${mSplit.centerA.x}" y="${mSplit.centerA.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${o.label2 ? `<text x="${mSplit.centerB.x}" y="${mSplit.centerB.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label2}</text>` : ""}`;
       } else {
-        lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
+        const mogaLbl = o.mogaNumber ? `<text x="${o.x+4}" y="${o.y+4}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.max(14, Math.min(o.w,o.h)*0.12)}" font-weight="bold" fill="#2563eb" text-anchor="start" dominant-baseline="hanging">M${o.mogaNumber}</text>` : "";
+        lbl = `${mogaLbl}${o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}`;
       }
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;
     }
@@ -357,7 +382,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       let arrow = "";
       if (o.type === "khal") {
         const khHalfW = (o.width || DIMENSIONS.KHAL_WIDTH) / 2;
-        const last = o.points[o.points.length-1], prev = o.points[o.points.length-2];
+        const last = o.points[o.points.length-1];
+        let prev = o.points[0];
+        for(let i=o.points.length-2;i>=0;i--){const p=o.points[i];if(Math.hypot(last.x-p.x,last.y-p.y)>khHalfW*2){prev=p;break;}}
         const ang = Math.atan2(last.y-prev.y, last.x-prev.x);
         const aLen = khHalfW * 12.5; // 5× original
         const aW = khHalfW * 5;      // 5× tail width
@@ -394,7 +421,14 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         }
       }
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
-      return `<polyline points="${pts}" fill="none" stroke="${chColor}" stroke-width="${lineW}" stroke-linecap="round" stroke-linejoin="round"/>${crossSVG}`;
+      let centerLbl = "";
+      if (o.centerLabel) {
+        const cx = o.points.reduce((s,p)=>s+p.x,0)/o.points.length;
+        const cy = o.points.reduce((s,p)=>s+p.y,0)/o.points.length;
+        const tw = o.centerLabel.length * 13 * 0.6 + 12;
+        centerLbl = `<rect x="${(cx-tw/2).toFixed(1)}" y="${(cy-9).toFixed(1)}" width="${tw.toFixed(1)}" height="19" fill="rgba(255,255,255,0.92)" stroke="${chColor}" stroke-width="1.5"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="13" fill="#166534">${o.centerLabel}</text>`;
+      }
+      return `<polyline points="${pts}" fill="none" stroke="${chColor}" stroke-width="${lineW}" stroke-linecap="round" stroke-linejoin="round"/>${crossSVG}${centerLbl}`;
     }
     if (o.type==="mouza" && o.points?.length>=2) {
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");

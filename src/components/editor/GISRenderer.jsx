@@ -177,7 +177,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
   }
 
   // Layer 5: Center label(s) — fixed world-unit size so ALL mustateels look same regardless of label length
-  // If a mouza boundary splits this parcel, draw 2 labels (above/below the mouza line) instead of 1
+  // If a mouza boundary splits this parcel, draw 2 labels (one on each side) instead of 1
   if (mouzaSplit) {
     ctx.save();
     ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
@@ -193,8 +193,8 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(text, center.x, center.y);
     };
-    drawSplitLabel(obj.label || "", mouzaSplit.topCenter);
-    drawSplitLabel(obj.label2 || "", mouzaSplit.bottomCenter);
+    drawSplitLabel(obj.label || "", mouzaSplit.centerA);
+    drawSplitLabel(obj.label2 || "", mouzaSplit.centerB);
     ctx.restore();
   } else {
     const centerX = obj.x + obj.w / 2, centerY = obj.y + obj.h / 2;
@@ -217,6 +217,14 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
       const ownerFont = Math.min(obj.w, obj.h) * 0.10;
       ctx.font = `${ownerFont}px Inter, sans-serif`;
       ctx.fillText(obj.ownerName, centerX, labelY + finalFont * 0.55);
+    }
+    // Moga number — blue, 2× killa font, top-left corner
+    if (obj.mogaNumber) {
+      ctx.fillStyle = "#2563eb";
+      const mogaFont = screenClampedFont(Math.min(obj.w, obj.h) * 0.12, zoom, 18, 32);
+      ctx.font = `bold ${mogaFont}px Rajdhani, sans-serif`;
+      ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillText(`M${obj.mogaNumber}`, obj.x + 4/zoom, obj.y + 4/zoom);
     }
     ctx.restore();
   }
@@ -400,8 +408,13 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
 
   // Flow-direction arrowhead at the khal's ending point — 5× size
   // Head (tip) at end point, tail behind toward start, tail width = 5× khal width
+  // Use the last segment with meaningful length to avoid double-click noise (two near-identical points)
   const last = obj.points[obj.points.length - 1];
-  const prev = obj.points[obj.points.length - 2];
+  let prev = obj.points[0]; // fallback: overall direction
+  for (let i = obj.points.length - 2; i >= 0; i--) {
+    const p = obj.points[i];
+    if (Math.hypot(last.x - p.x, last.y - p.y) > halfW * 2) { prev = p; break; }
+  }
   const fAng = Math.atan2(last.y - prev.y, last.x - prev.x);
   const arrowLen = halfW * 12.5;   // 5× original (2.5 × 5)
   const arrowWidth = halfW * 5;    // 5× tail width
@@ -643,6 +656,26 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false)
     ctx.font = `bold ${scaledFont(11, zoom)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "bottom";
     ctx.fillText(obj.name, 0, -6/zoom);
+    ctx.restore();
+  }
+
+  // CCA/GCA center label — rendered at the centroid of the chakbandi polyline
+  if (obj.centerLabel) {
+    const cx = obj.points.reduce((s, p) => s + p.x, 0) / obj.points.length;
+    const cy = obj.points.reduce((s, p) => s + p.y, 0) / obj.points.length;
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    const lblFont = scaledFont(13, zoom, 11, 18);
+    ctx.font = `bold ${lblFont}px Rajdhani, sans-serif`;
+    const measured = ctx.measureText(obj.centerLabel);
+    const padX = 6/zoom, padY = 3/zoom;
+    const tw = measured.width + padX * 2, th = lblFont + padY * 2;
+    ctx.fillRect(cx - tw/2, cy - th/2, tw, th);
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5/zoom;
+    ctx.strokeRect(cx - tw/2, cy - th/2, tw, th);
+    ctx.fillStyle = "#166534";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(obj.centerLabel, cx, cy);
     ctx.restore();
   }
 }

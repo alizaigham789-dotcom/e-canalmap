@@ -787,8 +787,8 @@ export function getMustateelMouzaSplit(obj, mouzaObjects) {
         });
         const cA = centroid([...sideA, i1, i2]);
         const cB = centroid([...sideB, i1, i2]);
-        const [top, bottom] = cA.y <= cB.y ? [cA, cB] : [cB, cA];
-        return { mouzaId: mouza.id, topCenter: top, bottomCenter: bottom };
+        // Direction-agnostic: return both centroids as centerA / centerB
+        return { mouzaId: mouza.id, centerA: cA, centerB: cB };
       }
     }
   }

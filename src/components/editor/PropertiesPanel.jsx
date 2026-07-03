@@ -197,6 +197,7 @@ export default function PropertiesPanel({ selectedObj, onUpdate, onDelete, onClo
                 />
                 <p className="text-[9px] text-green-500 mt-0.5">Assign a Moga # to filter/print this boundary separately</p>
               </div>
+              <Field label="CCA / GCA Label (center)" value={local.centerLabel || ""} onChange={v => commit("centerLabel", v)} placeholder="e.g. CCA, GCA…" hint="Shown at the center of this boundary area" />
               <SpacingControl label="Line Thickness" value={local.lineThickness || 6} min={1} max={10} step={1} onChange={v => commit("lineThickness", v)} />
               <div className="flex items-center justify-between mt-2">
                 <label className="text-xs text-slate-600">Cross Pattern (× × ×)</label>

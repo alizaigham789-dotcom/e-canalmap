@@ -92,9 +92,10 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
   if (mouzaSplit) {
     const splitFont = Math.min(obj.w, obj.h) * 0.26;
     const lbl2 = obj.label2 || "";
-    labelSvg = `${label ? `<text x="${mouzaSplit.topCenter.x}" y="${mouzaSplit.topCenter.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${lbl2 ? `<text x="${mouzaSplit.bottomCenter.x}" y="${mouzaSplit.bottomCenter.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${lbl2}</text>` : ""}`;
+    labelSvg = `${label ? `<text x="${mouzaSplit.centerA.x}" y="${mouzaSplit.centerA.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${lbl2 ? `<text x="${mouzaSplit.centerB.x}" y="${mouzaSplit.centerB.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${lbl2}</text>` : ""}`;
   } else {
-    labelSvg = label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : "";
+    const mogaNumSvg = obj.mogaNumber ? `<text x="${obj.x + 4}" y="${obj.y + 4}" text-anchor="start" dominant-baseline="hanging" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${Math.max(14, Math.min(obj.w, obj.h) * 0.12)}" fill="#2563eb">M${obj.mogaNumber}</text>` : "";
+    labelSvg = `${mogaNumSvg}${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
   }
 
   return `
@@ -163,6 +164,16 @@ function svgChakbandi(obj, C, idx, viewW) {
 
   const pts = obj.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 
+  // CCA/GCA center label at centroid
+  let centerLabelSvg = "";
+  if (obj.centerLabel) {
+    const cx = obj.points.reduce((s, p) => s + p.x, 0) / obj.points.length;
+    const cy = obj.points.reduce((s, p) => s + p.y, 0) / obj.points.length;
+    const lblFont = 13;
+    const tw = obj.centerLabel.length * lblFont * 0.6 + 12;
+    centerLabelSvg = `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - lblFont/2 - 3).toFixed(1)}" width="${tw.toFixed(1)}" height="${(lblFont + 6).toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${color}" stroke-width="1.5"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont}" fill="#166534">${obj.centerLabel}</text>`;
+  }
+
   let crosses = "";
   for (let i = 0; i < obj.points.length - 1; i++) {
     const a = obj.points[i], b = obj.points[i+1];
@@ -194,6 +205,7 @@ function svgChakbandi(obj, C, idx, viewW) {
   return `<g>
   <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${lineW}" stroke-linecap="round" stroke-linejoin="miter"/>
   ${crosses}
+  ${centerLabelSvg}
   ${label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${color}">${label}</text>` : ""}
 </g>`;
 }
@@ -228,7 +240,11 @@ function svgKhal(obj, C, idx) {
   const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   // Flow arrow at the ending point — 5× size, head at end, tail behind
   const last = obj.points[obj.points.length - 1];
-  const prev = obj.points[obj.points.length - 2];
+  let prev = obj.points[0];
+  for (let i = obj.points.length - 2; i >= 0; i--) {
+    const p = obj.points[i];
+    if (Math.hypot(last.x - p.x, last.y - p.y) > halfW * 2) { prev = p; break; }
+  }
   const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
   const aLen = halfW * 12.5;   // 5× original
   const aW = halfW * 5;        // 5× tail width
