@@ -260,7 +260,7 @@ function svgRoad(obj, C, idx) {
 function svgOutlet(obj, C, idx) {
   if (!obj.start || !obj.end) return "";
   const color = C.outletStroke || "#06b6d4";
-  const size = DIMENSIONS.CANAL_WIDTH; // moga print size = canal size
+  const size = DIMENSIONS.CANAL_WIDTH * 10; // moga print size 10× (print/export only)
   const half = size / 2;
   const { x: sx, y: sy } = obj.start;
   const { x: ex, y: ey } = obj.end;

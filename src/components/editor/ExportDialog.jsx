@@ -203,9 +203,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();
     } else if (o.type === "outlet" && o.start && o.end) {
-      // Moga — size matched to canal width for consistent print/export
+      // Moga — size 10× canal width for print/export legibility
       const color = C.outletStroke || "#06b6d4";
-      const size = DIMENSIONS.CANAL_WIDTH;
+      const size = DIMENSIONS.CANAL_WIDTH * 10;
       const half = size / 2;
       const { x: sx, y: sy } = o.start;
       const { x: ex, y: ey } = o.end;
@@ -392,7 +392,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }
     if (o.type==="outlet" && o.start && o.end) {
       const color = C.outletStroke || "#06b6d4";
-      const size = DIMENSIONS.CANAL_WIDTH;
+      const size = DIMENSIONS.CANAL_WIDTH * 10;
       const half = size / 2;
       const { x: sx, y: sy } = o.start;
       const { x: ex, y: ey } = o.end;
