@@ -46,6 +46,9 @@ const GISCanvas = forwardRef(function GISCanvas(
   const animRef = useRef(null);
   const objectsRef = useRef(objects);
   objectsRef.current = objects;
+  const panRef = useRef(pan);
+  panRef.current = pan;
+  const edgePanRef = useRef({ active: false, dx: 0, dy: 0 });
   const [editingLabel, setEditingLabel] = useState(null);
   // Damage marker line drawing state
   const damageStartRef = useRef(null);
@@ -260,6 +263,20 @@ const GISCanvas = forwardRef(function GISCanvas(
     return () => ro.disconnect();
   }, []);
 
+  // Edge auto-pan loop — smoothly pans canvas when cursor is near screen edges during drawing
+  useEffect(() => {
+    let raf;
+    const tick = () => {
+      const ep = edgePanRef.current;
+      if (ep.active && (ep.dx !== 0 || ep.dy !== 0)) {
+        onPanChange({ x: panRef.current.x + ep.dx, y: panRef.current.y + ep.dy });
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [onPanChange]);
+
   const getSnappedWorld = useCallback((e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -304,6 +321,28 @@ const GISCanvas = forwardRef(function GISCanvas(
         lastMouse.current = { x: e.clientX, y: e.clientY };
       }
       return;
+    }
+    // Edge auto-pan — smoothly pan canvas when cursor approaches screen edges
+    {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const threshold = 45;
+      const maxSpeed = 5; // moderate speed — prevents crooked lines
+      let dx = 0, dy = 0;
+      if (px < threshold) dx = maxSpeed * (1 - px / threshold);
+      else if (px > rect.width - threshold) dx = -maxSpeed * ((px - (rect.width - threshold)) / threshold);
+      if (py < threshold) dy = maxSpeed * (1 - py / threshold);
+      else if (py > rect.height - threshold) dy = -maxSpeed * ((py - (rect.height - threshold)) / threshold);
+      if (dx !== 0 || dy !== 0) {
+        edgePanRef.current.active = true;
+        edgePanRef.current.dx = dx;
+        edgePanRef.current.dy = dy;
+      } else {
+        edgePanRef.current.active = false;
+        edgePanRef.current.dx = 0;
+        edgePanRef.current.dy = 0;
+      }
     }
     // Freehand drawing — add points on mouse drag
     if (freehandMode && (activeTool === "chakbandi" || activeTool === "mouza")) {
@@ -430,6 +469,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       setBoxSelectDraft(null);
     }
     isPanning.current = false; isMoving.current = false; movingObjId.current = null;
+    edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0;
     // Finish damage marker line on mouse up
     if (activeTool === "damageMarker" && damageStartRef.current) {
       const canvas = canvasRef.current;
@@ -545,6 +585,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       setMeasureDraft(null);
       setMeasureResult(null);
     }
+    edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0;
   }, [activeTool]);
 
   const cursorClass = {
@@ -569,6 +610,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         onMouseUp={handleMouseUp}
         onDoubleClick={handleDblClick}
         onWheel={handleWheel}
+        onMouseLeave={() => { edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0; }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

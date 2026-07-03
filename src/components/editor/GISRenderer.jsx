@@ -397,17 +397,18 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
   ctx.stroke();
 
   // Flow-direction arrowhead at the khal's ending point
+  // Head (tip) at end point, tail behind toward start, tail width = khal width
   const last = obj.points[obj.points.length - 1];
   const prev = obj.points[obj.points.length - 2];
   const fAng = Math.atan2(last.y - prev.y, last.x - prev.x);
-  const aSize = 11 / zoom;
+  const arrowLen = Math.max(halfW * 2.5, 12 / zoom);
   ctx.save();
   ctx.translate(last.x, last.y); ctx.rotate(fAng);
   ctx.fillStyle = khalColor;
   ctx.beginPath();
   ctx.moveTo(0, 0);
-  ctx.lineTo(-aSize, -aSize * 0.6);
-  ctx.lineTo(-aSize, aSize * 0.6);
+  ctx.lineTo(-arrowLen, -halfW);
+  ctx.lineTo(-arrowLen, halfW);
   ctx.closePath(); ctx.fill();
   ctx.restore();
 

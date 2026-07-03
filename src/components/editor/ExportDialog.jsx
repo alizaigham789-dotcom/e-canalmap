@@ -155,10 +155,11 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
       // Flow arrow at end
       const last=o.points[o.points.length-1], prev=o.points[o.points.length-2];
-      const fA=Math.atan2(last.y-prev.y,last.x-prev.x), aS=11;
+      const fA=Math.atan2(last.y-prev.y,last.x-prev.x);
+      const aLen = Math.max(halfW * 2.5, 12);
       ctx.save(); ctx.translate(last.x,last.y); ctx.rotate(fA);
       ctx.fillStyle=kColor; ctx.beginPath();
-      ctx.moveTo(0,0); ctx.lineTo(-aS,-aS*0.6); ctx.lineTo(-aS,aS*0.6); ctx.closePath(); ctx.fill();
+      ctx.moveTo(0,0); ctx.lineTo(-aLen,-halfW); ctx.lineTo(-aLen,halfW); ctx.closePath(); ctx.fill();
       ctx.restore();
     } else if (o.type === "road" && o.points?.length >= 2) {
       const halfW = (o.width||28)/2;
@@ -349,12 +350,13 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const w = o.type==="canal"?2:o.type==="khal"?1.5:2;
       let arrow = "";
       if (o.type === "khal") {
+        const khHalfW = (o.width || DIMENSIONS.KHAL_WIDTH) / 2;
         const last = o.points[o.points.length-1], prev = o.points[o.points.length-2];
-        const ang = Math.atan2(last.y-prev.y, last.x-prev.x), a = 11;
-        const p1x=(last.x - a*Math.cos(ang) - a*0.6*Math.sin(ang)).toFixed(1);
-        const p1y=(last.y - a*Math.sin(ang) + a*0.6*Math.cos(ang)).toFixed(1);
-        const p2x=(last.x - a*Math.cos(ang) + a*0.6*Math.sin(ang)).toFixed(1);
-        const p2y=(last.y - a*Math.sin(ang) - a*0.6*Math.cos(ang)).toFixed(1);
+        const ang = Math.atan2(last.y-prev.y, last.x-prev.x), aLen = Math.max(khHalfW * 2.5, 12);
+        const p1x=(last.x - aLen*Math.cos(ang) - khHalfW*Math.sin(ang)).toFixed(1);
+        const p1y=(last.y - aLen*Math.sin(ang) + khHalfW*Math.cos(ang)).toFixed(1);
+        const p2x=(last.x - aLen*Math.cos(ang) + khHalfW*Math.sin(ang)).toFixed(1);
+        const p2y=(last.y - aLen*Math.sin(ang) - khHalfW*Math.cos(ang)).toFixed(1);
         arrow = `<polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>`;
       }
       return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${w}"/>${arrow}`;

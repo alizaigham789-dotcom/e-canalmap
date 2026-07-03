@@ -171,8 +171,9 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
     }
   }
 
-  // Parcel boundary snap for chakbandi/mouza
-  if (["chakbandi", "mouza"].includes(activeTool)) {
+  // Parcel boundary snap for chakbandi/mouza/khal — follows killa & mustateel boundaries,
+  // but allows passing through killa centers when not near any boundary
+  if (["chakbandi", "mouza", "khal"].includes(activeTool)) {
     const snap = snapToParcelBoundaries(wx, wy, objects, threshold * 2);
     return snap;
   }

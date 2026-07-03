@@ -226,11 +226,11 @@ function svgKhal(obj, C, idx) {
   const last = obj.points[obj.points.length - 1];
   const prev = obj.points[obj.points.length - 2];
   const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
-  const a = 11;
-  const p1x = (last.x - a * Math.cos(ang) - a * 0.6 * Math.sin(ang)).toFixed(1);
-  const p1y = (last.y - a * Math.sin(ang) + a * 0.6 * Math.cos(ang)).toFixed(1);
-  const p2x = (last.x - a * Math.cos(ang) + a * 0.6 * Math.sin(ang)).toFixed(1);
-  const p2y = (last.y - a * Math.sin(ang) - a * 0.6 * Math.cos(ang)).toFixed(1);
+  const aLen = Math.max(halfW * 2.5, 12);
+  const p1x = (last.x - aLen * Math.cos(ang) - halfW * Math.sin(ang)).toFixed(1);
+  const p1y = (last.y - aLen * Math.sin(ang) + halfW * Math.cos(ang)).toFixed(1);
+  const p2x = (last.x - aLen * Math.cos(ang) + halfW * Math.sin(ang)).toFixed(1);
+  const p2y = (last.y - aLen * Math.sin(ang) - halfW * Math.cos(ang)).toFixed(1);
   return `
 <g key="khal_${idx}">
   <path d="${fillPath}" fill="${color}22" />
