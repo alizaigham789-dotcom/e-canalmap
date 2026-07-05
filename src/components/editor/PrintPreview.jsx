@@ -424,6 +424,16 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     return { results, total };
   }, [objects]);
 
+  // CCA/GCA fraction labels for SVG preview/export
+  const gcaSvgLabels = useMemo(() => {
+    if (!gcaData.results.length) return "";
+    const ch = effectiveColors.chakbandiStroke || "#166534";
+    const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
+    return gcaData.results.map(({ x, y, cca, gca }) =>
+      svgCCAGCAFractionBox(cca, gca, x, y, lblFont, "rgba(255,255,255,0.94)", ch)
+    ).join("");
+  }, [gcaData, effectiveColors]);
+
   const svgString = svgData
     ? `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
@@ -436,16 +446,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   ${buildMogaDetailsSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, objects, mapData)}
 </svg>`
     : null;
-
-  // Inline SVG markup for preview (preserves exact vector scaling)
-  const gcaSvgLabels = useMemo(() => {
-    if (!gcaData.results.length) return "";
-    const ch = effectiveColors.chakbandiStroke || "#166534";
-    const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
-    return gcaData.results.map(({ x, y, cca, gca }) =>
-      svgCCAGCAFractionBox(cca, gca, x, y, lblFont, "rgba(255,255,255,0.94)", ch)
-    ).join("");
-  }, [gcaData, effectiveColors]);
 
   const inlineSvgMarkup = svgData
     ? `<rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>${svgData.svgBody}${gcaSvgLabels}${buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors)}${buildMogaDetailsSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, objects, mapData)}`
