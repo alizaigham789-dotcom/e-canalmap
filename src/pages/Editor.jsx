@@ -557,6 +557,8 @@ export default function Editor() {
     );
   }
 
+  const draftActive = !!(canalDraft || chakbandiDraft || khalDraft || roadDraft || mouzaDraft);
+
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: bgColor }}>
       <EditorHeader
