@@ -533,19 +533,20 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
 
   ctx.restore(); // end rotated arrow context
 
-  // Moga number ABOVE the block — blue, 2× mustateel killa-number font size
+  // Moga number ONLY — placed at the pointed tip (arrow end), offset beyond it so its
+  // colour never sits on top of the moga's own colour. Font = 2× mustateel label size.
   const moghaNum = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
   if (moghaNum) {
-    ctx.fillStyle = "#2563eb";
-    ctx.font = `bold ${scaledFont(28, zoom, 20, 48)}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-    ctx.fillText(moghaNum, sx, sy - blockSize/2 - 4/zoom);
-  }
-  if (obj.mogha_name) {
-    ctx.fillStyle = getMogaColor(C.labelColor);
-    ctx.font = `bold ${screenClampedFont(DIMENSIONS.MUSTATEEL.width * 0.15, zoom, 20, 56)}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(obj.mogha_name, sx, sy + blockSize/2 + 4/zoom);
+    const numColor = getMogaColor(color);
+    const baseFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38;
+    const numFont = screenClampedFont(baseFont * 2, zoom, 28, 64);
+    const gap = (22 * scale) / zoom + 14 / zoom;
+    const tx = ex + Math.cos(angle) * gap;
+    const ty = ey + Math.sin(angle) * gap;
+    ctx.fillStyle = numColor;
+    ctx.font = `bold ${numFont}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(moghaNum, tx, ty);
   }
 }
 
@@ -663,11 +664,11 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false)
     const cx = obj.points.reduce((s, p) => s + p.x, 0) / obj.points.length;
     const cy = obj.points.reduce((s, p) => s + p.y, 0) / obj.points.length;
     ctx.save();
-    // Font size matching mustateel label (world units, same as drawMustateel)
-    const baseFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38;
+    // Font size — 4× the mustateel label size
+    const baseFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 4;
     ctx.font = `bold ${baseFont}px Rajdhani, sans-serif`;
     const measured = ctx.measureText(obj.centerLabel);
-    const maxW = DIMENSIONS.MUSTATEEL.width * 0.80;
+    const maxW = DIMENSIONS.MUSTATEEL.width * 0.80 * 4;
     const fitScale = Math.min(1, maxW / (measured.width || 1));
     const lblFont = baseFont * fitScale;
     ctx.font = `bold ${lblFont}px Rajdhani, sans-serif`;

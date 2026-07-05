@@ -40,6 +40,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   const isMoving = useRef(false);
   const movingObjId = useRef(null);
   const moveOffset = useRef({ x: 0, y: 0 });
+  const movingObjOrigPoints = useRef(null);
   const lastMouse = useRef({ x: 0, y: 0 });
   const longPressTimer = useRef(null);
   const touchMoved = useRef(false);
@@ -372,8 +373,13 @@ const GISCanvas = forwardRef(function GISCanvas(
       if (movingObj && ["mustateel", "muraba", "acre"].includes(movingObj.type)) {
         const snapped = snapMovePosition({ ...movingObj, x: newX, y: newY }, objectsRef.current);
         newX = snapped.x; newY = snapped.y;
+        onUpdateObject(movingObjId.current, { x: newX, y: newY });
+      } else if (movingObj && movingObjOrigPoints.current) {
+        const dx = worldRaw.x - moveOffset.current.x;
+        const dy = worldRaw.y - moveOffset.current.y;
+        const newPoints = movingObjOrigPoints.current.map(p => ({ x: p.x + dx, y: p.y + dy }));
+        onUpdateObject(movingObjId.current, { points: newPoints });
       }
-      onUpdateObject(movingObjId.current, { x: newX, y: newY });
       return;
     }
     onSnapPosChange(getSnappedWorld(e));
@@ -414,6 +420,12 @@ const GISCanvas = forwardRef(function GISCanvas(
       if (hit && ["mustateel", "muraba"].includes(hit.type)) {
         isMoving.current = true; movingObjId.current = hit.id;
         moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
+        movingObjOrigPoints.current = null;
+        onSelect(hit.id);
+      } else if (hit && ["chakbandi", "canal", "khal", "road", "mouza"].includes(hit.type) && hit.points) {
+        isMoving.current = true; movingObjId.current = hit.id;
+        moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
+        movingObjOrigPoints.current = hit.points.map(p => ({ ...p }));
         onSelect(hit.id);
       }
     } else if (activeTool === "acre") onAddObject("acre", snapped);
@@ -469,6 +481,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       setBoxSelectDraft(null);
     }
     isPanning.current = false; isMoving.current = false; movingObjId.current = null;
+    movingObjOrigPoints.current = null;
     edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0;
     // Finish damage marker line on mouse up
     if (activeTool === "damageMarker" && damageStartRef.current) {

@@ -152,6 +152,27 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
     }
   }
 
+  // Canal → chakbandi flush snap: when drawing a canal near a chakbandi line, offset
+  // the canal centerline by half its width so its near edge sits exactly on the
+  // chakbandi line — no gap, no overlap.
+  if (spineSnap && activeTool === "canal") {
+    for (const o of objects) {
+      if (o.type !== "chakbandi" || !o.points || o.points.length < 2) continue;
+      const near = nearestPointOnPolyline(wx, wy, o.points);
+      if (!near || near.dist >= threshold * 4) continue;
+      const a = o.points[near.segIdx], b = o.points[near.segIdx + 1];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      const halfCanalW = DIMENSIONS.CANAL_WIDTH / 2;
+      const side = ((wx - a.x) * nx + (wy - a.y) * ny) >= 0 ? 1 : -1;
+      const targetX = near.x + nx * halfCanalW * side;
+      const targetY = near.y + ny * halfCanalW * side;
+      const d = Math.hypot(wx - targetX, wy - targetY);
+      if (d < bestDist) { bestX = targetX; bestY = targetY; bestDist = d; }
+    }
+  }
+
   // Canal/road spine snap — snap to endpoints first (for seamless connection), then spine
   if (spineSnap) {
     for (const o of objects) {
@@ -871,20 +892,38 @@ export function doesCanalCrossMustateel(canal, mustateel) {
   return false;
 }
 
-// GCA for a chakbandi: sum partial mustateel acres inside, canal-crossed → half
+// GCA for a chakbandi: sum per-killa (1 acre each) area inside the boundary, minus
+// whatever portion of that killa is covered by a canal. Since each killa is measured
+// independently by fractional coverage, acres split by a canal (or across several
+// killas) are automatically summed into accurate totals without double counting.
 export function calculateChakbandiGCA(chakbandi, mustateels, canals = []) {
   if (!chakbandi.points || chakbandi.points.length < 3) return 0;
   const polygon = chakbandi.points;
-  const ACRES_PER_MUSTATEEL = 10;
+  const canalPolys = (canals || []).map(c => {
+    if (!c.points || c.points.length < 2) return null;
+    const halfW = (c.width || DIMENSIONS.CANAL_WIDTH) / 2;
+    const left = getParallelPolyline(c.points, -halfW);
+    const right = getParallelPolyline(c.points, halfW);
+    return [...left, ...[...right].reverse()];
+  }).filter(Boolean);
+
   let totalAcres = 0;
   for (const m of mustateels) {
-    const fraction = rectAreaFractionInPolygon(m, polygon);
-    if (fraction <= 0) continue;
-    let acres = fraction * ACRES_PER_MUSTATEEL;
-    // Canal passing through mustateel center → count half
-    const canalCrosses = canals.length > 0 && canals.some(c => doesCanalCrossMustateel(c, m));
-    if (canalCrosses) acres *= 0.5;
-    totalAcres += acres;
+    const killaCols = 2, killaRows = 5;
+    const cellW = m.w / killaCols, cellH = m.h / killaRows;
+    for (let r = 0; r < killaRows; r++) {
+      for (let c = 0; c < killaCols; c++) {
+        const cellRect = { x: m.x + c * cellW, y: m.y + r * cellH, w: cellW, h: cellH };
+        let fraction = rectAreaFractionInPolygon(cellRect, polygon);
+        if (fraction <= 0) continue;
+        for (const canalPoly of canalPolys) {
+          if (fraction <= 0) break;
+          const canalFraction = rectAreaFractionInPolygon(cellRect, canalPoly);
+          fraction = Math.max(0, fraction - canalFraction);
+        }
+        totalAcres += fraction; // each killa = 1 acre
+      }
+    }
   }
   return Math.round(totalAcres * 10) / 10;
 }
