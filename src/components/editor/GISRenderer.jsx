@@ -352,24 +352,112 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
   ctx.stroke();
 
-  // Layer 5: Canal name + length — RED, center-aligned, rotated along segment angle
-  // Font = 3× smaller than moga number
+  // Layer 5: Canal name INSIDE the blue canal — repeats every ~5 acres along the path,
+  // follows canal geometry (straight or curved), highly visible colour, 5× font size.
   if (obj.name) {
-    const mid = Math.floor(obj.points.length / 2);
-    const p = obj.points[mid];
-    const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
-    const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
-    const len = canalLength(obj.points);
-    const label = `${obj.name} (${len} ft)`;
+    drawTextOnCanalPath(ctx, obj.points, obj.name, zoom);
+  }
+}
+
+// ─── Text-on-canal-path ──────────────────────────────────────────────────────
+// Draws text characters along the canal centerline so the label follows the
+// canal geometry (straight or curved). Repeats every `repeatSpacing` feet.
+// 5 acres ≈ 1100 ft of canal frontage (1 acre = 220 ft frontage).
+function drawTextOnCanalPath(ctx, points, text, zoom) {
+  if (!points || points.length < 2 || !text) return;
+  const cfWorld = canalNameFont();
+  const cf = screenClampedFont(cfWorld, zoom, 12, 32);
+  ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Total canal length and segment lengths
+  const segLens = [];
+  let totalLen = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    const d = Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y);
+    segLens.push(d);
+    totalLen += d;
+  }
+  if (totalLen < 1) return;
+
+  // Character width estimate (monospace-ish for Rajdhani bold)
+  const charW = cf * 0.55;
+  const textW = text.length * charW;
+  const repeatSpacing = 1100; // ~5 acres of frontage
+
+  // Walk along the path, placing text instances at regular intervals
+  for (let startDist = 0; startDist + textW < totalLen; startDist += repeatSpacing) {
+    drawTextAlongPath(ctx, points, segLens, text, startDist, cf, charW, zoom);
+  }
+}
+
+// Draws a single text string starting at `startDist` along the polyline,
+// character by character, each rotated to match the local tangent.
+function drawTextAlongPath(ctx, points, segLens, text, startDist, fontSize, charW, zoom) {
+  let remaining = startDist;
+  let segIdx = 0;
+  let segRemaining = segLens[0];
+
+  // Advance to the starting position on the path
+  while (segIdx < segLens.length && remaining > segRemaining) {
+    remaining -= segRemaining;
+    segIdx++;
+    if (segIdx < segLens.length) segRemaining = segLens[segIdx];
+  }
+  if (segIdx >= segLens.length) return;
+
+  // Draw each character along the path
+  for (let ci = 0; ci < text.length; ci++) {
+    const ch = text[ci];
+    // Advance by half a character width to center the character on its position
+    let advance = charW * 0.5;
+    while (advance > 0 && segIdx < segLens.length) {
+      if (advance <= segRemaining) {
+        segRemaining -= advance;
+        advance = 0;
+      } else {
+        advance -= segRemaining;
+        segIdx++;
+        if (segIdx < segLens.length) segRemaining = segLens[segIdx];
+      }
+    }
+    if (segIdx >= segLens.length) return;
+
+    // Calculate position and angle at the current point on the path
+    const p1 = points[segIdx];
+    const p2 = points[Math.min(segIdx + 1, points.length - 1)];
+    const t = segLens[segIdx] > 0 ? 1 - segRemaining / segLens[segIdx] : 0;
+    const px = p1.x + (p2.x - p1.x) * t;
+    const py = p1.y + (p2.y - p1.y) * t;
+    const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+
+    // Draw the character with a dark outline for visibility on blue water
     ctx.save();
-    ctx.translate(p.x, p.y); ctx.rotate(angle);
-    ctx.fillStyle = "#dc2626";
-    const cfWorld = canalNameFont();
-    const cf = screenClampedFont(cfWorld, zoom, 10, 18);
-    ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(label, 0, 0);
+    ctx.translate(px, py);
+    ctx.rotate(angle);
+    // Outline (dark) for contrast against blue canal fill
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.lineWidth = Math.max(2, fontSize * 0.18);
+    ctx.lineJoin = "round";
+    ctx.strokeText(ch, 0, 0);
+    // Fill — bright white/yellow for high visibility
+    ctx.fillStyle = "#fef08a";
+    ctx.fillText(ch, 0, 0);
     ctx.restore();
+
+    // Advance past the second half of this character for the next one
+    let advance2 = charW * 0.5;
+    while (advance2 > 0 && segIdx < segLens.length) {
+      if (advance2 <= segRemaining) {
+        segRemaining -= advance2;
+        advance2 = 0;
+      } else {
+        advance2 -= segRemaining;
+        segIdx++;
+        if (segIdx < segLens.length) segRemaining = segLens[segIdx];
+      }
+    }
   }
 }
 
@@ -538,19 +626,39 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
 
   ctx.restore(); // end rotated arrow context
 
-  // Moga number ONLY — no background box. Font = 3× smaller than before (professional).
-  const moghaNum = [obj.mogha_name, obj.mogha_number, obj.mogha_side].filter(Boolean).join(" / ");
-  if (moghaNum) {
+  // Moga number — professional stacked format: number over horizontal line over R/L
+  // No slash. Behaves as one visual unit positioned near the moga tip.
+  const moghaNum = obj.mogha_number || "";
+  const moghaSide = obj.mogha_side || "";
+  if (moghaNum || moghaSide) {
     const numColor = getMogaColor(color);
     const numFontWorld = mogaNumberFont();
-    const numFont = screenClampedFont(numFontWorld, zoom, 12, 22);
-    const gap = (22 * scale) / zoom + 10 / zoom;
+    const numFont = screenClampedFont(numFontWorld, zoom, 14, 28);
+    const gap = (22 * scale) / zoom + 12 / zoom;
     const tx = ex + Math.cos(angle) * gap;
     const ty = ey + Math.sin(angle) * gap;
+
+    ctx.save();
+    ctx.translate(tx, ty);
+    // Draw the number on top (bold, centered)
     ctx.fillStyle = numColor;
     ctx.font = `bold ${numFont}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(moghaNum, tx, ty);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(moghaNum, 0, 0);
+    // Horizontal line below the number
+    const lineW = numFont * Math.max(moghaNum.length, 1) * 0.65;
+    ctx.strokeStyle = numColor;
+    ctx.lineWidth = Math.max(1.5, numFont * 0.08);
+    ctx.beginPath();
+    ctx.moveTo(-lineW / 2, 2 / zoom);
+    ctx.lineTo(lineW / 2, 2 / zoom);
+    ctx.stroke();
+    // R or L below the line
+    ctx.textBaseline = "top";
+    ctx.font = `bold ${numFont * 0.8}px Rajdhani, sans-serif`;
+    ctx.fillText(moghaSide, 0, 6 / zoom);
+    ctx.restore();
   }
 }
 

@@ -1013,9 +1013,9 @@ export function mogaNumberFont() {
   return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 2 / 3;
 }
 
-// Canal name font — 3× smaller than moga number
+// Canal name font — 5× larger for visibility inside the blue canal
 export function canalNameFont() {
-  return mogaNumberFont() / 3;
+  return mogaNumberFont() * 5 / 3;
 }
 
 // ============================================================

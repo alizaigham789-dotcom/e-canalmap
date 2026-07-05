@@ -115,7 +115,7 @@ export default function Form33C() {
   const [district, setDistrict] = useState("Khushab");
   const [tehsil, setTehsil] = useState("");
   const [activeTab, setActiveTab] = useState("33c");
-  const [letterData, setLetterData] = useState({ date: "", number: "", to: "", from: "", govt_order: "" });
+  const [letterData, setLetterData] = useState({ date: "", number: "", to: "", from: "", govt_order: "120-2023/821.Rs(11)", govt_date: "31-05-2023" });
   const scanFileRef = useRef();
 
   const updateVillage = (id, key, val) =>
@@ -686,22 +686,62 @@ export default function Form33C() {
         {/* ══ COVERING LETTER TAB ══ */}
         {activeTab === "letter" && (
           <div className="space-y-4">
+            {/* Editable fields — Division, Tehsil, Crop, Year, Notification */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
               <h2 className="text-xs font-bold text-slate-700 mb-3">✉️ سرکاری خط تفصیلات</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" dir="rtl">
-                {[
-                  { key: "number", label: "نمبر", placeholder: "e.g. 13/123" },
-                  { key: "date", label: "تاریخ", placeholder: `${new Date().getDate()}-${new Date().getMonth()+1}-${new Date().getFullYear()}` },
-                  { key: "from", label: "از دفتر", placeholder: "ایگزیکٹو انجینئر خوشاب کینال ڈویژن..." },
-                  { key: "to", label: "بجانب", placeholder: "اسسٹنٹ کمشنر تحصیل..." },
-                  { key: "govt_order", label: "بحوالہ اولیکشن نمبر", placeholder: "Rs(11) 120-2023/..." },
-                ].map(f => (
-                  <div key={f.key}>
-                    <label className="text-[10px] text-slate-500 font-semibold block mb-1">{f.label}</label>
-                    <input value={letterData[f.key]} onChange={e => setLetterData(p => ({ ...p, [f.key]: e.target.value }))}
-                      placeholder={f.placeholder} className={inp + " w-full"} dir="rtl" style={{ fontFamily: "serif" }} />
-                  </div>
-                ))}
+                <div>
+                  <label className="text-[10px] text-slate-500 font-semibold block mb-1">نمبر</label>
+                  <input value={letterData.number} onChange={e => setLetterData(p => ({ ...p, number: e.target.value }))}
+                    placeholder="e.g. 13/123" className={inp + " w-full"} dir="rtl" style={{ fontFamily: "serif" }} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 font-semibold block mb-1">تاریخ</label>
+                  <input value={letterData.date} onChange={e => setLetterData(p => ({ ...p, date: e.target.value }))}
+                    placeholder={`${new Date().getDate()}-${new Date().getMonth()+1}-${new Date().getFullYear()}`} className={inp + " w-full"} dir="rtl" style={{ fontFamily: "serif" }} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 font-semibold block mb-1">ڈویژن (ضلع) — خوشاب</label>
+                  <input value={district} onChange={e => setDistrict(e.target.value)}
+                    placeholder="خوشاب" className={inp + " w-full"} dir="rtl" style={{ fontFamily: "serif" }} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 font-semibold block mb-1">تحصیل — قائدآباد</label>
+                  <input value={tehsil} onChange={e => setTehsil(e.target.value)}
+                    placeholder="قائدآباد" className={inp + " w-full"} dir="rtl" style={{ fontFamily: "serif" }} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 font-semibold block mb-1">فصل</label>
+                  <select value={fasal} onChange={e => setFasal(e.target.value)} className={inp + " w-full"} dir="rtl">
+                    <option value="ربیع">ربیع</option>
+                    <option value="خریف">خریف</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 font-semibold block mb-1">سال (e.g. 2025-26)</label>
+                  <input value={year} onChange={e => setYear(e.target.value)}
+                    placeholder="2025-26" className={inp + " w-full"} dir="rtl" style={{ fontFamily: "serif" }} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 font-semibold block mb-1">بحوالہ نوٹیفکیشن نمبر</label>
+                  <input value={letterData.govt_order} onChange={e => setLetterData(p => ({ ...p, govt_order: e.target.value }))}
+                    placeholder="120-2023/821.Rs(11)" className={inp + " w-full"} dir="rtl" style={{ fontFamily: "serif" }} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 font-semibold block mb-1">نوٹیفکیشن مورخہ</label>
+                  <input value={letterData.govt_date} onChange={e => setLetterData(p => ({ ...p, govt_date: e.target.value }))}
+                    placeholder="31-05-2023" className={inp + " w-full"} dir="rtl" style={{ fontFamily: "serif" }} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 font-semibold block mb-1">از دفتر</label>
+                  <input value={letterData.from} onChange={e => setLetterData(p => ({ ...p, from: e.target.value }))}
+                    placeholder={`ایگزیکٹو انجینئر ${district || "خوشاب"} کینال ڈویژن`} className={inp + " w-full"} dir="rtl" style={{ fontFamily: "serif" }} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 font-semibold block mb-1">بجانب</label>
+                  <input value={letterData.to} onChange={e => setLetterData(p => ({ ...p, to: e.target.value }))}
+                    placeholder={`اسسٹنٹ کمشنر تحصیل ${tehsil || "قائدآباد"}`} className={inp + " w-full"} dir="rtl" style={{ fontFamily: "serif" }} />
+                </div>
               </div>
             </div>
 
@@ -709,29 +749,33 @@ export default function Form33C() {
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
               <h2 className="text-xs font-bold text-slate-700 mb-3">👁 خط پریویو</h2>
               <div style={{ border: "1px solid #888", padding: "20px 28px", backgroundColor: "#fff", direction: "rtl", fontFamily: "Noto Nastaliq Urdu, serif", lineHeight: 2.2, fontSize: 15 }}>
+                {/* Header: Number & Date with dashed lines */}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 12 }}>
-                  <span>نمبر:۔ {letterData.number || "___________"}</span>
-                  <span>تاریخ:۔ {letterData.date || "___________"}</span>
+                  <span>نمبر:۔ <span style={{ borderBottom: "1.5px dashed #333", display: "inline-block", minWidth: 160, textAlign: "center", paddingBottom: 2 }}>{letterData.number || "\u00A0"}</span></span>
+                  <span>تاریخ:۔ <span style={{ borderBottom: "1.5px dashed #333", display: "inline-block", minWidth: 140, textAlign: "center", paddingBottom: 2 }}>{letterData.date || "\u00A0"}</span></span>
                 </div>
-                <div>از دفتر:۔ {letterData.from || (district ? `ایگزیکٹواِنجینئر خوشاب کینال ڈویژن ${district}` : "___________")}</div>
-                <div>بجانب:۔ {letterData.to || (tehsil ? `اسسٹنٹ کمشنر تحصیل ${tehsil}` : "___________")}</div>
-                <div>عنوان:۔ ریکوری ای۔آبیانہ پر عملدرآمد بابت فصل {fasal} {year}ء</div>
-                {letterData.govt_order && <div style={{ fontSize: 13, marginTop: 4 }}>بحوالہ اولیکشن نمبر: {letterData.govt_order}</div>}
-                <div style={{ marginTop: 10 }}>ڈیپارٹمنٹ (ریکوری سیکشن) بابت ریکوری ای۔آبیانہ پر عملدرآمد فصل {fasal} {year}ء بمراد کاروائی ضابطہ ارسال ہے۔ لسٹ مواضعات وتعداد بلز لاف ہذا ہیں۔</div>
+                <div>از دفتر:۔ {letterData.from || `ایگزیکٹو انجینئر ${district || "خوشاب"} کینال ڈویژن ${district || "خوشاب"}`}</div>
+                <div>بجانب:۔ {letterData.to || `اسسٹنٹ کمشنر تحصیل ${tehsil || "قائدآباد"}`}</div>
+                <div>عنوان:۔ ریکوری ای۔آبیانہ پرنٹڈ بلز بابت فصل {fasal} {year}ء</div>
+                {/* Notification section */}
+                <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.9 }}>
+                  بحوالہ نوٹیفکیشن نمبر: {letterData.govt_order || "120-2023/821.Rs(11)"}<br />
+                  مورخہ {letterData.govt_date || "31-05-2023"} گورنمنٹ آف پنجاب ریونیو ڈیپارٹمنٹ (ریکوری سیکشن) بابت ریکوری ای۔آبیانہ پرنٹڈ بلز برائے فصل {fasal} {year}ء، بمراد کاروائی ضابطہ ارسال ہے۔ لسٹ مواضعات و تعداد بلز بذیل ہیں۔
+                </div>
                 <div style={{ textAlign: "center", fontWeight: "bold", marginTop: 10, fontSize: 14 }}>تفصیل درج ذیل ہے۔</div>
                 <table style={{ margin: "10px auto", borderCollapse: "collapse", fontSize: 13, minWidth: 400 }}>
                   <thead>
                     <tr style={{ background: "#f0f0f0" }}>
-                      <th style={{ border: "1px solid #555", padding: "4px 14px" }}>تعداد 33-C</th>
-                      <th style={{ border: "1px solid #555", padding: "4px 14px" }}>کل پرعملد بلز</th>
-                      <th style={{ border: "1px solid #555", padding: "4px 14px" }}>تعداد موضع جات / چکوک ای۔آبیانہ بلنگ</th>
+                      <th style={{ border: "1.5px solid #555", padding: "4px 14px" }}>تعداد 33-C</th>
+                      <th style={{ border: "1.5px solid #555", padding: "4px 14px" }}>کل پرنٹڈ بلز</th>
+                      <th style={{ border: "1.5px solid #555", padding: "4px 14px" }}>تعداد موضع جات / چکوک ای۔آبیانہ بلنگ</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td style={{ border: "1px solid #aaa", padding: "4px 14px", textAlign: "center" }}>{villages.length}</td>
-                      <td style={{ border: "1px solid #aaa", padding: "4px 14px", textAlign: "center" }}>{totalBills.toLocaleString()}</td>
-                      <td style={{ border: "1px solid #aaa", padding: "4px 14px", textAlign: "center" }}>{villages.length}</td>
+                      <td style={{ border: "1.5px solid #aaa", padding: "4px 14px", textAlign: "center" }}>{villages.length}</td>
+                      <td style={{ border: "1.5px solid #aaa", padding: "4px 14px", textAlign: "center" }}>{totalBills.toLocaleString()}</td>
+                      <td style={{ border: "1.5px solid #aaa", padding: "4px 14px", textAlign: "center" }}>{villages.length}</td>
                     </tr>
                   </tbody>
                 </table>

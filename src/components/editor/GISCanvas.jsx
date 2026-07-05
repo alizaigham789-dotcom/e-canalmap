@@ -137,6 +137,32 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
     }
 
+    // Move handles for the selected outlet/moga — 4 arrows so it's clearly draggable
+    if (selObj && selObj.type === "outlet" && selObj.start && selObj.end) {
+      const cx = (selObj.start.x + selObj.end.x) / 2;
+      const cy = (selObj.start.y + selObj.end.y) / 2;
+      const r = 22 / zoom;
+      ctx.save();
+      ctx.strokeStyle = "#06b6d4";
+      ctx.fillStyle = "rgba(6,182,212,0.15)";
+      ctx.lineWidth = 2 / zoom;
+      // Bounding circle
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // 4 directional arrows
+      const arrows = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+      for (const [dx, dy] of arrows) {
+        const tipX = cx + dx * r, tipY = cy + dy * r;
+        const baseX = cx + dx * r * 0.5, baseY = cy + dy * r * 0.5;
+        ctx.fillStyle = "#06b6d4";
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(baseX - dy * r * 0.2, baseY + dx * r * 0.2);
+        ctx.lineTo(baseX + dy * r * 0.2, baseY - dx * r * 0.2);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    }
+
     // Draft previews
     drawCanalDraft(ctx, canalDraft, snapPos, zoom, C);
     drawKhalDraft(ctx, khalDraft, snapPos, zoom, C);
@@ -192,6 +218,50 @@ const GISCanvas = forwardRef(function GISCanvas(
       for (const pt of measurePoly) {
         ctx.fillStyle = "#a855f7";
         ctx.beginPath(); ctx.arc(pt.x, pt.y, 5/zoom, 0, Math.PI*2); ctx.fill();
+      }
+    }
+
+    // Live area display while measuring (before double-click finishes)
+    if (measurePoly && measurePoly.length >= 3) {
+      const pts = measurePoly;
+      let liveArea2 = 0, livePerim = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const j = (i + 1) % pts.length;
+        liveArea2 += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+        livePerim += Math.hypot(pts[j].x - pts[i].x, pts[j].y - pts[i].y);
+      }
+      const liveAreaFt = Math.abs(liveArea2) / 2;
+      const livePerimFt = livePerim;
+      const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+      const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+      const liveMid = worldToScreen(cx, cy, pan.x, pan.y, zoom);
+      // Draw live area text at polygon centroid
+      ctx.save();
+      ctx.restore();
+      // We'll render the bubble as a DOM overlay instead (see below)
+      // Store live result for the DOM overlay
+      if (!measureResult) {
+        // Use a ref-like approach: set state only if different to avoid re-render loop
+        // Actually, we can't set state inside render. So we draw it on canvas instead.
+        ctx.save();
+        const bx = liveMid.x, by = liveMid.y;
+        ctx.translate(0, 0);
+        ctx.font = "bold 13px sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const label1 = `${liveAreaFt.toFixed(0)} ft²  •  ${(liveAreaFt / 43560).toFixed(2)} acres`;
+        const label2 = `Perimeter: ${livePerimFt.toFixed(1)} ft`;
+        const tw = Math.max(ctx.measureText(label1).width, ctx.measureText(label2).width) + 16;
+        const th = 36;
+        // Background pill
+        ctx.fillStyle = "rgba(109,40,217,0.92)";
+        ctx.beginPath();
+        ctx.roundRect(bx - tw/2, by - th - 8, tw, th, 8);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.fillText(label1, bx, by - th/2 - 6);
+        ctx.font = "11px sans-serif";
+        ctx.fillText(label2, bx, by - th/2 + 10);
+        ctx.restore();
       }
     }
 
@@ -415,7 +485,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         const newPoints = movingObjOrigPoints.current.map(p => ({ x: p.x + dx, y: p.y + dy }));
         onUpdateObject(movingObjId.current, { points: newPoints });
       } else if (movingObj && movingObjOrigStartEnd.current) {
-        // Moga/outlet — translate both start and end by the drag delta
+        // Moga/outlet — translate both start and end by the drag delta (drag-and-drop)
         const dx = worldRaw.x - moveOffset.current.x;
         const dy = worldRaw.y - moveOffset.current.y;
         const orig = movingObjOrigStartEnd.current;
@@ -460,9 +530,9 @@ const GISCanvas = forwardRef(function GISCanvas(
         movingObjOrigPoints.current = hit.points.map(p => ({ ...p }));
         onSelect(hit.id);
       } else if (hit && hit.type === "outlet" && hit.start && hit.end) {
-        // Moga / outlet — draggable via start+end translation
+        // Moga / outlet — draggable via start+end translation (drag-and-drop)
         isMoving.current = true; movingObjId.current = hit.id;
-        moveOffset.current = { x: worldRaw.x - hit.start.x, y: worldRaw.y - hit.start.y };
+        moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
         movingObjOrigPoints.current = null;
         movingObjOrigStartEnd.current = { start: { ...hit.start }, end: { ...hit.end } };
         onSelect(hit.id);
