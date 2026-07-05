@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
-import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintHeaderHTML } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
 
 
 export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {} }) {
@@ -187,11 +187,13 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const mid = Math.floor(o.points.length / 2);
         const p = o.points[mid], p2 = o.points[Math.min(mid + 1, o.points.length - 1)];
         const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+        const len = canalLength(o.points);
+        const cf = canalNameFont();
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(angle);
         ctx.fillStyle = "#dc2626";
-        ctx.font = `bold 14px Rajdhani, sans-serif`;
+        ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(o.name, 0, 0);
+        ctx.fillText(`${o.name} (${len} ft)`, 0, 0);
         ctx.restore();
       }
     } else if (o.type === "khal" && o.points?.length >= 2) {
@@ -306,7 +308,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const num = [o.mogha_name, o.mogha_number, o.mogha_side].filter(Boolean).join(" / ");
       if (num) {
         const numColor = getMogaColor(color);
-        const numFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 2;
+        const numFont = mogaNumberFont();
         const gap = headLen + 15;
         const tx = ex + Math.cos(ang) * gap;
         const ty = ey + Math.sin(ang) * gap;
@@ -474,7 +476,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       let nameSvg = "";
       if (o.name) {
         const mid = o.points[Math.floor(o.points.length/2)];
-        nameSvg = `<text x="${mid.x.toFixed(1)}" y="${mid.y.toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="14" fill="#dc2626">${o.name}</text>`;
+        const len = canalLength(o.points);
+        const cf = canalNameFont().toFixed(1);
+        nameSvg = `<text x="${mid.x.toFixed(1)}" y="${mid.y.toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf}" fill="#dc2626">${o.name} (${len} ft)</text>`;
       }
       return `<g><polygon points="${fillPts}" fill="${fillColor}"/><polyline points="${leftPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
     }

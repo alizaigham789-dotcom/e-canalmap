@@ -970,41 +970,52 @@ export function getMogaColor(labelColor) {
 // ============================================================
 // PRINT HEADER BUILDER — Urdu "Khaka Dasti" header for print/export
 // ============================================================
+// Single-line Urdu header — خاکہ دستی موگہ نمبری ... راجباہ ... سیکشن ... سب ڈویژن ... ڈویژن ...
 export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
-  const mouza = mapData?.village || "";
+  const mogaNum = mogaFilter || mapData?.moga_number || "";
+  const mogaSide = mapData?.mogha_side || "";
+  const mogaFull = [mogaNum, mogaSide].filter(Boolean).join("/");
+  const rajbah = mapData?.rajbah || "";
   const section = mapData?.section || "";
   const subDiv = mapData?.tehsil || "";
   const division = mapData?.district || "";
-  const mogaNum = mogaFilter || mapData?.mouza_number || "";
-  const gcaText = totalGCA ? `(${totalGCA}/${totalGCA})` : "";
+  const gcaText = totalGCA ? ` — GCA: (${totalGCA}/${totalGCA})` : "";
+
+  const parts = [
+    "خاکہ دستی",
+    mogaFull ? `موگہ نمبری ${mogaFull}` : "",
+    rajbah ? `راجباہ ${rajbah}` : "",
+    section ? `سیکشن ${section}` : "",
+    subDiv ? `سب ڈویژن ${subDiv}` : "",
+    division ? `ڈویژن ${division}` : "",
+  ].filter(Boolean);
 
   return `
-  <div style="border:2px solid #000; padding:6px 10px; margin-bottom:6px; font-family:'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif;">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:16px; font-weight:bold; color:#000;">خاکہ دستی</span>
-        <span style="font-size:10px; color:#555;">(Khaka Dasti)</span>
-      </div>
-      <div style="border:1.5px solid #000; padding:2px 8px; min-width:60px; text-align:center;">
-        <span style="font-size:9px; color:#555;">موگہ نمبر</span><br/>
-        <span style="font-size:13px; font-weight:bold;">${mogaNum || "—"}</span>
-      </div>
-    </div>
-    <div style="display:flex; justify-content:space-between; gap:6px; margin-top:4px; font-size:10px;">
-      <span>موضع: <b>${mouza || "—"}</b></span>
-      <span>سیکشن: <b>${section || "—"}</b></span>
-      <span>سب ڈویژن: <b>${subDiv || "—"}</b></span>
-      <span>ڈویژن: <b>${division || "—"}</b></span>
-      ${gcaText ? `<span style="font-weight:bold; color:#166534;">GCA: ${gcaText}</span>` : ""}
-    </div>
-    <div style="display:flex; justify-content:space-between; gap:6px; margin-top:2px; font-size:9px; color:#666;">
-      <span>Mouza: <b>${mouza || "—"}</b></span>
-      <span>Section: <b>${section || "—"}</b></span>
-      <span>Sub-Division: <b>${subDiv || "—"}</b></span>
-      <span>Division: <b>${division || "—"}</b></span>
-      <span>Date: <b>${new Date().toLocaleDateString()}</b></span>
-    </div>
+  <div style="border:1.5px solid #000; padding:4px 10px; margin-bottom:4px; font-family:'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif; text-align:center;">
+    <span style="font-size:13px; font-weight:bold; color:#000; line-height:1.6;">
+      ${parts.join("  ")}${gcaText}
+    </span>
   </div>`;
+}
+
+// Canal polyline total length in feet
+export function canalLength(points) {
+  if (!points || points.length < 2) return 0;
+  let len = 0;
+  for (let i = 1; i < points.length; i++) {
+    len += Math.hypot(points[i].x - points[i-1].x, points[i].y - points[i-1].y);
+  }
+  return Math.round(len);
+}
+
+// Moga number font size — professional, 3× smaller than before
+export function mogaNumberFont() {
+  return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 2 / 3;
+}
+
+// Canal name font — 3× smaller than moga number
+export function canalNameFont() {
+  return mogaNumberFont() / 3;
 }
 
 // ============================================================

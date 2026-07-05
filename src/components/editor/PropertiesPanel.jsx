@@ -291,6 +291,24 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 </div>
               </div>
               <Field label="Mogha Name (موگہ نام)" value={local.mogha_name || ""} onChange={v => commit("mogha_name", v)} placeholder="e.g. Mogha Ali" />
+              {/* Moga CCA / GCA editable */}
+              <div className="p-2 bg-cyan-50 border border-cyan-200 rounded-lg space-y-2">
+                <div className="flex items-center gap-1">
+                  <Calculator className="w-3 h-3 text-cyan-600" />
+                  <span className="text-[10px] font-bold text-cyan-700 uppercase tracking-wider">Moga CCA / GCA</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[9px] text-slate-400 uppercase">CCA</label>
+                    <Input type="number" value={local.cca ?? ""} onChange={e => commit("cca", e.target.value)} placeholder="enter" className="h-7 text-xs font-mono bg-white border-cyan-200 text-cyan-800 focus:border-cyan-500" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-slate-400 uppercase">GCA</label>
+                    <Input type="number" value={local.gca ?? ""} onChange={e => commit("gca", e.target.value)} placeholder="enter" className="h-7 text-xs font-mono bg-white border-cyan-200 text-cyan-800 focus:border-cyan-500" />
+                  </div>
+                </div>
+                <p className="text-[9px] text-cyan-600">Enter this moga's CCA/GCA manually.</p>
+              </div>
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Mogha Number (موگہ نمبری)</label>
                 <div className="flex gap-2">

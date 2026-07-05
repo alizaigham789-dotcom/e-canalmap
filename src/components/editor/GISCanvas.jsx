@@ -41,6 +41,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   const movingObjId = useRef(null);
   const moveOffset = useRef({ x: 0, y: 0 });
   const movingObjOrigPoints = useRef(null);
+  const movingObjOrigStartEnd = useRef(null); // { start, end } — for outlet/moga dragging
   const vertexDrag = useRef(null); // { id, index } — dragging a single vertex of the selected chakbandi/canal
   const lastMouse = useRef({ x: 0, y: 0 });
   const longPressTimer = useRef(null);
@@ -57,10 +58,9 @@ const GISCanvas = forwardRef(function GISCanvas(
   const [damageDraft, setDamageDraft] = useState(null);
   // Mustateel/muraba ghost preview
   const [ghostPos, setGhostPos] = useState(null);
-  // Measurement tool state
-  const measureStartRef = useRef(null);
-  const [measureDraft, setMeasureDraft] = useState(null); // { start, end }
-  const [measureResult, setMeasureResult] = useState(null); // { ft, m, midScreen }
+  // Polygon measurement tool state — multi-point area + perimeter
+  const [measurePoly, setMeasurePoly] = useState(null); // [{x,y}, ...]
+  const [measureResult, setMeasureResult] = useState(null); // { areaFt, perimeterFt, midScreen }
   // Endpoint-snap highlight target (for continuous drawing)
   const [endpointSnap, setEndpointSnap] = useState(null);
   // Box-select state
@@ -169,17 +169,27 @@ const GISCanvas = forwardRef(function GISCanvas(
       ctx.setLineDash([]);
     }
 
-    // Measurement tool draft line
-    if (measureDraft) {
-      const end = measureDraft.end || snapPos || measureDraft.start;
+    // Polygon measurement draft — multi-point polygon with live preview to cursor
+    if (measurePoly && measurePoly.length > 0) {
+      const pts = [...measurePoly];
+      if (snapPos) pts.push(snapPos);
       ctx.strokeStyle = "#a855f7"; ctx.lineWidth = 2 / zoom;
-      ctx.lineCap = "round"; ctx.setLineDash([8/zoom, 4/zoom]);
+      ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.setLineDash([8/zoom, 4/zoom]);
       ctx.beginPath();
-      ctx.moveTo(measureDraft.start.x, measureDraft.start.y);
-      ctx.lineTo(end.x, end.y);
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      if (pts.length >= 3) ctx.closePath();
       ctx.stroke(); ctx.setLineDash([]);
-      // endpoint dots
-      for (const pt of [measureDraft.start, end]) {
+      // Faint fill for the polygon
+      if (pts.length >= 3) {
+        ctx.fillStyle = "rgba(168,85,247,0.08)";
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath(); ctx.fill();
+      }
+      // Vertex dots
+      for (const pt of measurePoly) {
         ctx.fillStyle = "#a855f7";
         ctx.beginPath(); ctx.arc(pt.x, pt.y, 5/zoom, 0, Math.PI*2); ctx.fill();
       }
@@ -254,7 +264,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         ctx.fillText(`${ang.toFixed(0)}°`, sx + 18, sy - 15);
       }
     }
-  }, [objects, zoom, pan, layers, selectedId, activeTool, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measureDraft, endpointSnap, orthoMode]);
+  }, [objects, zoom, pan, layers, selectedId, activeTool, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measurePoly, measureResult, endpointSnap, orthoMode]);
 
   useEffect(() => {
     const loop = () => { render(); animRef.current = requestAnimationFrame(loop); };
@@ -339,10 +349,6 @@ const GISCanvas = forwardRef(function GISCanvas(
     } else if (ghostPos) {
       setGhostPos(null);
     }
-    // Live measurement preview — update end point while dragging first point
-    if (activeTool === "measure" && measureStartRef.current && snapPos) {
-      setMeasureDraft({ start: measureStartRef.current, end: snapPos });
-    }
     if (isPanning.current || activeTool === "pan") {
       if (isPanning.current) {
         const dx = e.clientX - lastMouse.current.x;
@@ -408,6 +414,15 @@ const GISCanvas = forwardRef(function GISCanvas(
         const dy = worldRaw.y - moveOffset.current.y;
         const newPoints = movingObjOrigPoints.current.map(p => ({ x: p.x + dx, y: p.y + dy }));
         onUpdateObject(movingObjId.current, { points: newPoints });
+      } else if (movingObj && movingObjOrigStartEnd.current) {
+        // Moga/outlet — translate both start and end by the drag delta
+        const dx = worldRaw.x - moveOffset.current.x;
+        const dy = worldRaw.y - moveOffset.current.y;
+        const orig = movingObjOrigStartEnd.current;
+        onUpdateObject(movingObjId.current, {
+          start: { x: orig.start.x + dx, y: orig.start.y + dy },
+          end: { x: orig.end.x + dx, y: orig.end.y + dy },
+        });
       }
       return;
     }
@@ -427,21 +442,9 @@ const GISCanvas = forwardRef(function GISCanvas(
     const snapped = getSnappedWorld(e);
 
     if (activeTool === "measure") {
-      if (!measureStartRef.current) {
-        // First click — set start
-        measureStartRef.current = { x: worldRaw.x, y: worldRaw.y };
-        setMeasureDraft({ start: { x: worldRaw.x, y: worldRaw.y }, end: null });
-        setMeasureResult(null);
-      } else {
-        // Second click — finalise
-        const start = measureStartRef.current;
-        const distFt = Math.hypot(worldRaw.x - start.x, worldRaw.y - start.y) * FT_PER_UNIT;
-        const distM = distFt * 0.3048;
-        const midScreen = worldToScreen((start.x + worldRaw.x)/2, (start.y + worldRaw.y)/2, pan.x, pan.y, zoom);
-        setMeasureDraft({ start, end: worldRaw });
-        setMeasureResult({ ft: distFt, m: distM, midScreen });
-        measureStartRef.current = null;
-      }
+      // Click adds a polygon vertex
+      setMeasurePoly(prev => prev ? [...prev, { x: worldRaw.x, y: worldRaw.y }] : [{ x: worldRaw.x, y: worldRaw.y }]);
+      setMeasureResult(null);
       return;
     }
     if (activeTool === "move") {
@@ -455,6 +458,13 @@ const GISCanvas = forwardRef(function GISCanvas(
         isMoving.current = true; movingObjId.current = hit.id;
         moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
         movingObjOrigPoints.current = hit.points.map(p => ({ ...p }));
+        onSelect(hit.id);
+      } else if (hit && hit.type === "outlet" && hit.start && hit.end) {
+        // Moga / outlet — draggable via start+end translation
+        isMoving.current = true; movingObjId.current = hit.id;
+        moveOffset.current = { x: worldRaw.x - hit.start.x, y: worldRaw.y - hit.start.y };
+        movingObjOrigPoints.current = null;
+        movingObjOrigStartEnd.current = { start: { ...hit.start }, end: { ...hit.end } };
         onSelect(hit.id);
       }
     } else if (activeTool === "acre") onAddObject("acre", snapped);
@@ -521,7 +531,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     }
     vertexDrag.current = null;
     isPanning.current = false; isMoving.current = false; movingObjId.current = null;
-    movingObjOrigPoints.current = null;
+    movingObjOrigPoints.current = null; movingObjOrigStartEnd.current = null;
     edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0;
     // Finish damage marker line on mouse up
     if (activeTool === "damageMarker" && damageStartRef.current) {
@@ -538,6 +548,24 @@ const GISCanvas = forwardRef(function GISCanvas(
   }, [activeTool, pan, zoom, onAddObject, onBoxSelect, objects]);
 
   const handleDblClick = useCallback((e) => {
+    if (activeTool === "measure" && measurePoly && measurePoly.length >= 3) {
+      // Calculate area (shoelace) + perimeter
+      let area2 = 0, perim = 0;
+      const pts = measurePoly;
+      for (let i = 0; i < pts.length; i++) {
+        const j = (i + 1) % pts.length;
+        area2 += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+        perim += Math.hypot(pts[j].x - pts[i].x, pts[j].y - pts[i].y);
+      }
+      const areaFt = Math.abs(area2) / 2;
+      const perimFt = perim;
+      const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+      const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+      const midScreen = worldToScreen(cx, cy, pan.x, pan.y, zoom);
+      setMeasureResult({ areaFt, perimFt, midScreen });
+      setMeasurePoly(null);
+      return;
+    }
     if (activeTool === "canal") onCanalFinish();
     if (activeTool === "chakbandi") onChakbandiFinish();
     if (activeTool === "khal") onKhalFinish();
@@ -643,15 +671,10 @@ const GISCanvas = forwardRef(function GISCanvas(
   const prevToolRef = useRef(activeTool);
   if (prevToolRef.current !== activeTool) {
     prevToolRef.current = activeTool;
-    if (activeTool !== "measure") {
-      measureStartRef.current = null;
-      // can't call setState here; use effect instead
-    }
   }
   useEffect(() => {
     if (activeTool !== "measure") {
-      measureStartRef.current = null;
-      setMeasureDraft(null);
+      setMeasurePoly(null);
       setMeasureResult(null);
     }
     edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0;
@@ -686,32 +709,32 @@ const GISCanvas = forwardRef(function GISCanvas(
         onTouchCancel={handleTouchEnd}
         style={{ display: "block", touchAction: "none" }}
       />
-      {/* Measurement result bubble */}
+      {/* Measurement result bubble — polygon area + perimeter */}
       {measureResult && (
         <div
           className="absolute z-50 pointer-events-none select-none"
           style={{ left: measureResult.midScreen.x, top: measureResult.midScreen.y, transform: "translate(-50%, -120%)" }}
         >
           <div className="bg-purple-700 text-white rounded-xl shadow-2xl px-3 py-2 text-center border border-purple-400">
-            <div className="text-xs font-bold font-mono">{measureResult.ft.toFixed(1)} ft</div>
-            <div className="text-xs font-mono opacity-80">{measureResult.m.toFixed(1)} m</div>
-            <div className="text-[9px] opacity-60 mt-0.5">{(measureResult.ft / 220).toFixed(2)} killas</div>
+            <div className="text-xs font-bold font-mono">{measureResult.areaFt.toFixed(0)} ft²</div>
+            <div className="text-[10px] font-mono opacity-80">Perimeter: {measureResult.perimFt.toFixed(1)} ft</div>
+            <div className="text-[9px] opacity-60 mt-0.5">{(measureResult.areaFt / 43560).toFixed(2)} acres</div>
           </div>
           <div className="w-0 h-0 mx-auto border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-purple-700" />
         </div>
       )}
-      {/* Measure in-progress hint */}
-      {activeTool === "measure" && measureStartRef.current && !measureResult && (
+      {/* Measure hints */}
+      {activeTool === "measure" && !measurePoly && !measureResult && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
           <div className="bg-purple-800/90 text-white text-xs rounded-lg px-3 py-1.5 shadow border border-purple-500">
-            Click to set end point
+            Click to add polygon vertices — double-click to finish
           </div>
         </div>
       )}
-      {activeTool === "measure" && !measureStartRef.current && (
+      {activeTool === "measure" && measurePoly && !measureResult && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
           <div className="bg-purple-800/90 text-white text-xs rounded-lg px-3 py-1.5 shadow border border-purple-500">
-            Click start point to measure
+            {measurePoly.length < 3 ? `${measurePoly.length} pts — need ≥3` : `${measurePoly.length} pts — double-click to finish`}
           </div>
         </div>
       )}

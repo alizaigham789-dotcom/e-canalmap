@@ -30,7 +30,7 @@ export default function MapList() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
-  const [newMap, setNewMap] = useState({ title: "", village: "", district: "", tehsil: "" });
+  const [newMap, setNewMap] = useState({ title: "", village: "", district: "", tehsil: "", section: "", rajbah: "", moga_number: "", mogha_side: "" });
   const [deleteTarget, setDeleteTarget] = useState(null);
   const fileInputRef = useRef(null);
   const [uploadTitle, setUploadTitle] = useState("");
@@ -86,7 +86,7 @@ export default function MapList() {
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["maps"] });
       setShowCreate(false);
-      setNewMap({ title: "", village: "", district: "", tehsil: "" });
+      setNewMap({ title: "", village: "", district: "", tehsil: "", section: "", rajbah: "", moga_number: "", mogha_side: "" });
       toast.success("Map created");
       navigate(`/editor?id=${created.id}`);
     },
@@ -216,9 +216,47 @@ export default function MapList() {
           <div className="space-y-3 py-2">
             {[
               { key: "title", label: "Map Title *", placeholder: "e.g., Nurpur Canal Survey 2024" },
-              { key: "village", label: "Village", placeholder: "Village name" },
-              { key: "tehsil", label: "Sub Division", placeholder: "Sub Division name" },
-              { key: "district", label: "Division", placeholder: "Division name" },
+              { key: "village", label: "Village (موضع)", placeholder: "Village name" },
+            ].map(({ key, label, placeholder }) => (
+              <div key={key}>
+                <label className="text-xs text-slate-500 mb-1 block">{label}</label>
+                <Input
+                  placeholder={placeholder}
+                  value={newMap[key]}
+                  onChange={e => setNewMap(p => ({ ...p, [key]: e.target.value }))}
+                  className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
+                />
+              </div>
+            ))}
+            {/* Moga number + L/R side */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Moga Number (موگہ نمبری)</label>
+                <Input
+                  placeholder="e.g. 13223"
+                  value={newMap.moga_number}
+                  onChange={e => setNewMap(p => ({ ...p, moga_number: e.target.value }))}
+                  className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Side (L/R)</label>
+                <select
+                  value={newMap.mogha_side}
+                  onChange={e => setNewMap(p => ({ ...p, mogha_side: e.target.value }))}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">—</option>
+                  <option value="L">L</option>
+                  <option value="R">R</option>
+                </select>
+              </div>
+            </div>
+            {[
+              { key: "rajbah", label: "Rajbah / Canal Minor (راجباہ)", placeholder: "e.g. Roda Minor" },
+              { key: "section", label: "Section (سیکشن)", placeholder: "e.g. Ganjial" },
+              { key: "tehsil", label: "Sub Division (سب ڈویژن)", placeholder: "e.g. Qaidabad" },
+              { key: "district", label: "Division (ڈویژن)", placeholder: "e.g. Khushab" },
             ].map(({ key, label, placeholder }) => (
               <div key={key}>
                 <label className="text-xs text-slate-500 mb-1 block">{label}</label>

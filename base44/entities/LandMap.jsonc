@@ -10,10 +10,32 @@
       "type": "string"
     },
     "district": {
-      "type": "string"
+      "type": "string",
+      "description": "Division (\u0688\u0648\u06cc\u0698\u0646)"
     },
     "tehsil": {
-      "type": "string"
+      "type": "string",
+      "description": "Sub Division (\u0633\u0628 \u0688\u0648\u06cc\u0698\u0646)"
+    },
+    "section": {
+      "type": "string",
+      "description": "Section (\u0633\u06cc\u06a9\u0634\u0646)"
+    },
+    "rajbah": {
+      "type": "string",
+      "description": "Rajbah / Canal Minor name (\u0631\u0627\u062c\u0628\u0627\u06c1)"
+    },
+    "moga_number": {
+      "type": "string",
+      "description": "Moga Number (\u0645\u0648\u06af\u06c1 \u0646\u0645\u0628\u0631\u06cc)"
+    },
+    "mogha_side": {
+      "type": "string",
+      "enum": [
+        "L",
+        "R"
+      ],
+      "description": "Mogha Side L/R"
     },
     "status": {
       "type": "string",

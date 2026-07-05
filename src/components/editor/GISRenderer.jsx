@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMogaColor, calculateChakbandiGCA } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMogaColor, calculateChakbandiGCA, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
 
 // ---- Anti-aliased zoom-clamped font size ----
 // For print: use a larger effective min so labels are always readable regardless of zoom
@@ -352,18 +352,23 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
   ctx.stroke();
 
-  // Layer 5: Canal name — RED, center-aligned, rotated along segment angle
+  // Layer 5: Canal name + length — RED, center-aligned, rotated along segment angle
+  // Font = 3× smaller than moga number
   if (obj.name) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid];
     const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
     const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+    const len = canalLength(obj.points);
+    const label = `${obj.name} (${len} ft)`;
     ctx.save();
     ctx.translate(p.x, p.y); ctx.rotate(angle);
     ctx.fillStyle = "#dc2626";
-    ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
+    const cfWorld = canalNameFont();
+    const cf = screenClampedFont(cfWorld, zoom, 10, 18);
+    ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(obj.name, 0, 0);
+    ctx.fillText(label, 0, 0);
     ctx.restore();
   }
 }
@@ -533,14 +538,13 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
 
   ctx.restore(); // end rotated arrow context
 
-  // Moga number ONLY — placed at the pointed tip (arrow end), offset beyond it so its
-  // colour never sits on top of the moga's own colour. Font = 2× mustateel label size.
+  // Moga number ONLY — no background box. Font = 3× smaller than before (professional).
   const moghaNum = [obj.mogha_name, obj.mogha_number, obj.mogha_side].filter(Boolean).join(" / ");
   if (moghaNum) {
     const numColor = getMogaColor(color);
-    const baseFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38;
-    const numFont = screenClampedFont(baseFont * 2, zoom, 28, 64);
-    const gap = (22 * scale) / zoom + 14 / zoom;
+    const numFontWorld = mogaNumberFont();
+    const numFont = screenClampedFont(numFontWorld, zoom, 12, 22);
+    const gap = (22 * scale) / zoom + 10 / zoom;
     const tx = ex + Math.cos(angle) * gap;
     const ty = ey + Math.sin(angle) * gap;
     ctx.fillStyle = numColor;

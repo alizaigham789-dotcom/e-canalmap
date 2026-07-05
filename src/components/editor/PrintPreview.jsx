@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
@@ -219,12 +219,14 @@ function svgCanal(obj, C, idx) {
   const right = getParallelPolyline(obj.points, halfW);
   const fillColor = C.canalFill || "rgba(30,144,255,0.25)";
   const strokeColor = C.canalStroke || "#0284c7";
+  const len = canalLength(obj.points);
+  const cf = canalNameFont().toFixed(1);
   return `
 <g key="canal_${idx}">
   <path d="${fillPath}" fill="${fillColor}" />
   <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  ${obj.name ? `<text x="${obj.points[Math.floor(obj.points.length/2)].x}" y="${obj.points[Math.floor(obj.points.length/2)].y}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="14" fill="#dc2626">${obj.name}</text>` : ""}
+  ${obj.name ? `<text x="${obj.points[Math.floor(obj.points.length/2)].x}" y="${obj.points[Math.floor(obj.points.length/2)].y}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf}" fill="#dc2626">${obj.name} (${len} ft)</text>` : ""}
 </g>`;
 }
 
@@ -295,7 +297,7 @@ function svgOutlet(obj, C, idx) {
   // Moga name + number combined, at the pointed tip beyond the arrowhead — same
   // font size (2× mustateel label) and position formula used in editor & export.
   const num = [obj.mogha_name, obj.mogha_number, obj.mogha_side].filter(Boolean).join(" / ");
-  const numFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 2;
+  const numFont = mogaNumberFont();
   const gap = headLen + 15;
   const tx = (ex + Math.cos(angle) * gap).toFixed(1);
   const ty = (ey + Math.sin(angle) * gap).toFixed(1);
