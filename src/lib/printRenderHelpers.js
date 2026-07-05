@@ -6,6 +6,14 @@
 
 import { getParallelPolyline, DIMENSIONS } from "@/lib/gisEngine";
 
+// Moga fraction box = 2 acres (440×198), font reduced to fit
+const MOGA_BOX_W = DIMENSIONS.ACRE.width * 2;   // 440
+const MOGA_BOX_H = DIMENSIONS.ACRE.height;       // 198
+const MOGA_BOX_FONT = MOGA_BOX_H / 2.5;           // ~79
+
+// Mustateel label font (for legend font matching in print/export)
+const MUSTATEEL_LABEL_FONT = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30; // 132
+
 // ─── Canal name: total length + segment lengths ──────────────────────────
 function pathSegments(points) {
   const segLens = [];
@@ -213,9 +221,8 @@ export function getOutletLabelPos(obj) {
   if (obj.labelPos) return obj.labelPos;
   const size = DIMENSIONS.CANAL_WIDTH * 10;
   const headLen = size * 1.6;
-  // Use a reasonable default font — callers can override
-  const numFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 2;
-  const gap = headLen + numFont * 0.8;
+  // Gap based on moga box height (2 acres = 198)
+  const gap = headLen + MOGA_BOX_H * 0.8;
   const angle = Math.atan2(obj.end.y - obj.start.y, obj.end.x - obj.start.x);
   return {
     x: obj.end.x + Math.cos(angle) * gap,
@@ -236,32 +243,33 @@ export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxC
   if (!num && !side) return;
   const numStr = String(num || "");
   const sideStr = String(side || "");
-  const padX = fontPx * 0.45, padY = fontPx * 0.35;
-  const textW = fontPx * Math.max(numStr.length, sideStr.length, 1) * 0.65;
-  const boxW = textW + padX * 2;
-  const boxH = fontPx * 2.0 + padY * 2;
+  // Fixed box = 2 acres (440×198); font reduced to fit
+  const f = MOGA_BOX_FONT;
+  const boxW = MOGA_BOX_W;
+  const boxH = MOGA_BOX_H;
   const bx = cx - boxW / 2, by = cy - boxH / 2;
+  const textW = f * Math.max(numStr.length, sideStr.length, 1) * 0.65;
 
   // Box background
   ctx.fillStyle = boxColor || "rgba(120,225,245,0.92)";
   ctx.fillRect(bx, by, boxW, boxH);
   ctx.strokeStyle = borderColor || "#4a6772";
-  ctx.lineWidth = Math.max(1.5, fontPx * 0.07);
+  ctx.lineWidth = Math.max(1.5, f * 0.07);
   ctx.strokeRect(bx, by, boxW, boxH);
 
   // Fraction inside — vertically centred
   const lineY = cy;
-  const numY = cy - fontPx * 0.55;
-  const sideY = cy + fontPx * 0.55;
+  const numY = cy - f * 0.55;
+  const sideY = cy + f * 0.55;
   const inkColor = "#000000";
 
   ctx.fillStyle = inkColor;
   ctx.strokeStyle = inkColor;
-  ctx.lineWidth = Math.max(1.5, fontPx * 0.08);
+  ctx.lineWidth = Math.max(1.5, f * 0.08);
   ctx.textAlign = "center";
 
   if (numStr) {
-    ctx.font = `bold ${fontPx}px Rajdhani, sans-serif`;
+    ctx.font = `bold ${f}px Rajdhani, sans-serif`;
     ctx.textBaseline = "middle";
     ctx.fillText(numStr, cx, numY);
   }
@@ -270,7 +278,7 @@ export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxC
   ctx.lineTo(cx + textW / 2, lineY);
   ctx.stroke();
   if (sideStr) {
-    ctx.font = `bold ${fontPx * 0.8}px Rajdhani, sans-serif`;
+    ctx.font = `bold ${f * 0.8}px Rajdhani, sans-serif`;
     ctx.textBaseline = "middle";
     ctx.fillText(sideStr, cx, sideY);
   }
@@ -281,22 +289,23 @@ export function svgMogaFractionBox(num, side, cx, cy, fontPx, boxColor, borderCo
   if (!num && !side) return "";
   const numStr = String(num || "");
   const sideStr = String(side || "");
-  const padX = fontPx * 0.45, padY = fontPx * 0.35;
-  const textW = fontPx * Math.max(numStr.length, sideStr.length, 1) * 0.65;
-  const boxW = textW + padX * 2;
-  const boxH = fontPx * 2.0 + padY * 2;
+  // Fixed box = 2 acres (440×198); font reduced to fit
+  const f = MOGA_BOX_FONT;
+  const boxW = MOGA_BOX_W;
+  const boxH = MOGA_BOX_H;
   const bx = cx - boxW / 2, by = cy - boxH / 2;
+  const textW = f * Math.max(numStr.length, sideStr.length, 1) * 0.65;
   const lineY = cy;
-  const numY = cy - fontPx * 0.55;
-  const sideY = cy + fontPx * 0.55;
+  const numY = cy - f * 0.55;
+  const sideY = cy + f * 0.55;
 
-  let svg = `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" fill="${boxColor || 'rgba(120,225,245,0.92)'}" stroke="${borderColor || '#4a6772'}" stroke-width="${Math.max(1.5, fontPx * 0.07).toFixed(1)}"/>`;
+  let svg = `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" fill="${boxColor || 'rgba(120,225,245,0.92)'}" stroke="${borderColor || '#4a6772'}" stroke-width="${Math.max(1.5, f * 0.07).toFixed(1)}"/>`;
   if (numStr) {
-    svg += `<text x="${cx.toFixed(1)}" y="${numY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="#000">${numStr}</text>`;
+    svg += `<text x="${cx.toFixed(1)}" y="${numY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${f.toFixed(1)}" fill="#000">${numStr}</text>`;
   }
-  svg += `<line x1="${(cx - textW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + textW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="#000" stroke-width="${Math.max(1.5, fontPx * 0.08).toFixed(1)}"/>`;
+  svg += `<line x1="${(cx - textW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + textW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="#000" stroke-width="${Math.max(1.5, f * 0.08).toFixed(1)}"/>`;
   if (sideStr) {
-    svg += `<text x="${cx.toFixed(1)}" y="${sideY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(fontPx * 0.8).toFixed(1)}" fill="#000">${sideStr}</text>`;
+    svg += `<text x="${cx.toFixed(1)}" y="${sideY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(f * 0.8).toFixed(1)}" fill="#000">${sideStr}</text>`;
   }
   return svg;
 }
@@ -400,41 +409,44 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
     { label: "Mouza (موضع)", color: C.mouzaStroke || "#000000", type: "dashed" },
   ];
 
-  const legendW = 200, rowH = 22, headerH = 24;
-  const legendH = items.length * rowH + headerH + 10;
-  const lx = viewX + viewW - legendW - 10;
-  const ly = viewY + 10;
+  // 5× bigger; font = mustateel label font
+  const lf = MUSTATEEL_LABEL_FONT;
+  const S = 5;
+  const legendW = 1700, rowH = lf * 1.2, headerH = lf * 1.2;
+  const legendH = items.length * rowH + headerH + 10 * S;
+  const lx = viewX + viewW - legendW - 10 * S;
+  const ly = viewY + 10 * S;
 
-  let svg = `<rect x="${lx}" y="${ly}" width="${legendW}" height="${legendH}" fill="rgba(255,255,255,0.96)" stroke="#333" stroke-width="1.5" rx="4"/>`;
-  svg += `<text x="${lx + legendW/2}" y="${ly + 16}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="13" fill="#333">LEGEND / رہنمائی</text>`;
-  svg += `<line x1="${lx+8}" y1="${ly+20}" x2="${lx+legendW-8}" y2="${ly+20}" stroke="#ccc" stroke-width="1"/>`;
+  let svg = `<rect x="${lx}" y="${ly}" width="${legendW}" height="${legendH}" fill="rgba(255,255,255,0.96)" stroke="#333" stroke-width="${(1.5*S).toFixed(1)}" rx="${4*S}"/>`;
+  svg += `<text x="${lx + legendW/2}" y="${ly + headerH*0.6}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lf.toFixed(1)}" fill="#333">LEGEND / رہنمائی</text>`;
+  svg += `<line x1="${lx+8*S}" y1="${ly+headerH}" x2="${lx+legendW-8*S}" y2="${ly+headerH}" stroke="#ccc" stroke-width="${S}"/>`;
 
   items.forEach((item, i) => {
-    const iy = ly + headerH + 10 + i * rowH + rowH/2;
-    const symX = lx + 14;
-    const symW = 22;
+    const iy = ly + headerH + 10*S + i * rowH + rowH/2;
+    const symX = lx + 14*S;
+    const symW = 22*S;
     if (item.type === "rect") {
-      svg += `<rect x="${symX}" y="${iy-7}" width="${symW}" height="14" fill="none" stroke="${item.color}" stroke-width="2"/>`;
-      svg += `<line x1="${symX+symW/2}" y1="${iy-7}" x2="${symX+symW/2}" y2="${iy+7}" stroke="${item.color}" stroke-width="1" stroke-opacity="0.5"/>`;
+      svg += `<rect x="${symX}" y="${iy-7*S}" width="${symW}" height="${14*S}" fill="none" stroke="${item.color}" stroke-width="${2*S}"/>`;
+      svg += `<line x1="${symX+symW/2}" y1="${iy-7*S}" x2="${symX+symW/2}" y2="${iy+7*S}" stroke="${item.color}" stroke-width="${S}" stroke-opacity="0.5"/>`;
     } else if (item.type === "line") {
-      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="4" stroke-linecap="round"/>`;
+      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${4*S}" stroke-linecap="round"/>`;
     } else if (item.type === "line_thin") {
-      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="2.5" stroke-linecap="round"/>`;
+      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${2.5*S}" stroke-linecap="round"/>`;
     } else if (item.type === "line_thick") {
-      svg += `<rect x="${symX}" y="${iy-4}" width="${symW}" height="8" fill="#3a3a3a"/>`;
-      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,3"/>`;
+      svg += `<rect x="${symX}" y="${iy-4*S}" width="${symW}" height="${8*S}" fill="#3a3a3a"/>`;
+      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="#fbbf24" stroke-width="${S}" stroke-dasharray="${4*S},${3*S}"/>`;
     } else if (item.type === "cross") {
-      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="2"/>`;
-      svg += `<line x1="${symX+6}" y1="${iy-5}" x2="${symX+12}" y2="${iy+5}" stroke="${item.color}" stroke-width="1.5"/>`;
-      svg += `<line x1="${symX+12}" y1="${iy-5}" x2="${symX+6}" y2="${iy+5}" stroke="${item.color}" stroke-width="1.5"/>`;
+      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${2*S}"/>`;
+      svg += `<line x1="${symX+6*S}" y1="${iy-5*S}" x2="${symX+12*S}" y2="${iy+5*S}" stroke="${item.color}" stroke-width="${1.5*S}"/>`;
+      svg += `<line x1="${symX+12*S}" y1="${iy-5*S}" x2="${symX+6*S}" y2="${iy+5*S}" stroke="${item.color}" stroke-width="${1.5*S}"/>`;
     } else if (item.type === "arrow") {
-      svg += `<rect x="${symX}" y="${iy-5}" width="8" height="10" fill="${item.color}"/>`;
-      svg += `<line x1="${symX+8}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="2"/>`;
-      svg += `<polygon points="${symX+symW},${iy} ${symX+symW-5},${iy-3} ${symX+symW-5},${iy+3}" fill="${item.color}"/>`;
+      svg += `<rect x="${symX}" y="${iy-5*S}" width="${8*S}" height="${10*S}" fill="${item.color}"/>`;
+      svg += `<line x1="${symX+8*S}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${2*S}"/>`;
+      svg += `<polygon points="${symX+symW},${iy} ${symX+symW-5*S},${iy-3*S} ${symX+symW-5*S},${iy+3*S}" fill="${item.color}"/>`;
     } else if (item.type === "dashed") {
-      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${1.5*S}" stroke-dasharray="${4*S},${3*S}"/>`;
     }
-    svg += `<text x="${symX + symW + 10}" y="${iy}" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="11" fill="#333">${item.label}</text>`;
+    svg += `<text x="${symX + symW + 10*S}" y="${iy}" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#333">${item.label}</text>`;
   });
 
   return svg;
@@ -467,7 +479,7 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
 }
 
 // ─── CANVAS: draw legend in screen space (top-right corner) ──────────────
-export function drawLegendOnCanvas(ctx, canvasW, canvasH, C) {
+export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
   const items = [
     { label: "Mustateel", color: C.mustateelStroke || "#ef4444", type: "rect" },
     { label: "Canal", color: C.canalStroke || "#0284c7", type: "line" },
@@ -477,59 +489,62 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C) {
     { label: "Moga / Outlet", color: C.outletStroke || "#06b6d4", type: "arrow" },
     { label: "Mouza", color: C.mouzaStroke || "#000", type: "dashed" },
   ];
-  const legendW = 170, rowH = 20, headerH = 24;
-  const legendH = items.length * rowH + headerH + 10;
-  const lx = canvasW - legendW - 10;
-  const ly = 10;
+  // 5× bigger; font = mustateel label font × scale
+  const lf = MUSTATEEL_LABEL_FONT * scale;
+  const S = 5;
+  const legendW = 1700 * scale, rowH = lf * 1.2, headerH = lf * 1.2;
+  const legendH = items.length * rowH + headerH + 10 * S * scale;
+  const lx = canvasW - legendW - 10 * S * scale;
+  const ly = 10 * S * scale;
 
   ctx.fillStyle = "rgba(255,255,255,0.96)";
   ctx.fillRect(lx, ly, legendW, legendH);
-  ctx.strokeStyle = "#333"; ctx.lineWidth = 1.5;
+  ctx.strokeStyle = "#333"; ctx.lineWidth = 1.5 * S;
   ctx.strokeRect(lx, ly, legendW, legendH);
 
   ctx.fillStyle = "#333";
-  ctx.font = "bold 12px Rajdhani, sans-serif";
+  ctx.font = `bold ${lf}px Rajdhani, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("LEGEND", lx + legendW / 2, ly + 14);
-  ctx.strokeStyle = "#ccc"; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(lx + 8, ly + 20); ctx.lineTo(lx + legendW - 8, ly + 20); ctx.stroke();
+  ctx.fillText("LEGEND", lx + legendW / 2, ly + headerH * 0.6);
+  ctx.strokeStyle = "#ccc"; ctx.lineWidth = S;
+  ctx.beginPath(); ctx.moveTo(lx + 8*S*scale, ly + headerH); ctx.lineTo(lx + legendW - 8*S*scale, ly + headerH); ctx.stroke();
 
   items.forEach((item, i) => {
-    const iy = ly + headerH + 10 + i * rowH + rowH / 2;
-    const symX = lx + 14, symW = 22;
-    ctx.strokeStyle = item.color; ctx.fillStyle = item.color; ctx.lineWidth = 2;
+    const iy = ly + headerH + 10*S*scale + i * rowH + rowH / 2;
+    const symX = lx + 14*S*scale, symW = 22*S*scale;
+    ctx.strokeStyle = item.color; ctx.fillStyle = item.color; ctx.lineWidth = 2*S;
     if (item.type === "rect") {
-      ctx.strokeRect(symX, iy - 7, symW, 14);
+      ctx.strokeRect(symX, iy - 7*S, symW, 14*S);
     } else if (item.type === "line") {
-      ctx.lineWidth = 4; ctx.lineCap = "round";
+      ctx.lineWidth = 4*S; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
     } else if (item.type === "line_thin") {
-      ctx.lineWidth = 2.5; ctx.lineCap = "round";
+      ctx.lineWidth = 2.5*S; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
     } else if (item.type === "line_thick") {
-      ctx.fillStyle = "#3a3a3a"; ctx.fillRect(symX, iy - 4, symW, 8);
-      ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+      ctx.fillStyle = "#3a3a3a"; ctx.fillRect(symX, iy - 4*S, symW, 8*S);
+      ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = S; ctx.setLineDash([4*S, 3*S]);
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
       ctx.setLineDash([]);
     } else if (item.type === "cross") {
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2*S;
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
-      ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(symX + 6, iy - 5); ctx.lineTo(symX + 12, iy + 5); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(symX + 12, iy - 5); ctx.lineTo(symX + 6, iy + 5); ctx.stroke();
+      ctx.lineWidth = 1.5*S;
+      ctx.beginPath(); ctx.moveTo(symX + 6*S, iy - 5*S); ctx.lineTo(symX + 12*S, iy + 5*S); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(symX + 12*S, iy - 5*S); ctx.lineTo(symX + 6*S, iy + 5*S); ctx.stroke();
     } else if (item.type === "arrow") {
-      ctx.fillRect(symX, iy - 5, 8, 10);
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(symX + 8, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(symX + symW, iy); ctx.lineTo(symX + symW - 5, iy - 3); ctx.lineTo(symX + symW - 5, iy + 3); ctx.closePath(); ctx.fill();
+      ctx.fillRect(symX, iy - 5*S, 8*S, 10*S);
+      ctx.lineWidth = 2*S;
+      ctx.beginPath(); ctx.moveTo(symX + 8*S, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(symX + symW, iy); ctx.lineTo(symX + symW - 5*S, iy - 3*S); ctx.lineTo(symX + symW - 5*S, iy + 3*S); ctx.closePath(); ctx.fill();
     } else if (item.type === "dashed") {
-      ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+      ctx.lineWidth = 1.5*S; ctx.setLineDash([4*S, 3*S]);
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
       ctx.setLineDash([]);
     }
-    ctx.fillStyle = "#333"; ctx.font = "11px Rajdhani, sans-serif";
+    ctx.fillStyle = "#333"; ctx.font = `${lf}px Rajdhani, sans-serif`;
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    ctx.fillText(item.label, symX + symW + 8, iy);
+    ctx.fillText(item.label, symX + symW + 10*S*scale, iy);
   });
 }
 

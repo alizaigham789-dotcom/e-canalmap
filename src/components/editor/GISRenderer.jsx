@@ -632,10 +632,8 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
   const moghaNum = obj.mogha_number || "";
   const moghaSide = obj.mogha_side || "";
   if (moghaNum || moghaSide) {
-    const numFontWorld = mogaNumberFont();
-    const numFont = screenClampedFont(numFontWorld, zoom, 14, 28);
     const lp = getOutletLabelPos(obj);
-    drawMogaFractionBoxOnCanvas(ctx, moghaNum, moghaSide, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#4a6772");
+    drawMogaFractionBoxOnCanvas(ctx, moghaNum, moghaSide, lp.x, lp.y, 0, "rgba(120,225,245,0.92)", "#4a6772");
   }
 }
 

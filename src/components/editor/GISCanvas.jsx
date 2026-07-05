@@ -554,8 +554,9 @@ const GISCanvas = forwardRef(function GISCanvas(
       for (const o of objects) {
         if (o.type === "outlet" && (o.mogha_number || o.mogha_side)) {
           const lp = getOutletLabelPos(o);
-          const _nf = Math.max(14, Math.min(28, mogaNumberFont() * zoom)) / zoom;
-          if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _nf * 2) {
+          // Hit test based on 2-acre moga box (440×198)
+          const _halfDiag = Math.max(DIMENSIONS.ACRE.width, DIMENSIONS.ACRE.height / 2);
+          if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _halfDiag) {
             isMoving.current = true; movingObjId.current = o.id;
             movingLabelType.current = "outlet";
             moveOffset.current = { x: worldRaw.x - lp.x, y: worldRaw.y - lp.y };

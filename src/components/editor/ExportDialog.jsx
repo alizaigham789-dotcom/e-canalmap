@@ -94,7 +94,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
 
     ctx.restore();
     // Legend + moga details (screen space, top-right + bottom-left corners)
-    drawLegendOnCanvas(ctx, canvas.width, canvas.height, C);
+    drawLegendOnCanvas(ctx, canvas.width, canvas.height, C, scale);
     drawMogaDetailsOnCanvas(ctx, canvas.width, canvas.height, objects);
     return canvas;
   }
