@@ -34,6 +34,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     killaVisibility, // { mustateel: bool, muraba: bool }
     orthoMode, // CAD-style H/V angle constraint while drawing line tools
     onBoxSelect, // callback(selectedObjects[]) when box-select completes
+    showPageBorder, // draw page border guide lines on canvas
   },
   ref
 ) {
@@ -322,6 +323,18 @@ const GISCanvas = forwardRef(function GISCanvas(
       ctx.restore();
     }
 
+    // Page border guide — dashed rectangle inset from canvas edges
+    if (showPageBorder) {
+      const margin = 24;
+      ctx.save();
+      ctx.strokeStyle = "#3b82f6";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([10, 5]);
+      ctx.strokeRect(margin, margin, W - margin * 2, H - margin * 2);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
     // Snap indicator overlay
     if (snapPos) {
       const sx = snapPos.x * zoom + pan.x;
@@ -359,7 +372,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         ctx.fillText(`${ang.toFixed(0)}°`, sx + 18, sy - 15);
       }
     }
-  }, [objects, zoom, pan, layers, selectedId, activeTool, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measurePoly, measureResult, endpointSnap, orthoMode]);
+  }, [objects, zoom, pan, layers, selectedId, activeTool, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measurePoly, measureResult, endpointSnap, orthoMode, showPageBorder]);
 
   useEffect(() => {
     const loop = () => { render(); animRef.current = requestAnimationFrame(loop); };

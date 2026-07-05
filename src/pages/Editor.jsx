@@ -21,7 +21,7 @@ import {
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
   saveToClipboard, loadFromClipboard, hasClipboard,
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
@@ -99,6 +99,7 @@ export default function Editor() {
   const [canRedo, setCanRedo] = useState(false);
   const [colorSettings, setColorSettings] = useState(DEFAULT_COLORS);
   const [bgColor, setBgColor] = useState("#ffffff");
+  const [showPageBorder, setShowPageBorder] = useState(false);
 
   const dsmRef = useRef(new DrawingStateManager([]));
   const autoSaveTimer = useRef(null);
@@ -645,6 +646,7 @@ export default function Editor() {
               muraba: killaVisibility.muraba && killaNumbersGlobal,
             }}
             onBoxSelect={handleBoxSelect}
+            showPageBorder={showPageBorder}
           />
 
           {/* Top-right toolbar buttons */}
@@ -687,6 +689,12 @@ export default function Editor() {
               title="Print Preview (Ctrl+P)">
               <Printer className="w-4 h-4" />
             </Button>
+            <label
+              className={`w-9 h-9 border shadow-md rounded-md flex items-center justify-center cursor-pointer transition-all ${showPageBorder ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
+              title="Show Page Border">
+              <Frame className="w-4 h-4" />
+              <input type="checkbox" checked={showPageBorder} onChange={e => setShowPageBorder(e.target.checked)} className="hidden" />
+            </label>
             <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${gridFlags.showMustateel ? "bg-red-500 border-red-400 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-red-500 hover:bg-red-50"}`}
               onClick={() => setGridFlags(f => ({ ...f, showMustateel: !f.showMustateel }))}
