@@ -983,7 +983,7 @@ export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   const mogaStr = mogaSide ? `${mapData.mogha_side}/${mogaNum}` : mogaNum;
   return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-bottom:4px;">
     <div style="padding:3px 10px; text-align:center; font-size:26px; font-weight:bold; line-height:1.2; white-space:nowrap; overflow:hidden;">
-      خاکہ دستی موگہ نمبری <span style="font-family:'Rajdhani',Arial,sans-serif;">${mogaStr}</span> راجباہ ${rajbah} موضع ${section} تحصیل ${subDiv} ضلع ${division}
+      خاکہ دستی موگہ نمبری <span style="font-family:'Rajdhani',Arial,sans-serif; direction:ltr; unicode-bidi:isolate;">${mogaStr}</span> راجباہ ${rajbah} موضع ${section} تحصیل ${subDiv} ضلع ${division}
     </div>
   </div>`;
 }
