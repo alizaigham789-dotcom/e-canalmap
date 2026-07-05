@@ -301,7 +301,7 @@ function svgMouza(obj, C, idx) {
   if (!obj.points || obj.points.length < 2) return "";
   const pts = obj.points.map(p => `${p.x},${p.y}`).join(" ");
   const mouzaWidth = (CHAKBANDI_SCALE.lineWidth() * 5) / 3; // 3× thinner
-  return `<polyline key="mouza_${idx}" points="${pts}" fill="none" stroke="${C.mouzaStroke || '#000'}" stroke-width="${mouzaWidth}" stroke-linecap="round"/>`;
+  return `<polyline key="mouza_${idx}" points="${pts}" fill="none" stroke="${C.mouzaStroke || '#000'}" stroke-width="${mouzaWidth}" stroke-linecap="round" stroke-dasharray="25,12"/>`;
 }
 
 // ─── MAIN SVG GENERATOR ───────────────────────────────────────────────────────
@@ -370,6 +370,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [scale, setScale] = useState(100);
   const [mogaFilter, setMogaFilter] = useState(selectedMogaFilter || "");
   const [bwMode, setBwMode] = useState(false);
+  const [pageOrientation, setPageOrientation] = useState("landscape");
 
   // Extract all mogas from objects
   const availableMogas = useMemo(() => {
@@ -483,12 +484,13 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     win.document.write(`<!DOCTYPE html><html><head>
       <title>Khaka Dasti</title>
       <style>
-        @page { margin: 6mm; size: A4 landscape; }
+        @page { margin: 6mm; size: A4 ${pageOrientation}; }
         * { margin:0; padding:0; box-sizing:border-box; }
         html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; }
-        .map-wrap { width:100%; height:calc(100vh - 100px); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+        body { display: flex; flex-direction: column; }
+        .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .map-wrap svg { max-width:100%; max-height:100%; width:auto; height:auto; display:block; }
-        @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .map-wrap { height:100vh; } }
+        @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
       </style>
     </head><body>
       ${headerHTML}
@@ -555,6 +557,21 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               onClick={handleDownloadSVG}>
               <FileText className="w-3.5 h-3.5" /> SVG
             </Button>
+            {/* Page orientation */}
+            <div className="flex items-center bg-slate-800 rounded-lg overflow-hidden border border-slate-600">
+              <button
+                onClick={() => setPageOrientation("landscape")}
+                className={`px-2 h-8 text-[10px] font-bold transition-all ${pageOrientation === "landscape" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"}`}
+              >
+                ⬌ Landscape
+              </button>
+              <button
+                onClick={() => setPageOrientation("portrait")}
+                className={`px-2 h-8 text-[10px] font-bold transition-all ${pageOrientation === "portrait" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"}`}
+              >
+                ⬍ Portrait
+              </button>
+            </div>
             {/* Print */}
             <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-500 text-white text-xs gap-1" onClick={handlePrint}>
               <Printer className="w-3.5 h-3.5" /> Print / PDF

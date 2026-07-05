@@ -250,9 +250,15 @@ export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxC
   const bx = cx - boxW / 2, by = cy - boxH / 2;
   const textW = f * Math.max(numStr.length, sideStr.length, 1) * 0.65;
 
-  // Box background
-  ctx.fillStyle = boxColor || "rgba(120,225,245,0.92)";
+  // Shadow + light transparent background
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.3)";
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetX = 4;
+  ctx.shadowOffsetY = 4;
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.fillRect(bx, by, boxW, boxH);
+  ctx.restore();
   ctx.strokeStyle = borderColor || "#4a6772";
   ctx.lineWidth = Math.max(1.5, f * 0.07);
   ctx.strokeRect(bx, by, boxW, boxH);
@@ -299,7 +305,9 @@ export function svgMogaFractionBox(num, side, cx, cy, fontPx, boxColor, borderCo
   const numY = cy - f * 0.55;
   const sideY = cy + f * 0.55;
 
-  let svg = `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" fill="${boxColor || 'rgba(120,225,245,0.92)'}" stroke="${borderColor || '#4a6772'}" stroke-width="${Math.max(1.5, f * 0.07).toFixed(1)}"/>`;
+  // Shadow + light transparent background
+  let svg = `<rect x="${(bx+4).toFixed(1)}" y="${(by+4).toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" fill="rgba(0,0,0,0.18)"/>`;
+  svg += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" fill="rgba(255,255,255,0.55)" stroke="${borderColor || '#4a6772'}" stroke-width="${Math.max(1.5, f * 0.07).toFixed(1)}"/>`;
   if (numStr) {
     svg += `<text x="${cx.toFixed(1)}" y="${numY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${f.toFixed(1)}" fill="#000">${numStr}</text>`;
   }
@@ -322,12 +330,7 @@ export function drawCCAGCAFractionBoxOnCanvas(ctx, ccaText, gcaText, cx, cy, fon
   const boxH = fontPx * 2.0 + padY * 2;
   const bx = cx - boxW / 2, by = cy - boxH / 2;
 
-  ctx.fillStyle = boxColor || "rgba(255,255,255,0.94)";
-  ctx.fillRect(bx, by, boxW, boxH);
-  ctx.strokeStyle = borderColor || "#166534";
-  ctx.lineWidth = Math.max(1.5, fontPx * 0.06);
-  ctx.strokeRect(bx, by, boxW, boxH);
-
+  // No background — just text and fraction line
   const lineY = cy;
   const ccaY = cy - fontPx * 0.55;
   const gcaY = cy + fontPx * 0.55;
@@ -370,7 +373,8 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
   const ink = "#166534";
   const sw = Math.max(1.5, fontPx * 0.06).toFixed(1);
 
-  let svg = `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" fill="${boxColor || 'rgba(255,255,255,0.94)'}" stroke="${borderColor || '#166534'}" stroke-width="${sw}"/>`;
+  // No background — just text and fraction line
+  let svg = "";
   if (ccaStr) {
     svg += `<text x="${cx.toFixed(1)}" y="${ccaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${ccaStr}</text>`;
   }
@@ -400,7 +404,7 @@ export function getCCAGCAText(chakbandi, gcaValue) {
 // Placed in the top-right corner of the viewBox.
 export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
   const items = [
-    { label: "Mustateel (مستتصل)", color: C.mustateelStroke || "#ef4444", type: "rect" },
+    { label: "Mustateel (مستطیل)", color: C.mustateelStroke || "#ef4444", type: "rect" },
     { label: "Canal (راجباہ)", color: C.canalStroke || "#0284c7", type: "line" },
     { label: "Khal (خال)", color: C.khalStroke || "#2563eb", type: "line_thin" },
     { label: "Road (راستہ)", color: C.roadStroke || "#b45309", type: "line_thick" },
@@ -414,8 +418,8 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
   const S = 5;
   const legendW = 1700, rowH = lf * 1.2, headerH = lf * 1.2;
   const legendH = items.length * rowH + headerH + 10 * S;
-  const lx = viewX + viewW - legendW - 10 * S;
-  const ly = viewY + 10 * S;
+  const lx = viewX + 10 * S;
+  const ly = viewY + viewH - legendH - 10 * S;
 
   let svg = `<rect x="${lx}" y="${ly}" width="${legendW}" height="${legendH}" fill="rgba(255,255,255,0.96)" stroke="#333" stroke-width="${(1.5*S).toFixed(1)}" rx="${4*S}"/>`;
   svg += `<text x="${lx + legendW/2}" y="${ly + headerH*0.6}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lf.toFixed(1)}" fill="#333">LEGEND / رہنمائی</text>`;
@@ -458,21 +462,24 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
   const outlets = objects.filter(o => o.type === "outlet" && (o.mogha_number || o.mogha_side || o.mogha_name));
   if (outlets.length === 0) return "";
 
-  const detailW = 220, rowH = 18, headerH = 24;
-  const detailH = outlets.length * rowH + headerH + 10;
-  const dx = viewX + 10;
-  const dy = viewY + viewH - detailH - 10;
+  // 5× bigger; positioned top-right (legend is now bottom-left)
+  const S = 5;
+  const detailW = 220 * S, rowH = 18 * S, headerH = 24 * S;
+  const detailH = outlets.length * rowH + headerH + 10 * S;
+  const dx = viewX + viewW - detailW - 10 * S;
+  const dy = viewY + 10 * S;
+  const fontHdr = 13 * S, fontRow = 10 * S;
 
-  let svg = `<rect x="${dx}" y="${dy}" width="${detailW}" height="${detailH}" fill="rgba(255,255,255,0.96)" stroke="#333" stroke-width="1.5" rx="4"/>`;
-  svg += `<text x="${dx + detailW/2}" y="${dy + 16}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="13" fill="#333">MOGA DETAILS / موگہ تفصیل</text>`;
-  svg += `<line x1="${dx+8}" y1="${dy+20}" x2="${dx+detailW-8}" y2="${dy+20}" stroke="#ccc" stroke-width="1"/>`;
+  let svg = `<rect x="${dx}" y="${dy}" width="${detailW}" height="${detailH}" fill="rgba(255,255,255,0.96)" stroke="#333" stroke-width="${1.5*S}" rx="${4*S}"/>`;
+  svg += `<text x="${dx + detailW/2}" y="${dy + headerH*0.6}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontHdr}" fill="#333">MOGA DETAILS / موگہ تفصیل</text>`;
+  svg += `<line x1="${dx+8*S}" y1="${dy+headerH}" x2="${dx+detailW-8*S}" y2="${dy+headerH}" stroke="#ccc" stroke-width="${S}"/>`;
 
   outlets.forEach((o, i) => {
-    const iy = dy + headerH + 10 + i * rowH + rowH/2;
+    const iy = dy + headerH + 10*S + i * rowH + rowH/2;
     const num = o.mogha_number || "-";
     const side = o.mogha_side || "-";
     const name = o.mogha_name || "";
-    svg += `<text x="${dx + 10}" y="${iy}" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="10" fill="#333">Moga ${num}/${side}${name ? ' — ' + name : ''}</text>`;
+    svg += `<text x="${dx + 10*S}" y="${iy}" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${fontRow}" fill="#333">Moga ${num}/${side}${name ? ' — ' + name : ''}</text>`;
   });
 
   return svg;
@@ -494,8 +501,8 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
   const S = 5;
   const legendW = 1700 * scale, rowH = lf * 1.2, headerH = lf * 1.2;
   const legendH = items.length * rowH + headerH + 10 * S * scale;
-  const lx = canvasW - legendW - 10 * S * scale;
-  const ly = 10 * S * scale;
+  const lx = 10 * S * scale;
+  const ly = canvasH - legendH - 10 * S * scale;
 
   ctx.fillStyle = "rgba(255,255,255,0.96)";
   ctx.fillRect(lx, ly, legendW, legendH);
@@ -552,27 +559,30 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
 export function drawMogaDetailsOnCanvas(ctx, canvasW, canvasH, objects) {
   const outlets = objects.filter(o => o.type === "outlet" && (o.mogha_number || o.mogha_side || o.mogha_name));
   if (outlets.length === 0) return;
-  const detailW = 200, rowH = 16, headerH = 24;
-  const detailH = outlets.length * rowH + headerH + 10;
-  const dx = 10;
-  const dy = canvasH - detailH - 10;
+  // 5× bigger; positioned top-right (legend is now bottom-left)
+  const S = 5;
+  const detailW = 200 * S, rowH = 16 * S, headerH = 24 * S;
+  const detailH = outlets.length * rowH + headerH + 10 * S;
+  const dx = canvasW - detailW - 10 * S;
+  const dy = 10 * S;
+  const fontHdr = 12 * S, fontRow = 10 * S;
 
   ctx.fillStyle = "rgba(255,255,255,0.96)";
   ctx.fillRect(dx, dy, detailW, detailH);
-  ctx.strokeStyle = "#333"; ctx.lineWidth = 1.5;
+  ctx.strokeStyle = "#333"; ctx.lineWidth = 1.5 * S;
   ctx.strokeRect(dx, dy, detailW, detailH);
 
-  ctx.fillStyle = "#333"; ctx.font = "bold 12px Rajdhani, sans-serif";
+  ctx.fillStyle = "#333"; ctx.font = `bold ${fontHdr}px Rajdhani, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("MOGA DETAILS", dx + detailW / 2, dy + 14);
-  ctx.strokeStyle = "#ccc"; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(dx + 8, dy + 20); ctx.lineTo(dx + detailW - 8, dy + 20); ctx.stroke();
+  ctx.fillText("MOGA DETAILS", dx + detailW / 2, dy + headerH * 0.6);
+  ctx.strokeStyle = "#ccc"; ctx.lineWidth = S;
+  ctx.beginPath(); ctx.moveTo(dx + 8*S, dy + headerH); ctx.lineTo(dx + detailW - 8*S, dy + headerH); ctx.stroke();
 
   outlets.forEach((o, i) => {
-    const iy = dy + headerH + 10 + i * rowH + rowH / 2;
+    const iy = dy + headerH + 10*S + i * rowH + rowH / 2;
     const text = `Moga ${o.mogha_number || "-"}/${o.mogha_side || "-"}${o.mogha_name ? " — " + o.mogha_name : ""}`;
-    ctx.fillStyle = "#333"; ctx.font = "10px Rajdhani, sans-serif";
+    ctx.fillStyle = "#333"; ctx.font = `${fontRow}px Rajdhani, sans-serif`;
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    ctx.fillText(text, dx + 10, iy);
+    ctx.fillText(text, dx + 10*S, iy);
   });
 }

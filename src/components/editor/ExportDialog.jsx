@@ -8,6 +8,7 @@ import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, sv
 
 export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {} }) {
   const [loading, setLoading] = useState(null);
+  const [pageOrientation, setPageOrientation] = useState("landscape");
   const C = colorSettings || {};
   const previewCanvasRef = useRef(null);
 
@@ -244,9 +245,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         }
       }
     } else if (o.type === "mouza" && o.points?.length >= 2) {
-      ctx.strokeStyle=C.mouzaStroke || "#000"; ctx.lineWidth=(CHAKBANDI_SCALE.lineWidth()*5)/3; ctx.lineCap="round"; ctx.setLineDash([]);
+      ctx.strokeStyle=C.mouzaStroke || "#000"; ctx.lineWidth=(CHAKBANDI_SCALE.lineWidth()*5)/3; ctx.lineCap="round"; ctx.setLineDash([25,12]);
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
-      for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();
+      for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke(); ctx.setLineDash([]);
     }
     // Moga number on mustateel — same font as label, blue (or black if label is non-black)
     if (o.type === "mustateel" && o.mogaNumber) {
@@ -303,7 +304,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const totalGCA = calculateTotalGCA(objects);
     const headerHTML = buildPrintHeaderHTML(mapData, null, totalGCA);
     // A4 landscape: fit map on single page with header
-    const pw = 1123, ph = 794; // A4 landscape px at 96dpi (with 6mm margin)
+    const pw = pageOrientation === "landscape" ? 1123 : 794;
+    const ph = pageOrientation === "landscape" ? 794 : 1123;
     const headerH = 90;
     const mapAreaH = ph - headerH;
     const ratio = Math.min(pw / canvas.width, mapAreaH / canvas.height);
@@ -313,15 +315,16 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const win = window.open("", "_blank");
     win.document.write(`<!DOCTYPE html><html><head><title>Khaka Dasti</title>
     <style>
-      @page { size: A4 landscape; margin: 6mm; }
+      @page { size: A4 ${pageOrientation}; margin: 6mm; }
       * { margin:0; padding:0; box-sizing:border-box; }
       html, body { width:100%; height:100%; overflow:hidden; background:white; font-family:Rajdhani,Arial,sans-serif; }
-      .map-area { width:100%; height:calc(100vh - ${headerH}px); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+      body { display: flex; flex-direction: column; }
+      .map-area { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
       .map-area img { max-width:100%; max-height:100%; width:auto; height:auto; }
-      @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .map-area { height:calc(100vh - ${headerH}px); } }
+      @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
     </style></head><body>
     ${headerHTML}
-    <div class="map-area"><img src="${imgData}" style="max-width:100%;max-height:100%;width:${iw}px;height:${ih}px;" /></div>
+    <div class="map-area"><img src="${imgData}" /></div>
     </body></html>`);
     win.document.close();
     setTimeout(() => { win.print(); setLoading(null); }, 800);
@@ -376,12 +379,13 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const win = window.open("", "_blank");
     win.document.write(`<!DOCTYPE html><html><head><title>Khaka Dasti</title>
     <style>
-      @page { size: A4 landscape; margin: 6mm; }
+      @page { size: A4 ${pageOrientation}; margin: 6mm; }
       * { margin:0; padding:0; box-sizing:border-box; }
       html, body { width:100%; height:100%; overflow:hidden; background:white; font-family:Rajdhani,Arial,sans-serif; }
-      .map-wrap { width:100%; height:calc(100vh - 100px); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+      body { display: flex; flex-direction: column; }
+      .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
       .map-wrap svg { max-width:100%; max-height:100%; width:auto; height:auto; display:block; }
-      @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .map-wrap { height:calc(100vh - 100px); } }
+      @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
     </style></head><body>
     ${headerHTML}
     <div class="map-wrap">${svgContent}</div>
@@ -508,7 +512,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }
     if (o.type==="mouza" && o.points?.length>=2) {
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
-      return `<polyline points="${pts}" fill="none" stroke="${C.mouzaStroke || "#000"}" stroke-width="${(CHAKBANDI_SCALE.lineWidth()*5)/3}" stroke-linecap="round"/>`;
+      return `<polyline points="${pts}" fill="none" stroke="${C.mouzaStroke || "#000"}" stroke-width="${(CHAKBANDI_SCALE.lineWidth()*5)/3}" stroke-linecap="round" stroke-dasharray="25,12"/>`;
     }
     if (o.type==="outlet" && o.start && o.end) {
       const color = o.outletColor || C.outletStroke || "#06b6d4";
@@ -718,6 +722,11 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
           <canvas ref={previewCanvasRef} className="max-w-full max-h-48 object-contain" />
         </div>
         <p className="text-[10px] text-slate-500 text-center -mt-1">Live preview — this is exactly how your export will look</p>
+        <div className="flex items-center gap-1 justify-center">
+          <span className="text-[10px] text-slate-500">Page:</span>
+          <button onClick={() => setPageOrientation("landscape")} className={`text-[10px] px-2 py-0.5 rounded ${pageOrientation === "landscape" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>Landscape</button>
+          <button onClick={() => setPageOrientation("portrait")} className={`text-[10px] px-2 py-0.5 rounded ${pageOrientation === "portrait" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>Portrait</button>
+        </div>
         <div className="space-y-2 py-2 max-h-[70vh] overflow-y-auto">
           {EXPORTS.map(({ label, desc, icon: Icon, color, action, key }) => (
             <button key={key} onClick={() => action()}
