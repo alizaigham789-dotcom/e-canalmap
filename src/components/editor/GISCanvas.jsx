@@ -41,6 +41,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   const movingObjId = useRef(null);
   const moveOffset = useRef({ x: 0, y: 0 });
   const movingObjOrigPoints = useRef(null);
+  const vertexDrag = useRef(null); // { id, index } — dragging a single vertex of the selected chakbandi/canal
   const lastMouse = useRef({ x: 0, y: 0 });
   const longPressTimer = useRef(null);
   const touchMoved = useRef(false);
@@ -123,6 +124,17 @@ const GISCanvas = forwardRef(function GISCanvas(
       else if (obj.type === "chakbandi") drawChakbandi(ctx, obj, isSelected, zoom, C, true);
       else if (obj.type === "mouza") drawMouza(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "damageMarker") drawDamageMarker(ctx, obj, isSelected, zoom);
+    }
+
+    // Vertex handles for the selected chakbandi/canal — draggable editing
+    const selObj = objects.find(o => o.id === selectedId);
+    if (selObj && ["chakbandi", "canal"].includes(selObj.type) && selObj.points) {
+      for (const p of selObj.points) {
+        ctx.fillStyle = "#3b82f6";
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5 / zoom;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 6 / zoom, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
     }
 
     // Draft previews
@@ -295,6 +307,18 @@ const GISCanvas = forwardRef(function GISCanvas(
   }, [pan, zoom, activeTool, snapSettings, orthoMode, canalDraft, khalDraft, roadDraft, mouzaDraft, chakbandiDraft]);
 
   const handleMouseMove = useCallback((e) => {
+    // Dragging a single vertex of the selected chakbandi/canal
+    if (vertexDrag.current) {
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
+      const obj = objectsRef.current.find(o => o.id === vertexDrag.current.id);
+      if (obj && obj.points) {
+        const newPoints = obj.points.map((p, i) => i === vertexDrag.current.index ? { x: worldRaw.x, y: worldRaw.y } : p);
+        onUpdateObject(obj.id, { points: newPoints });
+      }
+      return;
+    }
     // Ghost preview for mustateel/muraba
     if (activeTool === "mustateel" || activeTool === "muraba") {
       const canvas = canvasRef.current;
@@ -457,6 +481,16 @@ const GISCanvas = forwardRef(function GISCanvas(
       boxSelectStart.current = { x: worldRaw.x, y: worldRaw.y };
       setBoxSelectDraft({ x1: worldRaw.x, y1: worldRaw.y, x2: worldRaw.x, y2: worldRaw.y });
     } else if (activeTool === "select") {
+      // Check for a vertex handle on the currently selected chakbandi/canal first
+      const selectedObj = selectedId ? objects.find(o => o.id === selectedId) : null;
+      if (selectedObj && ["chakbandi", "canal"].includes(selectedObj.type) && selectedObj.points) {
+        const vThresh = 10 / zoom;
+        const vIdx = selectedObj.points.findIndex(p => Math.hypot(p.x - worldRaw.x, p.y - worldRaw.y) < vThresh);
+        if (vIdx !== -1) {
+          vertexDrag.current = { id: selectedObj.id, index: vIdx };
+          return;
+        }
+      }
       const hit = hitTest(worldRaw.x, worldRaw.y, objects);
       if (hit?.type === "damageMarker" && onDamageMarkerClick) {
         onDamageMarkerClick(hit);
@@ -466,7 +500,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       const hit = hitTest(worldRaw.x, worldRaw.y, objects, true); // true = eraser mode (boundary-aware)
       if (hit) onAddObject("__delete__", { id: hit.id });
     }
-  }, [activeTool, pan, zoom, objects, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd, onMouzaPointAdd, onDamageMarkerClick]);
+  }, [activeTool, pan, zoom, objects, selectedId, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd, onMouzaPointAdd, onDamageMarkerClick]);
 
   const handleMouseUp = useCallback((e) => {
     // Finish box-select
@@ -480,6 +514,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       boxSelectStart.current = null;
       setBoxSelectDraft(null);
     }
+    vertexDrag.current = null;
     isPanning.current = false; isMoving.current = false; movingObjId.current = null;
     movingObjOrigPoints.current = null;
     edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0;

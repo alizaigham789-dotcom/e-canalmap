@@ -210,21 +210,34 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                   <Calculator className="w-3 h-3 text-green-600" />
                   <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider">CCA / GCA (Acres)</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] text-slate-600">CCA = GCA</label>
+                  <Switch checked={!!local.ccaEqualsGca} onCheckedChange={v => {
+                    if (v) {
+                      const gca = local.gca ?? "";
+                      commitMultiple({ ccaEqualsGca: true, cca: gca, centerLabel: gca ? `(${gca}/${gca})` : "" });
+                    } else {
+                      commitMultiple({ ccaEqualsGca: false });
+                    }
+                  }} className="scale-75" />
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[9px] text-slate-400 uppercase">CCA</label>
-                    <Input type="number" value={local.cca ?? ""} onChange={e => {
+                    <Input type="number" disabled={!!local.ccaEqualsGca} value={local.cca ?? ""} onChange={e => {
                       const v = e.target.value;
                       const gca = local.gca ?? "";
                       commitMultiple({ cca: v, centerLabel: v || gca ? `(${v}/${gca})` : "" });
-                    }} placeholder="auto" className="h-7 text-xs font-mono bg-white border-green-200 text-green-800 focus:border-green-500" />
+                    }} placeholder="auto" className="h-7 text-xs font-mono bg-white border-green-200 text-green-800 focus:border-green-500 disabled:opacity-50" />
                   </div>
                   <div>
                     <label className="text-[9px] text-slate-400 uppercase">GCA</label>
                     <Input type="number" value={local.gca ?? ""} onChange={e => {
                       const v = e.target.value;
-                      const cca = local.cca ?? "";
-                      commitMultiple({ gca: v, centerLabel: cca || v ? `(${cca}/${v})` : "" });
+                      const cca = local.ccaEqualsGca ? v : (local.cca ?? "");
+                      commitMultiple(local.ccaEqualsGca
+                        ? { gca: v, cca: v, centerLabel: v ? `(${v}/${v})` : "" }
+                        : { gca: v, centerLabel: cca || v ? `(${cca}/${v})` : "" });
                     }} placeholder="auto" className="h-7 text-xs font-mono bg-white border-green-200 text-green-800 focus:border-green-500" />
                   </div>
                 </div>
@@ -233,7 +246,9 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                     const mustateels = allObjects.filter(o => o.type === "mustateel");
                     const canals = allObjects.filter(o => o.type === "canal");
                     const gca = calculateChakbandiGCA(selectedObj, mustateels, canals);
-                    commitMultiple({ cca: String(gca), gca: String(gca), centerLabel: `(${gca}/${gca})` });
+                    commitMultiple(local.ccaEqualsGca
+                      ? { cca: String(gca), gca: String(gca), centerLabel: `(${gca}/${gca})` }
+                      : { gca: String(gca), centerLabel: `(${local.cca ?? gca}/${gca})` });
                   }}>
                   <Calculator className="w-3 h-3 mr-1" /> Auto Calculate
                 </Button>
