@@ -6,7 +6,9 @@ import {
   DIMENSIONS, distToLineSegment, computeSnapPosition,
   snapToNearestBoundary, rectsOverlap, createMustateel, createMuraba, createAcre,
   getMustateelMouzaSplit, getObjectsInBox, nearestPointOnPolyline,
+  calculateChakbandiGCA, mogaNumberFont,
 } from "@/lib/gisEngine";
+import { drawCCAGCAFractionBoxOnCanvas, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText } from "@/lib/printRenderHelpers";
 import { applyOrthoConstraint, segmentAngleDeg, findNearbyEndpoint, isLineTool } from "@/lib/drawingAssist";
 import {
   drawGrid, drawAcre, drawMustateel, drawMuraba,
@@ -43,6 +45,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   const movingObjOrigPoints = useRef(null);
   const movingObjOrigStartEnd = useRef(null); // { start, end } — for outlet/moga dragging
   const vertexDrag = useRef(null); // { id, index } — dragging a single vertex of the selected chakbandi/canal
+  const movingLabelType = useRef(null); // "outlet" | "chakbandi" — dragging a label box
   const lastMouse = useRef({ x: 0, y: 0 });
   const longPressTimer = useRef(null);
   const touchMoved = useRef(false);
@@ -124,6 +127,28 @@ const GISCanvas = forwardRef(function GISCanvas(
       else if (obj.type === "chakbandi") drawChakbandi(ctx, obj, isSelected, zoom, C, true);
       else if (obj.type === "mouza") drawMouza(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "damageMarker") drawDamageMarker(ctx, obj, isSelected, zoom);
+    }
+
+    // CCA/GCA fraction labels for chakbandis — drawn above all objects in boxes
+    {
+      const _mustateels = objects.filter(o => o.type === "mustateel");
+      const _canals = objects.filter(o => o.type === "canal");
+      const _chakbandis = objects.filter(o => o.type === "chakbandi");
+      const gcaFontWorld = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
+      const gcaFont = Math.max(12, Math.min(24, gcaFontWorld * zoom)) / zoom;
+      for (const ch of _chakbandis) {
+        if (ch.points?.length >= 3) {
+          const gca = calculateChakbandiGCA(ch, _mustateels, _canals);
+          if (gca > 0 || ch.centerLabel) {
+            const lp = getChakbandiLabelPos(ch);
+            if (!lp) continue;
+            const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
+            if (cca || gcaTxt) {
+              drawCCAGCAFractionBoxOnCanvas(ctx, cca, gcaTxt, lp.x, lp.y, gcaFont, "rgba(255,255,255,0.94)", "#166534");
+            }
+          }
+        }
+      }
     }
 
     // Vertex handles for the selected chakbandi/canal — draggable editing
@@ -472,6 +497,13 @@ const GISCanvas = forwardRef(function GISCanvas(
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
+      // Label box dragging (outlet moga or chakbandi GCA)
+      if (movingLabelType.current) {
+        const nx = worldRaw.x - moveOffset.current.x;
+        const ny = worldRaw.y - moveOffset.current.y;
+        onUpdateObject(movingObjId.current, { labelPos: { x: nx, y: ny } });
+        return;
+      }
       let newX = worldRaw.x - moveOffset.current.x;
       let newY = worldRaw.y - moveOffset.current.y;
       const movingObj = objectsRef.current.find(o => o.id === movingObjId.current);
@@ -518,6 +550,35 @@ const GISCanvas = forwardRef(function GISCanvas(
       return;
     }
     if (activeTool === "move") {
+      // Check for outlet moga label box drag first
+      for (const o of objects) {
+        if (o.type === "outlet" && (o.mogha_number || o.mogha_side)) {
+          const lp = getOutletLabelPos(o);
+          const _nf = Math.max(14, Math.min(28, mogaNumberFont() * zoom)) / zoom;
+          if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _nf * 2) {
+            isMoving.current = true; movingObjId.current = o.id;
+            movingLabelType.current = "outlet";
+            moveOffset.current = { x: worldRaw.x - lp.x, y: worldRaw.y - lp.y };
+            onSelect(o.id);
+            return;
+          }
+        }
+      }
+      // Check for chakbandi GCA label box drag
+      for (const o of objects) {
+        if (o.type === "chakbandi" && o.points?.length >= 3) {
+          const lp = getChakbandiLabelPos(o);
+          if (!lp) continue;
+          const _gf = Math.max(12, Math.min(24, Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30 * zoom)) / zoom;
+          if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _gf * 3) {
+            isMoving.current = true; movingObjId.current = o.id;
+            movingLabelType.current = "chakbandi";
+            moveOffset.current = { x: worldRaw.x - lp.x, y: worldRaw.y - lp.y };
+            onSelect(o.id);
+            return;
+          }
+        }
+      }
       const hit = hitTest(worldRaw.x, worldRaw.y, objects);
       if (hit && ["mustateel", "muraba"].includes(hit.type)) {
         isMoving.current = true; movingObjId.current = hit.id;
@@ -601,6 +662,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     }
     vertexDrag.current = null;
     isPanning.current = false; isMoving.current = false; movingObjId.current = null;
+    movingLabelType.current = null;
     movingObjOrigPoints.current = null; movingObjOrigStartEnd.current = null;
     edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0;
     // Finish damage marker line on mouse up

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
 import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
-import { svgCanalNameOnPath, svgMogaFraction, chakbandiLabelPosition } from "@/lib/printRenderHelpers";
+import { svgCanalNameOnPath, svgMogaFraction, svgMogaFractionBox, svgCCAGCAFractionBox, chakbandiLabelPosition, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, buildMogaDetailsSVG } from "@/lib/printRenderHelpers";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
@@ -285,13 +285,10 @@ function svgOutlet(obj, C, idx) {
   const h1y = (ey - headLen * Math.sin(angle) + headW * Math.cos(angle)).toFixed(1);
   const h2x = (ex - headLen * Math.cos(angle) + headW * Math.sin(angle)).toFixed(1);
   const h2y = (ey - headLen * Math.sin(angle) - headW * Math.cos(angle)).toFixed(1);
-  // Moga number as fraction (number over line over R/L) at the tip — 3× font
+  // Moga number — fraction inside a square box at labelPos (draggable)
   const numFont = mogaNumberFont();
-  const gap = headLen + numFont * 0.8;
-  const tx = ex + Math.cos(angle) * gap;
-  const ty = ey + Math.sin(angle) * gap;
-  const numColor = getMogaColor(color);
-  const numLabel = svgMogaFraction(obj.mogha_number, obj.mogha_side, tx, ty, numFont, numColor);
+  const lp = getOutletLabelPos(obj);
+  const numLabel = svgMogaFractionBox(obj.mogha_number, obj.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#4a6772");
   return `<g key="outlet_${idx}">
     <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
     <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size * 0.25).toFixed(1)}" stroke-linecap="round"/>
@@ -415,12 +412,11 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     for (const ch of chakbandis) {
       if (ch.points?.length >= 3) {
         const gca = calculateChakbandiGCA(ch, mustateels, canals);
-        if (gca > 0) {
-          const pos = chakbandiLabelPosition(ch);
-          if (!pos) continue;
-          // Use user's centerLabel text if entered, otherwise auto-calculate
-          const text = ch.centerLabel || `(${gca}/${gca})`;
-          results.push({ x: pos.x, y: pos.y, gca, text });
+        if (gca > 0 || ch.centerLabel) {
+          const lp = getChakbandiLabelPos(ch);
+          if (!lp) continue;
+          const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
+          results.push({ x: lp.x, y: lp.y, cca, gca: gcaTxt });
           total += gca;
         }
       }
@@ -435,25 +431,24 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
      width="${svgData.viewW}" height="${svgData.viewH}">
   <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
   ${svgData.svgBody}
+  ${gcaSvgLabels}
+  ${buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors)}
+  ${buildMogaDetailsSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, objects, mapData)}
 </svg>`
     : null;
 
   // Inline SVG markup for preview (preserves exact vector scaling)
   const gcaSvgLabels = useMemo(() => {
     if (!gcaData.results.length) return "";
-    const ch = effectiveColors.chakbandiStroke || "#000";
+    const ch = effectiveColors.chakbandiStroke || "#166534";
     const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
-    return gcaData.results.map(({ x, y, text }) => {
-      const tw = text.length * lblFont * 0.6 + lblFont * 0.3;
-      const th = lblFont + lblFont * 0.2;
-      // Position above the chakbandi (y = top of bounding box, box sits above it)
-      const by = y - th - 10;
-      return `<rect x="${(x - tw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${ch}" stroke-width="2"/><text x="${x.toFixed(1)}" y="${(by + th/2).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${text}</text>`;
-    }).join("");
+    return gcaData.results.map(({ x, y, cca, gca }) =>
+      svgCCAGCAFractionBox(cca, gca, x, y, lblFont, "rgba(255,255,255,0.94)", ch)
+    ).join("");
   }, [gcaData, effectiveColors]);
 
   const inlineSvgMarkup = svgData
-    ? `<rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>${svgData.svgBody}${gcaSvgLabels}`
+    ? `<rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>${svgData.svgBody}${gcaSvgLabels}${buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors)}${buildMogaDetailsSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, objects, mapData)}`
     : null;
 
   // ─── VECTOR PRINT — single page, Urdu header ─────────────────────────────────
@@ -472,14 +467,13 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     for (const ch of chakbandis) {
       if (ch.points?.length >= 3) {
         const gca = calculateChakbandiGCA(ch, mustateels, canals);
-        if (gca > 0) {
-          const pos = chakbandiLabelPosition(ch);
-          if (!pos) continue;
-          const lblText = ch.centerLabel || `(${gca}/${gca})`;
-          const tw = lblText.length * lblFont * 0.6 + lblFont * 0.3;
-          const th = lblFont + lblFont * 0.2;
-          const by = pos.y - th - 10;
-          gcaLabels += `<rect x="${(pos.x - tw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${effectiveColors.chakbandiStroke || '#000'}" stroke-width="2"/><text x="${pos.x.toFixed(1)}" y="${(by + th/2).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${lblText}</text>`;
+        if (gca > 0 || ch.centerLabel) {
+          const lp = getChakbandiLabelPos(ch);
+          if (!lp) continue;
+          const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
+          if (cca || gcaTxt) {
+            gcaLabels += svgCCAGCAFractionBox(cca, gcaTxt, lp.x, lp.y, lblFont, "rgba(255,255,255,0.94)", effectiveColors.chakbandiStroke || "#166534");
+          }
         }
       }
     }
@@ -506,6 +500,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
           <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
           ${svgData.svgBody}
           ${gcaLabels}
+          ${buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors)}
+          ${buildMogaDetailsSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, objects, mapData)}
         </svg>
       </div>
     </body></html>`);

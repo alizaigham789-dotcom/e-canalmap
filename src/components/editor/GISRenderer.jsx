@@ -5,6 +5,7 @@
 // ============================================================
 
 import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMogaColor, calculateChakbandiGCA, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
+import { drawMogaFractionBoxOnCanvas, getOutletLabelPos } from "@/lib/printRenderHelpers";
 
 // ---- Anti-aliased zoom-clamped font size ----
 // For print: use a larger effective min so labels are always readable regardless of zoom
@@ -626,39 +627,15 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
 
   ctx.restore(); // end rotated arrow context
 
-  // Moga number — professional stacked format: number over horizontal line over R/L
-  // No slash. Behaves as one visual unit positioned near the moga tip.
+  // Moga number — fraction (number/line/R) inside a square box at labelPos
+  // Box prevents the moga label from mixing with mustateel numbers
   const moghaNum = obj.mogha_number || "";
   const moghaSide = obj.mogha_side || "";
   if (moghaNum || moghaSide) {
-    const numColor = getMogaColor(color);
     const numFontWorld = mogaNumberFont();
     const numFont = screenClampedFont(numFontWorld, zoom, 14, 28);
-    const gap = (22 * scale) / zoom + 12 / zoom;
-    const tx = ex + Math.cos(angle) * gap;
-    const ty = ey + Math.sin(angle) * gap;
-
-    ctx.save();
-    ctx.translate(tx, ty);
-    // Draw the number on top (bold, centered)
-    ctx.fillStyle = numColor;
-    ctx.font = `bold ${numFont}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillText(moghaNum, 0, 0);
-    // Horizontal line below the number
-    const lineW = numFont * Math.max(moghaNum.length, 1) * 0.65;
-    ctx.strokeStyle = numColor;
-    ctx.lineWidth = Math.max(1.5, numFont * 0.08);
-    ctx.beginPath();
-    ctx.moveTo(-lineW / 2, 2 / zoom);
-    ctx.lineTo(lineW / 2, 2 / zoom);
-    ctx.stroke();
-    // R or L below the line
-    ctx.textBaseline = "top";
-    ctx.font = `bold ${numFont * 0.8}px Rajdhani, sans-serif`;
-    ctx.fillText(moghaSide, 0, 6 / zoom);
-    ctx.restore();
+    const lp = getOutletLabelPos(obj);
+    drawMogaFractionBoxOnCanvas(ctx, moghaNum, moghaSide, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#4a6772");
   }
 }
 
@@ -771,31 +748,7 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false)
     ctx.restore();
   }
 
-  // CCA/GCA center label — font size matches mustateel label, bigger box
-  if (obj.centerLabel) {
-    const cx = obj.points.reduce((s, p) => s + p.x, 0) / obj.points.length;
-    const cy = obj.points.reduce((s, p) => s + p.y, 0) / obj.points.length;
-    ctx.save();
-    // Font size — 4× the mustateel label size
-    const baseFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 4;
-    ctx.font = `bold ${baseFont}px Rajdhani, sans-serif`;
-    const measured = ctx.measureText(obj.centerLabel);
-    const maxW = DIMENSIONS.MUSTATEEL.width * 0.80 * 4;
-    const fitScale = Math.min(1, maxW / (measured.width || 1));
-    const lblFont = baseFont * fitScale;
-    ctx.font = `bold ${lblFont}px Rajdhani, sans-serif`;
-    const reMeasured = ctx.measureText(obj.centerLabel);
-    const padX = lblFont * 0.15, padY = lblFont * 0.10;
-    const tw = reMeasured.width + padX * 2, th = lblFont + padY * 2;
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.fillRect(cx - tw/2, cy - th/2, tw, th);
-    ctx.strokeStyle = color; ctx.lineWidth = 2/zoom;
-    ctx.strokeRect(cx - tw/2, cy - th/2, tw, th);
-    ctx.fillStyle = "#166534";
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(obj.centerLabel, cx, cy);
-    ctx.restore();
-  }
+  // CCA/GCA fraction labels are drawn in GISCanvas render pass (above all objects)
 }
 
 // ============================================================

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
 import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
-import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, svgMogaFraction, chakbandiLabelPosition } from "@/lib/printRenderHelpers";
+import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, svgMogaFraction, chakbandiLabelPosition, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, buildMogaDetailsSVG, drawLegendOnCanvas, drawMogaDetailsOnCanvas } from "@/lib/printRenderHelpers";
 
 
 export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {} }) {
@@ -71,40 +71,31 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       drawObj(ctx, o, scale);
     }
 
-    // Auto-calculated CCA/GCA labels ABOVE each chakbandi — use user's centerLabel if entered
-    const _mustateels = objects.filter(o => o.type === "mustateel");
-    const _canals = objects.filter(o => o.type === "canal");
-    const _chakbandis = objects.filter(o => o.type === "chakbandi");
-    for (const ch of _chakbandis) {
-      if (ch.points?.length >= 3) {
-        const gca = calculateChakbandiGCA(ch, _mustateels, _canals);
-        if (gca > 0) {
-          const pos = chakbandiLabelPosition(ch);
-          if (!pos) continue;
-          const lblText = ch.centerLabel || `(${gca}/${gca})`;
-          const baseFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30 * 4;
-          ctx.font = `bold ${baseFont}px Rajdhani, sans-serif`;
-          const maxW = DIMENSIONS.MUSTATEEL.width * 0.80 * 4;
-          const fitScale = Math.min(1, maxW / (ctx.measureText(lblText).width || 1));
-          const lblFont = baseFont * fitScale;
-          ctx.font = `bold ${lblFont}px Rajdhani, sans-serif`;
-          const tw = ctx.measureText(lblText).width + lblFont * 0.3;
-          const th = lblFont + lblFont * 0.2;
-          // Position above the chakbandi (y = top of bounding box, box sits above it)
-          const bx = pos.x;
-          const by = pos.y - th - 10;
-          ctx.fillStyle = "rgba(255,255,255,0.92)";
-          ctx.fillRect(bx - tw/2, by, tw, th);
-          ctx.strokeStyle = C.chakbandiStroke || "#000"; ctx.lineWidth = 2;
-          ctx.strokeRect(bx - tw/2, by, tw, th);
-          ctx.fillStyle = "#166534";
-          ctx.textAlign = "center"; ctx.textBaseline = "middle";
-          ctx.fillText(lblText, bx, by + th/2);
+    // CCA/GCA fraction labels for chakbandis — at labelPos, in fraction boxes
+    {
+      const _mustateels = objects.filter(o => o.type === "mustateel");
+      const _canals = objects.filter(o => o.type === "canal");
+      const _chakbandis = objects.filter(o => o.type === "chakbandi");
+      const gcaFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
+      for (const ch of _chakbandis) {
+        if (ch.points?.length >= 3) {
+          const gca = calculateChakbandiGCA(ch, _mustateels, _canals);
+          if (gca > 0 || ch.centerLabel) {
+            const lp = getChakbandiLabelPos(ch);
+            if (!lp) continue;
+            const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
+            if (cca || gcaTxt) {
+              drawCCAGCAFractionBoxOnCanvas(ctx, cca, gcaTxt, lp.x, lp.y, gcaFont, "rgba(255,255,255,0.94)", C.chakbandiStroke || "#166534");
+            }
+          }
         }
       }
     }
 
     ctx.restore();
+    // Legend + moga details (screen space, top-right + bottom-left corners)
+    drawLegendOnCanvas(ctx, canvas.width, canvas.height, C);
+    drawMogaDetailsOnCanvas(ctx, canvas.width, canvas.height, objects);
     return canvas;
   }
 
@@ -281,14 +272,11 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.lineTo(ex - headLen * Math.cos(ang) - headW * Math.sin(ang), ey - headLen * Math.sin(ang) + headW * Math.cos(ang));
       ctx.lineTo(ex - headLen * Math.cos(ang) + headW * Math.sin(ang), ey - headLen * Math.sin(ang) - headW * Math.cos(ang));
       ctx.closePath(); ctx.fill();
-      // Moga number as fraction (number over line over R/L) at the tip — 3× font
+      // Moga number — fraction inside a square box at labelPos (draggable)
       if (o.mogha_number || o.mogha_side) {
-        const numColor = getMogaColor(color);
         const numFont = mogaNumberFont();
-        const gap = headLen + numFont * 0.8;
-        const tx = ex + Math.cos(ang) * gap;
-        const ty = ey + Math.sin(ang) * gap;
-        drawMogaFractionOnCanvas(ctx, o.mogha_number, o.mogha_side, tx, ty, numFont, numColor);
+        const lp = getOutletLabelPos(o);
+        drawMogaFractionBoxOnCanvas(ctx, o.mogha_number, o.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#4a6772");
       }
     }
   }
@@ -348,25 +336,22 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const totalGCA = calculateTotalGCA(objects);
     const headerHTML = buildPrintHeaderHTML(mapData, null, totalGCA);
 
-    // Auto-calculated CCA/GCA labels for chakbandis — ABOVE boundary, use centerLabel
+    // CCA/GCA fraction labels for chakbandis — at labelPos, in fraction boxes
     const mustateels = objects.filter(o => o.type === "mustateel");
     const canals = objects.filter(o => o.type === "canal");
     const chakbandis = objects.filter(o => o.type === "chakbandi");
-    const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30 * 4;
+    const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
     let gcaLabels = "";
     for (const ch of chakbandis) {
       if (ch.points?.length >= 3) {
         const gca = calculateChakbandiGCA(ch, mustateels, canals);
-        if (gca > 0) {
-          const pos = chakbandiLabelPosition(ch);
-          if (!pos) continue;
-          const lblText = ch.centerLabel || `(${gca}/${gca})`;
-          const cx = pos.x - bbox.minX;
-          const cy = pos.y - bbox.minY;
-          const tw = lblText.length * lblFont * 0.6 + lblFont * 0.3;
-          const th = lblFont + lblFont * 0.2;
-          const by = cy - th - 10;
-          gcaLabels += `<rect x="${(cx - tw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${C.chakbandiStroke || '#000'}" stroke-width="2"/><text x="${cx.toFixed(1)}" y="${(by + th/2).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${lblText}</text>`;
+        if (gca > 0 || ch.centerLabel) {
+          const lp = getChakbandiLabelPos(ch);
+          if (!lp) continue;
+          const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
+          if (cca || gcaTxt) {
+            gcaLabels += svgCCAGCAFractionBox(cca, gcaTxt, lp.x, lp.y, lblFont, "rgba(255,255,255,0.94)", C.chakbandiStroke || "#166534");
+          }
         }
       }
     }
@@ -376,11 +361,15 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       return order.indexOf(a.type)-order.indexOf(b.type);
     }).map(o => objToSVG(o, bbox)).filter(Boolean).join("\n");
 
+    const legendSvg = buildLegendSVG(bbox.minX, bbox.minY, W, H, C);
+    const mogaDetailsSvg = buildMogaDetailsSVG(bbox.minX, bbox.minY, W, H, objects, mapData);
     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
       <rect width="${W}" height="${H}" fill="white"/>
       <g transform="translate(${-bbox.minX},${-bbox.minY})">
         ${svgObjs}
         ${gcaLabels}
+        ${legendSvg}
+        ${mogaDetailsSvg}
       </g>
     </svg>`;
 
@@ -533,13 +522,10 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const h1y=(ey - headLen*Math.sin(ang) + headW*Math.cos(ang)).toFixed(1);
       const h2x=(ex - headLen*Math.cos(ang) + headW*Math.sin(ang)).toFixed(1);
       const h2y=(ey - headLen*Math.sin(ang) - headW*Math.cos(ang)).toFixed(1);
-      // Moga number as fraction (number over line over R/L) at the tip — 3× font
-      const numColor = getMogaColor(color);
+      // Moga number — fraction inside a square box at labelPos (draggable)
       const numFont = mogaNumberFont();
-      const gap = headLen + numFont * 0.8;
-      const _tx = ex + Math.cos(ang) * gap;
-      const _ty = ey + Math.sin(ang) * gap;
-      const numLbl = svgMogaFraction(o.mogha_number, o.mogha_side, _tx, _ty, numFont, numColor);
+      const _lp = getOutletLabelPos(o);
+      const numLbl = svgMogaFractionBox(o.mogha_number, o.mogha_side, _lp.x, _lp.y, numFont, "rgba(120,225,245,0.92)", "#4a6772");
       return `<g>
         <rect x="${(sx-half).toFixed(1)}" y="${(sy-half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
         <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size*0.25).toFixed(1)}" stroke-linecap="round"/>
