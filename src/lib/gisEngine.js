@@ -978,7 +978,7 @@ export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   const section = mapData?.section || "____";
   const subDiv = mapData?.tehsil || "____";
   const division = mapData?.district || "____";
-  const uf = "'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
+  const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
 
   return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-bottom:4px;">
     <div style="padding:4px 12px; text-align:center; font-size:14px; font-weight:bold; line-height:1.8;">

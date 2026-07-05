@@ -265,8 +265,8 @@ export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxC
 
   // Fraction inside — vertically centred
   const lineY = cy;
-  const numY = cy - f * 0.55;
-  const sideY = cy + f * 0.55;
+  const numY = cy + f * 0.55;
+  const sideY = cy - f * 0.55;
   const inkColor = "#000000";
 
   ctx.fillStyle = inkColor;
@@ -302,8 +302,8 @@ export function svgMogaFractionBox(num, side, cx, cy, fontPx, boxColor, borderCo
   const bx = cx - boxW / 2, by = cy - boxH / 2;
   const textW = f * Math.max(numStr.length, sideStr.length, 1) * 0.65;
   const lineY = cy;
-  const numY = cy - f * 0.55;
-  const sideY = cy + f * 0.55;
+  const numY = cy + f * 0.55;
+  const sideY = cy - f * 0.55;
 
   // Shadow + light transparent background
   let svg = `<rect x="${(bx+4).toFixed(1)}" y="${(by+4).toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" fill="rgba(0,0,0,0.18)"/>`;
@@ -420,19 +420,19 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
   const legendH = headerH + colHdrH + items.length * rowH + pad;
   const lx = viewX + 8 * S;
   const ly = viewY + viewH - legendH - 8 * S;
-  const signColX = lx + pad;
-  const nameColX = lx + pad * 2 + colSignW;
-  const midX = signColX + colSignW + pad / 2;
+  const nameColX = lx + pad;
+  const signColX = lx + pad * 2 + colNameW;
+  const midX = nameColX + colNameW + pad / 2;
 
   // Outer border (black)
   let svg = `<rect x="${lx}" y="${ly}" width="${legendW}" height="${legendH}" fill="white" stroke="#000" stroke-width="${(1.5*S).toFixed(1)}"/>`;
   // Black header bar with white "علامات"
   svg += `<rect x="${lx}" y="${ly}" width="${legendW}" height="${headerH}" fill="#000"/>`;
-  svg += `<text x="${lx + legendW/2}" y="${ly + headerH*0.65}" text-anchor="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lf.toFixed(1)}" fill="white">علامات</text>`;
+  svg += `<text x="${lx + legendW/2}" y="${ly + headerH*0.65}" text-anchor="middle" font-family="'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lf.toFixed(1)}" fill="white">علامات</text>`;
   // Sub-header: right="نام علامت", left="علامت"
   const colHdrY = ly + headerH + colHdrH * 0.55;
-  svg += `<text x="${nameColX + colNameW/2}" y="${colHdrY}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(lf*0.75).toFixed(1)}" fill="#000">نام علامت</text>`;
-  svg += `<text x="${signColX + colSignW/2}" y="${colHdrY}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(lf*0.75).toFixed(1)}" fill="#000">علامت</text>`;
+  svg += `<text x="${nameColX + colNameW/2}" y="${colHdrY}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(lf*0.75).toFixed(1)}" fill="#000">نام علامت</text>`;
+  svg += `<text x="${signColX + colSignW/2}" y="${colHdrY}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(lf*0.75).toFixed(1)}" fill="#000">علامت</text>`;
   // Horizontal line under sub-header
   svg += `<line x1="${lx}" y1="${ly+headerH+colHdrH}" x2="${lx+legendW}" y2="${ly+headerH+colHdrH}" stroke="#000" stroke-width="${S}"/>`;
   // Vertical divider down the middle
@@ -465,7 +465,7 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
     } else if (item.type === "dashed") {
       svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${S}" stroke-dasharray="${3*S},${2*S}"/>`;
     }
-    svg += `<text x="${nameColX + colNameW/2}" y="${iy}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#000">${item.label}</text>`;
+    svg += `<text x="${nameColX + colNameW/2}" y="${iy}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#000">${item.label}</text>`;
   });
 
   return svg;
@@ -519,9 +519,9 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
   const legendH = headerH + colHdrH + items.length * rowH + pad;
   const lx = 8 * S * scale;
   const ly = canvasH - legendH - 8 * S * scale;
-  const signColX = lx + pad;
-  const nameColX = lx + pad * 2 + colSignW;
-  const midX = signColX + colSignW + pad / 2;
+  const nameColX = lx + pad;
+  const signColX = lx + pad * 2 + colNameW;
+  const midX = nameColX + colNameW + pad / 2;
 
   // White background + black border
   ctx.fillStyle = "white";
@@ -533,14 +533,14 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
   ctx.fillStyle = "#000";
   ctx.fillRect(lx, ly, legendW, headerH);
   ctx.fillStyle = "white";
-  ctx.font = `bold ${lf}px 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
+  ctx.font = `bold ${lf}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText("علامات", lx + legendW / 2, ly + headerH * 0.5);
 
   // Sub-header: right="نام علامت", left="علامت"
   const colHdrY = ly + headerH + colHdrH * 0.55;
   ctx.fillStyle = "#000";
-  ctx.font = `bold ${lf * 0.75}px 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
+  ctx.font = `bold ${lf * 0.75}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText("نام علامت", nameColX + colNameW / 2, colHdrY);
   ctx.fillText("علامت", signColX + colSignW / 2, colHdrY);
@@ -589,7 +589,7 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
       ctx.setLineDash([]);
     }
-    ctx.fillStyle = "#000"; ctx.font = `${lf}px 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
+    ctx.fillStyle = "#000"; ctx.font = `${lf}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(item.label, nameColX + colNameW / 2, iy);
   });

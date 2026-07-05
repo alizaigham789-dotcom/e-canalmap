@@ -316,6 +316,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const win = window.open("", "_blank");
     win.document.write(`<!DOCTYPE html><html><head><title>Khaka Dasti</title>
     <style>
+      @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
       @page { size: A4 ${pageOrientation}; margin: 6mm; }
       * { margin:0; padding:0; box-sizing:border-box; }
       html, body { width:100%; height:100%; overflow:hidden; background:white; font-family:Rajdhani,Arial,sans-serif; }
@@ -380,6 +381,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const win = window.open("", "_blank");
     win.document.write(`<!DOCTYPE html><html><head><title>Khaka Dasti</title>
     <style>
+      @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
       @page { size: A4 ${pageOrientation}; margin: 6mm; }
       * { margin:0; padding:0; box-sizing:border-box; }
       html, body { width:100%; height:100%; overflow:hidden; background:white; font-family:Rajdhani,Arial,sans-serif; }

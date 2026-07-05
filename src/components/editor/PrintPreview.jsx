@@ -487,6 +487,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     win.document.write(`<!DOCTYPE html><html><head>
       <title>Khaka Dasti</title>
       <style>
+        @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
         @page { margin: 6mm; size: A4 ${pageOrientation}; }
         * { margin:0; padding:0; box-sizing:border-box; }
         html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; }
