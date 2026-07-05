@@ -7,9 +7,9 @@
 import { getParallelPolyline, DIMENSIONS } from "@/lib/gisEngine";
 
 // Moga fraction box = 2 acres (440×198), font reduced to fit
-const MOGA_BOX_W = DIMENSIONS.ACRE.width * 2;   // 440
-const MOGA_BOX_H = DIMENSIONS.ACRE.height;       // 198
-const MOGA_BOX_FONT = MOGA_BOX_H / 1.25;          // ~158 (2× bigger)
+const MOGA_BOX_W = DIMENSIONS.ACRE.width * 2.5;  // 550 (bigger box)
+const MOGA_BOX_H = DIMENSIONS.ACRE.height * 1.4;  // ~277 (taller so font fits)
+const MOGA_BOX_FONT = 140;                        // slightly bigger than mustateel (132)
 
 // Mustateel label font (for legend font matching in print/export)
 const MUSTATEEL_LABEL_FONT = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30; // 132
@@ -324,13 +324,16 @@ export function drawCCAGCAFractionBoxOnCanvas(ctx, ccaText, gcaText, cx, cy, fon
   const ccaStr = String(ccaText || "");
   const gcaStr = String(gcaText || "");
   if (!ccaStr && !gcaStr) return;
+  // Wrap both numbers in parentheses — brackets on both sides
+  const ccaDisp = `(${ccaStr})`;
+  const gcaDisp = `(${gcaStr})`;
   const padX = fontPx * 0.4, padY = fontPx * 0.3;
-  const textW = fontPx * Math.max(ccaStr.length, gcaStr.length, 1) * 0.58;
+  const textW = fontPx * Math.max(ccaDisp.length, gcaDisp.length, 1) * 0.58;
   const boxW = textW + padX * 2;
   const boxH = fontPx * 2.0 + padY * 2;
   const bx = cx - boxW / 2, by = cy - boxH / 2;
 
-  // No background — just text and fraction line
+  // Brackets on both sides of the fraction + line in the middle
   const lineY = cy;
   const ccaY = cy - fontPx * 0.55;
   const gcaY = cy + fontPx * 0.55;
@@ -344,7 +347,7 @@ export function drawCCAGCAFractionBoxOnCanvas(ctx, ccaText, gcaText, cx, cy, fon
   if (ccaStr) {
     ctx.font = `bold ${fontPx}px Rajdhani, sans-serif`;
     ctx.textBaseline = "middle";
-    ctx.fillText(ccaStr, cx, ccaY);
+    ctx.fillText(ccaDisp, cx, ccaY);
   }
   ctx.beginPath();
   ctx.moveTo(cx - textW / 2, lineY);
@@ -353,7 +356,7 @@ export function drawCCAGCAFractionBoxOnCanvas(ctx, ccaText, gcaText, cx, cy, fon
   if (gcaStr) {
     ctx.font = `bold ${fontPx * 0.85}px Rajdhani, sans-serif`;
     ctx.textBaseline = "middle";
-    ctx.fillText(gcaStr, cx, gcaY);
+    ctx.fillText(gcaDisp, cx, gcaY);
   }
 }
 
@@ -362,8 +365,11 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
   const ccaStr = String(ccaText || "");
   const gcaStr = String(gcaText || "");
   if (!ccaStr && !gcaStr) return "";
+  // Wrap both numbers in parentheses — brackets on both sides
+  const ccaDisp = `(${ccaStr})`;
+  const gcaDisp = `(${gcaStr})`;
   const padX = fontPx * 0.4, padY = fontPx * 0.3;
-  const textW = fontPx * Math.max(ccaStr.length, gcaStr.length, 1) * 0.58;
+  const textW = fontPx * Math.max(ccaDisp.length, gcaDisp.length, 1) * 0.58;
   const boxW = textW + padX * 2;
   const boxH = fontPx * 2.0 + padY * 2;
   const bx = cx - boxW / 2, by = cy - boxH / 2;
@@ -373,14 +379,14 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
   const ink = "#166534";
   const sw = Math.max(1.5, fontPx * 0.06).toFixed(1);
 
-  // No background — just text and fraction line
+  // Brackets on both sides of the fraction + line in the middle
   let svg = "";
   if (ccaStr) {
-    svg += `<text x="${cx.toFixed(1)}" y="${ccaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${ccaStr}</text>`;
+    svg += `<text x="${cx.toFixed(1)}" y="${ccaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${ccaDisp}</text>`;
   }
   svg += `<line x1="${(cx - textW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + textW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="${ink}" stroke-width="${Math.max(1.5, fontPx * 0.07).toFixed(1)}"/>`;
   if (gcaStr) {
-    svg += `<text x="${cx.toFixed(1)}" y="${gcaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(fontPx * 0.85).toFixed(1)}" fill="${ink}">${gcaStr}</text>`;
+    svg += `<text x="${cx.toFixed(1)}" y="${gcaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(fontPx * 0.85).toFixed(1)}" fill="${ink}">${gcaDisp}</text>`;
   }
   return svg;
 }
