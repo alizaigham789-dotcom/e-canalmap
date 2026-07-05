@@ -303,7 +303,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.lineTo(ex - headLen * Math.cos(ang) + headW * Math.sin(ang), ey - headLen * Math.sin(ang) - headW * Math.cos(ang));
       ctx.closePath(); ctx.fill();
       // Moga number ONLY — at the pointed tip, offset beyond the arrowhead
-      const num = [o.mogha_number, o.mogha_side].filter(Boolean).join("/");
+      const num = [o.mogha_name, o.mogha_number, o.mogha_side].filter(Boolean).join(" / ");
       if (num) {
         const numColor = getMogaColor(color);
         const numFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 2;
@@ -562,7 +562,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const h1y=(ey - headLen*Math.sin(ang) + headW*Math.cos(ang)).toFixed(1);
       const h2x=(ex - headLen*Math.cos(ang) + headW*Math.sin(ang)).toFixed(1);
       const h2y=(ey - headLen*Math.sin(ang) - headW*Math.cos(ang)).toFixed(1);
-      const num = [o.mogha_number, o.mogha_side].filter(Boolean).join("/");
+      const num = [o.mogha_name, o.mogha_number, o.mogha_side].filter(Boolean).join(" / ");
       const _outletMogaClr = getMogaColor(color);
       const _numFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 2;
       const _gap = headLen + 15;

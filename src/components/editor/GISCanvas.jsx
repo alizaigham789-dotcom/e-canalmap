@@ -5,7 +5,7 @@ import {
   snapMovePosition, snapToParcelBoundaries, isInViewport,
   DIMENSIONS, distToLineSegment, computeSnapPosition,
   snapToNearestBoundary, rectsOverlap, createMustateel, createMuraba, createAcre,
-  getMustateelMouzaSplit, getObjectsInBox,
+  getMustateelMouzaSplit, getObjectsInBox, nearestPointOnPolyline,
 } from "@/lib/gisEngine";
 import { applyOrthoConstraint, segmentAngleDeg, findNearbyEndpoint, isLineTool } from "@/lib/drawingAssist";
 import {
@@ -314,7 +314,12 @@ const GISCanvas = forwardRef(function GISCanvas(
       const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
       const obj = objectsRef.current.find(o => o.id === vertexDrag.current.id);
       if (obj && obj.points) {
-        const newPoints = obj.points.map((p, i) => i === vertexDrag.current.index ? { x: worldRaw.x, y: worldRaw.y } : p);
+        // Vertex follows acre/mustateel/canal boundaries — same snapping the draw tool uses
+        const snap = snapSettings || { gridSnap: true, spineSnap: true, mogaSnap: true, zoom };
+        const others = objectsRef.current.filter(o => o.id !== obj.id);
+        const snapType = obj.type === "canal" ? "canal" : "chakbandi";
+        const snapped = computeSnapPosition(worldRaw.x, worldRaw.y, snapType, others, { ...snap, zoom });
+        const newPoints = obj.points.map((p, i) => i === vertexDrag.current.index ? { x: snapped.x, y: snapped.y } : p);
         onUpdateObject(obj.id, { points: newPoints });
       }
       return;
@@ -542,6 +547,22 @@ const GISCanvas = forwardRef(function GISCanvas(
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
+      // Double-click on a line of the selected chakbandi/canal (not on an existing vertex)
+      // auto-inserts a new draggable anchor point right there — no need to redraw.
+      const selectedObj = selectedId ? objectsRef.current.find(o => o.id === selectedId) : null;
+      if (selectedObj && ["chakbandi", "canal"].includes(selectedObj.type) && selectedObj.points) {
+        const vThresh = 10 / zoom;
+        const onVertex = selectedObj.points.some(p => Math.hypot(p.x - worldRaw.x, p.y - worldRaw.y) < vThresh);
+        if (!onVertex) {
+          const near = nearestPointOnPolyline(worldRaw.x, worldRaw.y, selectedObj.points);
+          if (near && near.dist < 15 / zoom) {
+            const newPoints = [...selectedObj.points];
+            newPoints.splice(near.segIdx + 1, 0, { x: near.x, y: near.y });
+            onUpdateObject(selectedObj.id, { points: newPoints });
+            return;
+          }
+        }
+      }
       const hit = hitTest(worldRaw.x, worldRaw.y, objectsRef.current);
       if (hit?.type === "damageMarker" && onDamageMarkerClick) {
         onDamageMarkerClick(hit);
@@ -550,7 +571,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         setEditingLabel({ id: hit.id, value: hit.label || "" });
       }
     }
-  }, [activeTool, pan, zoom, onSelect, onCanalFinish, onChakbandiFinish, onKhalFinish, onRoadFinish, onMouzaFinish, onDamageMarkerClick]);
+  }, [activeTool, pan, zoom, selectedId, onSelect, onUpdateObject, onCanalFinish, onChakbandiFinish, onKhalFinish, onRoadFinish, onMouzaFinish, onDamageMarkerClick]);
 
   const commitLabelEdit = useCallback(() => {
     if (editingLabel) { onUpdateObject(editingLabel.id, { label: editingLabel.value }); setEditingLabel(null); }

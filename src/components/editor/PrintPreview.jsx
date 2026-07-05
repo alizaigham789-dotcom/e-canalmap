@@ -292,15 +292,19 @@ function svgOutlet(obj, C, idx) {
   const h1y = (ey - headLen * Math.sin(angle) + headW * Math.cos(angle)).toFixed(1);
   const h2x = (ex - headLen * Math.cos(angle) + headW * Math.sin(angle)).toFixed(1);
   const h2y = (ey - headLen * Math.sin(angle) - headW * Math.cos(angle)).toFixed(1);
-  const num = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
-  // Moga number ABOVE block — blue, 2× mustateel killa font (print killa font ~11pt → 22pt)
-  const numLabel = num ? `<text x="${sx.toFixed(1)}" y="${(sy - half - 3).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="22" fill="#2563eb">${num}</text>` : "";
-  const nameLabel = obj.mogha_name ? `<text x="${sx.toFixed(1)}" y="${(sy + half + 14).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${DIMENSIONS.MUSTATEEL.width * 0.15}" fill="${getMogaColor(C.labelColor)}">${obj.mogha_name}</text>` : "";
+  // Moga name + number combined, at the pointed tip beyond the arrowhead — same
+  // font size (2× mustateel label) and position formula used in editor & export.
+  const num = [obj.mogha_name, obj.mogha_number, obj.mogha_side].filter(Boolean).join(" / ");
+  const numFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 2;
+  const gap = headLen + 15;
+  const tx = (ex + Math.cos(angle) * gap).toFixed(1);
+  const ty = (ey + Math.sin(angle) * gap).toFixed(1);
+  const numLabel = num ? `<text x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${numFont.toFixed(1)}" fill="${getMogaColor(color)}">${num}</text>` : "";
   return `<g key="outlet_${idx}">
     <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
     <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size * 0.25).toFixed(1)}" stroke-linecap="round"/>
     <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
-    ${numLabel}${nameLabel}
+    ${numLabel}
   </g>`;
 }
 

@@ -535,7 +535,7 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
 
   // Moga number ONLY — placed at the pointed tip (arrow end), offset beyond it so its
   // colour never sits on top of the moga's own colour. Font = 2× mustateel label size.
-  const moghaNum = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
+  const moghaNum = [obj.mogha_name, obj.mogha_number, obj.mogha_side].filter(Boolean).join(" / ");
   if (moghaNum) {
     const numColor = getMogaColor(color);
     const baseFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38;
