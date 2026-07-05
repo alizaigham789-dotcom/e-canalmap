@@ -977,14 +977,15 @@ export function hitTest(wx, wy, objects, eraser = false) {
     const o = objects[i];
     if (["acre", "mustateel", "muraba"].includes(o.type)) {
       if (eraser) {
-        // Hit if click is on boundary (within BORDER_THRESH) OR inside
-        const onBoundary =
+        // Eraser: ONLY hit when clicking near the boundary EDGE (not interior).
+        // This lets you erase canals/khals drawn on top of a mustateel without
+        // accidentally erasing the parcel below.
+        const nearEdge =
           (wx >= o.x - BORDER_THRESH && wx <= o.x + o.w + BORDER_THRESH &&
            wy >= o.y - BORDER_THRESH && wy <= o.y + o.h + BORDER_THRESH) &&
           (wx <= o.x + BORDER_THRESH || wx >= o.x + o.w - BORDER_THRESH ||
-           wy <= o.y + BORDER_THRESH || wy >= o.y + o.h - BORDER_THRESH ||
-           (wx >= o.x && wx <= o.x + o.w && wy >= o.y && wy <= o.y + o.h));
-        if (onBoundary) return o;
+           wy <= o.y + BORDER_THRESH || wy >= o.y + o.h - BORDER_THRESH);
+        if (nearEdge) return o;
       } else {
         if (wx >= o.x && wx <= o.x + o.w && wy >= o.y && wy <= o.y + o.h) return o;
       }
@@ -996,7 +997,10 @@ export function hitTest(wx, wy, objects, eraser = false) {
         }
       }
     } else if (["canal", "chakbandi", "khal", "road"].includes(o.type)) {
-      const thresh = eraser ? 25 : 15;
+      // Eraser: wider threshold + account for line width so overlapping lines
+      // can each be erased one at a time (top first, then bottom on next click).
+      const lineWidth = o.width || 14;
+      const thresh = eraser ? Math.max(25, lineWidth / 2 + 15) : 15;
       for (let j = 0; j < o.points.length - 1; j++) {
         if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < thresh) return o;
       }
