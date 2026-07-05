@@ -973,7 +973,7 @@ export function getMogaColor(labelColor) {
 // Single-line Urdu header — خاکہ دستی موگہ نمبری ... راجباہ ... سیکشن ... سب ڈویژن ... ڈویژن ...
 export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   const mogaNum = mogaFilter || mapData?.moga_number || "____";
-  const mogaSide = mapData?.mogha_side ? `${mapData.mogha_side}/` : "";
+  const mogaSide = mapData?.mogha_side ? `/${mapData.mogha_side}` : "";
   const rajbah = mapData?.rajbah || "____";
   const section = mapData?.section || "____";
   const subDiv = mapData?.tehsil || "____";
@@ -981,7 +981,7 @@ export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
 
   return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-bottom:4px;">
-    <div style="padding:4px 12px; text-align:center; font-size:14px; font-weight:bold; line-height:1.8;">
+    <div style="padding:4px 12px; text-align:center; font-size:42px; font-weight:bold; line-height:1.8;">
       خاکہ دستی موگہ&nbsp;&nbsp;&nbsp;
       موگہ نمبری <u>${mogaSide}${mogaNum}</u>&nbsp;&nbsp;&nbsp;
       راجباہ <u>${rajbah}</u>&nbsp;&nbsp;&nbsp;

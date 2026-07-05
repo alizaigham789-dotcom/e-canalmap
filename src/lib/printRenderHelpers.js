@@ -265,8 +265,8 @@ export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxC
 
   // Fraction inside — vertically centred
   const lineY = cy;
-  const numY = cy + f * 0.55;
-  const sideY = cy - f * 0.55;
+  const numY = cy - f * 0.55;
+  const sideY = cy + f * 0.55;
   const inkColor = "#000000";
 
   ctx.fillStyle = inkColor;
@@ -302,8 +302,8 @@ export function svgMogaFractionBox(num, side, cx, cy, fontPx, boxColor, borderCo
   const bx = cx - boxW / 2, by = cy - boxH / 2;
   const textW = f * Math.max(numStr.length, sideStr.length, 1) * 0.65;
   const lineY = cy;
-  const numY = cy + f * 0.55;
-  const sideY = cy - f * 0.55;
+  const numY = cy - f * 0.55;
+  const sideY = cy + f * 0.55;
 
   // Shadow + light transparent background
   let svg = `<rect x="${(bx+4).toFixed(1)}" y="${(by+4).toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" fill="rgba(0,0,0,0.18)"/>`;
