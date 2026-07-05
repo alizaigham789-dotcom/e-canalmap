@@ -980,14 +980,10 @@ export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   const division = mapData?.district || "____";
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
 
+  const mogaStr = `${mogaNum}${mogaSide}`;
   return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-bottom:4px;">
-    <div style="padding:4px 12px; text-align:center; font-size:42px; font-weight:bold; line-height:1.8;">
-      خاکہ دستی موگہ&nbsp;&nbsp;&nbsp;
-      موگہ نمبری <u>${mogaSide}${mogaNum}</u>&nbsp;&nbsp;&nbsp;
-      راجباہ <u>${rajbah}</u>&nbsp;&nbsp;&nbsp;
-      موضع <u>${section}</u>&nbsp;&nbsp;&nbsp;
-      تحصیل <u>${subDiv}</u>&nbsp;&nbsp;&nbsp;
-      ضلع <u>${division}</u>
+    <div style="padding:4px 12px; text-align:center; font-size:42px; font-weight:bold; line-height:1.8; word-spacing:0.6em;">
+      خاکہ دستی <u style="font-family:'Rajdhani',Arial,sans-serif;">${mogaStr}</u> &nbsp; موگہ &nbsp; راجباہ <u>${rajbah}</u> &nbsp; موضع <u>${section}</u> &nbsp; تحصیل <u>${subDiv}</u> &nbsp; ضلع <u>${division}</u>
     </div>
   </div>`;
 }
