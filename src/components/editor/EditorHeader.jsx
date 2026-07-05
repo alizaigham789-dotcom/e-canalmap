@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Globe, Download, Loader2, Pencil, Check, X, Square, StopCircle } from "lucide-react";
+import { ArrowLeft, Save, Globe, Download, Loader2, Pencil, Check, X, Square, StopCircle, Undo2 } from "lucide-react";
 
 const STATUS_COLORS = {
   draft: "border-slate-500/30 bg-slate-500/10 text-slate-400",
@@ -17,7 +17,7 @@ const STATUS_COLORS = {
 export default function EditorHeader({
   mapData, onSave, onStatusChange, isSaving,
   activeTool, onStopDrawing, canalDraftActive,
-  onExport
+  onUndoPoint, onExport
 }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
@@ -98,14 +98,24 @@ export default function EditorHeader({
 
       {/* Stop drawing */}
       {(isDrawing || canalDraftActive) && (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onStopDrawing}
-          className="h-7 text-xs border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-1.5"
-        >
-          <StopCircle className="w-3.5 h-3.5" /> Stop Drawing
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onUndoPoint}
+            className="h-7 text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 gap-1.5"
+          >
+            <Undo2 className="w-3.5 h-3.5" /> Back
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onStopDrawing}
+            className="h-7 text-xs border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-1.5"
+          >
+            <StopCircle className="w-3.5 h-3.5" /> Stop Drawing
+          </Button>
+        </div>
       )}
 
       {/* Export */}

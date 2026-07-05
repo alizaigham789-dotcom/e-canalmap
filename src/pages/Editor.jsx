@@ -540,6 +540,15 @@ export default function Editor() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [selectedId, activeTool, canalDraft, chakbandiDraft, khalDraft, roadDraft, mouzaDraft, zoom, pan]);
 
+  // Undo last point of the active line draft (canal/chakbandi/khal/road/mouza)
+  const handleUndoPoint = useCallback(() => {
+    if (canalDraft) setCanalDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
+    if (chakbandiDraft) setChakbandiDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
+    if (khalDraft) setKhalDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
+    if (roadDraft) setRoadDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
+    if (mouzaDraft) setMouzaDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
+  }, [canalDraft, chakbandiDraft, khalDraft, roadDraft, mouzaDraft]);
+
   if (!mapId) {
     return (
       <div className="h-screen flex items-center justify-center bg-white">
@@ -547,8 +556,6 @@ export default function Editor() {
       </div>
     );
   }
-
-  const draftActive = !!(canalDraft || chakbandiDraft || khalDraft || roadDraft || mouzaDraft);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: bgColor }}>
@@ -560,6 +567,7 @@ export default function Editor() {
         activeTool={activeTool}
         onStopDrawing={handleStopDrawing}
         canalDraftActive={draftActive}
+        onUndoPoint={handleUndoPoint}
         onExport={() => setShowExport(true)}
       />
 
