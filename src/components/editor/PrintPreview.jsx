@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
 import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
+import { svgCanalNameOnPath, svgMogaFraction, chakbandiLabelPosition } from "@/lib/printRenderHelpers";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
@@ -164,17 +165,6 @@ function svgChakbandi(obj, C, idx, viewW) {
 
   const pts = obj.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 
-  // CCA/GCA center label at centroid
-  let centerLabelSvg = "";
-  if (obj.centerLabel) {
-    const cx = obj.points.reduce((s, p) => s + p.x, 0) / obj.points.length;
-    const cy = obj.points.reduce((s, p) => s + p.y, 0) / obj.points.length;
-    const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
-    const tw = obj.centerLabel.length * lblFont * 0.6 + lblFont * 0.3;
-    const th = lblFont + lblFont * 0.2;
-    centerLabelSvg = `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - th/2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${color}" stroke-width="2"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${obj.centerLabel}</text>`;
-  }
-
   let crosses = "";
   for (let i = 0; i < obj.points.length - 1; i++) {
     const a = obj.points[i], b = obj.points[i+1];
@@ -206,7 +196,6 @@ function svgChakbandi(obj, C, idx, viewW) {
   return `<g>
   <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${lineW}" stroke-linecap="round" stroke-linejoin="miter"/>
   ${crosses}
-  ${centerLabelSvg}
   ${label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${color}">${label}</text>` : ""}
 </g>`;
 }
@@ -219,14 +208,16 @@ function svgCanal(obj, C, idx) {
   const right = getParallelPolyline(obj.points, halfW);
   const fillColor = C.canalFill || "rgba(30,144,255,0.25)";
   const strokeColor = C.canalStroke || "#0284c7";
-  const len = canalLength(obj.points);
-  const cf = canalNameFont().toFixed(1);
+  // Canal name inside the canal — text on path, bright yellow + dark outline
+  // Font = mustateel label font + 2 points
+  const cf = canalNameFont();
+  const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf) : "";
   return `
 <g key="canal_${idx}">
   <path d="${fillPath}" fill="${fillColor}" />
   <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  ${obj.name ? `<text x="${obj.points[Math.floor(obj.points.length/2)].x}" y="${obj.points[Math.floor(obj.points.length/2)].y}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf}" fill="#dc2626">${obj.name} (${len} ft)</text>` : ""}
+  ${nameSvg}
 </g>`;
 }
 
@@ -294,14 +285,13 @@ function svgOutlet(obj, C, idx) {
   const h1y = (ey - headLen * Math.sin(angle) + headW * Math.cos(angle)).toFixed(1);
   const h2x = (ex - headLen * Math.cos(angle) + headW * Math.sin(angle)).toFixed(1);
   const h2y = (ey - headLen * Math.sin(angle) - headW * Math.cos(angle)).toFixed(1);
-  // Moga name + number combined, at the pointed tip beyond the arrowhead — same
-  // font size (2× mustateel label) and position formula used in editor & export.
-  const num = [obj.mogha_name, obj.mogha_number, obj.mogha_side].filter(Boolean).join(" / ");
+  // Moga number as fraction (number over line over R/L) at the tip — 3× font
   const numFont = mogaNumberFont();
-  const gap = headLen + 15;
-  const tx = (ex + Math.cos(angle) * gap).toFixed(1);
-  const ty = (ey + Math.sin(angle) * gap).toFixed(1);
-  const numLabel = num ? `<text x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${numFont.toFixed(1)}" fill="${getMogaColor(color)}">${num}</text>` : "";
+  const gap = headLen + numFont * 0.8;
+  const tx = ex + Math.cos(angle) * gap;
+  const ty = ey + Math.sin(angle) * gap;
+  const numColor = getMogaColor(color);
+  const numLabel = svgMogaFraction(obj.mogha_number, obj.mogha_side, tx, ty, numFont, numColor);
   return `<g key="outlet_${idx}">
     <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
     <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size * 0.25).toFixed(1)}" stroke-linecap="round"/>
@@ -415,7 +405,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     [objects, effectiveColors, mogaFilter, killaVisibility]
   );
 
-  // Auto-calculate CCA/GCA per chakbandi
+  // Auto-calculate CCA/GCA per chakbandi — use user's centerLabel if entered
   const gcaData = useMemo(() => {
     const mustateels = objects.filter(o => o.type === "mustateel");
     const canals = objects.filter(o => o.type === "canal");
@@ -426,9 +416,11 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       if (ch.points?.length >= 3) {
         const gca = calculateChakbandiGCA(ch, mustateels, canals);
         if (gca > 0) {
-          const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length;
-          const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length;
-          results.push({ cx, cy, gca, text: `(${gca}/${gca})` });
+          const pos = chakbandiLabelPosition(ch);
+          if (!pos) continue;
+          // Use user's centerLabel text if entered, otherwise auto-calculate
+          const text = ch.centerLabel || `(${gca}/${gca})`;
+          results.push({ x: pos.x, y: pos.y, gca, text });
           total += gca;
         }
       }
@@ -451,10 +443,12 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     if (!gcaData.results.length) return "";
     const ch = effectiveColors.chakbandiStroke || "#000";
     const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
-    return gcaData.results.map(({ cx, cy, text }) => {
+    return gcaData.results.map(({ x, y, text }) => {
       const tw = text.length * lblFont * 0.6 + lblFont * 0.3;
       const th = lblFont + lblFont * 0.2;
-      return `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - th/2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${ch}" stroke-width="2"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${text}</text>`;
+      // Position above the chakbandi (y = top of bounding box, box sits above it)
+      const by = y - th - 10;
+      return `<rect x="${(x - tw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${ch}" stroke-width="2"/><text x="${x.toFixed(1)}" y="${(by + th/2).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${text}</text>`;
     }).join("");
   }, [gcaData, effectiveColors]);
 
@@ -468,7 +462,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     const totalGCA = calculateTotalGCA(objects);
     const headerHTML = buildPrintHeaderHTML(mapData, mogaFilter, totalGCA);
 
-    // Auto-calculate CCA/GCA for each chakbandi and inject into SVG
+    // Auto-calculated CCA/GCA for each chakbandi — use user's centerLabel if entered,
+    // positioned ABOVE the chakbandi boundary (not at centroid)
     const mustateels = objects.filter(o => o.type === "mustateel");
     const canals = objects.filter(o => o.type === "canal");
     const chakbandis = objects.filter(o => o.type === "chakbandi");
@@ -478,12 +473,13 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       if (ch.points?.length >= 3) {
         const gca = calculateChakbandiGCA(ch, mustateels, canals);
         if (gca > 0) {
-          const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length;
-          const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length;
-          const lblText = `(${gca}/${gca})`;
+          const pos = chakbandiLabelPosition(ch);
+          if (!pos) continue;
+          const lblText = ch.centerLabel || `(${gca}/${gca})`;
           const tw = lblText.length * lblFont * 0.6 + lblFont * 0.3;
           const th = lblFont + lblFont * 0.2;
-          gcaLabels += `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - th/2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${effectiveColors.chakbandiStroke || '#000'}" stroke-width="2"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${lblText}</text>`;
+          const by = pos.y - th - 10;
+          gcaLabels += `<rect x="${(pos.x - tw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${effectiveColors.chakbandiStroke || '#000'}" stroke-width="2"/><text x="${pos.x.toFixed(1)}" y="${(by + th/2).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${lblText}</text>`;
         }
       }
     }
@@ -619,7 +615,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             {/* Footer */}
             <div style={{ padding:"6px 14px", borderTop:"1px solid #bbb", display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6, fontSize:9, color:"#777" }}>
               <span>1 Killa = 220×198 ft | 1 Mustateel = 10 Killas</span>
-              {gcaData.total > 0 && <span style={{ fontWeight:"bold", color:"#166534" }}>Total GCA: ({gcaData.total}/{gcaData.total})</span>}
             </div>
           </div>
         </div>

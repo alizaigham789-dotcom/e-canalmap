@@ -979,8 +979,6 @@ export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   const section = mapData?.section || "";
   const subDiv = mapData?.tehsil || "";
   const division = mapData?.district || "";
-  const gcaText = totalGCA ? ` — GCA: (${totalGCA}/${totalGCA})` : "";
-
   const parts = [
     "خاکہ دستی",
     mogaFull ? `موگہ نمبری ${mogaFull}` : "",
@@ -993,7 +991,7 @@ export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   return `
   <div style="border:1.5px solid #000; padding:4px 10px; margin-bottom:4px; font-family:'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif; text-align:center;">
     <span style="font-size:13px; font-weight:bold; color:#000; line-height:1.6;">
-      ${parts.join("  ")}${gcaText}
+      ${parts.join("  ")}
     </span>
   </div>`;
 }
@@ -1008,14 +1006,14 @@ export function canalLength(points) {
   return Math.round(len);
 }
 
-// Moga number font size — professional, 3× smaller than before
+// Moga number font size — 3× larger for print/export legibility
 export function mogaNumberFont() {
-  return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 2 / 3;
+  return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 2;
 }
 
-// Canal name font — 5× larger for visibility inside the blue canal
+// Canal name font — 2 points larger than mustateel label font (for print/export)
 export function canalNameFont() {
-  return mogaNumberFont() * 5 / 3;
+  return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30 + 2;
 }
 
 // ============================================================
