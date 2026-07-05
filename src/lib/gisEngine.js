@@ -983,14 +983,14 @@ export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   const mogaStr = mogaSide ? `${mogaNum}/${mapData.mogha_side}` : mogaNum;
   return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-bottom:4px;">
     <div style="padding:3px 10px; text-align:center; font-size:26px; font-weight:bold; line-height:1.2; white-space:nowrap; overflow:hidden;">
-      خاکہ دستی موگہ نمبری <span style="font-family:'Rajdhani',Arial,sans-serif; direction:ltr; unicode-bidi:isolate;">${mogaStr}</span> راجباہ ${rajbah} موضع ${section} تحصیل ${subDiv} ضلع ${division}
+      خاکہ دستی موگہ نمبری <span style="font-family:'Rajdhani',Arial,sans-serif; direction:ltr; unicode-bidi:isolate;">${mogaStr}</span>، راجباہ ${rajbah}، موضع ${section}، تحصیل ${subDiv}، ضلع ${division}
     </div>
   </div>`;
 }
 
 export function buildPrintFooterHTML(mapData) {
-  const uf = "'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
-  return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-top:2px; padding:20px 16px; display:flex; justify-content:space-between; font-size:13px;">
+  const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
+  return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-top:2px; padding:18px 16px; display:flex; justify-content:space-between; font-size:22px; font-weight:bold;">
     <span>مرتب کنندہ _______________</span>
     <span>ضلعدار _______________</span>
   </div>`;

@@ -343,20 +343,16 @@ export function drawCCAGCAFractionBoxOnCanvas(ctx, ccaText, gcaText, cx, cy, fon
   ctx.lineJoin = "round";
   ctx.textAlign = "center";
 
-  // Left bracket [ — covers both top and bottom numbers
+  // Left bracket — vertical line covering both numbers
   ctx.beginPath();
-  ctx.moveTo(bx + tickW, by);
-  ctx.lineTo(bx, by);
+  ctx.moveTo(bx, by);
   ctx.lineTo(bx, by + boxH);
-  ctx.lineTo(bx + tickW, by + boxH);
   ctx.stroke();
-  // Right bracket ] — covers both top and bottom numbers
+  // Right bracket — vertical line covering both numbers
   const rx = bx + boxW;
   ctx.beginPath();
-  ctx.moveTo(rx - tickW, by);
-  ctx.lineTo(rx, by);
+  ctx.moveTo(rx, by);
   ctx.lineTo(rx, by + boxH);
-  ctx.lineTo(rx - tickW, by + boxH);
   ctx.stroke();
 
   if (ccaStr) {
@@ -393,12 +389,12 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
   const tickW = fontPx * 0.25;
 
   let svg = "";
-  // Left bracket [ — covers both top and bottom numbers
+  // Left bracket — vertical line covering both numbers
   const lx = bx;
-  svg += `<path d="M${(lx+tickW).toFixed(1)} ${by.toFixed(1)} L${lx.toFixed(1)} ${by.toFixed(1)} L${lx.toFixed(1)} ${(by+boxH).toFixed(1)} L${(lx+tickW).toFixed(1)} ${(by+boxH).toFixed(1)}" fill="none" stroke="${ink}" stroke-width="${sw.toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
-  // Right bracket ] — covers both top and bottom numbers
+  svg += `<line x1="${lx.toFixed(1)}" y1="${by.toFixed(1)}" x2="${lx.toFixed(1)}" y2="${(by+boxH).toFixed(1)}" stroke="${ink}" stroke-width="${sw.toFixed(1)}" stroke-linecap="round"/>`;
+  // Right bracket — vertical line covering both numbers
   const rx = bx + boxW;
-  svg += `<path d="M${(rx-tickW).toFixed(1)} ${by.toFixed(1)} L${rx.toFixed(1)} ${by.toFixed(1)} L${rx.toFixed(1)} ${(by+boxH).toFixed(1)} L${(rx-tickW).toFixed(1)} ${(by+boxH).toFixed(1)}" fill="none" stroke="${ink}" stroke-width="${sw.toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  svg += `<line x1="${rx.toFixed(1)}" y1="${by.toFixed(1)}" x2="${rx.toFixed(1)}" y2="${(by+boxH).toFixed(1)}" stroke="${ink}" stroke-width="${sw.toFixed(1)}" stroke-linecap="round"/>`;
   if (ccaStr) {
     svg += `<text x="${cx.toFixed(1)}" y="${ccaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${ccaStr}</text>`;
   }
