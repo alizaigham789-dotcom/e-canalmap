@@ -973,7 +973,7 @@ export function getMogaColor(labelColor) {
 // Single-line Urdu header — خاکہ دستی موگہ نمبری ... راجباہ ... سیکشن ... سب ڈویژن ... ڈویژن ...
 export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   const mogaNum = mogaFilter || mapData?.moga_number || "____";
-  const mogaSide = mapData?.mogha_side ? `/${mapData.mogha_side}` : "";
+  const mogaSide = mapData?.mogha_side ? `${mapData.mogha_side}/` : "";
   const rajbah = mapData?.rajbah || "____";
   const section = mapData?.section || "____";
   const subDiv = mapData?.tehsil || "____";
@@ -983,7 +983,7 @@ export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-bottom:4px;">
     <div style="padding:4px 12px; text-align:center; font-size:14px; font-weight:bold; line-height:1.8;">
       خاکہ دستی موگہ&nbsp;&nbsp;&nbsp;
-      موگہ نمبری <u>${mogaNum}${mogaSide}</u>&nbsp;&nbsp;&nbsp;
+      موگہ نمبری <u>${mogaSide}${mogaNum}</u>&nbsp;&nbsp;&nbsp;
       راجباہ <u>${rajbah}</u>&nbsp;&nbsp;&nbsp;
       موضع <u>${section}</u>&nbsp;&nbsp;&nbsp;
       تحصیل <u>${subDiv}</u>&nbsp;&nbsp;&nbsp;
@@ -994,7 +994,7 @@ export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
 
 export function buildPrintFooterHTML(mapData) {
   const uf = "'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
-  return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-top:4px; padding:8px 16px; display:flex; justify-content:space-between; font-size:12px;">
+  return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-top:2px; padding:20px 16px; display:flex; justify-content:space-between; font-size:13px;">
     <span>مرتب کنندہ _______________</span>
     <span>ضلعدار _______________</span>
   </div>`;

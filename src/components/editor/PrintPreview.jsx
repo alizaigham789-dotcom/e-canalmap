@@ -635,7 +635,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
             {/* Footer info */}
             <div style={{ padding:"6px 14px", borderTop:"1px solid #bbb", display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6, fontSize:9, color:"#777" }}>
-              <span>1 Killa = 220×198 ft | 1 Mustateel = 10 Killas</span>
             </div>
             {/* Signature footer — مرتب کنندہ / ضلعدار at the end */}
             <div dangerouslySetInnerHTML={{ __html: buildPrintFooterHTML(mapData) }} />

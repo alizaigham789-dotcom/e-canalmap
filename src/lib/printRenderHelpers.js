@@ -400,10 +400,9 @@ export function getCCAGCAText(chakbandi, gcaValue) {
   return { cca: `${gca} CCA`, gca: `${gca} GCA` };
 }
 
-// ─── Legend SVG: 2-column (name | sign), 2× smaller ─────────────────────
+// ─── Legend SVG: 2-column table (sign | name), 3× bigger ────────────────
 export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
   const items = [
-    { label: "مستطیل", color: C.mustateelStroke || "#ef4444", type: "rect" },
     { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
     { label: "کھال", color: C.khalStroke || "#2563eb", type: "line_thin" },
     { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
@@ -412,9 +411,9 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
     { label: "موضع", color: C.mouzaStroke || "#000000", type: "dashed" },
   ];
 
-  // 2× smaller; 2-column layout (name | sign)
-  const S = 2.5;
-  const lf = MUSTATEEL_LABEL_FONT / 2;
+  // 3× bigger; table style with black header
+  const S = 7.5;
+  const lf = MUSTATEEL_LABEL_FONT;
   const colSignW = 34 * S, colNameW = 42 * S, pad = 6 * S;
   const legendW = colSignW + colNameW + pad * 3;
   const headerH = lf * 1.3, colHdrH = lf * 1.1, rowH = lf * 1.4;
@@ -423,25 +422,32 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
   const ly = viewY + viewH - legendH - 8 * S;
   const signColX = lx + pad;
   const nameColX = lx + pad * 2 + colSignW;
+  const midX = signColX + colSignW + pad / 2;
 
-  let svg = `<rect x="${lx}" y="${ly}" width="${legendW}" height="${legendH}" fill="rgba(255,255,255,0.96)" stroke="#333" stroke-width="${(1.5*S).toFixed(1)}" rx="${3*S}"/>`;
-  svg += `<text x="${lx + legendW/2}" y="${ly + headerH*0.65}" text-anchor="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lf.toFixed(1)}" fill="#333">علامات</text>`;
-  svg += `<line x1="${lx+pad}" y1="${ly+headerH}" x2="${lx+legendW-pad}" y2="${ly+headerH}" stroke="#999" stroke-width="${S}"/>`;
-  // Column headers: نام (right) | نشان (left)
+  // Outer border (black)
+  let svg = `<rect x="${lx}" y="${ly}" width="${legendW}" height="${legendH}" fill="white" stroke="#000" stroke-width="${(1.5*S).toFixed(1)}"/>`;
+  // Black header bar with white "علامات"
+  svg += `<rect x="${lx}" y="${ly}" width="${legendW}" height="${headerH}" fill="#000"/>`;
+  svg += `<text x="${lx + legendW/2}" y="${ly + headerH*0.65}" text-anchor="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lf.toFixed(1)}" fill="white">علامات</text>`;
+  // Sub-header: right="نام علامت", left="علامت"
   const colHdrY = ly + headerH + colHdrH * 0.55;
-  svg += `<text x="${nameColX + colNameW/2}" y="${colHdrY}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(lf*0.75).toFixed(1)}" fill="#555">نام</text>`;
-  svg += `<text x="${signColX + colSignW/2}" y="${colHdrY}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(lf*0.75).toFixed(1)}" fill="#555">نشان</text>`;
-  svg += `<line x1="${lx+pad}" y1="${ly+headerH+colHdrH}" x2="${lx+legendW-pad}" y2="${ly+headerH+colHdrH}" stroke="#999" stroke-width="${S}"/>`;
-  svg += `<line x1="${signColX+colSignW+pad/2}" y1="${ly+headerH}" x2="${signColX+colSignW+pad/2}" y2="${ly+legendH-pad}" stroke="#ddd" stroke-width="${S}"/>`;
+  svg += `<text x="${nameColX + colNameW/2}" y="${colHdrY}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(lf*0.75).toFixed(1)}" fill="#000">نام علامت</text>`;
+  svg += `<text x="${signColX + colSignW/2}" y="${colHdrY}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(lf*0.75).toFixed(1)}" fill="#000">علامت</text>`;
+  // Horizontal line under sub-header
+  svg += `<line x1="${lx}" y1="${ly+headerH+colHdrH}" x2="${lx+legendW}" y2="${ly+headerH+colHdrH}" stroke="#000" stroke-width="${S}"/>`;
+  // Vertical divider down the middle
+  svg += `<line x1="${midX}" y1="${ly+headerH}" x2="${midX}" y2="${ly+legendH}" stroke="#000" stroke-width="${S}"/>`;
+  // Horizontal lines between data rows
+  for (let i = 1; i < items.length; i++) {
+    const y = ly + headerH + colHdrH + i * rowH;
+    svg += `<line x1="${lx}" y1="${y}" x2="${lx+legendW}" y2="${y}" stroke="#000" stroke-width="${(S*0.5).toFixed(1)}"/>`;
+  }
 
   items.forEach((item, i) => {
     const iy = ly + headerH + colHdrH + i * rowH + rowH/2;
     const symX = signColX + (colSignW - 20*S) / 2;
     const symW = 20 * S;
-    if (item.type === "rect") {
-      svg += `<rect x="${symX}" y="${iy-6*S}" width="${symW}" height="${12*S}" fill="none" stroke="${item.color}" stroke-width="${1.5*S}"/>`;
-      svg += `<line x1="${symX+symW/2}" y1="${iy-6*S}" x2="${symX+symW/2}" y2="${iy+6*S}" stroke="${item.color}" stroke-width="${S}" stroke-opacity="0.5"/>`;
-    } else if (item.type === "line") {
+    if (item.type === "line") {
       svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${3*S}" stroke-linecap="round"/>`;
     } else if (item.type === "line_thin") {
       svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${2*S}" stroke-linecap="round"/>`;
@@ -459,7 +465,7 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
     } else if (item.type === "dashed") {
       svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${S}" stroke-dasharray="${3*S},${2*S}"/>`;
     }
-    svg += `<text x="${nameColX + colNameW/2}" y="${iy}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#333">${item.label}</text>`;
+    svg += `<text x="${nameColX + colNameW/2}" y="${iy}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#000">${item.label}</text>`;
   });
 
   return svg;
@@ -494,10 +500,9 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
   return svg;
 }
 
-// ─── CANVAS: draw legend in screen space — 2-column (name | sign), 2× smaller ─
+// ─── CANVAS: draw legend — 2-column table (sign | name), 3× bigger ───────
 export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
   const items = [
-    { label: "مستطیل", color: C.mustateelStroke || "#ef4444", type: "rect" },
     { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
     { label: "کھال", color: C.khalStroke || "#2563eb", type: "line_thin" },
     { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
@@ -505,9 +510,9 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
     { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
     { label: "موضع", color: C.mouzaStroke || "#000", type: "dashed" },
   ];
-  // 2× smaller; 2-column layout (name | sign)
-  const S = 2.5;
-  const lf = (MUSTATEEL_LABEL_FONT / 2) * scale;
+  // 3× bigger; table style with black header
+  const S = 7.5;
+  const lf = MUSTATEEL_LABEL_FONT * scale;
   const colSignW = 34 * S * scale, colNameW = 42 * S * scale, pad = 6 * S * scale;
   const legendW = colSignW + colNameW + pad * 3;
   const headerH = lf * 1.3, colHdrH = lf * 1.1, rowH = lf * 1.4;
@@ -516,39 +521,48 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
   const ly = canvasH - legendH - 8 * S * scale;
   const signColX = lx + pad;
   const nameColX = lx + pad * 2 + colSignW;
+  const midX = signColX + colSignW + pad / 2;
 
-  ctx.fillStyle = "rgba(255,255,255,0.96)";
+  // White background + black border
+  ctx.fillStyle = "white";
   ctx.fillRect(lx, ly, legendW, legendH);
-  ctx.strokeStyle = "#333"; ctx.lineWidth = 1.5 * S * scale;
+  ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5 * S * scale;
   ctx.strokeRect(lx, ly, legendW, legendH);
 
-  // Title
-  ctx.fillStyle = "#333";
+  // Black header bar with white "علامات"
+  ctx.fillStyle = "#000";
+  ctx.fillRect(lx, ly, legendW, headerH);
+  ctx.fillStyle = "white";
   ctx.font = `bold ${lf}px 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("علامات", lx + legendW / 2, ly + headerH * 0.55);
-  ctx.strokeStyle = "#999"; ctx.lineWidth = S * scale;
-  ctx.beginPath(); ctx.moveTo(lx + pad, ly + headerH); ctx.lineTo(lx + legendW - pad, ly + headerH); ctx.stroke();
+  ctx.fillText("علامات", lx + legendW / 2, ly + headerH * 0.5);
 
-  // Column headers
+  // Sub-header: right="نام علامت", left="علامت"
   const colHdrY = ly + headerH + colHdrH * 0.55;
+  ctx.fillStyle = "#000";
   ctx.font = `bold ${lf * 0.75}px 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
-  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#555";
-  ctx.fillText("نام", nameColX + colNameW / 2, colHdrY);
-  ctx.fillText("نشان", signColX + colSignW / 2, colHdrY);
-  ctx.strokeStyle = "#999"; ctx.lineWidth = S * scale;
-  ctx.beginPath(); ctx.moveTo(lx + pad, ly + headerH + colHdrH); ctx.lineTo(lx + legendW - pad, ly + headerH + colHdrH); ctx.stroke();
-  ctx.strokeStyle = "#ddd";
-  ctx.beginPath(); ctx.moveTo(signColX + colSignW + pad/2, ly + headerH); ctx.lineTo(signColX + colSignW + pad/2, ly + legendH - pad); ctx.stroke();
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("نام علامت", nameColX + colNameW / 2, colHdrY);
+  ctx.fillText("علامت", signColX + colSignW / 2, colHdrY);
+
+  // Horizontal line under sub-header
+  ctx.strokeStyle = "#000"; ctx.lineWidth = S * scale;
+  ctx.beginPath(); ctx.moveTo(lx, ly + headerH + colHdrH); ctx.lineTo(lx + legendW, ly + headerH + colHdrH); ctx.stroke();
+  // Vertical divider down the middle
+  ctx.beginPath(); ctx.moveTo(midX, ly + headerH); ctx.lineTo(midX, ly + legendH); ctx.stroke();
+  // Horizontal lines between data rows
+  ctx.lineWidth = S * 0.5 * scale;
+  for (let i = 1; i < items.length; i++) {
+    const y = ly + headerH + colHdrH + i * rowH;
+    ctx.beginPath(); ctx.moveTo(lx, y); ctx.lineTo(lx + legendW, y); ctx.stroke();
+  }
 
   items.forEach((item, i) => {
     const iy = ly + headerH + colHdrH + i * rowH + rowH / 2;
     const symX = signColX + (colSignW - 20*S*scale) / 2;
     const symW = 20 * S * scale;
     ctx.strokeStyle = item.color; ctx.fillStyle = item.color; ctx.lineWidth = 1.5 * S * scale;
-    if (item.type === "rect") {
-      ctx.strokeRect(symX, iy - 6*S*scale, symW, 12*S*scale);
-    } else if (item.type === "line") {
+    if (item.type === "line") {
       ctx.lineWidth = 3*S*scale; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
     } else if (item.type === "line_thin") {
@@ -575,7 +589,7 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
       ctx.setLineDash([]);
     }
-    ctx.fillStyle = "#333"; ctx.font = `${lf}px 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
+    ctx.fillStyle = "#000"; ctx.font = `${lf}px 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(item.label, nameColX + colNameW / 2, iy);
   });
