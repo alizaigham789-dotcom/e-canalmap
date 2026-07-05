@@ -4,17 +4,18 @@ import { BookOpen, Eye, EyeOff } from "lucide-react";
 const ITEMS = [
   { label: "Mustateel Boundary", color: "#ef4444", style: "solid", thickness: 3, desc: "440 × 990 ft • 10 Killas", key: "mustateelStroke", killaToggle: "mustateel" },
   { label: "Muraba Boundary", color: "#ef4444", style: "solid", thickness: 4, desc: "1100 × 990 ft • 25 Killas", key: "murabaStroke", killaToggle: "muraba" },
-  { label: "Acre (Killa)", color: "#eab308", style: "solid", thickness: 1.5, desc: "220 × 198 ft", key: "acreStroke" },
-  { label: "Canal / Distry", color: "#3b82f6", style: "double", thickness: 2, desc: "Dual wall + trees", key: "canalStroke" },
-  { label: "Khal / Watercourse", color: "#2563eb", style: "solid", thickness: 2.5, desc: "Bold blue line" },
-  { label: "Road", color: "#d97706", style: "double", thickness: 2, desc: "Dual line + ROAD label" },
-  { label: "Chakbandi Line", color: "#22c55e", style: "cross", thickness: 3.5, desc: "Land consolidation boundary", key: "chakbandiStroke" },
-  { label: "Outlet / Moga", color: "#06b6d4", style: "arrow", thickness: 2, desc: "Directional water outlet", key: "outletStroke" },
+  { label: "Acre (Killa)", color: "#eab308", style: "solid", thickness: 1.5, desc: "220 × 198 ft", key: "acreStroke", layerKey: "acre" },
+  { label: "Canal / Distry", color: "#3b82f6", style: "double", thickness: 2, desc: "Dual wall + trees", key: "canalStroke", layerKey: "canal" },
+  { label: "Khal / Watercourse", color: "#2563eb", style: "solid", thickness: 2.5, desc: "Bold blue line", layerKey: "khal" },
+  { label: "Road", color: "#d97706", style: "double", thickness: 2, desc: "Dual line + ROAD label", layerKey: "road" },
+  { label: "Chakbandi Line", color: "#22c55e", style: "cross", thickness: 3.5, desc: "Land consolidation boundary", key: "chakbandiStroke", layerKey: "chakbandi" },
+  { label: "Outlet / Moga", color: "#06b6d4", style: "arrow", thickness: 2, desc: "Directional water outlet", key: "outletStroke", layerKey: "outlet" },
 ];
 
-export default function LegendPanel({ colorSettings, killaVisibility, onKillaVisibilityChange }) {
+export default function LegendPanel({ colorSettings, killaVisibility, onKillaVisibilityChange, layers, onLayerChange }) {
   const C = colorSettings || {};
   const kv = killaVisibility || { mustateel: true, muraba: true };
+  const lv = layers || {};
 
   const getColor = (key, fallback) => C[key] || fallback;
   const colors = [
@@ -38,7 +39,9 @@ export default function LegendPanel({ colorSettings, killaVisibility, onKillaVis
         {ITEMS.map((item, idx) => {
           const color = colors[idx];
           const hasKillaToggle = !!item.killaToggle;
+          const hasLayerToggle = !!item.layerKey;
           const killaVisible = hasKillaToggle ? kv[item.killaToggle] : true;
+          const layerVisible = hasLayerToggle ? (lv[item.layerKey]?.visible !== false) : true;
           return (
             <div key={item.label} className="flex items-center gap-2">
               {/* Symbol */}
@@ -73,6 +76,15 @@ export default function LegendPanel({ colorSettings, killaVisibility, onKillaVis
                 <p className="text-xs text-slate-700 font-medium leading-tight">{item.label}</p>
                 <p className="text-[10px] text-slate-400 font-mono leading-tight">{item.desc}</p>
               </div>
+              {hasLayerToggle && onLayerChange && (
+                <button
+                  onClick={() => onLayerChange(item.layerKey, { visible: !layerVisible })}
+                  className={`shrink-0 p-1 rounded transition-colors ${layerVisible ? "text-emerald-500 hover:bg-emerald-50" : "text-slate-300 hover:bg-slate-50"}`}
+                  title={layerVisible ? "Hide Layer" : "Show Layer"}
+                >
+                  {layerVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                </button>
+              )}
               {hasKillaToggle && onKillaVisibilityChange && (
                 <button
                   onClick={() => onKillaVisibilityChange(item.killaToggle, !killaVisible)}
@@ -88,7 +100,7 @@ export default function LegendPanel({ colorSettings, killaVisibility, onKillaVis
       </div>
       {/* Killa numbers legend */}
       <div className="px-3 pb-3 pt-1 border-t border-slate-100">
-        <p className="text-[9px] text-slate-400 font-mono">👁 Eye icon = toggle killa numbers</p>
+        <p className="text-[9px] text-slate-400 font-mono">👁 Eye icon = toggle layer / killa visibility</p>
       </div>
     </div>
   );

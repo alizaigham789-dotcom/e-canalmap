@@ -689,12 +689,12 @@ export default function Editor() {
               title="Print Preview (Ctrl+P)">
               <Printer className="w-4 h-4" />
             </Button>
-            <label
-              className={`w-9 h-9 border shadow-md rounded-md flex items-center justify-center cursor-pointer transition-all ${showPageBorder ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
+            <Button variant="ghost" size="icon"
+              className={`w-9 h-9 border shadow-md transition-all ${showPageBorder ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
+              onClick={() => setShowPageBorder(v => !v)}
               title="Show Page Border">
               <Frame className="w-4 h-4" />
-              <input type="checkbox" checked={showPageBorder} onChange={e => setShowPageBorder(e.target.checked)} className="hidden" />
-            </label>
+            </Button>
             <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${gridFlags.showMustateel ? "bg-red-500 border-red-400 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-red-500 hover:bg-red-50"}`}
               onClick={() => setGridFlags(f => ({ ...f, showMustateel: !f.showMustateel }))}
@@ -788,6 +788,8 @@ export default function Editor() {
                 colorSettings={colorSettings}
                 killaVisibility={killaVisibility}
                 onKillaVisibilityChange={(type, val) => setKillaVisibility(prev => ({ ...prev, [type]: val }))}
+                layers={layers}
+                onLayerChange={handleLayerChange}
               />
             </div>
           )}
