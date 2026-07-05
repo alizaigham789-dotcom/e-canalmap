@@ -169,9 +169,10 @@ function svgChakbandi(obj, C, idx, viewW) {
   if (obj.centerLabel) {
     const cx = obj.points.reduce((s, p) => s + p.x, 0) / obj.points.length;
     const cy = obj.points.reduce((s, p) => s + p.y, 0) / obj.points.length;
-    const lblFont = 13;
-    const tw = obj.centerLabel.length * lblFont * 0.6 + 12;
-    centerLabelSvg = `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - lblFont/2 - 3).toFixed(1)}" width="${tw.toFixed(1)}" height="${(lblFont + 6).toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${color}" stroke-width="1.5"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont}" fill="#166534">${obj.centerLabel}</text>`;
+    const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
+    const tw = obj.centerLabel.length * lblFont * 0.6 + lblFont * 0.3;
+    const th = lblFont + lblFont * 0.2;
+    centerLabelSvg = `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - th/2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${color}" stroke-width="2"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${obj.centerLabel}</text>`;
   }
 
   let crosses = "";
@@ -411,12 +412,13 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   // Auto-calculate CCA/GCA per chakbandi
   const gcaData = useMemo(() => {
     const mustateels = objects.filter(o => o.type === "mustateel");
+    const canals = objects.filter(o => o.type === "canal");
     const chakbandis = objects.filter(o => o.type === "chakbandi");
     const results = [];
     let total = 0;
     for (const ch of chakbandis) {
       if (ch.points?.length >= 3) {
-        const gca = calculateChakbandiGCA(ch, mustateels);
+        const gca = calculateChakbandiGCA(ch, mustateels, canals);
         if (gca > 0) {
           const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length;
           const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length;
@@ -442,9 +444,11 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const gcaSvgLabels = useMemo(() => {
     if (!gcaData.results.length) return "";
     const ch = effectiveColors.chakbandiStroke || "#000";
+    const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
     return gcaData.results.map(({ cx, cy, text }) => {
-      const tw = text.length * 16 * 0.6 + 12;
-      return `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - 12).toFixed(1)}" width="${tw.toFixed(1)}" height="22" fill="rgba(255,255,255,0.92)" stroke="${ch}" stroke-width="1.5"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="16" fill="#166534">${text}</text>`;
+      const tw = text.length * lblFont * 0.6 + lblFont * 0.3;
+      const th = lblFont + lblFont * 0.2;
+      return `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - th/2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${ch}" stroke-width="2"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${text}</text>`;
     }).join("");
   }, [gcaData, effectiveColors]);
 
@@ -460,17 +464,20 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
     // Auto-calculate CCA/GCA for each chakbandi and inject into SVG
     const mustateels = objects.filter(o => o.type === "mustateel");
+    const canals = objects.filter(o => o.type === "canal");
     const chakbandis = objects.filter(o => o.type === "chakbandi");
+    const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
     let gcaLabels = "";
     for (const ch of chakbandis) {
       if (ch.points?.length >= 3) {
-        const gca = calculateChakbandiGCA(ch, mustateels);
+        const gca = calculateChakbandiGCA(ch, mustateels, canals);
         if (gca > 0) {
           const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length;
           const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length;
           const lblText = `(${gca}/${gca})`;
-          const tw = lblText.length * 13 * 0.6 + 12;
-          gcaLabels += `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - 12).toFixed(1)}" width="${tw.toFixed(1)}" height="22" fill="rgba(255,255,255,0.92)" stroke="${effectiveColors.chakbandiStroke || '#000'}" stroke-width="1.5"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="16" fill="#166534">${lblText}</text>`;
+          const tw = lblText.length * lblFont * 0.6 + lblFont * 0.3;
+          const th = lblFont + lblFont * 0.2;
+          gcaLabels += `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - th/2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${effectiveColors.chakbandiStroke || '#000'}" stroke-width="2"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${lblText}</text>`;
         }
       }
     }

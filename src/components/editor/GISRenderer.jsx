@@ -658,19 +658,25 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false)
     ctx.restore();
   }
 
-  // CCA/GCA center label — rendered at the centroid of the chakbandi polyline
+  // CCA/GCA center label — font size matches mustateel label, bigger box
   if (obj.centerLabel) {
     const cx = obj.points.reduce((s, p) => s + p.x, 0) / obj.points.length;
     const cy = obj.points.reduce((s, p) => s + p.y, 0) / obj.points.length;
     ctx.save();
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    const lblFont = scaledFont(13, zoom, 11, 18);
-    ctx.font = `bold ${lblFont}px Rajdhani, sans-serif`;
+    // Font size matching mustateel label (world units, same as drawMustateel)
+    const baseFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38;
+    ctx.font = `bold ${baseFont}px Rajdhani, sans-serif`;
     const measured = ctx.measureText(obj.centerLabel);
-    const padX = 6/zoom, padY = 3/zoom;
-    const tw = measured.width + padX * 2, th = lblFont + padY * 2;
+    const maxW = DIMENSIONS.MUSTATEEL.width * 0.80;
+    const fitScale = Math.min(1, maxW / (measured.width || 1));
+    const lblFont = baseFont * fitScale;
+    ctx.font = `bold ${lblFont}px Rajdhani, sans-serif`;
+    const reMeasured = ctx.measureText(obj.centerLabel);
+    const padX = lblFont * 0.15, padY = lblFont * 0.10;
+    const tw = reMeasured.width + padX * 2, th = lblFont + padY * 2;
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
     ctx.fillRect(cx - tw/2, cy - th/2, tw, th);
-    ctx.strokeStyle = color; ctx.lineWidth = 1.5/zoom;
+    ctx.strokeStyle = color; ctx.lineWidth = 2/zoom;
     ctx.strokeRect(cx - tw/2, cy - th/2, tw, th);
     ctx.fillStyle = "#166534";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";

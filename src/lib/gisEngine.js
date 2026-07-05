@@ -754,42 +754,57 @@ export function getMustateelMouzaSplit(obj, mouzaObjects) {
     { x: obj.x + obj.w, y: obj.y + obj.h }, { x: obj.x, y: obj.y + obj.h },
   ];
   const edges = [[corners[0], corners[1]], [corners[1], corners[2]], [corners[2], corners[3]], [corners[3], corners[0]]];
+  const rectContains = (p) =>
+    p.x >= obj.x && p.x <= obj.x + obj.w &&
+    p.y >= obj.y && p.y <= obj.y + obj.h;
 
   for (const mouza of mouzaObjects) {
     if (!mouza.points || mouza.points.length < 2) continue;
+
+    // Collect ALL entry/exit points where the mouza polyline crosses the mustateel boundary.
+    // This handles multi-segment mouza lines, lines that start/end inside the mustateel,
+    // and lines that cross through any acre of the mustateel.
+    const crossings = [];
     for (let i = 0; i < mouza.points.length - 1; i++) {
       const a = mouza.points[i], b = mouza.points[i + 1];
       const segMinX = Math.min(a.x, b.x), segMaxX = Math.max(a.x, b.x);
       const segMinY = Math.min(a.y, b.y), segMaxY = Math.max(a.y, b.y);
       if (segMaxX < obj.x || segMinX > obj.x + obj.w || segMaxY < obj.y || segMinY > obj.y + obj.h) continue;
 
-      const pts = [];
       edges.forEach(([e1, e2], edgeIdx) => {
         const ip = segIntersect(a, b, e1, e2);
-        if (ip) pts.push({ ...ip, edgeIdx });
+        if (ip && !crossings.some(c => Math.hypot(c.x - ip.x, c.y - ip.y) < 0.5)) {
+          crossings.push({ ...ip, edgeIdx });
+        }
       });
-      const uniq = [];
-      for (const p of pts) {
-        if (!uniq.some(u => Math.hypot(u.x - p.x, u.y - p.y) < 0.01)) uniq.push(p);
-      }
-      // Only a valid split if the line truly crosses the rectangle through two different edges —
-      // if both intersections land on the same edge (a bend/graze near a corner), skip it so the
-      // parcel keeps its normal single centered label instead of a broken/degenerate split.
-      if (uniq.length === 2 && uniq[0].edgeIdx !== uniq[1].edgeIdx) {
-        const [i1, i2] = uniq;
-        const sideOf = (p) => lineSide(p.x, p.y, i1.x, i1.y, i2.x, i2.y);
-        const sideA = corners.filter(c => sideOf(c) >= 0);
-        const sideB = corners.filter(c => sideOf(c) < 0);
-        if (sideA.length === 0 || sideB.length === 0) continue;
-        const centroid = (poly) => ({
-          x: poly.reduce((s, p) => s + p.x, 0) / poly.length,
-          y: poly.reduce((s, p) => s + p.y, 0) / poly.length,
-        });
-        const cA = centroid([...sideA, i1, i2]);
-        const cB = centroid([...sideB, i1, i2]);
-        // Direction-agnostic: return both centroids as centerA / centerB
-        return { mouzaId: mouza.id, centerA: cA, centerB: cB };
-      }
+    }
+
+    // If the polyline starts inside the mustateel, add the start point
+    if (rectContains(mouza.points[0]) && !crossings.some(c => Math.hypot(c.x - mouza.points[0].x, c.y - mouza.points[0].y) < 0.5)) {
+      crossings.unshift({ ...mouza.points[0], edgeIdx: -1 });
+    }
+    // If the polyline ends inside the mustateel, add the end point
+    const lastMouzaPt = mouza.points[mouza.points.length - 1];
+    if (rectContains(lastMouzaPt) && !crossings.some(c => Math.hypot(c.x - lastMouzaPt.x, c.y - lastMouzaPt.y) < 0.5)) {
+      crossings.push({ ...lastMouzaPt, edgeIdx: -1 });
+    }
+
+    // Need at least 2 points to form a split line
+    if (crossings.length >= 2) {
+      const i1 = crossings[0];
+      const i2 = crossings[crossings.length - 1];
+      const sideOf = (p) => lineSide(p.x, p.y, i1.x, i1.y, i2.x, i2.y);
+      const sideA = corners.filter(c => sideOf(c) >= 0);
+      const sideB = corners.filter(c => sideOf(c) < 0);
+      // Only valid if both sides have at least one corner (line actually divides the rectangle)
+      if (sideA.length === 0 || sideB.length === 0) continue;
+      const centroid = (poly) => ({
+        x: poly.reduce((s, p) => s + p.x, 0) / poly.length,
+        y: poly.reduce((s, p) => s + p.y, 0) / poly.length,
+      });
+      const cA = centroid([...sideA, i1, i2]);
+      const cB = centroid([...sideB, i1, i2]);
+      return { mouzaId: mouza.id, centerA: cA, centerB: cB };
     }
   }
   return null;

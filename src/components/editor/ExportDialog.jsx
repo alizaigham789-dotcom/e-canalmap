@@ -81,13 +81,18 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
           const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length;
           const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length;
           const lblText = `(${gca}/${gca})`;
-          const lblFont = 16;
+          const baseFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
+          ctx.font = `bold ${baseFont}px Rajdhani, sans-serif`;
+          const maxW = DIMENSIONS.MUSTATEEL.width * 0.80;
+          const fitScale = Math.min(1, maxW / (ctx.measureText(lblText).width || 1));
+          const lblFont = baseFont * fitScale;
           ctx.font = `bold ${lblFont}px Rajdhani, sans-serif`;
-          const tw = ctx.measureText(lblText).width + 12;
+          const tw = ctx.measureText(lblText).width + lblFont * 0.3;
+          const th = lblFont + lblFont * 0.2;
           ctx.fillStyle = "rgba(255,255,255,0.92)";
-          ctx.fillRect(cx - tw/2, cy - lblFont/2 - 3, tw, lblFont + 6);
-          ctx.strokeStyle = C.chakbandiStroke || "#000"; ctx.lineWidth = 1.5;
-          ctx.strokeRect(cx - tw/2, cy - lblFont/2 - 3, tw, lblFont + 6);
+          ctx.fillRect(cx - tw/2, cy - th/2, tw, th);
+          ctx.strokeStyle = C.chakbandiStroke || "#000"; ctx.lineWidth = 2;
+          ctx.strokeRect(cx - tw/2, cy - th/2, tw, th);
           ctx.fillStyle = "#166534";
           ctx.textAlign = "center"; ctx.textBaseline = "middle";
           ctx.fillText(lblText, cx, cy);
@@ -253,16 +258,22 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();
     }
-    // CCA/GCA center label for chakbandi (canvas path)
+    // CCA/GCA center label for chakbandi (canvas path) — font size matches mustateel label
     if (o.type === "chakbandi" && o.centerLabel && o.points?.length >= 2) {
       const cx = o.points.reduce((s,p)=>s+p.x,0)/o.points.length;
       const cy = o.points.reduce((s,p)=>s+p.y,0)/o.points.length;
-      ctx.font = `bold 13px Rajdhani, sans-serif`;
-      const tw = ctx.measureText(o.centerLabel).width + 12;
+      const baseFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
+      ctx.font = `bold ${baseFont}px Rajdhani, sans-serif`;
+      const maxW = DIMENSIONS.MUSTATEEL.width * 0.80;
+      const fitScale = Math.min(1, maxW / (ctx.measureText(o.centerLabel).width || 1));
+      const lblFont = baseFont * fitScale;
+      ctx.font = `bold ${lblFont}px Rajdhani, sans-serif`;
+      const tw = ctx.measureText(o.centerLabel).width + lblFont * 0.3;
+      const th = lblFont + lblFont * 0.2;
       ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillRect(cx - tw/2, cy - 9, tw, 19);
-      ctx.strokeStyle = C.chakbandiStroke || "#000"; ctx.lineWidth = 1.5;
-      ctx.strokeRect(cx - tw/2, cy - 9, tw, 19);
+      ctx.fillRect(cx - tw/2, cy - th/2, tw, th);
+      ctx.strokeStyle = C.chakbandiStroke || "#000"; ctx.lineWidth = 2;
+      ctx.strokeRect(cx - tw/2, cy - th/2, tw, th);
       ctx.fillStyle = "#166534";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(o.centerLabel, cx, cy);
@@ -365,6 +376,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const mustateels = objects.filter(o => o.type === "mustateel");
     const canals = objects.filter(o => o.type === "canal");
     const chakbandis = objects.filter(o => o.type === "chakbandi");
+    const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
     let gcaLabels = "";
     for (const ch of chakbandis) {
       if (ch.points?.length >= 3) {
@@ -373,8 +385,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
           const cx = ch.points.reduce((s, p) => s + p.x, 0) / ch.points.length - bbox.minX;
           const cy = ch.points.reduce((s, p) => s + p.y, 0) / ch.points.length - bbox.minY;
           const lblText = `(${gca}/${gca})`;
-          const tw = lblText.length * 16 * 0.6 + 12;
-          gcaLabels += `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - 12).toFixed(1)}" width="${tw.toFixed(1)}" height="22" fill="rgba(255,255,255,0.92)" stroke="${C.chakbandiStroke || '#000'}" stroke-width="1.5"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="16" fill="#166534">${lblText}</text>`;
+          const tw = lblText.length * lblFont * 0.6 + lblFont * 0.3;
+          const th = lblFont + lblFont * 0.2;
+          gcaLabels += `<rect x="${(cx - tw/2).toFixed(1)}" y="${(cy - th/2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${C.chakbandiStroke || '#000'}" stroke-width="2"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${lblText}</text>`;
         }
       }
     }
@@ -526,8 +539,10 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       if (o.centerLabel) {
         const cx = o.points.reduce((s,p)=>s+p.x,0)/o.points.length;
         const cy = o.points.reduce((s,p)=>s+p.y,0)/o.points.length;
-        const tw = o.centerLabel.length * 13 * 0.6 + 12;
-        centerLbl = `<rect x="${(cx-tw/2).toFixed(1)}" y="${(cy-9).toFixed(1)}" width="${tw.toFixed(1)}" height="19" fill="rgba(255,255,255,0.92)" stroke="${chColor}" stroke-width="1.5"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="13" fill="#166534">${o.centerLabel}</text>`;
+        const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
+        const tw = o.centerLabel.length * lblFont * 0.6 + lblFont * 0.3;
+        const th = lblFont + lblFont * 0.2;
+        centerLbl = `<rect x="${(cx-tw/2).toFixed(1)}" y="${(cy-th/2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(255,255,255,0.92)" stroke="${chColor}" stroke-width="2"/><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lblFont.toFixed(1)}" fill="#166534">${o.centerLabel}</text>`;
       }
       return `<polyline points="${pts}" fill="none" stroke="${chColor}" stroke-width="${lineW}" stroke-linecap="round" stroke-linejoin="round"/>${crossSVG}${centerLbl}`;
     }
