@@ -9,7 +9,7 @@ import { getParallelPolyline, DIMENSIONS } from "@/lib/gisEngine";
 // Moga fraction box = 2 acres (440×198), font reduced to fit
 const MOGA_BOX_W = DIMENSIONS.ACRE.width * 2;   // 440
 const MOGA_BOX_H = DIMENSIONS.ACRE.height;       // 198
-const MOGA_BOX_FONT = MOGA_BOX_H / 2.5;           // ~79
+const MOGA_BOX_FONT = MOGA_BOX_H / 1.25;          // ~158 (2× bigger)
 
 // Mustateel label font (for legend font matching in print/export)
 const MUSTATEEL_LABEL_FONT = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30; // 132
