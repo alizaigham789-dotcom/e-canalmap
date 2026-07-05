@@ -972,27 +972,29 @@ export function getMogaColor(labelColor) {
 // ============================================================
 // Single-line Urdu header — خاکہ دستی موگہ نمبری ... راجباہ ... سیکشن ... سب ڈویژن ... ڈویژن ...
 export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
-  const mogaNum = mogaFilter || mapData?.moga_number || "";
-  const mogaSide = mapData?.mogha_side || "";
-  const mogaFull = [mogaNum, mogaSide].filter(Boolean).join("/");
-  const rajbah = mapData?.rajbah || "";
-  const section = mapData?.section || "";
-  const subDiv = mapData?.tehsil || "";
-  const division = mapData?.district || "";
-  const parts = [
-    "خاکہ دستی",
-    mogaFull ? `موگہ نمبری ${mogaFull}` : "",
-    rajbah ? `راجباہ ${rajbah}` : "",
-    section ? `سیکشن ${section}` : "",
-    subDiv ? `سب ڈویژن ${subDiv}` : "",
-    division ? `ڈویژن ${division}` : "",
-  ].filter(Boolean);
+  const mogaNum = mogaFilter || mapData?.moga_number || "____";
+  const mogaSide = mapData?.mogha_side ? `/${mapData.mogha_side}` : "";
+  const rajbah = mapData?.rajbah || "____";
+  const section = mapData?.section || "____";
+  const subDiv = mapData?.tehsil || "____";
+  const division = mapData?.district || "____";
+  const uf = "'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
 
-  return `
-  <div style="border:1.5px solid #000; padding:4px 10px; margin-bottom:4px; font-family:'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif; text-align:center;">
-    <span style="font-size:13px; font-weight:bold; color:#000; line-height:1.6;">
-      ${parts.join("  ")}
-    </span>
+  return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-bottom:4px;">
+    <!-- Top title row -->
+    <div style="border-bottom:1.5px solid #000; padding:4px 12px; text-align:center; font-size:14px; font-weight:bold; line-height:1.8;">
+      خاکہ دستی موگہ&nbsp;&nbsp;&nbsp;
+      موگہ نمبری <u>${mogaNum}${mogaSide}</u>&nbsp;&nbsp;&nbsp;
+      راجباہ <u>${rajbah}</u>&nbsp;&nbsp;&nbsp;
+      موضع <u>${section}</u>&nbsp;&nbsp;&nbsp;
+      تحصیل <u>${subDiv}</u>&nbsp;&nbsp;&nbsp;
+      ضلع <u>${division}</u>
+    </div>
+    <!-- Bottom: signatures row like PDF -->
+    <div style="display:flex; justify-content:flex-end; gap:40px; padding:4px 16px; font-size:11px; border-top:1px solid #ccc; margin-top:2px; direction:rtl;">
+      <span>ضلعدار _______________</span>
+      <span>مرتب کنندہ _______________</span>
+    </div>
   </div>`;
 }
 

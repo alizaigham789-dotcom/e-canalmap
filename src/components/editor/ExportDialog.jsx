@@ -9,6 +9,7 @@ import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, sv
 export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {} }) {
   const [loading, setLoading] = useState(null);
   const [pageOrientation, setPageOrientation] = useState("landscape");
+  const [showLegendInExport, setShowLegendInExport] = useState(true);
   const C = colorSettings || {};
   const previewCanvasRef = useRef(null);
 
@@ -94,8 +95,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }
 
     ctx.restore();
-    // Legend + moga details (screen space, top-right + bottom-left corners)
-    drawLegendOnCanvas(ctx, canvas.width, canvas.height, C, scale);
+    // Legend + moga details
+    if (showLegendInExport) drawLegendOnCanvas(ctx, canvas.width, canvas.height, C, scale);
     drawMogaDetailsOnCanvas(ctx, canvas.width, canvas.height, objects);
     return canvas;
   }
@@ -364,7 +365,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       return order.indexOf(a.type)-order.indexOf(b.type);
     }).map(o => objToSVG(o, bbox)).filter(Boolean).join("\n");
 
-    const legendSvg = buildLegendSVG(bbox.minX, bbox.minY, W, H, C);
+    const legendSvg = showLegendInExport ? buildLegendSVG(bbox.minX, bbox.minY, W, H, C) : "";
     const mogaDetailsSvg = buildMogaDetailsSVG(bbox.minX, bbox.minY, W, H, objects, mapData);
     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
       <rect width="${W}" height="${H}" fill="white"/>
@@ -722,10 +723,14 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
           <canvas ref={previewCanvasRef} className="max-w-full max-h-48 object-contain" />
         </div>
         <p className="text-[10px] text-slate-500 text-center -mt-1">Live preview — this is exactly how your export will look</p>
-        <div className="flex items-center gap-1 justify-center">
+        <div className="flex items-center gap-2 justify-center flex-wrap">
           <span className="text-[10px] text-slate-500">Page:</span>
           <button onClick={() => setPageOrientation("landscape")} className={`text-[10px] px-2 py-0.5 rounded ${pageOrientation === "landscape" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>Landscape</button>
           <button onClick={() => setPageOrientation("portrait")} className={`text-[10px] px-2 py-0.5 rounded ${pageOrientation === "portrait" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>Portrait</button>
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input type="checkbox" checked={showLegendInExport} onChange={e => setShowLegendInExport(e.target.checked)} className="w-3 h-3 accent-blue-500" />
+            <span className="text-[10px] text-slate-400" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>علامات</span>
+          </label>
         </div>
         <div className="space-y-2 py-2 max-h-[70vh] overflow-y-auto">
           {EXPORTS.map(({ label, desc, icon: Icon, color, action, key }) => (

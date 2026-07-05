@@ -371,6 +371,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [mogaFilter, setMogaFilter] = useState(selectedMogaFilter || "");
   const [bwMode, setBwMode] = useState(false);
   const [pageOrientation, setPageOrientation] = useState("landscape");
+  const [showLegendInPrint, setShowLegendInPrint] = useState(true);
 
   // Extract all mogas from objects
   const availableMogas = useMemo(() => {
@@ -435,6 +436,9 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     ).join("");
   }, [gcaData, effectiveColors]);
 
+  const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors) : "";
+  const mogaDetailsSVG = buildMogaDetailsSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, objects, mapData);
+
   const svgString = svgData
     ? `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
@@ -443,13 +447,13 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
   ${svgData.svgBody}
   ${gcaSvgLabels}
-  ${buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors)}
-  ${buildMogaDetailsSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, objects, mapData)}
+  ${legendSVG}
+  ${mogaDetailsSVG}
 </svg>`
     : null;
 
   const inlineSvgMarkup = svgData
-    ? `<rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>${svgData.svgBody}${gcaSvgLabels}${buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors)}${buildMogaDetailsSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, objects, mapData)}`
+    ? `<rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>${svgData.svgBody}${gcaSvgLabels}${legendSVG}${mogaDetailsSVG}`
     : null;
 
   // ─── VECTOR PRINT — single page, Urdu header ─────────────────────────────────
@@ -502,8 +506,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
           <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
           ${svgData.svgBody}
           ${gcaLabels}
-          ${buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors)}
-          ${buildMogaDetailsSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, objects, mapData)}
+          ${legendSVG}
+          ${mogaDetailsSVG}
         </svg>
       </div>
     </body></html>`);
@@ -604,7 +608,12 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               Assign Moga Numbers to Chakbandi lines to enable single-Moga printing
             </span>
           )}
-          <span className="text-[9px] text-green-500 ml-auto font-mono">⬡ Vector SVG — Sharp at any scale</span>
+          {/* Legend toggle */}
+          <label className="flex items-center gap-1.5 ml-auto cursor-pointer select-none">
+            <input type="checkbox" checked={showLegendInPrint} onChange={e => setShowLegendInPrint(e.target.checked)}
+              className="w-3 h-3 accent-blue-500" />
+            <span className="text-[10px] text-slate-400" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>علامات دکھائیں</span>
+          </label>
         </div>
 
         {/* Preview Area */}

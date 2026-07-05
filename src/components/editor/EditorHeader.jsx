@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Globe, Download, Loader2, Pencil, Check, X, Square, StopCircle, Undo2 } from "lucide-react";
+import { ArrowLeft, Save, Globe, Download, Loader2, Pencil, Check, X, Square, StopCircle, Undo2, Settings2 } from "lucide-react";
 
 const STATUS_COLORS = {
   draft: "border-slate-500/30 bg-slate-500/10 text-slate-400",
@@ -17,7 +17,7 @@ const STATUS_COLORS = {
 export default function EditorHeader({
   mapData, onSave, onStatusChange, isSaving,
   activeTool, onStopDrawing, canalDraftActive,
-  onUndoPoint, onExport
+  onUndoPoint, onExport, onEditDetails
 }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
@@ -87,12 +87,18 @@ export default function EditorHeader({
         </SelectContent>
       </Select>
 
-      {/* Location */}
-      {(mapData?.village || mapData?.district) && (
-        <span className="text-xs text-slate-500 hidden md:inline truncate">
-          {[mapData.village, mapData.district].filter(Boolean).join(", ")}
-        </span>
-      )}
+      {/* Map info summary */}
+      <div className="hidden md:flex items-center gap-2 text-[11px] text-slate-500 truncate" dir="rtl"
+        style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
+        {mapData?.moga_number && <span>موگہ {mapData.moga_number}{mapData.mogha_side ? `/${mapData.mogha_side}` : ""}</span>}
+        {mapData?.rajbah && <span>• راجباہ {mapData.rajbah}</span>}
+        {mapData?.tehsil && <span>• {mapData.tehsil}</span>}
+      </div>
+
+      {/* Edit details button */}
+      <Button variant="ghost" size="icon" className="w-7 h-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={onEditDetails} title="Edit Map Details">
+        <Settings2 className="w-3.5 h-3.5" />
+      </Button>
 
       <div className="flex-1" />
 

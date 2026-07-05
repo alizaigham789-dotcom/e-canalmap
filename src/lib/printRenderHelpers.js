@@ -404,13 +404,13 @@ export function getCCAGCAText(chakbandi, gcaValue) {
 // Placed in the top-right corner of the viewBox.
 export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
   const items = [
-    { label: "Mustateel (مستطیل)", color: C.mustateelStroke || "#ef4444", type: "rect" },
-    { label: "Canal (راجباہ)", color: C.canalStroke || "#0284c7", type: "line" },
-    { label: "Khal (خال)", color: C.khalStroke || "#2563eb", type: "line_thin" },
-    { label: "Road (راستہ)", color: C.roadStroke || "#b45309", type: "line_thick" },
-    { label: "Chakbandi (چکبندی)", color: C.chakbandiStroke || "#22c55e", type: "cross" },
-    { label: "Moga / Outlet (موگہ)", color: C.outletStroke || "#06b6d4", type: "arrow" },
-    { label: "Mouza (موضع)", color: C.mouzaStroke || "#000000", type: "dashed" },
+    { label: "مستطیل", color: C.mustateelStroke || "#ef4444", type: "rect" },
+    { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
+    { label: "خال", color: C.khalStroke || "#2563eb", type: "line_thin" },
+    { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
+    { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
+    { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
+    { label: "موضع", color: C.mouzaStroke || "#000000", type: "dashed" },
   ];
 
   // 5× bigger; font = mustateel label font
@@ -422,7 +422,7 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
   const ly = viewY + viewH - legendH - 10 * S;
 
   let svg = `<rect x="${lx}" y="${ly}" width="${legendW}" height="${legendH}" fill="rgba(255,255,255,0.96)" stroke="#333" stroke-width="${(1.5*S).toFixed(1)}" rx="${4*S}"/>`;
-  svg += `<text x="${lx + legendW/2}" y="${ly + headerH*0.6}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lf.toFixed(1)}" fill="#333">LEGEND / رہنمائی</text>`;
+  svg += `<text x="${lx + legendW/2}" y="${ly + headerH*0.6}" text-anchor="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lf.toFixed(1)}" fill="#333">علامات</text>`;
   svg += `<line x1="${lx+8*S}" y1="${ly+headerH}" x2="${lx+legendW-8*S}" y2="${ly+headerH}" stroke="#ccc" stroke-width="${S}"/>`;
 
   items.forEach((item, i) => {
@@ -450,7 +450,7 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
     } else if (item.type === "dashed") {
       svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${1.5*S}" stroke-dasharray="${4*S},${3*S}"/>`;
     }
-    svg += `<text x="${symX + symW + 10*S}" y="${iy}" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#333">${item.label}</text>`;
+    svg += `<text x="${symX + symW + 10*S}" y="${iy}" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#333">${item.label}</text>`;
   });
 
   return svg;
@@ -488,13 +488,13 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
 // ─── CANVAS: draw legend in screen space (top-right corner) ──────────────
 export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
   const items = [
-    { label: "Mustateel", color: C.mustateelStroke || "#ef4444", type: "rect" },
-    { label: "Canal", color: C.canalStroke || "#0284c7", type: "line" },
-    { label: "Khal", color: C.khalStroke || "#2563eb", type: "line_thin" },
-    { label: "Road", color: C.roadStroke || "#b45309", type: "line_thick" },
-    { label: "Chakbandi", color: C.chakbandiStroke || "#22c55e", type: "cross" },
-    { label: "Moga / Outlet", color: C.outletStroke || "#06b6d4", type: "arrow" },
-    { label: "Mouza", color: C.mouzaStroke || "#000", type: "dashed" },
+    { label: "مستطیل", color: C.mustateelStroke || "#ef4444", type: "rect" },
+    { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
+    { label: "خال", color: C.khalStroke || "#2563eb", type: "line_thin" },
+    { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
+    { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
+    { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
+    { label: "موضع", color: C.mouzaStroke || "#000", type: "dashed" },
   ];
   // 5× bigger; font = mustateel label font × scale
   const lf = MUSTATEEL_LABEL_FONT * scale;
@@ -512,7 +512,7 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
   ctx.fillStyle = "#333";
   ctx.font = `bold ${lf}px Rajdhani, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("LEGEND", lx + legendW / 2, ly + headerH * 0.6);
+  ctx.fillText("علامات", lx + legendW / 2, ly + headerH * 0.6);
   ctx.strokeStyle = "#ccc"; ctx.lineWidth = S;
   ctx.beginPath(); ctx.moveTo(lx + 8*S*scale, ly + headerH); ctx.lineTo(lx + legendW - 8*S*scale, ly + headerH); ctx.stroke();
 

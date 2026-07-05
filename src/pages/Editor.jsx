@@ -25,6 +25,7 @@ import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
+import MapDetailsDialog from "@/components/editor/MapDetailsDialog";
 // DamageMarkerDialog removed — damage tool is now a simple line draw
 
 const DEFAULT_LAYERS = {
@@ -85,6 +86,7 @@ export default function Editor() {
   const [gridFlags, setGridFlags] = useState({ showMustateel: true, showMuraba: false });
   const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [groupName, setGroupName] = useState("");
+  const [showMapDetails, setShowMapDetails] = useState(false);
   // damage marker is now a simple line — no dialog state needed
   const [canalDraft, setCanalDraft] = useState(null);
   const [chakbandiDraft, setChakbandiDraft] = useState(null);
@@ -571,6 +573,7 @@ export default function Editor() {
         canalDraftActive={draftActive}
         onUndoPoint={handleUndoPoint}
         onExport={() => setShowExport(true)}
+        onEditDetails={() => setShowMapDetails(true)}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -876,7 +879,13 @@ export default function Editor() {
         }} />
       )}
 
-      {/* Damage tool is now a simple line drawn directly on canvas — no dialog */}
+      {/* Map Details Dialog */}
+      <MapDetailsDialog
+        open={showMapDetails}
+        mapData={mapData}
+        onClose={() => setShowMapDetails(false)}
+        onSave={(data) => handleSave(data)}
+      />
 
       {/* Moga Group / Name Dialog */}
       {showGroupDialog && (
