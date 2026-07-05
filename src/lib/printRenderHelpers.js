@@ -400,57 +400,66 @@ export function getCCAGCAText(chakbandi, gcaValue) {
   return { cca: `${gca} CCA`, gca: `${gca} GCA` };
 }
 
-// ─── Legend SVG: symbol + label for each map element type ────────────────
-// Placed in the top-right corner of the viewBox.
+// ─── Legend SVG: 2-column (name | sign), 2× smaller ─────────────────────
 export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
   const items = [
     { label: "مستطیل", color: C.mustateelStroke || "#ef4444", type: "rect" },
     { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
-    { label: "خال", color: C.khalStroke || "#2563eb", type: "line_thin" },
+    { label: "کھال", color: C.khalStroke || "#2563eb", type: "line_thin" },
     { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
     { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
     { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
     { label: "موضع", color: C.mouzaStroke || "#000000", type: "dashed" },
   ];
 
-  // 5× bigger; font = mustateel label font
-  const lf = MUSTATEEL_LABEL_FONT;
-  const S = 5;
-  const legendW = 1700, rowH = lf * 1.2, headerH = lf * 1.2;
-  const legendH = items.length * rowH + headerH + 10 * S;
-  const lx = viewX + 10 * S;
-  const ly = viewY + viewH - legendH - 10 * S;
+  // 2× smaller; 2-column layout (name | sign)
+  const S = 2.5;
+  const lf = MUSTATEEL_LABEL_FONT / 2;
+  const colSignW = 34 * S, colNameW = 42 * S, pad = 6 * S;
+  const legendW = colSignW + colNameW + pad * 3;
+  const headerH = lf * 1.3, colHdrH = lf * 1.1, rowH = lf * 1.4;
+  const legendH = headerH + colHdrH + items.length * rowH + pad;
+  const lx = viewX + 8 * S;
+  const ly = viewY + viewH - legendH - 8 * S;
+  const signColX = lx + pad;
+  const nameColX = lx + pad * 2 + colSignW;
 
-  let svg = `<rect x="${lx}" y="${ly}" width="${legendW}" height="${legendH}" fill="rgba(255,255,255,0.96)" stroke="#333" stroke-width="${(1.5*S).toFixed(1)}" rx="${4*S}"/>`;
-  svg += `<text x="${lx + legendW/2}" y="${ly + headerH*0.6}" text-anchor="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lf.toFixed(1)}" fill="#333">علامات</text>`;
-  svg += `<line x1="${lx+8*S}" y1="${ly+headerH}" x2="${lx+legendW-8*S}" y2="${ly+headerH}" stroke="#ccc" stroke-width="${S}"/>`;
+  let svg = `<rect x="${lx}" y="${ly}" width="${legendW}" height="${legendH}" fill="rgba(255,255,255,0.96)" stroke="#333" stroke-width="${(1.5*S).toFixed(1)}" rx="${3*S}"/>`;
+  svg += `<text x="${lx + legendW/2}" y="${ly + headerH*0.65}" text-anchor="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${lf.toFixed(1)}" fill="#333">علامات</text>`;
+  svg += `<line x1="${lx+pad}" y1="${ly+headerH}" x2="${lx+legendW-pad}" y2="${ly+headerH}" stroke="#999" stroke-width="${S}"/>`;
+  // Column headers: نام (right) | نشان (left)
+  const colHdrY = ly + headerH + colHdrH * 0.55;
+  svg += `<text x="${nameColX + colNameW/2}" y="${colHdrY}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(lf*0.75).toFixed(1)}" fill="#555">نام</text>`;
+  svg += `<text x="${signColX + colSignW/2}" y="${colHdrY}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(lf*0.75).toFixed(1)}" fill="#555">نشان</text>`;
+  svg += `<line x1="${lx+pad}" y1="${ly+headerH+colHdrH}" x2="${lx+legendW-pad}" y2="${ly+headerH+colHdrH}" stroke="#999" stroke-width="${S}"/>`;
+  svg += `<line x1="${signColX+colSignW+pad/2}" y1="${ly+headerH}" x2="${signColX+colSignW+pad/2}" y2="${ly+legendH-pad}" stroke="#ddd" stroke-width="${S}"/>`;
 
   items.forEach((item, i) => {
-    const iy = ly + headerH + 10*S + i * rowH + rowH/2;
-    const symX = lx + 14*S;
-    const symW = 22*S;
+    const iy = ly + headerH + colHdrH + i * rowH + rowH/2;
+    const symX = signColX + (colSignW - 20*S) / 2;
+    const symW = 20 * S;
     if (item.type === "rect") {
-      svg += `<rect x="${symX}" y="${iy-7*S}" width="${symW}" height="${14*S}" fill="none" stroke="${item.color}" stroke-width="${2*S}"/>`;
-      svg += `<line x1="${symX+symW/2}" y1="${iy-7*S}" x2="${symX+symW/2}" y2="${iy+7*S}" stroke="${item.color}" stroke-width="${S}" stroke-opacity="0.5"/>`;
+      svg += `<rect x="${symX}" y="${iy-6*S}" width="${symW}" height="${12*S}" fill="none" stroke="${item.color}" stroke-width="${1.5*S}"/>`;
+      svg += `<line x1="${symX+symW/2}" y1="${iy-6*S}" x2="${symX+symW/2}" y2="${iy+6*S}" stroke="${item.color}" stroke-width="${S}" stroke-opacity="0.5"/>`;
     } else if (item.type === "line") {
-      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${4*S}" stroke-linecap="round"/>`;
+      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${3*S}" stroke-linecap="round"/>`;
     } else if (item.type === "line_thin") {
-      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${2.5*S}" stroke-linecap="round"/>`;
+      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${2*S}" stroke-linecap="round"/>`;
     } else if (item.type === "line_thick") {
-      svg += `<rect x="${symX}" y="${iy-4*S}" width="${symW}" height="${8*S}" fill="#3a3a3a"/>`;
-      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="#fbbf24" stroke-width="${S}" stroke-dasharray="${4*S},${3*S}"/>`;
+      svg += `<rect x="${symX}" y="${iy-3*S}" width="${symW}" height="${6*S}" fill="#3a3a3a"/>`;
+      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="#fbbf24" stroke-width="${S}" stroke-dasharray="${3*S},${2*S}"/>`;
     } else if (item.type === "cross") {
-      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${2*S}"/>`;
-      svg += `<line x1="${symX+6*S}" y1="${iy-5*S}" x2="${symX+12*S}" y2="${iy+5*S}" stroke="${item.color}" stroke-width="${1.5*S}"/>`;
-      svg += `<line x1="${symX+12*S}" y1="${iy-5*S}" x2="${symX+6*S}" y2="${iy+5*S}" stroke="${item.color}" stroke-width="${1.5*S}"/>`;
+      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${1.5*S}"/>`;
+      svg += `<line x1="${symX+5*S}" y1="${iy-4*S}" x2="${symX+10*S}" y2="${iy+4*S}" stroke="${item.color}" stroke-width="${S}"/>`;
+      svg += `<line x1="${symX+10*S}" y1="${iy-4*S}" x2="${symX+5*S}" y2="${iy+4*S}" stroke="${item.color}" stroke-width="${S}"/>`;
     } else if (item.type === "arrow") {
-      svg += `<rect x="${symX}" y="${iy-5*S}" width="${8*S}" height="${10*S}" fill="${item.color}"/>`;
-      svg += `<line x1="${symX+8*S}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${2*S}"/>`;
-      svg += `<polygon points="${symX+symW},${iy} ${symX+symW-5*S},${iy-3*S} ${symX+symW-5*S},${iy+3*S}" fill="${item.color}"/>`;
+      svg += `<rect x="${symX}" y="${iy-4*S}" width="${6*S}" height="${8*S}" fill="${item.color}"/>`;
+      svg += `<line x1="${symX+6*S}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${1.5*S}"/>`;
+      svg += `<polygon points="${symX+symW},${iy} ${symX+symW-4*S},${iy-2.5*S} ${symX+symW-4*S},${iy+2.5*S}" fill="${item.color}"/>`;
     } else if (item.type === "dashed") {
-      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${1.5*S}" stroke-dasharray="${4*S},${3*S}"/>`;
+      svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${S}" stroke-dasharray="${3*S},${2*S}"/>`;
     }
-    svg += `<text x="${symX + symW + 10*S}" y="${iy}" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#333">${item.label}</text>`;
+    svg += `<text x="${nameColX + colNameW/2}" y="${iy}" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#333">${item.label}</text>`;
   });
 
   return svg;
@@ -485,73 +494,90 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
   return svg;
 }
 
-// ─── CANVAS: draw legend in screen space (top-right corner) ──────────────
+// ─── CANVAS: draw legend in screen space — 2-column (name | sign), 2× smaller ─
 export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
   const items = [
     { label: "مستطیل", color: C.mustateelStroke || "#ef4444", type: "rect" },
     { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
-    { label: "خال", color: C.khalStroke || "#2563eb", type: "line_thin" },
+    { label: "کھال", color: C.khalStroke || "#2563eb", type: "line_thin" },
     { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
     { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
     { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
     { label: "موضع", color: C.mouzaStroke || "#000", type: "dashed" },
   ];
-  // 5× bigger; font = mustateel label font × scale
-  const lf = MUSTATEEL_LABEL_FONT * scale;
-  const S = 5;
-  const legendW = 1700 * scale, rowH = lf * 1.2, headerH = lf * 1.2;
-  const legendH = items.length * rowH + headerH + 10 * S * scale;
-  const lx = 10 * S * scale;
-  const ly = canvasH - legendH - 10 * S * scale;
+  // 2× smaller; 2-column layout (name | sign)
+  const S = 2.5;
+  const lf = (MUSTATEEL_LABEL_FONT / 2) * scale;
+  const colSignW = 34 * S * scale, colNameW = 42 * S * scale, pad = 6 * S * scale;
+  const legendW = colSignW + colNameW + pad * 3;
+  const headerH = lf * 1.3, colHdrH = lf * 1.1, rowH = lf * 1.4;
+  const legendH = headerH + colHdrH + items.length * rowH + pad;
+  const lx = 8 * S * scale;
+  const ly = canvasH - legendH - 8 * S * scale;
+  const signColX = lx + pad;
+  const nameColX = lx + pad * 2 + colSignW;
 
   ctx.fillStyle = "rgba(255,255,255,0.96)";
   ctx.fillRect(lx, ly, legendW, legendH);
-  ctx.strokeStyle = "#333"; ctx.lineWidth = 1.5 * S;
+  ctx.strokeStyle = "#333"; ctx.lineWidth = 1.5 * S * scale;
   ctx.strokeRect(lx, ly, legendW, legendH);
 
+  // Title
   ctx.fillStyle = "#333";
-  ctx.font = `bold ${lf}px Rajdhani, sans-serif`;
+  ctx.font = `bold ${lf}px 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("علامات", lx + legendW / 2, ly + headerH * 0.6);
-  ctx.strokeStyle = "#ccc"; ctx.lineWidth = S;
-  ctx.beginPath(); ctx.moveTo(lx + 8*S*scale, ly + headerH); ctx.lineTo(lx + legendW - 8*S*scale, ly + headerH); ctx.stroke();
+  ctx.fillText("علامات", lx + legendW / 2, ly + headerH * 0.55);
+  ctx.strokeStyle = "#999"; ctx.lineWidth = S * scale;
+  ctx.beginPath(); ctx.moveTo(lx + pad, ly + headerH); ctx.lineTo(lx + legendW - pad, ly + headerH); ctx.stroke();
+
+  // Column headers
+  const colHdrY = ly + headerH + colHdrH * 0.55;
+  ctx.font = `bold ${lf * 0.75}px 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#555";
+  ctx.fillText("نام", nameColX + colNameW / 2, colHdrY);
+  ctx.fillText("نشان", signColX + colSignW / 2, colHdrY);
+  ctx.strokeStyle = "#999"; ctx.lineWidth = S * scale;
+  ctx.beginPath(); ctx.moveTo(lx + pad, ly + headerH + colHdrH); ctx.lineTo(lx + legendW - pad, ly + headerH + colHdrH); ctx.stroke();
+  ctx.strokeStyle = "#ddd";
+  ctx.beginPath(); ctx.moveTo(signColX + colSignW + pad/2, ly + headerH); ctx.lineTo(signColX + colSignW + pad/2, ly + legendH - pad); ctx.stroke();
 
   items.forEach((item, i) => {
-    const iy = ly + headerH + 10*S*scale + i * rowH + rowH / 2;
-    const symX = lx + 14*S*scale, symW = 22*S*scale;
-    ctx.strokeStyle = item.color; ctx.fillStyle = item.color; ctx.lineWidth = 2*S;
+    const iy = ly + headerH + colHdrH + i * rowH + rowH / 2;
+    const symX = signColX + (colSignW - 20*S*scale) / 2;
+    const symW = 20 * S * scale;
+    ctx.strokeStyle = item.color; ctx.fillStyle = item.color; ctx.lineWidth = 1.5 * S * scale;
     if (item.type === "rect") {
-      ctx.strokeRect(symX, iy - 7*S, symW, 14*S);
+      ctx.strokeRect(symX, iy - 6*S*scale, symW, 12*S*scale);
     } else if (item.type === "line") {
-      ctx.lineWidth = 4*S; ctx.lineCap = "round";
+      ctx.lineWidth = 3*S*scale; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
     } else if (item.type === "line_thin") {
-      ctx.lineWidth = 2.5*S; ctx.lineCap = "round";
+      ctx.lineWidth = 2*S*scale; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
     } else if (item.type === "line_thick") {
-      ctx.fillStyle = "#3a3a3a"; ctx.fillRect(symX, iy - 4*S, symW, 8*S);
-      ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = S; ctx.setLineDash([4*S, 3*S]);
+      ctx.fillStyle = "#3a3a3a"; ctx.fillRect(symX, iy - 3*S*scale, symW, 6*S*scale);
+      ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = S*scale; ctx.setLineDash([3*S*scale, 2*S*scale]);
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
       ctx.setLineDash([]);
     } else if (item.type === "cross") {
-      ctx.lineWidth = 2*S;
+      ctx.lineWidth = 1.5*S*scale;
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
-      ctx.lineWidth = 1.5*S;
-      ctx.beginPath(); ctx.moveTo(symX + 6*S, iy - 5*S); ctx.lineTo(symX + 12*S, iy + 5*S); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(symX + 12*S, iy - 5*S); ctx.lineTo(symX + 6*S, iy + 5*S); ctx.stroke();
+      ctx.lineWidth = S*scale;
+      ctx.beginPath(); ctx.moveTo(symX + 5*S*scale, iy - 4*S*scale); ctx.lineTo(symX + 10*S*scale, iy + 4*S*scale); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(symX + 10*S*scale, iy - 4*S*scale); ctx.lineTo(symX + 5*S*scale, iy + 4*S*scale); ctx.stroke();
     } else if (item.type === "arrow") {
-      ctx.fillRect(symX, iy - 5*S, 8*S, 10*S);
-      ctx.lineWidth = 2*S;
-      ctx.beginPath(); ctx.moveTo(symX + 8*S, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(symX + symW, iy); ctx.lineTo(symX + symW - 5*S, iy - 3*S); ctx.lineTo(symX + symW - 5*S, iy + 3*S); ctx.closePath(); ctx.fill();
+      ctx.fillRect(symX, iy - 4*S*scale, 6*S*scale, 8*S*scale);
+      ctx.lineWidth = 1.5*S*scale;
+      ctx.beginPath(); ctx.moveTo(symX + 6*S*scale, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(symX + symW, iy); ctx.lineTo(symX + symW - 4*S*scale, iy - 2.5*S*scale); ctx.lineTo(symX + symW - 4*S*scale, iy + 2.5*S*scale); ctx.closePath(); ctx.fill();
     } else if (item.type === "dashed") {
-      ctx.lineWidth = 1.5*S; ctx.setLineDash([4*S, 3*S]);
+      ctx.lineWidth = S*scale; ctx.setLineDash([3*S*scale, 2*S*scale]);
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
       ctx.setLineDash([]);
     }
-    ctx.fillStyle = "#333"; ctx.font = `${lf}px Rajdhani, sans-serif`;
-    ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    ctx.fillText(item.label, symX + symW + 10*S*scale, iy);
+    ctx.fillStyle = "#333"; ctx.font = `${lf}px 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(item.label, nameColX + colNameW / 2, iy);
   });
 }
 

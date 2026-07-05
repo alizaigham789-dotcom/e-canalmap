@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Search, Map, Calendar, MapPin, Layers, Trash2, Upload, Download } from "lucide-react";
+import { ArrowLeft, Plus, Search, Map, Calendar, MapPin, Layers, Trash2, Upload, Download, Pencil } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import MapDetailsDialog from "@/components/editor/MapDetailsDialog";
 
 const STATUS_COLORS = {
   draft: "bg-slate-100 text-slate-600 border-slate-300",
@@ -32,6 +33,7 @@ export default function MapList() {
   const [showCreate, setShowCreate] = useState(false);
   const [newMap, setNewMap] = useState({ title: "", village: "", district: "", tehsil: "", section: "", rajbah: "", moga_number: "", mogha_side: "" });
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
   const fileInputRef = useRef(null);
   const [uploadTitle, setUploadTitle] = useState("");
 
@@ -79,6 +81,16 @@ export default function MapList() {
   const { data: maps = [], isLoading } = useQuery({
     queryKey: ["maps"],
     queryFn: () => base44.entities.LandMap.list("-created_date", 50),
+  });
+
+  const updateMapMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.LandMap.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maps"] });
+      setEditTarget(null);
+      toast.success("Map details updated");
+    },
+    onError: () => toast.error("Update failed"),
   });
 
   const createMutation = useMutation({
@@ -194,6 +206,13 @@ export default function MapList() {
                     </button>
                   </Link>
                   <button
+                    onClick={() => setEditTarget(map)}
+                    className="px-2.5 py-1.5 text-[10px] font-semibold rounded-lg bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 transition-colors"
+                    title="Edit Moga details"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
                     onClick={() => setDeleteTarget(map)}
                     className="px-2.5 py-1.5 text-[10px] font-semibold rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
                     title="Delete this map"
@@ -303,6 +322,14 @@ export default function MapList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Map Details Dialog */}
+      <MapDetailsDialog
+        open={!!editTarget}
+        mapData={editTarget}
+        onClose={() => setEditTarget(null)}
+        onSave={(data) => updateMapMutation.mutate({ id: editTarget.id, data })}
+      />
 
       <BottomNav />
     </div>

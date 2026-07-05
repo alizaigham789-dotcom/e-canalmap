@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
-import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
-import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, svgMogaFraction, chakbandiLabelPosition, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, buildMogaDetailsSVG, drawLegendOnCanvas, drawMogaDetailsOnCanvas } from "@/lib/printRenderHelpers";
+import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintHeaderHTML, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
+import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, svgMogaFraction, chakbandiLabelPosition, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas } from "@/lib/printRenderHelpers";
 
 
 export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {} }) {
@@ -97,7 +97,6 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     ctx.restore();
     // Legend + moga details
     if (showLegendInExport) drawLegendOnCanvas(ctx, canvas.width, canvas.height, C, scale);
-    drawMogaDetailsOnCanvas(ctx, canvas.width, canvas.height, objects);
     return canvas;
   }
 
@@ -304,6 +303,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const imgData = canvas.toDataURL("image/jpeg", 0.95);
     const totalGCA = calculateTotalGCA(objects);
     const headerHTML = buildPrintHeaderHTML(mapData, null, totalGCA);
+    const footerHTML = buildPrintFooterHTML(mapData);
     // A4 landscape: fit map on single page with header
     const pw = pageOrientation === "landscape" ? 1123 : 794;
     const ph = pageOrientation === "landscape" ? 794 : 1123;
@@ -326,6 +326,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     </style></head><body>
     ${headerHTML}
     <div class="map-area"><img src="${imgData}" /></div>
+    ${footerHTML}
     </body></html>`);
     win.document.close();
     setTimeout(() => { win.print(); setLoading(null); }, 800);
@@ -339,6 +340,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const H = bbox.maxY - bbox.minY;
     const totalGCA = calculateTotalGCA(objects);
     const headerHTML = buildPrintHeaderHTML(mapData, null, totalGCA);
+    const footerHTML = buildPrintFooterHTML(mapData);
 
     // CCA/GCA fraction labels for chakbandis — at labelPos, in fraction boxes
     const mustateels = objects.filter(o => o.type === "mustateel");
@@ -366,14 +368,12 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }).map(o => objToSVG(o, bbox)).filter(Boolean).join("\n");
 
     const legendSvg = showLegendInExport ? buildLegendSVG(bbox.minX, bbox.minY, W, H, C) : "";
-    const mogaDetailsSvg = buildMogaDetailsSVG(bbox.minX, bbox.minY, W, H, objects, mapData);
     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
       <rect width="${W}" height="${H}" fill="white"/>
       <g transform="translate(${-bbox.minX},${-bbox.minY})">
         ${svgObjs}
         ${gcaLabels}
         ${legendSvg}
-        ${mogaDetailsSvg}
       </g>
     </svg>`;
 
@@ -390,6 +390,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     </style></head><body>
     ${headerHTML}
     <div class="map-wrap">${svgContent}</div>
+    ${footerHTML}
     </body></html>`);
     win.document.close();
     setTimeout(() => { win.print(); setLoading(null); }, 800);

@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
-import { svgCanalNameOnPath, svgMogaFraction, svgMogaFractionBox, svgCCAGCAFractionBox, chakbandiLabelPosition, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, buildMogaDetailsSVG } from "@/lib/printRenderHelpers";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
+import { svgCanalNameOnPath, svgMogaFraction, svgMogaFractionBox, svgCCAGCAFractionBox, chakbandiLabelPosition, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
@@ -437,7 +437,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   }, [gcaData, effectiveColors]);
 
   const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors) : "";
-  const mogaDetailsSVG = buildMogaDetailsSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, objects, mapData);
 
   const svgString = svgData
     ? `<?xml version="1.0" encoding="UTF-8"?>
@@ -448,12 +447,11 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   ${svgData.svgBody}
   ${gcaSvgLabels}
   ${legendSVG}
-  ${mogaDetailsSVG}
 </svg>`
     : null;
 
   const inlineSvgMarkup = svgData
-    ? `<rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>${svgData.svgBody}${gcaSvgLabels}${legendSVG}${mogaDetailsSVG}`
+    ? `<rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>${svgData.svgBody}${gcaSvgLabels}${legendSVG}`
     : null;
 
   // ─── VECTOR PRINT — single page, Urdu header ─────────────────────────────────
@@ -461,6 +459,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     if (!svgData) return;
     const totalGCA = calculateTotalGCA(objects);
     const headerHTML = buildPrintHeaderHTML(mapData, mogaFilter, totalGCA);
+    const footerHTML = buildPrintFooterHTML(mapData);
 
     // Auto-calculated CCA/GCA for each chakbandi — use user's centerLabel if entered,
     // positioned ABOVE the chakbandi boundary (not at centroid)
@@ -507,9 +506,9 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
           ${svgData.svgBody}
           ${gcaLabels}
           ${legendSVG}
-          ${mogaDetailsSVG}
         </svg>
       </div>
+      ${footerHTML}
     </body></html>`);
     win.document.close();
     win.onload = () => win.print();
@@ -634,10 +633,12 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               <div style={{ padding:40, textAlign:"center", color:"#999" }}>No objects to print</div>
             )}
 
-            {/* Footer */}
+            {/* Footer info */}
             <div style={{ padding:"6px 14px", borderTop:"1px solid #bbb", display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6, fontSize:9, color:"#777" }}>
               <span>1 Killa = 220×198 ft | 1 Mustateel = 10 Killas</span>
             </div>
+            {/* Signature footer — مرتب کنندہ / ضلعدار at the end */}
+            <div dangerouslySetInnerHTML={{ __html: buildPrintFooterHTML(mapData) }} />
           </div>
         </div>
       </div>
