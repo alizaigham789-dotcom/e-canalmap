@@ -6,7 +6,7 @@ import BottomNav from "@/components/BottomNav";
 
 const URDU_FONT = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
 
-const DEFAULT_BODY = `بموجب ضابطہ نمبر 51 پرت وارہ بندی، حصہ داران موگہ ایڑ چی نمبر مذکورہ بالا کو نوٹس دیا جاتا ہے کہ مورخہ مذکورہ بالا کو دوران کاروائی ضلعداری حاضر ہو کر اپنا اپنا حق وارشکنی درج کروائیں۔`;
+const DEFAULT_BODY = `قلمی ہے کہ سائل/سائیلان نے درخواست گزاری ہے کہ فریق دوم مذکورہ بالا نے ان کا منظور شدہ پانی روک کر ان کی حق تلفی کی ہے۔ ان کے خلاف قانونی کاروائی عمل میں لائی جائے۔ آپ کو اس ضمن میں ہدایت کی جاتی ہے کہ آب موقعہ پر جا کر ناجائز آبپاشی کا اندراج کریں اور دونوں فریقین کو مطلع کریں کہ وہ مورخہ: ---------------- کو بمقام دفتر ضلعداری میں مقررہ وقت پر پابند کریں۔ عدم حاضری کی صورت میں یک طرفہ کاروائی ضابطہ عمل میں لائی جائے گی۔ اور بعد ازاں کوئی عذر قابل قبول نہ ہو گا۔`;
 
 export default function Warashikni() {
   const [form, setForm] = useState({
@@ -80,8 +80,8 @@ export default function Warashikni() {
         <div class="field"><span class="field-label">مورخہ:</span> <span class="field-value">${form.footer_date || "—"}</span></div>
       </div>
 
-      <div class="clause">گی۔ اور بعد ازاں کوئی مقدر قابل قبول نہ ہوگا۔</div>
-      <div class="clause">بعد از تحریل اصل ہذا واپس کریں۔</div>
+      <div class="clause">اور بعد ازاں کوئی عذر قابل قبول نہ ہو گا۔</div>
+      <div class="clause">بعد از تعمیل اصل ہذا واپس کریں۔</div>
 
       <div class="signatures">
         <div class="sig-box">
@@ -206,10 +206,10 @@ export default function Warashikni() {
             {/* Clauses */}
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-1">
               <p className="text-xs text-slate-700" style={{ fontFamily: URDU_FONT, lineHeight: 2 }}>
-                گی۔ اور بعد ازاں کوئی مقدر قابل قبول نہ ہوگا۔
+                اور بعد ازاں کوئی عذر قابل قبول نہ ہو گا۔
               </p>
               <p className="text-xs text-slate-700" style={{ fontFamily: URDU_FONT, lineHeight: 2 }}>
-                بعد از تحریل اصل ہذا واپس کریں۔
+                بعد از تعمیل اصل ہذا واپس کریں۔
               </p>
             </div>
 
