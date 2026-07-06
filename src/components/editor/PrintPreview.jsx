@@ -437,7 +437,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     ).join("");
   }, [gcaData, effectiveColors]);
 
-  const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors) : "";
+  const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects)) : "";
 
   const svgString = svgData
     ? `<?xml version="1.0" encoding="UTF-8"?>

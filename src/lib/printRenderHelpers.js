@@ -403,7 +403,7 @@ export function getCCAGCAText(chakbandi, gcaValue) {
 }
 
 // ─── Legend SVG: 2-column table (sign | name), 3× bigger ────────────────
-export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
+export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = null) {
   const items = [
     { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
     { label: "کھال", color: C.khalStroke || "#2563eb", type: "line_thin" },
@@ -420,8 +420,23 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C) {
   const legendW = colSignW + colNameW + pad * 3;
   const headerH = lf * 1.3, colHdrH = lf * 1.1, rowH = lf * 1.4;
   const legendH = headerH + colHdrH + items.length * rowH + pad;
-  const lx = viewX + 8 * S;
-  const ly = viewY + viewH - legendH - 8 * S;
+  // Find the corner with least overlap with map objects
+  const _pad = 8 * S;
+  const _obj = objectsBounds || { minX: viewX + 80, minY: viewY + 80, maxX: viewX + viewW - 80, maxY: viewY + viewH - 80 };
+  const _cands = [
+    { lx: viewX + _pad, ly: viewY + viewH - legendH - _pad },
+    { lx: viewX + viewW - legendW - _pad, ly: viewY + viewH - legendH - _pad },
+    { lx: viewX + _pad, ly: viewY + _pad },
+    { lx: viewX + viewW - legendW - _pad, ly: viewY + _pad },
+  ];
+  let lx = _cands[0].lx, ly = _cands[0].ly, _bestOv = Infinity;
+  for (const _c of _cands) {
+    const _rx = _c.lx + legendW, _ry = _c.ly + legendH;
+    const _ox = Math.max(0, Math.min(_rx, _obj.maxX) - Math.max(_c.lx, _obj.minX));
+    const _oy = Math.max(0, Math.min(_ry, _obj.maxY) - Math.max(_c.ly, _obj.minY));
+    const _ov = _ox * _oy;
+    if (_ov < _bestOv) { _bestOv = _ov; lx = _c.lx; ly = _c.ly; }
+  }
   const nameColX = lx + pad;
   const signColX = lx + pad * 2 + colNameW;
   const midX = nameColX + colNameW + pad / 2;
@@ -503,7 +518,7 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
 }
 
 // ─── CANVAS: draw legend — 2-column table (sign | name), 3× bigger ───────
-export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
+export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBounds = null) {
   const items = [
     { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
     { label: "کھال", color: C.khalStroke || "#2563eb", type: "line_thin" },
@@ -519,8 +534,22 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1) {
   const legendW = colSignW + colNameW + pad * 3;
   const headerH = lf * 1.3, colHdrH = lf * 1.1, rowH = lf * 1.4;
   const legendH = headerH + colHdrH + items.length * rowH + pad;
-  const lx = 8 * S * scale;
-  const ly = canvasH - legendH - 8 * S * scale;
+  const _pad = 8 * S * scale;
+  const _obj = objBounds || { minX: 80 * scale, minY: 80 * scale, maxX: canvasW - 80 * scale, maxY: canvasH - 80 * scale };
+  const _cands = [
+    { lx: _pad, ly: canvasH - legendH - _pad },
+    { lx: canvasW - legendW - _pad, ly: canvasH - legendH - _pad },
+    { lx: _pad, ly: _pad },
+    { lx: canvasW - legendW - _pad, ly: _pad },
+  ];
+  let lx = _cands[0].lx, ly = _cands[0].ly, _bestOv = Infinity;
+  for (const _c of _cands) {
+    const _rx = _c.lx + legendW, _ry = _c.ly + legendH;
+    const _ox = Math.max(0, Math.min(_rx, _obj.maxX) - Math.max(_c.lx, _obj.minX));
+    const _oy = Math.max(0, Math.min(_ry, _obj.maxY) - Math.max(_c.ly, _obj.minY));
+    const _ov = _ox * _oy;
+    if (_ov < _bestOv) { _bestOv = _ov; lx = _c.lx; ly = _c.ly; }
+  }
   const nameColX = lx + pad;
   const signColX = lx + pad * 2 + colNameW;
   const midX = nameColX + colNameW + pad / 2;

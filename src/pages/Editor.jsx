@@ -300,6 +300,8 @@ export default function Editor() {
       }
       return null;
     });
+    // Immediate save — ensures khal persists for print/export without waiting for auto-save
+    saveRef.current();
   }, []);
 
   const handleRoadPointAdd = useCallback((pt) => {
