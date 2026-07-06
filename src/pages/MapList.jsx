@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Search, Map, Calendar, MapPin, Layers, Trash2, Upload, Download, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Search, Map, Calendar, MapPin, Layers, Trash2, Upload, Download, Pencil, Printer, Check, Loader2 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import MapDetailsDialog from "@/components/editor/MapDetailsDialog";
+import { buildSVG, getObjectsBounds } from "@/lib/svgMapBuilder";
+import { DIMENSIONS, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML } from "@/lib/gisEngine";
+import { svgCCAGCAFractionBox, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
 
 const STATUS_COLORS = {
   draft: "bg-slate-100 text-slate-600 border-slate-300",
@@ -26,6 +29,23 @@ const STATUS_LABELS = {
   published: "Published",
 };
 
+const PRINT_COLORS = {
+  acreStroke: "#eab308",
+  acreFill: "rgba(234,179,8,0.08)",
+  mustateelStroke: "#ef4444",
+  mustateelFill: "rgba(245,158,11,0.10)",
+  murabaStroke: "#ef4444",
+  murabaFill: "rgba(249,115,22,0.08)",
+  canalStroke: "#0284c7",
+  canalFill: "rgba(14,165,233,0.35)",
+  khalStroke: "#2563eb",
+  roadStroke: "#b45309",
+  chakbandiStroke: "#22c55e",
+  mouzaStroke: "#000000",
+  labelColor: "#000000",
+  outletStroke: "#06b6d4",
+};
+
 export default function MapList() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -34,6 +54,8 @@ export default function MapList() {
   const [newMap, setNewMap] = useState({ title: "", village: "", district: "", tehsil: "", section: "", rajbah: "", moga_number: "", mogha_side: "" });
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isBulkPrinting, setIsBulkPrinting] = useState(false);
   const fileInputRef = useRef(null);
   const [uploadTitle, setUploadTitle] = useState("");
 
@@ -104,6 +126,98 @@ export default function MapList() {
     },
   });
 
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkPrint = () => {
+    const selected = maps.filter(m => selectedIds.has(m.id));
+    if (selected.length === 0) { toast.warning("Select at least one map"); return; }
+
+    setIsBulkPrinting(true);
+    const C = PRINT_COLORS;
+    let pagesHTML = "";
+    let count = 0;
+
+    for (const map of selected) {
+      let objects = [];
+      try { objects = JSON.parse(map.drawing_data || "[]"); } catch { continue; }
+      if (objects.length === 0) continue;
+
+      const svgData = buildSVG(objects, C, null, { mustateel: true, muraba: true });
+      if (!svgData) continue;
+
+      // CCA/GCA labels
+      const mustateels = objects.filter(o => o.type === "mustateel");
+      const canals = objects.filter(o => o.type === "canal");
+      const chakbandis = objects.filter(o => o.type === "chakbandi");
+      const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
+      let gcaLabels = "";
+      for (const ch of chakbandis) {
+        if (ch.points?.length >= 3) {
+          const gca = calculateChakbandiGCA(ch, mustateels, canals);
+          if (gca > 0 || ch.centerLabel) {
+            const lp = getChakbandiLabelPos(ch);
+            if (!lp) continue;
+            const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
+            if (cca || gcaTxt) {
+              gcaLabels += svgCCAGCAFractionBox(cca, gcaTxt, lp.x, lp.y, lblFont, "rgba(255,255,255,0.94)", C.chakbandiStroke || "#166534");
+            }
+          }
+        }
+      }
+
+      const bounds = getObjectsBounds(objects);
+      const legendSVG = buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, C, bounds);
+      const headerHTML = buildPrintHeaderHTML(map, null, 0);
+      const footerHTML = buildPrintFooterHTML(map);
+
+      pagesHTML += `<div class="map-page">
+        ${headerHTML}
+        <div class="map-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}" preserveAspectRatio="xMidYMid meet" style="max-width:100%;max-height:100%;display:block;">
+            <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
+            ${svgData.svgBody}
+            ${gcaLabels}
+            ${legendSVG}
+          </svg>
+        </div>
+        ${footerHTML}
+      </div>`;
+      count++;
+    }
+
+    setIsBulkPrinting(false);
+
+    if (count === 0) { toast.error("No printable maps found — selected maps may be empty"); return; }
+
+    const win = window.open("", "_blank");
+    if (!win) { toast.error("Popup blocked — allow popups for this site"); return; }
+    win.document.write(`<!DOCTYPE html><html><head>
+      <title>Bulk Print — ${count} Maps</title>
+      <style>
+        @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
+        @page { margin: 6mm; size: A4 landscape; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html, body { background:#fff; font-family: Rajdhani, Arial, sans-serif; }
+        .map-page { width:100%; height:100vh; page-break-after: always; display:flex; flex-direction:column; overflow:hidden; }
+        .map-page:last-child { page-break-after: auto; }
+        .map-wrap { flex:1; min-height:0; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+        @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+      </style>
+    </head><body>
+      ${pagesHTML}
+    </body></html>`);
+    win.document.close();
+    win.onload = () => { setTimeout(() => win.print(), 500); };
+    setSelectedIds(new Set());
+    toast.success(`Generating PDF with ${count} map(s)…`);
+  };
+
   const filtered = maps.filter(m =>
     (m.title || "").toLowerCase().includes(search.toLowerCase()) ||
     (m.village || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -127,6 +241,11 @@ export default function MapList() {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
+            {selectedIds.size > 0 && (
+              <Button onClick={handleBulkPrint} disabled={isBulkPrinting} size="sm" className="bg-green-600 hover:bg-green-500 text-white gap-1.5 text-xs">
+                {isBulkPrinting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />} Print PDF ({selectedIds.size})
+              </Button>
+            )}
             <Button onClick={() => fileInputRef.current?.click()} size="sm" variant="outline" className="text-xs gap-1.5 border-slate-300">
               <Upload className="w-3.5 h-3.5" /> Import
             </Button>
@@ -150,6 +269,24 @@ export default function MapList() {
           />
         </div>
 
+        {/* Selection Bar */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-3">
+            <span className="text-xs text-blue-700 font-medium">{selectedIds.size} map(s) selected</span>
+            <div className="flex gap-1.5">
+              <Button size="sm" variant="ghost" className="text-xs h-7 text-slate-500" onClick={() => {
+                if (selectedIds.size === filtered.length) setSelectedIds(new Set());
+                else setSelectedIds(new Set(filtered.map(m => m.id)));
+              }}>
+                {selectedIds.size === filtered.length ? "Deselect All" : "Select All"}
+              </Button>
+              <Button size="sm" variant="ghost" className="text-xs h-7 text-slate-500" onClick={() => setSelectedIds(new Set())}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Map List */}
         {isLoading ? (
           <div className="space-y-3">
@@ -170,8 +307,15 @@ export default function MapList() {
         ) : (
           <div className="space-y-3">
             {filtered.map(map => (
-              <div key={map.id} className="bg-white border border-slate-200 rounded-xl p-3 hover:border-blue-300 hover:shadow-md transition-all shadow-sm">
+              <div key={map.id} className={`bg-white border rounded-xl p-3 hover:border-blue-300 hover:shadow-md transition-all shadow-sm ${selectedIds.has(map.id) ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"}`}>
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => toggleSelect(map.id)}
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${selectedIds.has(map.id) ? "bg-blue-600 border-blue-600" : "bg-white border-slate-300 hover:border-blue-400"}`}
+                    title="Select for bulk print"
+                  >
+                    {selectedIds.has(map.id) && <Check className="w-3 h-3 text-white" />}
+                  </button>
                   <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center shrink-0">
                     <Map className="w-5 h-5 text-blue-400" />
                   </div>
