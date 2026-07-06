@@ -324,12 +324,8 @@ export default function WarabandiParatForm() {
         className="w-5 h-5 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded" title="حذف کریں">
         <Trash2 className="w-3 h-3" />
       </button>
-      <button onClick={() => insertRowAfter(i)}
-        className="w-5 h-5 flex items-center justify-center text-blue-300 hover:text-blue-500 hover:bg-blue-50 rounded text-[8px]" title="نیچے قطار شامل کریں">
-        <Plus className="w-3 h-3" />
-      </button>
-    </div>
-  );
+      </div>
+      );
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -503,8 +499,6 @@ export default function WarabandiParatForm() {
               <RowActions i={i} />
             </div>
           ))}
-          {/* spacer for میزان row */}
-          <div style={{ minHeight: "30px" }} />
         </div>
 
         {/* Scrollable table */}
