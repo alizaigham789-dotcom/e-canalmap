@@ -38,39 +38,34 @@ export default function Warashikni() {
       <title>نوٹس وارشکنی</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-        @page { size: A4 portrait; margin: 14mm; }
+        @page { size: A4 portrait; margin: 12mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: ${URDU_FONT}; color: #1e293b; padding: 18px; direction: rtl; }
-        .form-border { border: 1px solid #000; padding: 20px; }
-        .notice-title { text-align: center; font-size: 18px; font-weight: bold; color: #1e293b; margin-bottom: 14px; }
-        .meta-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px; }
-        .meta-row .meta-item { flex: 1; }
-        .meta-label { font-weight: bold; }
-        .meta-value { border-bottom: 1px dotted #555; display: inline-block; width: 160px; text-align: center; }
-        .field-line { font-size: 12px; line-height: 2.2; margin-bottom: 6px; }
-        .field-label { font-weight: bold; white-space: nowrap; }
-        .field-value { border-bottom: 1px dotted #555; display: inline-block; width: 160px; text-align: center; margin-right: 4px; }
-        .body-text { font-size: 12px; line-height: 2.4; text-align: justify; margin: 14px 0; }
-        .return-clause { font-size: 12px; text-align: center; margin: 18px 0 18px 40px; }
-        .signatures { display: flex; justify-content: space-between; margin-top: 30px; gap: 30px; }
-        .sig-box { text-align: center; min-width: 160px; }
-        .sig-label { font-size: 12px; font-weight: bold; margin-bottom: 28px; }
-        .sig-line { border-top: 1px solid #333; padding-top: 4px; font-size: 11px; color: #444; }
+        body { font-family: ${URDU_FONT}; color: #1a1a1a; padding: 14px; direction: rtl; }
+        .form-border { border: 1.5px solid #000; padding: 32px 38px; min-height: 250mm; }
+        .notice-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 24px; letter-spacing: 0.5px; }
+        .field-line { display: flex; align-items: baseline; font-size: 15px; line-height: 2.9; margin-bottom: 12px; }
+        .field-label { min-width: 175px; white-space: nowrap; font-weight: bold; }
+        .field-value { flex: 1; border-bottom: 1px dotted #333; min-height: 1.2em; padding: 0 8px; }
+        .body-text { font-size: 15px; line-height: 2.9; text-align: justify; margin: 24px 0; }
+        .return-clause { font-size: 15px; text-align: center; margin: 28px 70px 28px 0; font-weight: bold; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 44px; gap: 50px; }
+        .sig-box { flex: 1; }
+        .sig-label { font-size: 15px; font-weight: bold; margin-bottom: 42px; }
+        .sig-blank { border-top: 1px solid #333; margin: 6px 0 12px; }
+        .sig-footer { font-size: 14px; margin: 8px 0 16px; }
+        .sig-blank-end { border-top: 1px solid #333; margin-top: 14px; }
       </style>
     </head><body>
       <div class="form-border">
         <div class="notice-title">نوٹس وارشکنی</div>
 
-        <div class="meta-row">
-          <div class="meta-item"><span class="meta-label">نمبر:</span> <span class="meta-value">${form.number || ""}</span></div>
-          <div class="meta-item"><span class="meta-label">تاریخ:</span> <span class="meta-value">${form.date || ""}</span></div>
-        </div>
-
-        <div class="field-line"><span class="field-label">منجانب:</span> دفتر ضلعداری سیکشن <span class="field-value">${form.from_office || ""}</span></div>
-        <div class="field-line"><span class="field-label">بمقدمہ:</span> ${form.subject || ""} <span class="field-value">${form.mouza_burji ? "موگہ برجی نمبر " + form.mouza_burji : ""}</span></div>
-        <div class="field-line"><span class="field-label">موگہ برجی نمبر:</span> <span class="field-value">${form.mouza_burji || ""}</span></div>
-        <div class="field-line"><span class="field-label">راجباہ:</span> <span class="field-value">${form.rajbaha || ""}</span></div>
-        <div class="field-line"><span class="field-label">بنام منشی:</span> <span class="field-value">${form.to_munshi || ""}</span></div>
+        <div class="field-line"><span class="field-label">نمبر:</span><span class="field-value">${form.number || ""}</span></div>
+        <div class="field-line"><span class="field-label">تاریخ:</span><span class="field-value">${form.date || ""}</span></div>
+        <div class="field-line"><span class="field-label">منجانب:</span><span class="field-value">دفتر ضلعداری سیکشن ${form.from_office || ""}</span></div>
+        <div class="field-line"><span class="field-label">بمقدمہ:</span><span class="field-value">${form.subject || ""} ${form.mouza_burji ? "موگہ برجی نمبر " + form.mouza_burji : ""}</span></div>
+        <div class="field-line"><span class="field-label">موگہ برجی نمبر:</span><span class="field-value">${form.mouza_burji || ""}</span></div>
+        <div class="field-line"><span class="field-label">راجباہ:</span><span class="field-value">${form.rajbaha || ""}</span></div>
+        <div class="field-line"><span class="field-label">بنام منشی:</span><span class="field-value">${form.to_munshi || ""}</span></div>
 
         <div class="body-text">${bodyForPrint}</div>
 
@@ -79,11 +74,15 @@ export default function Warashikni() {
         <div class="signatures">
           <div class="sig-box">
             <div class="sig-label">دستخط ضلعدار</div>
-            <div class="sig-line">ضلعداری سیکشن ${form.section || ""}</div>
+            <div class="sig-blank"></div>
+            <div class="sig-footer">ضلعداری سیکشن ${form.section || ""}</div>
+            <div class="sig-blank-end"></div>
           </div>
           <div class="sig-box">
             <div class="sig-label">سیکشن</div>
-            <div class="sig-line">ملحمہ ٹوانہ سب ڈویژن ${form.sub_division || ""}</div>
+            <div class="sig-blank"></div>
+            <div class="sig-footer">ضلعداری سیکشن ${form.section || ""} سب ڈویژن ${form.sub_division || ""}</div>
+            <div class="sig-blank-end"></div>
           </div>
         </div>
       </div>
@@ -154,14 +153,14 @@ export default function Warashikni() {
                 className={inputCls} dir="rtl" style={{ fontFamily: URDU_FONT }} />
             </div>
 
-            {/* Mouza Burji — full width (vertical sequence) */}
+            {/* Mouza Burji — full width */}
             <div>
               <label className={labelCls} style={{ fontFamily: URDU_FONT }}>موگہ برجی نمبر</label>
               <input value={form.mouza_burji} onChange={e => update("mouza_burji", e.target.value)}
                 className={inputCls} placeholder="—" dir="ltr" />
             </div>
 
-            {/* Rajbaha — full width (vertical sequence) */}
+            {/* Rajbaha — full width */}
             <div>
               <label className={labelCls} style={{ fontFamily: URDU_FONT }}>راجباہ</label>
               <input value={form.rajbaha} onChange={e => update("rajbaha", e.target.value)}
@@ -199,28 +198,32 @@ export default function Warashikni() {
 
             {/* Return clause — centered, slightly left */}
             <div className="pt-4">
-              <p className="text-sm text-slate-700" style={{ fontFamily: URDU_FONT, lineHeight: 2, textAlign: "center", marginRight: 60 }}>
+              <p className="text-sm text-slate-700" style={{ fontFamily: URDU_FONT, lineHeight: 2, textAlign: "center", marginRight: 70 }}>
                 بعد از تعمیل اصل ہذا واپس کریں۔
               </p>
             </div>
 
-            {/* Signatures */}
-            <div className="flex justify-between items-end pt-6 gap-6">
-              <div className="text-center flex-1">
-                <div className="text-xs font-bold text-slate-700 mb-8" style={{ fontFamily: URDU_FONT }}>
+            {/* Signatures — two columns matching print layout */}
+            <div className="flex justify-between items-start pt-6 gap-8">
+              <div className="flex-1 text-center">
+                <div className="text-xs font-bold text-slate-700 mb-10" style={{ fontFamily: URDU_FONT }}>
                   دستخط ضلعدار
                 </div>
-                <div className="border-t border-slate-400 pt-1 text-[10px] text-slate-500" style={{ fontFamily: URDU_FONT }}>
+                <div className="border-t border-slate-400 mb-3" />
+                <div className="text-[10px] text-slate-500 mb-4" style={{ fontFamily: URDU_FONT }}>
                   ضلعداری سیکشن {form.section || "—"}
                 </div>
+                <div className="border-t border-slate-300" />
               </div>
-              <div className="text-center flex-1">
-                <div className="text-xs font-bold text-slate-700 mb-8" style={{ fontFamily: URDU_FONT }}>
+              <div className="flex-1 text-center">
+                <div className="text-xs font-bold text-slate-700 mb-10" style={{ fontFamily: URDU_FONT }}>
                   سیکشن
                 </div>
-                <div className="border-t border-slate-400 pt-1 text-[10px] text-slate-500" style={{ fontFamily: URDU_FONT }}>
-                  ملحمہ ٹوانہ سب ڈویژن {form.sub_division || "—"}
+                <div className="border-t border-slate-400 mb-3" />
+                <div className="text-[10px] text-slate-500 mb-4" style={{ fontFamily: URDU_FONT }}>
+                  ضلعداری سیکشن {form.section || "—"} سب ڈویژن {form.sub_division || "—"}
                 </div>
+                <div className="border-t border-slate-300" />
               </div>
             </div>
           </div>

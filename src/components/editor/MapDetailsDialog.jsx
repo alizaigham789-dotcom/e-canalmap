@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
   const [form, setForm] = useState({
     title: "", moga_number: "", rajbah: "", section: "",
-    tehsil: "", district: "", mogha_side: "L",
+    zilladar_section: "", tehsil: "", district: "", mogha_side: "L",
   });
 
   useEffect(() => {
@@ -15,6 +15,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
         moga_number: mapData.moga_number || "",
         rajbah: mapData.rajbah || "",
         section: mapData.section || "",
+        zilladar_section: mapData.zilladar_section || "",
         tehsil: mapData.tehsil || "",
         district: mapData.district || "",
         mogha_side: mapData.mogha_side || "L",
@@ -50,6 +51,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
             موگہ نمبری {form.moga_number ? `${form.moga_number}/${form.mogha_side}` : "_____"}&nbsp;&nbsp;
             راجباہ {form.rajbah || "_____"}&nbsp;&nbsp;
             موضع {form.section || "_____"}&nbsp;&nbsp;
+            ضلعداری سیکشن {form.zilladar_section || "_____"}&nbsp;&nbsp;
             تحصیل {form.tehsil || "_____"}&nbsp;&nbsp;
             ضلع {form.district || "_____"}
           </span>
@@ -100,6 +102,15 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
             <input value={form.section} onChange={e => f("section", e.target.value)}
               className="w-full border border-slate-200 rounded-lg h-8 px-3 text-sm text-slate-800 focus:outline-none focus:border-blue-400"
               placeholder="Section / Village" />
+          </div>
+
+          {/* Zilladar Section */}
+          <div>
+            <label className="block text-[10px] text-slate-500 uppercase tracking-widest mb-1" dir="rtl"
+              style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>ضلعداری سیکشن</label>
+            <input value={form.zilladar_section} onChange={e => f("zilladar_section", e.target.value)}
+              className="w-full border border-slate-200 rounded-lg h-8 px-3 text-sm text-slate-800 focus:outline-none focus:border-blue-400"
+              placeholder="Zilladar Section" />
           </div>
 
           {/* Sub division */}

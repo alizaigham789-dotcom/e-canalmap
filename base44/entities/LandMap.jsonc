@@ -21,6 +21,10 @@
       "type": "string",
       "description": "Section (\u0633\u06cc\u06a9\u0634\u0646)"
     },
+    "zilladar_section": {
+      "type": "string",
+      "description": "Zilladar Section (\u0636\u0644\u0639\u062f\u0627\u0631\u06cc \u0633\u06cc\u06a9\u0634\u0646)"
+    },
     "rajbah": {
       "type": "string",
       "description": "Rajbah / Canal Minor name (\u0631\u0627\u062c\u0628\u0627\u06c1)"

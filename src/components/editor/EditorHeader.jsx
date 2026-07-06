@@ -92,6 +92,8 @@ export default function EditorHeader({
         style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
         {mapData?.moga_number && <span>موگہ {mapData.moga_number}{mapData.mogha_side ? `/${mapData.mogha_side}` : ""}</span>}
         {mapData?.rajbah && <span>• راجباہ {mapData.rajbah}</span>}
+        {mapData?.section && <span>• موضع {mapData.section}</span>}
+        {mapData?.zilladar_section && <span>، ضلعداری سیکشن {mapData.zilladar_section}</span>}
         {mapData?.tehsil && <span>• {mapData.tehsil}</span>}
       </div>
 
