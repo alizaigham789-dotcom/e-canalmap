@@ -102,6 +102,8 @@ export default function Editor() {
   const [colorSettings, setColorSettings] = useState(DEFAULT_COLORS);
   const [bgColor, setBgColor] = useState("#ffffff");
   const [pageBorderStyle, setPageBorderStyle] = useState("none");
+  const [legendPos, setLegendPos] = useState(null); // null = default position; {x, y} when dragged
+  const legendDragRef = useRef(null); // { offsetX, offsetY }
 
   const dsmRef = useRef(new DrawingStateManager([]));
   const autoSaveTimer = useRef(null);
@@ -171,10 +173,11 @@ export default function Editor() {
 
   const scheduleAutoSave = () => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => saveRef.current(), 1000);
+    autoSaveTimer.current = setTimeout(() => saveRef.current(), 400);
   };
 
-  // Save on unmount / navigate away — direct API call so it survives unmount
+  // Save on unmount / navigate away — direct API call so it survives unmount.
+  // Also removes stale query cache so fresh data is loaded on next visit.
   useEffect(() => {
     return () => {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
@@ -185,6 +188,8 @@ export default function Editor() {
         drawing_data: dsmRef.current.serialize(),
         total_parcels: parcels,
         viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+      }).then(() => {
+        queryClient.removeQueries({ queryKey: ["map", mapId] });
       }).catch(() => {});
     };
   }, []);
@@ -265,6 +270,7 @@ export default function Editor() {
         dsmRef.current.add(canal);
         setSelectedId(canal.id);
         syncObjects();
+        saveRef.current();
       }
       return null;
     });
@@ -281,6 +287,7 @@ export default function Editor() {
         dsmRef.current.add(cb);
         setSelectedId(cb.id);
         syncObjects();
+        saveRef.current();
       }
       return null;
     });
@@ -297,11 +304,11 @@ export default function Editor() {
         dsmRef.current.add(khal);
         setSelectedId(khal.id);
         syncObjects();
+        // Save immediately — dsmRef is already updated at this point
+        saveRef.current();
       }
       return null;
     });
-    // Immediate save — ensures khal persists for print/export without waiting for auto-save
-    saveRef.current();
   }, []);
 
   const handleRoadPointAdd = useCallback((pt) => {
@@ -315,6 +322,7 @@ export default function Editor() {
         dsmRef.current.add(road);
         setSelectedId(road.id);
         syncObjects();
+        saveRef.current();
       }
       return null;
     });
@@ -331,6 +339,7 @@ export default function Editor() {
         dsmRef.current.add(mouza);
         setSelectedId(mouza.id);
         syncObjects();
+        saveRef.current();
       }
       return null;
     });
@@ -347,6 +356,7 @@ export default function Editor() {
         dsmRef.current.add(outlet);
         setSelectedId(outlet.id);
         syncObjects();
+        saveRef.current();
       }
       return null;
     });
@@ -406,6 +416,38 @@ export default function Editor() {
   const handleFitView = () => { setZoom(1); setPan({ x: 100, y: 80 }); };
 
   const handleSelect = (id) => setSelectedId(id);
+
+  const handleLegendDragStart = (e) => {
+    const panel = e.currentTarget.parentElement;
+    if (!panel) return;
+    const container = panel.offsetParent;
+    if (!container) return;
+    const panelRect = panel.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    legendDragRef.current = {
+      offsetX: e.clientX - panelRect.left,
+      offsetY: e.clientY - panelRect.top,
+      containerX: containerRect.left,
+      containerY: containerRect.top,
+    };
+    setLegendPos({
+      x: panelRect.left - containerRect.left,
+      y: panelRect.top - containerRect.top,
+    });
+    e.preventDefault();
+  };
+  useEffect(() => {
+    if (legendPos === null) return;
+    const handleMove = (e) => {
+      if (!legendDragRef.current) return;
+      const { offsetX, offsetY, containerX, containerY } = legendDragRef.current;
+      setLegendPos({ x: e.clientX - offsetX - containerX, y: e.clientY - offsetY - containerY });
+    };
+    const handleUp = () => { legendDragRef.current = null; };
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => { window.removeEventListener("mousemove", handleMove); window.removeEventListener("mouseup", handleUp); };
+  }, [legendPos !== null]);
   const selectedObj = objects.find(o => o.id === selectedId) || null;
 
   const handleUpdateObject = (id, changes) => {
@@ -809,13 +851,20 @@ export default function Editor() {
 
           {/* Panels */}
           {showLegend && (
-            <div className="absolute top-[200px] right-3 z-20">
+            <div
+              className="absolute z-20"
+              style={legendPos
+                ? { left: legendPos.x, top: legendPos.y, right: "auto" }
+                : { top: "200px", right: "12px" }}
+            >
               <LegendPanel
                 colorSettings={colorSettings}
                 killaVisibility={killaVisibility}
                 onKillaVisibilityChange={(type, val) => setKillaVisibility(prev => ({ ...prev, [type]: val }))}
                 layers={layers}
                 onLayerChange={handleLayerChange}
+                onDragStart={handleLegendDragStart}
+                onResetPos={() => setLegendPos(null)}
               />
             </div>
           )}

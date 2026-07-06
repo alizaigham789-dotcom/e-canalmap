@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, Eye, EyeOff } from "lucide-react";
+import { BookOpen, Eye, EyeOff, GripVertical, RotateCcw } from "lucide-react";
 
 const ITEMS = [
   { label: "Mustateel Boundary", color: "#ef4444", style: "solid", thickness: 3, desc: "440 × 990 ft • 10 Killas", key: "mustateelStroke", killaToggle: "mustateel" },
@@ -12,7 +12,7 @@ const ITEMS = [
   { label: "Outlet / Moga", color: "#06b6d4", style: "arrow", thickness: 2, desc: "Directional water outlet", key: "outletStroke", layerKey: "outlet" },
 ];
 
-export default function LegendPanel({ colorSettings, killaVisibility, onKillaVisibilityChange, layers, onLayerChange }) {
+export default function LegendPanel({ colorSettings, killaVisibility, onKillaVisibilityChange, layers, onLayerChange, onDragStart, onResetPos }) {
   const C = colorSettings || {};
   const kv = killaVisibility || { mustateel: true, muraba: true };
   const lv = layers || {};
@@ -31,9 +31,22 @@ export default function LegendPanel({ colorSettings, killaVisibility, onKillaVis
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden w-60">
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-200 bg-slate-50">
+      <div
+        className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-200 bg-slate-50 cursor-grab active:cursor-grabbing select-none"
+        onMouseDown={onDragStart}
+      >
+        <GripVertical className="w-3.5 h-3.5 text-slate-400" />
         <BookOpen className="w-3.5 h-3.5 text-blue-600" />
-        <span className="text-xs font-bold text-slate-800 font-heading tracking-wider">LEGEND</span>
+        <span className="text-xs font-bold text-slate-800 font-heading tracking-wider flex-1">LEGEND</span>
+        {onResetPos && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onResetPos(); }}
+            className="text-slate-400 hover:text-blue-600 transition-colors"
+            title="Reset position"
+          >
+            <RotateCcw className="w-3 h-3" />
+          </button>
+        )}
       </div>
       <div className="p-3 space-y-2.5">
         {ITEMS.map((item, idx) => {
