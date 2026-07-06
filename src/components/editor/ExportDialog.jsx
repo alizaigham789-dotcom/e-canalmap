@@ -6,7 +6,7 @@ import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBA
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, svgMogaFraction, chakbandiLabelPosition, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas } from "@/lib/printRenderHelpers";
 
 
-export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {}, showPageBorder = false }) {
+export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {}, pageBorderStyle = "none" }) {
   const [loading, setLoading] = useState(null);
   const [pageOrientation, setPageOrientation] = useState("landscape");
   const [pageSize, setPageSize] = useState("A4");
@@ -322,7 +322,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       @page { size: ${pageSize} ${pageOrientation}; margin: 6mm; }
       * { margin:0; padding:0; box-sizing:border-box; }
       html, body { width:100%; height:100%; overflow:hidden; background:white; font-family:Rajdhani,Arial,sans-serif; }
-      body { display: flex; flex-direction: column;${showPageBorder ? " border:2px dashed #3b82f6;" : ""} }
+      body { display: flex; flex-direction: column;${pageBorderStyle !== "none" && pageBorderStyle ? ` border:2px ${pageBorderStyle} #3b82f6;` : ""} }
       .map-area { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
       .map-area img { max-width:100%; max-height:100%; width:auto; height:auto; }
       @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
@@ -387,7 +387,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       @page { size: ${pageSize} ${pageOrientation}; margin: 6mm; }
       * { margin:0; padding:0; box-sizing:border-box; }
       html, body { width:100%; height:100%; overflow:hidden; background:white; font-family:Rajdhani,Arial,sans-serif; }
-      body { display: flex; flex-direction: column;${showPageBorder ? " border:2px dashed #3b82f6;" : ""} }
+      body { display: flex; flex-direction: column;${pageBorderStyle !== "none" && pageBorderStyle ? ` border:2px ${pageBorderStyle} #3b82f6;` : ""} }
       .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
       .map-wrap svg { max-width:100%; max-height:100%; width:auto; height:auto; display:block; }
       @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
@@ -575,7 +575,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     #zoom-display { font-size: 12px; color: #64748b; min-width: 50px; text-align: center; }
     #viewport { overflow: auto; width: 100vw; height: calc(100vh - 90px); cursor: grab; background: #f8fafc; }
     #viewport.dragging { cursor: grabbing; }
-    #map-container { position: relative; display: inline-block; padding: 40px; min-width: fit-content;${showPageBorder ? " border: 2px dashed #3b82f6;" : ""} }
+    #map-container { position: relative; display: inline-block; padding: 40px; min-width: fit-content;${pageBorderStyle !== "none" && pageBorderStyle ? ` border: 2px ${pageBorderStyle} #3b82f6;` : ""} }
     #map-img { display: block; transform-origin: top left; image-rendering: pixelated; transition: transform 0.1s; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
     #info-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #16213e; padding: 4px 16px; font-size: 11px; color: #64748b; display: flex; gap: 16px; border-top: 1px solid #0f3460; }
   </style>

@@ -366,7 +366,7 @@ function SettingSlider({ label, value, min, max, step, onChange, unit = "" }) {
 }
 
 // ─── COMPONENT ─────────────────────────────────────────────────────────────────
-export default function PrintPreview({ mapData, objects, colorSettings, onClose, selectedMogaFilter, killaVisibility = {}, showPageBorder = false }) {
+export default function PrintPreview({ mapData, objects, colorSettings, onClose, selectedMogaFilter, killaVisibility = {}, pageBorderStyle = "none" }) {
   const [scale, setScale] = useState(100);
   const [mogaFilter, setMogaFilter] = useState(selectedMogaFilter || "");
   const [bwMode, setBwMode] = useState(false);
@@ -492,7 +492,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
         * { margin:0; padding:0; box-sizing:border-box; }
         html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; }
-        body { display: flex; flex-direction: column;${showPageBorder ? " border:2px dashed #3b82f6;" : ""} }
+        body { display: flex; flex-direction: column;${pageBorderStyle !== "none" && pageBorderStyle ? ` border:2px ${pageBorderStyle} #3b82f6;` : ""} }
         .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .map-wrap svg { max-width:100%; max-height:100%; width:auto; height:auto; display:block; }
         @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
@@ -628,7 +628,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
         {/* Preview Area */}
         <div className="flex-1 overflow-auto bg-slate-950 p-6 flex items-start justify-center">
-          <div className="bg-white shadow-2xl" style={{ width: `${scale}%`, minWidth: 500, border: showPageBorder ? "2px dashed #3b82f6" : "none" }}>
+          <div className="bg-white shadow-2xl" style={{ width: `${scale}%`, minWidth: 500, border: pageBorderStyle !== "none" ? `2px ${pageBorderStyle} #3b82f6` : "none" }}>
             {/* Urdu header — Khaka Dasti */}
             <div dangerouslySetInnerHTML={{ __html: buildPrintHeaderHTML(mapData, mogaFilter, gcaData.total) }} />
 

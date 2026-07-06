@@ -12,6 +12,7 @@ import EditorHeader from "@/components/editor/EditorHeader";
 import ExportDialog from "@/components/editor/ExportDialog";
 import LegendPanel from "@/components/editor/LegendPanel";
 import MapScanDialog from "@/components/editor/MapScanDialog";
+import AICommandPanel from "@/components/editor/AICommandPanel";
 
 import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
 import PrintPreview from "@/components/editor/PrintPreview";
@@ -21,7 +22,7 @@ import {
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
   saveToClipboard, loadFromClipboard, hasClipboard,
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
@@ -77,6 +78,7 @@ export default function Editor() {
   const [killaNumbersGlobal, setKillaNumbersGlobal] = useState(true);
   const [mustateelStartNum, setMustateelStartNum] = useState("");
   const [showScan, setShowScan] = useState(false);
+  const [showAICommand, setShowAICommand] = useState(false);
   const [showColors, setShowColors] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
@@ -99,7 +101,7 @@ export default function Editor() {
   const [canRedo, setCanRedo] = useState(false);
   const [colorSettings, setColorSettings] = useState(DEFAULT_COLORS);
   const [bgColor, setBgColor] = useState("#ffffff");
-  const [showPageBorder, setShowPageBorder] = useState(false);
+  const [pageBorderStyle, setPageBorderStyle] = useState("none");
 
   const dsmRef = useRef(new DrawingStateManager([]));
   const autoSaveTimer = useRef(null);
@@ -351,6 +353,12 @@ export default function Editor() {
   const handleSnapChange = (key, val) => setSnapSettings(prev => ({ ...prev, [key]: val }));
 
   const handleDamageMarkerClick = () => {}; // no-op: line-based, no dialog
+
+  const handleAICommand = (newObjects, updates = []) => {
+    newObjects.forEach(o => dsmRef.current.add(o));
+    updates.forEach(u => dsmRef.current.update(u.id, u.changes));
+    syncObjects();
+  };
 
   const handleToolChange = (tool) => {
     if (tool !== "mustateel") setMustateelStartNum("");
@@ -653,7 +661,7 @@ export default function Editor() {
               muraba: killaVisibility.muraba && killaNumbersGlobal,
             }}
             onBoxSelect={handleBoxSelect}
-            showPageBorder={showPageBorder}
+            pageBorderStyle={pageBorderStyle}
           />
 
           {/* Top-right toolbar buttons */}
@@ -697,9 +705,12 @@ export default function Editor() {
               <Printer className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
-              className={`w-9 h-9 border shadow-md transition-all ${showPageBorder ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
-              onClick={() => setShowPageBorder(v => !v)}
-              title="Show Page Border">
+              className={`w-9 h-9 border shadow-md transition-all ${pageBorderStyle !== "none" ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
+              onClick={() => setPageBorderStyle(prev => {
+                const styles = ["none", "dashed", "solid", "dotted"];
+                return styles[(styles.indexOf(prev) + 1) % styles.length];
+              })}
+              title={`Page Border: ${pageBorderStyle !== "none" ? pageBorderStyle : "off"} (click to cycle)`}>
               <Frame className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
@@ -760,6 +771,12 @@ export default function Editor() {
               <Upload className="w-4 h-4" />
               <input type="file" accept=".json,.chakbandi.json" onChange={handleUploadJSON} className="hidden" />
             </label>
+            <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-purple-600 hover:bg-purple-50 shadow-md"
+              onClick={() => setShowAICommand(true)}
+              title="AI Command — type to draw map">
+              <Wand2 className="w-4 h-4" />
+            </Button>
             <Button variant="ghost" size="icon"
               className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-amber-600 hover:bg-amber-50 shadow-md"
               onClick={() => setShowScan(true)}
@@ -873,7 +890,7 @@ export default function Editor() {
         objects={objects}
         killaVisibility={{ mustateel: killaVisibility.mustateel && killaNumbersGlobal, muraba: killaVisibility.muraba && killaNumbersGlobal }}
         colorSettings={colorSettings}
-        showPageBorder={showPageBorder}
+        pageBorderStyle={pageBorderStyle}
       />
 
       {showPrint && (
@@ -883,8 +900,17 @@ export default function Editor() {
           colorSettings={colorSettings}
           selectedMogaFilter={printMogaFilter}
           killaVisibility={{ mustateel: killaVisibility.mustateel && killaNumbersGlobal, muraba: killaVisibility.muraba && killaNumbersGlobal }}
-          showPageBorder={showPageBorder}
+          pageBorderStyle={pageBorderStyle}
           onClose={() => { setShowPrint(false); setPrintMogaFilter(""); }}
+        />
+      )}
+
+      {/* AI Command Panel */}
+      {showAICommand && (
+        <AICommandPanel
+          objects={objects}
+          onApply={handleAICommand}
+          onClose={() => setShowAICommand(false)}
         />
       )}
 

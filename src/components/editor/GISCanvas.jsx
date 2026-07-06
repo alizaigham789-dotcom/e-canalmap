@@ -34,7 +34,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     killaVisibility, // { mustateel: bool, muraba: bool }
     orthoMode, // CAD-style H/V angle constraint while drawing line tools
     onBoxSelect, // callback(selectedObjects[]) when box-select completes
-    showPageBorder, // draw page border guide lines on canvas
+    pageBorderStyle, // "none"|"dashed"|"solid"|"dotted" — page border guide
   },
   ref
 ) {
@@ -323,13 +323,15 @@ const GISCanvas = forwardRef(function GISCanvas(
       ctx.restore();
     }
 
-    // Page border guide — dashed rectangle inset from canvas edges
-    if (showPageBorder) {
+    // Page border guide — rectangle inset from canvas edges (dashed / solid / dotted)
+    if (pageBorderStyle && pageBorderStyle !== "none") {
       const margin = 24;
       ctx.save();
       ctx.strokeStyle = "#3b82f6";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([10, 5]);
+      ctx.lineWidth = pageBorderStyle === "dotted" ? 3 : 2;
+      if (pageBorderStyle === "dashed") ctx.setLineDash([10, 5]);
+      else if (pageBorderStyle === "dotted") ctx.setLineDash([2, 4]);
+      else ctx.setLineDash([]); // solid
       ctx.strokeRect(margin, margin, W - margin * 2, H - margin * 2);
       ctx.setLineDash([]);
       ctx.restore();
@@ -372,7 +374,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         ctx.fillText(`${ang.toFixed(0)}°`, sx + 18, sy - 15);
       }
     }
-  }, [objects, zoom, pan, layers, selectedId, activeTool, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measurePoly, measureResult, endpointSnap, orthoMode, showPageBorder]);
+  }, [objects, zoom, pan, layers, selectedId, activeTool, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measurePoly, measureResult, endpointSnap, orthoMode, pageBorderStyle]);
 
   useEffect(() => {
     const loop = () => { render(); animRef.current = requestAnimationFrame(loop); };
