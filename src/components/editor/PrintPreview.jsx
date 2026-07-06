@@ -379,28 +379,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const legendDragRef = useRef(null);
   const svgWrapRef = useRef(null);
 
-  // Convert screen coordinates to SVG world coordinates
-  const screenToSVG = useCallback((clientX, clientY) => {
-    if (!svgWrapRef.current || !svgData) return null;
-    const svgEl = svgWrapRef.current.querySelector("svg");
-    if (!svgEl) return null;
-    const rect = svgEl.getBoundingClientRect();
-    const sx = clientX - rect.left;
-    const sy = clientY - rect.top;
-    const wx = svgData.viewX + (sx / rect.width) * svgData.viewW;
-    const wy = svgData.viewY + (sy / rect.height) * svgData.viewH;
-    return { x: wx, y: wy };
-  }, [svgData]);
-
-  const handlePreviewClick = useCallback((e) => {
-    if (!legendMoveMode) return;
-    const pos = screenToSVG(e.clientX, e.clientY);
-    if (pos) {
-      setLegendCustomPos(pos);
-      setLegendMoveMode(false);
-    }
-  }, [legendMoveMode, screenToSVG]);
-
   // Extract all mogas from objects
   const availableMogas = useMemo(() => {
     const s = new Set();
@@ -431,6 +409,28 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility),
     [objects, effectiveColors, mogaFilter, killaVisibility]
   );
+
+  // Convert screen coordinates to SVG world coordinates (must be after svgData)
+  const screenToSVG = useCallback((clientX, clientY) => {
+    if (!svgWrapRef.current || !svgData) return null;
+    const svgEl = svgWrapRef.current.querySelector("svg");
+    if (!svgEl) return null;
+    const rect = svgEl.getBoundingClientRect();
+    const sx = clientX - rect.left;
+    const sy = clientY - rect.top;
+    const wx = svgData.viewX + (sx / rect.width) * svgData.viewW;
+    const wy = svgData.viewY + (sy / rect.height) * svgData.viewH;
+    return { x: wx, y: wy };
+  }, [svgData]);
+
+  const handlePreviewClick = useCallback((e) => {
+    if (!legendMoveMode) return;
+    const pos = screenToSVG(e.clientX, e.clientY);
+    if (pos) {
+      setLegendCustomPos(pos);
+      setLegendMoveMode(false);
+    }
+  }, [legendMoveMode, screenToSVG]);
 
   // Auto-calculate CCA/GCA per chakbandi — use user's centerLabel if entered
   const gcaData = useMemo(() => {
