@@ -112,6 +112,19 @@ export default function Editor() {
   const zoomRef = useRef(zoom);
   const panRef = useRef(pan);
   const mustateelStartNumRef = useRef(mustateelStartNum);
+  // Draft refs — allow finish handlers to read current draft without side-effects in state updaters
+  const canalDraftRef = useRef(null);
+  const chakbandiDraftRef = useRef(null);
+  const khalDraftRef = useRef(null);
+  const roadDraftRef = useRef(null);
+  const mouzaDraftRef = useRef(null);
+  const outletDraftRef = useRef(null);
+  canalDraftRef.current = canalDraft;
+  chakbandiDraftRef.current = chakbandiDraft;
+  khalDraftRef.current = khalDraft;
+  roadDraftRef.current = roadDraft;
+  mouzaDraftRef.current = mouzaDraft;
+  outletDraftRef.current = outletDraft;
   zoomRef.current = zoom;
   panRef.current = pan;
   mustateelStartNumRef.current = mustateelStartNum;
@@ -264,16 +277,15 @@ export default function Editor() {
   }, []);
 
   const handleCanalFinish = useCallback(() => {
-    setCanalDraft(prev => {
-      if (prev && prev.length >= 2) {
-        const canal = createCanal(prev);
-        dsmRef.current.add(canal);
-        setSelectedId(canal.id);
-        syncObjects();
-        saveRef.current();
-      }
-      return null;
-    });
+    const draft = canalDraftRef.current;
+    setCanalDraft(null);
+    if (draft && draft.length >= 2) {
+      const canal = createCanal(draft);
+      dsmRef.current.add(canal);
+      setSelectedId(canal.id);
+      syncObjects();
+      saveRef.current();
+    }
   }, []);
 
   const handleChakbandiPointAdd = useCallback((pt) => {
@@ -281,16 +293,15 @@ export default function Editor() {
   }, []);
 
   const handleChakbandiFinish = useCallback(() => {
-    setChakbandiDraft(prev => {
-      if (prev && prev.length >= 2) {
-        const cb = createChakbandi(prev);
-        dsmRef.current.add(cb);
-        setSelectedId(cb.id);
-        syncObjects();
-        saveRef.current();
-      }
-      return null;
-    });
+    const draft = chakbandiDraftRef.current;
+    setChakbandiDraft(null);
+    if (draft && draft.length >= 2) {
+      const cb = createChakbandi(draft);
+      dsmRef.current.add(cb);
+      setSelectedId(cb.id);
+      syncObjects();
+      saveRef.current();
+    }
   }, []);
 
   const handleKhalPointAdd = useCallback((pt) => {
@@ -298,17 +309,15 @@ export default function Editor() {
   }, []);
 
   const handleKhalFinish = useCallback(() => {
-    setKhalDraft(prev => {
-      if (prev && prev.length >= 2) {
-        const khal = createKhal(prev);
-        dsmRef.current.add(khal);
-        setSelectedId(khal.id);
-        syncObjects();
-        // Save immediately — dsmRef is already updated at this point
-        saveRef.current();
-      }
-      return null;
-    });
+    const draft = khalDraftRef.current;
+    setKhalDraft(null);
+    if (draft && draft.length >= 2) {
+      const khal = createKhal(draft);
+      dsmRef.current.add(khal);
+      setSelectedId(khal.id);
+      syncObjects();
+      saveRef.current();
+    }
   }, []);
 
   const handleRoadPointAdd = useCallback((pt) => {
@@ -316,16 +325,15 @@ export default function Editor() {
   }, []);
 
   const handleRoadFinish = useCallback(() => {
-    setRoadDraft(prev => {
-      if (prev && prev.length >= 2) {
-        const road = createRoad(prev);
-        dsmRef.current.add(road);
-        setSelectedId(road.id);
-        syncObjects();
-        saveRef.current();
-      }
-      return null;
-    });
+    const draft = roadDraftRef.current;
+    setRoadDraft(null);
+    if (draft && draft.length >= 2) {
+      const road = createRoad(draft);
+      dsmRef.current.add(road);
+      setSelectedId(road.id);
+      syncObjects();
+      saveRef.current();
+    }
   }, []);
 
   const handleMouzaPointAdd = useCallback((pt) => {
@@ -333,16 +341,15 @@ export default function Editor() {
   }, []);
 
   const handleMouzaFinish = useCallback(() => {
-    setMouzaDraft(prev => {
-      if (prev && prev.length >= 2) {
-        const mouza = createMouza(prev);
-        dsmRef.current.add(mouza);
-        setSelectedId(mouza.id);
-        syncObjects();
-        saveRef.current();
-      }
-      return null;
-    });
+    const draft = mouzaDraftRef.current;
+    setMouzaDraft(null);
+    if (draft && draft.length >= 2) {
+      const mouza = createMouza(draft);
+      dsmRef.current.add(mouza);
+      setSelectedId(mouza.id);
+      syncObjects();
+      saveRef.current();
+    }
   }, []);
 
   const handleOutletStart = useCallback((pt, canalId) => {
@@ -350,16 +357,15 @@ export default function Editor() {
   }, []);
 
   const handleOutletFinish = useCallback((endPt) => {
-    setOutletDraft(prev => {
-      if (prev) {
-        const outlet = createOutlet(prev.canalId, { x: prev.x, y: prev.y }, endPt);
-        dsmRef.current.add(outlet);
-        setSelectedId(outlet.id);
-        syncObjects();
-        saveRef.current();
-      }
-      return null;
-    });
+    const draft = outletDraftRef.current;
+    setOutletDraft(null);
+    if (draft) {
+      const outlet = createOutlet(draft.canalId, { x: draft.x, y: draft.y }, endPt);
+      dsmRef.current.add(outlet);
+      setSelectedId(outlet.id);
+      syncObjects();
+      saveRef.current();
+    }
   }, []);
 
   const handleSnapChange = (key, val) => setSnapSettings(prev => ({ ...prev, [key]: val }));

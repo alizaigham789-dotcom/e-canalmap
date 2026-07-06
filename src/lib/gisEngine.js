@@ -984,7 +984,7 @@ export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   const mogaNum = mogaFilter || mapData?.moga_number || "____";
   const mogaSide = mapData?.mogha_side ? `/${mapData.mogha_side}` : "";
   const rajbah = mapData?.rajbah || "____";
-  const section = mapData?.section || "____";
+  const village = mapData?.village || "____";
   const zilladarSection = mapData?.zilladar_section || "____";
   const subDiv = mapData?.tehsil || "____";
   const division = mapData?.district || "____";
@@ -993,7 +993,7 @@ export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
   const mogaStr = mogaSide ? `${mogaNum}/${mapData.mogha_side}` : mogaNum;
   return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-bottom:4px;">
     <div style="padding:3px 10px; text-align:center; font-size:26px; font-weight:bold; line-height:1.2; white-space:nowrap; overflow:hidden;">
-      خاکہ دستی موگہ نمبری <span style="font-family:'Rajdhani',Arial,sans-serif; direction:ltr; unicode-bidi:isolate;">${mogaStr}</span>، راجباہ ${rajbah}، موضع ${section}، ضلعداری سیکشن ${zilladarSection}، تحصیل ${subDiv}، ضلع ${division}
+      خاکہ دستی موگہ نمبری <span style="font-family:'Rajdhani',Arial,sans-serif; direction:ltr; unicode-bidi:isolate;">${mogaStr}</span>، راجباہ ${rajbah}، موضع ${village}، ضلعداری سیکشن ${zilladarSection}، سب ڈویزن ${subDiv}، ڈویزن ${division}
     </div>
   </div>`;
 }
