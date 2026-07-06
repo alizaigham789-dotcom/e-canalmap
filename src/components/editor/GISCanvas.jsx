@@ -152,9 +152,9 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
     }
 
-    // Vertex handles for the selected chakbandi/canal — draggable editing
+    // Vertex handles for the selected chakbandi/canal/khal — draggable editing
     const selObj = objects.find(o => o.id === selectedId);
-    if (selObj && ["chakbandi", "canal"].includes(selObj.type) && selObj.points) {
+    if (selObj && ["chakbandi", "canal", "khal"].includes(selObj.type) && selObj.points) {
       for (const p of selObj.points) {
         ctx.fillStyle = "#3b82f6";
         ctx.strokeStyle = "#ffffff";
@@ -437,7 +437,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         // Vertex follows acre/mustateel/canal boundaries — same snapping the draw tool uses
         const snap = snapSettings || { gridSnap: true, spineSnap: true, mogaSnap: true, zoom };
         const others = objectsRef.current.filter(o => o.id !== obj.id);
-        const snapType = obj.type === "canal" ? "canal" : "chakbandi";
+        const snapType = obj.type === "canal" ? "canal" : obj.type === "khal" ? "khal" : "chakbandi";
         const snapped = computeSnapPosition(worldRaw.x, worldRaw.y, snapType, others, { ...snap, zoom });
         const newPoints = obj.points.map((p, i) => i === vertexDrag.current.index ? { x: snapped.x, y: snapped.y } : p);
         onUpdateObject(obj.id, { points: newPoints });
@@ -645,7 +645,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     } else if (activeTool === "select") {
       // Check for a vertex handle on the currently selected chakbandi/canal first
       const selectedObj = selectedId ? objects.find(o => o.id === selectedId) : null;
-      if (selectedObj && ["chakbandi", "canal"].includes(selectedObj.type) && selectedObj.points) {
+      if (selectedObj && ["chakbandi", "canal", "khal"].includes(selectedObj.type) && selectedObj.points) {
         const vThresh = 10 / zoom;
         const vIdx = selectedObj.points.findIndex(p => Math.hypot(p.x - worldRaw.x, p.y - worldRaw.y) < vThresh);
         if (vIdx !== -1) {
@@ -726,7 +726,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       // Double-click on a line of the selected chakbandi/canal (not on an existing vertex)
       // auto-inserts a new draggable anchor point right there — no need to redraw.
       const selectedObj = selectedId ? objectsRef.current.find(o => o.id === selectedId) : null;
-      if (selectedObj && ["chakbandi", "canal"].includes(selectedObj.type) && selectedObj.points) {
+      if (selectedObj && ["chakbandi", "canal", "khal"].includes(selectedObj.type) && selectedObj.points) {
         const vThresh = 10 / zoom;
         const onVertex = selectedObj.points.some(p => Math.hypot(p.x - worldRaw.x, p.y - worldRaw.y) < vThresh);
         if (!onVertex) {

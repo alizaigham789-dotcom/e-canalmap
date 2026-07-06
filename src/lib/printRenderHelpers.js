@@ -343,18 +343,6 @@ export function drawCCAGCAFractionBoxOnCanvas(ctx, ccaText, gcaText, cx, cy, fon
   ctx.lineJoin = "round";
   ctx.textAlign = "center";
 
-  // Left bracket — vertical line covering both numbers
-  ctx.beginPath();
-  ctx.moveTo(bx, by);
-  ctx.lineTo(bx, by + boxH);
-  ctx.stroke();
-  // Right bracket — vertical line covering both numbers
-  const rx = bx + boxW;
-  ctx.beginPath();
-  ctx.moveTo(rx, by);
-  ctx.lineTo(rx, by + boxH);
-  ctx.stroke();
-
   if (ccaStr) {
     ctx.font = `bold ${fontPx}px Rajdhani, sans-serif`;
     ctx.textBaseline = "middle";
@@ -389,12 +377,6 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
   const tickW = fontPx * 0.25;
 
   let svg = "";
-  // Left bracket — vertical line covering both numbers
-  const lx = bx;
-  svg += `<line x1="${lx.toFixed(1)}" y1="${by.toFixed(1)}" x2="${lx.toFixed(1)}" y2="${(by+boxH).toFixed(1)}" stroke="${ink}" stroke-width="${sw.toFixed(1)}" stroke-linecap="round"/>`;
-  // Right bracket — vertical line covering both numbers
-  const rx = bx + boxW;
-  svg += `<line x1="${rx.toFixed(1)}" y1="${by.toFixed(1)}" x2="${rx.toFixed(1)}" y2="${(by+boxH).toFixed(1)}" stroke="${ink}" stroke-width="${sw.toFixed(1)}" stroke-linecap="round"/>`;
   if (ccaStr) {
     svg += `<text x="${cx.toFixed(1)}" y="${ccaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${ccaStr}</text>`;
   }
