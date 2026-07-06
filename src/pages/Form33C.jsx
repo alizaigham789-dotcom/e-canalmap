@@ -116,6 +116,7 @@ export default function Form33C() {
   const [tehsil, setTehsil] = useState("");
   const [activeTab, setActiveTab] = useState("33c");
   const [letterData, setLetterData] = useState({ date: "", number: "", to: "", from: "", govt_order: "120-2023/821.Rs(11)", govt_date: "31-05-2023" });
+  const [loadedRecordId, setLoadedRecordId] = useState(null);
   const scanFileRef = useRef();
 
   const updateVillage = (id, key, val) =>
@@ -156,7 +157,7 @@ export default function Form33C() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await base44.entities.Form33CRecord.create({
+      const payload = {
         fasal, year, orientation,
         district: showDistrict ? district : "",
         villages_json: JSON.stringify(villages),
@@ -165,7 +166,13 @@ export default function Form33C() {
           deputy_img: signatures.deputy_img ? "[uploaded]" : "",
           clerk_img: signatures.clerk_img ? "[uploaded]" : "",
         }),
-      });
+      };
+      if (loadedRecordId) {
+        await base44.entities.Form33CRecord.update(loadedRecordId, payload);
+      } else {
+        const created = await base44.entities.Form33CRecord.create(payload);
+        setLoadedRecordId(created.id);
+      }
       alert("✓ ریکارڈ محفوظ ہو گیا");
       setHistoryKey(k => k + 1);
     } catch (e) {
@@ -175,6 +182,7 @@ export default function Form33C() {
   };
 
   const handleLoadRecord = (rec, vills) => {
+    setLoadedRecordId(rec.id);
     setFasal(rec.fasal || "خریف");
     setYear(rec.year || String(CURRENT_YEAR));
     setOrientation(rec.orientation || "landscape");

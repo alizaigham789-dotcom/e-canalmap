@@ -25,6 +25,9 @@ import Form33C from './pages/Form33C';
 import EditorPro from './pages/EditorPro';
 import ZilladarDocs from './pages/ZilladarDocs';
 import GroupChat from './pages/GroupChat';
+import CanalPatwari from './pages/CanalPatwari';
+import Naqsha27B from './pages/Naqsha27B';
+import ChakbandiIkhrajCase from './pages/ChakbandiIkhrajCase';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -77,6 +80,9 @@ const AuthenticatedApp = () => {
         <Route path="/editor-pro" element={<EditorPro />} />
         <Route path="/zilladar" element={<ZilladarDocs />} />
         <Route path="/group-chat" element={<GroupChat />} />
+        <Route path="/canal-patwari" element={<CanalPatwari />} />
+        <Route path="/canal-patwari/naqsha-27b" element={<Naqsha27B />} />
+        <Route path="/chakbandi-ikhraj" element={<ChakbandiIkhrajCase />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
