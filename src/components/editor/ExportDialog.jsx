@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
-import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintHeaderHTML, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintHeaderHTML, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, svgMogaFraction, chakbandiLabelPosition, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas } from "@/lib/printRenderHelpers";
 
 
-export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {} }) {
+export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {}, showPageBorder = false }) {
   const [loading, setLoading] = useState(null);
   const [pageOrientation, setPageOrientation] = useState("landscape");
+  const [pageSize, setPageSize] = useState("A4");
   const [showLegendInExport, setShowLegendInExport] = useState(true);
   const C = colorSettings || {};
   const previewCanvasRef = useRef(null);
@@ -305,8 +306,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const headerHTML = buildPrintHeaderHTML(mapData, null, totalGCA);
     const footerHTML = buildPrintFooterHTML(mapData);
     // A4 landscape: fit map on single page with header
-    const pw = pageOrientation === "landscape" ? 1123 : 794;
-    const ph = pageOrientation === "landscape" ? 794 : 1123;
+    const _ps = PAGE_SIZES[pageSize] || PAGE_SIZES.A4;
+    const pw = pageOrientation === "landscape" ? _ps.h : _ps.w;
+    const ph = pageOrientation === "landscape" ? _ps.w : _ps.h;
     const headerH = 90;
     const mapAreaH = ph - headerH;
     const ratio = Math.min(pw / canvas.width, mapAreaH / canvas.height);
@@ -317,10 +319,10 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     win.document.write(`<!DOCTYPE html><html><head><title>Khaka Dasti</title>
     <style>
       @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
-      @page { size: A4 ${pageOrientation}; margin: 6mm; }
+      @page { size: ${pageSize} ${pageOrientation}; margin: 6mm; }
       * { margin:0; padding:0; box-sizing:border-box; }
       html, body { width:100%; height:100%; overflow:hidden; background:white; font-family:Rajdhani,Arial,sans-serif; }
-      body { display: flex; flex-direction: column; }
+      body { display: flex; flex-direction: column;${showPageBorder ? " border:2px dashed #3b82f6;" : ""} }
       .map-area { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
       .map-area img { max-width:100%; max-height:100%; width:auto; height:auto; }
       @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
@@ -382,10 +384,10 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     win.document.write(`<!DOCTYPE html><html><head><title>Khaka Dasti</title>
     <style>
       @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
-      @page { size: A4 ${pageOrientation}; margin: 6mm; }
+      @page { size: ${pageSize} ${pageOrientation}; margin: 6mm; }
       * { margin:0; padding:0; box-sizing:border-box; }
       html, body { width:100%; height:100%; overflow:hidden; background:white; font-family:Rajdhani,Arial,sans-serif; }
-      body { display: flex; flex-direction: column; }
+      body { display: flex; flex-direction: column;${showPageBorder ? " border:2px dashed #3b82f6;" : ""} }
       .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
       .map-wrap svg { max-width:100%; max-height:100%; width:auto; height:auto; display:block; }
       @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
@@ -573,7 +575,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     #zoom-display { font-size: 12px; color: #64748b; min-width: 50px; text-align: center; }
     #viewport { overflow: auto; width: 100vw; height: calc(100vh - 90px); cursor: grab; background: #f8fafc; }
     #viewport.dragging { cursor: grabbing; }
-    #map-container { position: relative; display: inline-block; padding: 40px; min-width: fit-content; }
+    #map-container { position: relative; display: inline-block; padding: 40px; min-width: fit-content;${showPageBorder ? " border: 2px dashed #3b82f6;" : ""} }
     #map-img { display: block; transform-origin: top left; image-rendering: pixelated; transition: transform 0.1s; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
     #info-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #16213e; padding: 4px 16px; font-size: 11px; color: #64748b; display: flex; gap: 16px; border-top: 1px solid #0f3460; }
   </style>
@@ -728,6 +730,14 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         <p className="text-[10px] text-slate-500 text-center -mt-1">Live preview — this is exactly how your export will look</p>
         <div className="flex items-center gap-2 justify-center flex-wrap">
           <span className="text-[10px] text-slate-500">Page:</span>
+          <select
+            value={pageSize}
+            onChange={e => setPageSize(e.target.value)}
+            className="text-[10px] bg-slate-800 border border-slate-700 text-slate-300 rounded px-1 py-0.5 cursor-pointer"
+            title="Page Size"
+          >
+            {["A4", "A3", "A2", "A1", "A0"].map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
           <button onClick={() => setPageOrientation("landscape")} className={`text-[10px] px-2 py-0.5 rounded ${pageOrientation === "landscape" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>Landscape</button>
           <button onClick={() => setPageOrientation("portrait")} className={`text-[10px] px-2 py-0.5 rounded ${pageOrientation === "portrait" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>Portrait</button>
           <label className="flex items-center gap-1 cursor-pointer">

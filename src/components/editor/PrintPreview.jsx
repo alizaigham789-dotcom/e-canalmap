@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
 import { svgCanalNameOnPath, svgMogaFraction, svgMogaFractionBox, svgCCAGCAFractionBox, chakbandiLabelPosition, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
@@ -366,11 +366,12 @@ function SettingSlider({ label, value, min, max, step, onChange, unit = "" }) {
 }
 
 // ─── COMPONENT ─────────────────────────────────────────────────────────────────
-export default function PrintPreview({ mapData, objects, colorSettings, onClose, selectedMogaFilter, killaVisibility = {} }) {
+export default function PrintPreview({ mapData, objects, colorSettings, onClose, selectedMogaFilter, killaVisibility = {}, showPageBorder = false }) {
   const [scale, setScale] = useState(100);
   const [mogaFilter, setMogaFilter] = useState(selectedMogaFilter || "");
   const [bwMode, setBwMode] = useState(false);
   const [pageOrientation, setPageOrientation] = useState("landscape");
+  const [pageSize, setPageSize] = useState("A4");
   const [showLegendInPrint, setShowLegendInPrint] = useState(true);
 
   // Extract all mogas from objects
@@ -488,10 +489,10 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       <title>Khaka Dasti</title>
       <style>
         @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
-        @page { margin: 6mm; size: A4 ${pageOrientation}; }
+        @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
         * { margin:0; padding:0; box-sizing:border-box; }
         html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; }
-        body { display: flex; flex-direction: column; }
+        body { display: flex; flex-direction: column;${showPageBorder ? " border:2px dashed #3b82f6;" : ""} }
         .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .map-wrap svg { max-width:100%; max-height:100%; width:auto; height:auto; display:block; }
         @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
@@ -561,6 +562,15 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               onClick={handleDownloadSVG}>
               <FileText className="w-3.5 h-3.5" /> SVG
             </Button>
+            {/* Page size */}
+            <select
+              value={pageSize}
+              onChange={e => setPageSize(e.target.value)}
+              className="h-8 bg-slate-800 border border-slate-600 rounded-lg text-[10px] text-slate-300 px-2 font-bold cursor-pointer"
+              title="Page Size"
+            >
+              {["A4", "A3", "A2", "A1", "A0"].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
             {/* Page orientation */}
             <div className="flex items-center bg-slate-800 rounded-lg overflow-hidden border border-slate-600">
               <button
@@ -618,7 +628,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
         {/* Preview Area */}
         <div className="flex-1 overflow-auto bg-slate-950 p-6 flex items-start justify-center">
-          <div className="bg-white shadow-2xl" style={{ width: `${scale}%`, minWidth: 500 }}>
+          <div className="bg-white shadow-2xl" style={{ width: `${scale}%`, minWidth: 500, border: showPageBorder ? "2px dashed #3b82f6" : "none" }}>
             {/* Urdu header — Khaka Dasti */}
             <div dangerouslySetInnerHTML={{ __html: buildPrintHeaderHTML(mapData, mogaFilter, gcaData.total) }} />
 

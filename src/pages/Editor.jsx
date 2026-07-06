@@ -228,7 +228,8 @@ export default function Editor() {
       obj = createMustateel(snap.x, snap.y);
       const startN = mustateelStartNumRef.current !== "" ? parseInt(mustateelStartNumRef.current, 10) : null;
       obj.label = autoAssignLabel("mustateel", dsmRef.current.objects, startN);
-      if (startN !== null) setMustateelStartNum(String(parseInt(obj.label, 10) + 1));
+      // Always track next number so subsequent draws continue the sequence
+      setMustateelStartNum(String(parseInt(obj.label, 10) + 1));
     }
     else if (type === "muraba") {
       const proto = createMuraba(0, 0);
@@ -398,8 +399,14 @@ export default function Editor() {
   const selectedObj = objects.find(o => o.id === selectedId) || null;
 
   const handleUpdateObject = (id, changes) => {
+    const obj = objects.find(o => o.id === id);
     dsmRef.current.update(id, changes);
     syncObjects();
+    // If a mustateel's label was manually changed to a number, continue numbering from there
+    if (obj && obj.type === "mustateel" && changes.label !== undefined) {
+      const m = String(changes.label).match(/(\d+)/);
+      if (m) setMustateelStartNum(String(parseInt(m[1], 10) + 1));
+    }
   };
 
   const handleDeleteObject = (id) => {
@@ -866,6 +873,7 @@ export default function Editor() {
         objects={objects}
         killaVisibility={{ mustateel: killaVisibility.mustateel && killaNumbersGlobal, muraba: killaVisibility.muraba && killaNumbersGlobal }}
         colorSettings={colorSettings}
+        showPageBorder={showPageBorder}
       />
 
       {showPrint && (
@@ -875,6 +883,7 @@ export default function Editor() {
           colorSettings={colorSettings}
           selectedMogaFilter={printMogaFilter}
           killaVisibility={{ mustateel: killaVisibility.mustateel && killaNumbersGlobal, muraba: killaVisibility.muraba && killaNumbersGlobal }}
+          showPageBorder={showPageBorder}
           onClose={() => { setShowPrint(false); setPrintMogaFilter(""); }}
         />
       )}

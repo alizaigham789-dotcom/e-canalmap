@@ -104,7 +104,7 @@ export function drawAcre(ctx, obj, isSelected, zoom, C) {
 
   // Layer 2: Boundary
   ctx.strokeStyle = isSelected ? "#60a5fa" : (C.acreStroke || "#eab308");
-  ctx.lineWidth = (isSelected ? 2 : 1.5) / zoom;
+  ctx.lineWidth = ((isSelected ? 2 : 1.5) * 0.2 + (isSelected ? 1.5 : 0)) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
   // Layer 5: Label
@@ -137,7 +137,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
 
   // Layer 2: Outer boundary — RED, thick (world-unit thickness, matches print/export)
   ctx.strokeStyle = isSelected ? "#60a5fa" : (C.mustateelStroke || "#ef4444");
-  ctx.lineWidth = (MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness) + (isSelected ? 3 : 0)) / zoom;
+  ctx.lineWidth = (MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness) * 0.2 + (isSelected ? 2 : 0)) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
   // Layer 2: Killa grid — always visible, subtle ink
@@ -251,7 +251,7 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
 
   // Layer 2: Outer boundary — RED, thicker
   ctx.strokeStyle = isSelected ? "#60a5fa" : (C.murabaStroke || "#ef4444");
-  ctx.lineWidth = (isSelected ? 4 : 3) / zoom;
+  ctx.lineWidth = ((isSelected ? 4 : 3) * 0.2 + (isSelected ? 2 : 0)) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
   // Layer 2: Killa grid — always visible, subtle ink
@@ -693,8 +693,8 @@ export function drawDamageMarker(ctx, obj, isSelected, zoom) {
 export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false) {
   if (obj.points.length < 2) return;
   const color = C.chakbandiStroke || "#22c55e";
-  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness);
-  const crossSize = CHAKBANDI_SCALE.crossSize(obj.crossSize) / zoom;
+  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness) * 0.2;
+  const crossSize = CHAKBANDI_SCALE.crossSize(obj.crossSize) * 0.2 / zoom;
   const spacing = CHAKBANDI_SCALE.crossSpacing(obj.crossSpacing) / zoom;
 
   // Always draw straight segments (no curves) — chakbandi is a hard boundary
@@ -848,8 +848,8 @@ export function drawChakbandiDraft(ctx, chakbandiDraft, snapPos, zoom, C) {
   const color = C.chakbandiStroke || "#22c55e";
   const draftPts = [...chakbandiDraft];
   if (snapPos) draftPts.push(snapPos);
-  const lineW = CHAKBANDI_SCALE.lineWidth();
-  const crossSize = CHAKBANDI_SCALE.crossSize()/zoom, spacing = CHAKBANDI_SCALE.crossSpacing()/zoom;
+  const lineW = CHAKBANDI_SCALE.lineWidth() * 0.2;
+  const crossSize = CHAKBANDI_SCALE.crossSize() * 0.2 / zoom, spacing = CHAKBANDI_SCALE.crossSpacing() / zoom;
 
   // Straight line (no curves)
   ctx.strokeStyle = color; ctx.lineWidth = lineW/zoom; ctx.lineCap = "round"; ctx.lineJoin = "miter";

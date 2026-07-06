@@ -13,6 +13,15 @@ export const DIMENSIONS = {
   ROAD_WIDTH: 28,
 };
 
+// Standard paper sizes in pixels at 96 DPI (w = portrait width, h = portrait height)
+export const PAGE_SIZES = {
+  A4: { w: 794, h: 1123 },
+  A3: { w: 1123, h: 1587 },
+  A2: { w: 1587, h: 2245 },
+  A1: { w: 2245, h: 3179 },
+  A0: { w: 3179, h: 4499 },
+};
+
 export const LOCKED_DIMS = {
   acre: { w: DIMENSIONS.ACRE.width, h: DIMENSIONS.ACRE.height },
   mustateel: { w: DIMENSIONS.MUSTATEEL.width, h: DIMENSIONS.MUSTATEEL.height },
