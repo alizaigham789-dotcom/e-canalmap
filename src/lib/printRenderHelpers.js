@@ -399,11 +399,11 @@ export function getCCAGCAText(chakbandi, gcaValue) {
     return { cca: chakbandi.centerLabel, gca: "" };
   }
   const gca = gcaValue || 0;
-  return { cca: `${gca} CCA`, gca: `${gca} GCA` };
+  return { cca: `${gca} سی سی اے`, gca: `${gca} جی سی اے` };
 }
 
 // ─── Legend SVG: 2-column table (sign | name), 3× bigger ────────────────
-export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = null) {
+export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = null, customPos = null) {
   const items = [
     { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
     { label: "کھال", color: C.khalStroke || "#2563eb", type: "line_thin" },
@@ -430,12 +430,16 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = nu
     { lx: viewX + viewW - legendW - _pad, ly: viewY + _pad },
   ];
   let lx = _cands[0].lx, ly = _cands[0].ly, _bestOv = Infinity;
-  for (const _c of _cands) {
-    const _rx = _c.lx + legendW, _ry = _c.ly + legendH;
-    const _ox = Math.max(0, Math.min(_rx, _obj.maxX) - Math.max(_c.lx, _obj.minX));
-    const _oy = Math.max(0, Math.min(_ry, _obj.maxY) - Math.max(_c.ly, _obj.minY));
-    const _ov = _ox * _oy;
-    if (_ov < _bestOv) { _bestOv = _ov; lx = _c.lx; ly = _c.ly; }
+  if (customPos) {
+    lx = customPos.x; ly = customPos.y;
+  } else {
+    for (const _c of _cands) {
+      const _rx = _c.lx + legendW, _ry = _c.ly + legendH;
+      const _ox = Math.max(0, Math.min(_rx, _obj.maxX) - Math.max(_c.lx, _obj.minX));
+      const _oy = Math.max(0, Math.min(_ry, _obj.maxY) - Math.max(_c.ly, _obj.minY));
+      const _ov = _ox * _oy;
+      if (_ov < _bestOv) { _bestOv = _ov; lx = _c.lx; ly = _c.ly; }
+    }
   }
   const nameColX = lx + pad;
   const signColX = lx + pad * 2 + colNameW;
@@ -503,7 +507,7 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
   const fontHdr = 13 * S, fontRow = 10 * S;
 
   let svg = `<rect x="${dx}" y="${dy}" width="${detailW}" height="${detailH}" fill="rgba(255,255,255,0.96)" stroke="#333" stroke-width="${1.5*S}" rx="${4*S}"/>`;
-  svg += `<text x="${dx + detailW/2}" y="${dy + headerH*0.6}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontHdr}" fill="#333">MOGA DETAILS / موگہ تفصیل</text>`;
+  svg += `<text x="${dx + detailW/2}" y="${dy + headerH*0.6}" text-anchor="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontHdr}" fill="#333">موگہ تفصیل</text>`;
   svg += `<line x1="${dx+8*S}" y1="${dy+headerH}" x2="${dx+detailW-8*S}" y2="${dy+headerH}" stroke="#ccc" stroke-width="${S}"/>`;
 
   outlets.forEach((o, i) => {
@@ -511,7 +515,7 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
     const num = o.mogha_number || "-";
     const side = o.mogha_side || "-";
     const name = o.mogha_name || "";
-    svg += `<text x="${dx + 10*S}" y="${iy}" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${fontRow}" fill="#333">Moga ${num}/${side}${name ? ' — ' + name : ''}</text>`;
+    svg += `<text x="${dx + 10*S}" y="${iy}" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${fontRow}" fill="#333">موگہ ${num}/${side}${name ? ' — ' + name : ''}</text>`;
   });
 
   return svg;
@@ -643,16 +647,16 @@ export function drawMogaDetailsOnCanvas(ctx, canvasW, canvasH, objects) {
   ctx.strokeStyle = "#333"; ctx.lineWidth = 1.5 * S;
   ctx.strokeRect(dx, dy, detailW, detailH);
 
-  ctx.fillStyle = "#333"; ctx.font = `bold ${fontHdr}px Rajdhani, sans-serif`;
+  ctx.fillStyle = "#333"; ctx.font = `bold ${fontHdr}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("MOGA DETAILS", dx + detailW / 2, dy + headerH * 0.6);
+  ctx.fillText("موگہ تفصیل", dx + detailW / 2, dy + headerH * 0.6);
   ctx.strokeStyle = "#ccc"; ctx.lineWidth = S;
   ctx.beginPath(); ctx.moveTo(dx + 8*S, dy + headerH); ctx.lineTo(dx + detailW - 8*S, dy + headerH); ctx.stroke();
 
   outlets.forEach((o, i) => {
     const iy = dy + headerH + 10*S + i * rowH + rowH / 2;
-    const text = `Moga ${o.mogha_number || "-"}/${o.mogha_side || "-"}${o.mogha_name ? " — " + o.mogha_name : ""}`;
-    ctx.fillStyle = "#333"; ctx.font = `${fontRow}px Rajdhani, sans-serif`;
+    const text = `موگہ ${o.mogha_number || "-"}/${o.mogha_side || "-"}${o.mogha_name ? " — " + o.mogha_name : ""}`;
+    ctx.fillStyle = "#333"; ctx.font = `${fontRow}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
     ctx.fillText(text, dx + 10*S, iy);
   });

@@ -547,6 +547,7 @@ export default function Editor() {
         if (!Array.isArray(objs)) throw new Error("Invalid format");
         objs.forEach(o => dsmRef.current.add(o));
         syncObjects();
+        saveRef.current();
         toast.success(`${objs.length} object(s) imported from file`);
       } catch {
         toast.error("Invalid map file — must be a .chakbandi.json export");

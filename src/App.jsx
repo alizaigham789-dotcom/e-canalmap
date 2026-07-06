@@ -22,7 +22,7 @@ import TAForm from './pages/TAForm';
 import GeoMap from './pages/GeoMap';
 import DeputyCollectorDocs from './pages/DeputyCollectorDocs';
 import Form33C from './pages/Form33C';
-import EditorPro from './pages/EditorPro';
+
 import ZilladarDocs from './pages/ZilladarDocs';
 import GroupChat from './pages/GroupChat';
 import CanalPatwari from './pages/CanalPatwari';
@@ -77,7 +77,7 @@ const AuthenticatedApp = () => {
         <Route path="/geo-map" element={<GeoMap />} />
         <Route path="/deputy-collector" element={<DeputyCollectorDocs />} />
         <Route path="/deputy-collector/33c" element={<Form33C />} />
-        <Route path="/editor-pro" element={<EditorPro />} />
+
         <Route path="/zilladar" element={<ZilladarDocs />} />
         <Route path="/group-chat" element={<GroupChat />} />
         <Route path="/canal-patwari" element={<CanalPatwari />} />

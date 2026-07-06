@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
 import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
 import { svgCanalNameOnPath, svgMogaFraction, svgMogaFractionBox, svgCCAGCAFractionBox, chakbandiLabelPosition, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
+import { Move } from "lucide-react";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
@@ -95,7 +96,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
     const lbl2 = obj.label2 || "";
     labelSvg = `${label ? `<text x="${mouzaSplit.centerA.x}" y="${mouzaSplit.centerA.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${lbl2 ? `<text x="${mouzaSplit.centerB.x}" y="${mouzaSplit.centerB.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${lbl2}</text>` : ""}`;
   } else {
-    const mogaNumSvg = obj.mogaNumber ? `<text x="${obj.x + 4}" y="${obj.y + 4}" text-anchor="start" dominant-baseline="hanging" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize}" fill="${getMogaColor(C.labelColor)}">M${obj.mogaNumber}</text>` : "";
+    const mogaNumSvg = obj.mogaNumber ? `<text x="${obj.x + 4}" y="${obj.y + 4}" text-anchor="start" dominant-baseline="hanging" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize}" fill="${getMogaColor(C.labelColor)}">مو${obj.mogaNumber}</text>` : "";
     labelSvg = `${mogaNumSvg}${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
   }
 
@@ -373,6 +374,32 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [pageOrientation, setPageOrientation] = useState("landscape");
   const [pageSize, setPageSize] = useState("A4");
   const [showLegendInPrint, setShowLegendInPrint] = useState(true);
+  const [legendCustomPos, setLegendCustomPos] = useState(null); // null = auto; {x, y} in SVG coords
+  const [legendMoveMode, setLegendMoveMode] = useState(false);
+  const legendDragRef = useRef(null);
+  const svgWrapRef = useRef(null);
+
+  // Convert screen coordinates to SVG world coordinates
+  const screenToSVG = useCallback((clientX, clientY) => {
+    if (!svgWrapRef.current || !svgData) return null;
+    const svgEl = svgWrapRef.current.querySelector("svg");
+    if (!svgEl) return null;
+    const rect = svgEl.getBoundingClientRect();
+    const sx = clientX - rect.left;
+    const sy = clientY - rect.top;
+    const wx = svgData.viewX + (sx / rect.width) * svgData.viewW;
+    const wy = svgData.viewY + (sy / rect.height) * svgData.viewH;
+    return { x: wx, y: wy };
+  }, [svgData]);
+
+  const handlePreviewClick = useCallback((e) => {
+    if (!legendMoveMode) return;
+    const pos = screenToSVG(e.clientX, e.clientY);
+    if (pos) {
+      setLegendCustomPos(pos);
+      setLegendMoveMode(false);
+    }
+  }, [legendMoveMode, screenToSVG]);
 
   // Extract all mogas from objects
   const availableMogas = useMemo(() => {
@@ -437,7 +464,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     ).join("");
   }, [gcaData, effectiveColors]);
 
-  const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects)) : "";
+  const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos) : "";
 
   const svgString = svgData
     ? `<?xml version="1.0" encoding="UTF-8"?>
@@ -485,6 +512,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
     const win = window.open("", "_blank");
     if (!win) return;
+    const printLegendSVG = showLegendInPrint ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos) : "";
     win.document.write(`<!DOCTYPE html><html><head>
       <title>Khaka Dasti</title>
       <style>
@@ -507,7 +535,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
           <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
           ${svgData.svgBody}
           ${gcaLabels}
-          ${legendSVG}
+          ${printLegendSVG}
         </svg>
       </div>
       ${footerHTML}
@@ -619,16 +647,42 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             </span>
           )}
           {/* Legend toggle */}
-          <label className="flex items-center gap-1.5 ml-auto cursor-pointer select-none">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <input type="checkbox" checked={showLegendInPrint} onChange={e => setShowLegendInPrint(e.target.checked)}
               className="w-3 h-3 accent-blue-500" />
             <span className="text-[10px] text-slate-400" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>علامات دکھائیں</span>
           </label>
+          {showLegendInPrint && (
+            <>
+              <button
+                onClick={() => setLegendMoveMode(v => !v)}
+                className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${legendMoveMode ? "bg-green-600 text-white animate-pulse" : "bg-blue-600 text-white hover:bg-blue-500"}`}
+                title="Click then click on map to place legend"
+              >
+                <Move className="w-3 h-3 inline mr-1" />
+                {legendMoveMode ? "Click on map…" : "Move Legend"}
+              </button>
+              {legendCustomPos !== null && (
+                <button
+                  onClick={() => setLegendCustomPos(null)}
+                  className="text-[10px] px-2 py-1 rounded font-medium bg-slate-800 text-slate-400 hover:text-white"
+                  title="Reset legend position to auto"
+                >
+                  Auto
+                </button>
+              )}
+            </>
+          )}
         </div>
 
         {/* Preview Area */}
         <div className="flex-1 overflow-auto bg-slate-950 p-6 flex items-start justify-center">
-          <div className="bg-white shadow-2xl" style={{ width: `${scale}%`, minWidth: 500, border: pageBorderStyle !== "none" ? `2px ${pageBorderStyle} #3b82f6` : "none" }}>
+          <div
+            ref={svgWrapRef}
+            className={`bg-white shadow-2xl relative ${legendMoveMode ? "cursor-crosshair ring-4 ring-green-400/50" : ""}`}
+            style={{ width: `${scale}%`, minWidth: 500, border: pageBorderStyle !== "none" ? `2px ${pageBorderStyle} #3b82f6` : "none" }}
+            onClick={handlePreviewClick}
+          >
             {/* Urdu header — Khaka Dasti */}
             <div dangerouslySetInnerHTML={{ __html: buildPrintHeaderHTML(mapData, mogaFilter, gcaData.total) }} />
 

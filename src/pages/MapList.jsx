@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Plus, Search, Map, Calendar, MapPin, Layers, Trash2, Upload, Download, Pencil, Printer, Check, Loader2 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import MapDetailsDialog from "@/components/editor/MapDetailsDialog";
+import BulkPrintDialog from "@/components/editor/BulkPrintDialog";
 import { buildSVG, getObjectsBounds } from "@/lib/svgMapBuilder";
 import { DIMENSIONS, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML } from "@/lib/gisEngine";
 import { svgCCAGCAFractionBox, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
@@ -56,6 +57,7 @@ export default function MapList() {
   const [editTarget, setEditTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [isBulkPrinting, setIsBulkPrinting] = useState(false);
+  const [showBulkPrint, setShowBulkPrint] = useState(false);
   const fileInputRef = useRef(null);
   const [uploadTitle, setUploadTitle] = useState("");
 
@@ -91,7 +93,7 @@ export default function MapList() {
         });
         queryClient.invalidateQueries({ queryKey: ["maps"] });
         toast.success(`Map imported: ${title}`);
-        navigate(`/editor-pro?id=${created.id}`);
+        navigate(`/editor?id=${created.id}`);
       } catch {
         toast.error("Invalid map file — must be a .chakbandi.json export");
       }
@@ -134,12 +136,24 @@ export default function MapList() {
     });
   };
 
-  const handleBulkPrint = () => {
+  const handleBulkPrint = async (options = {}) => {
     const selected = maps.filter(m => selectedIds.has(m.id));
     if (selected.length === 0) { toast.warning("Select at least one map"); return; }
 
+    const { pageSize = "A4", orientation = "landscape", bwMode = false, showLegend = true } = options;
     setIsBulkPrinting(true);
-    const C = PRINT_COLORS;
+
+    const baseColors = PRINT_COLORS;
+    const C = bwMode ? {
+      mustateelStroke: "#000000", mustateelFill: "none",
+      murabaStroke: "#000000", murabaFill: "none",
+      acreStroke: "#555555", acreFill: "none",
+      canalStroke: "#333333", canalFill: "rgba(0,0,0,0.08)",
+      khalStroke: "#444444", roadStroke: "#222222",
+      chakbandiStroke: "#000000", mouzaStroke: "#000000",
+      labelColor: "#000000", outletStroke: "#333333",
+    } : baseColors;
+
     let pagesHTML = "";
     let count = 0;
 
@@ -151,7 +165,6 @@ export default function MapList() {
       const svgData = buildSVG(objects, C, null, { mustateel: true, muraba: true });
       if (!svgData) continue;
 
-      // CCA/GCA labels
       const mustateels = objects.filter(o => o.type === "mustateel");
       const canals = objects.filter(o => o.type === "canal");
       const chakbandis = objects.filter(o => o.type === "chakbandi");
@@ -172,7 +185,7 @@ export default function MapList() {
       }
 
       const bounds = getObjectsBounds(objects);
-      const legendSVG = buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, C, bounds);
+      const legendSVG = showLegend ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, C, bounds) : "";
       const headerHTML = buildPrintHeaderHTML(map, null, 0);
       const footerHTML = buildPrintFooterHTML(map);
 
@@ -201,7 +214,7 @@ export default function MapList() {
       <title>Bulk Print — ${count} Maps</title>
       <style>
         @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
-        @page { margin: 6mm; size: A4 landscape; }
+        @page { margin: 6mm; size: ${pageSize} ${orientation}; }
         * { margin:0; padding:0; box-sizing:border-box; }
         html, body { background:#fff; font-family: Rajdhani, Arial, sans-serif; }
         .map-page { width:100%; height:100vh; page-break-after: always; display:flex; flex-direction:column; overflow:hidden; }
@@ -242,7 +255,7 @@ export default function MapList() {
           </div>
           <div className="flex items-center gap-1.5">
             {selectedIds.size > 0 && (
-              <Button onClick={handleBulkPrint} disabled={isBulkPrinting} size="sm" className="bg-green-600 hover:bg-green-500 text-white gap-1.5 text-xs">
+              <Button onClick={() => setShowBulkPrint(true)} disabled={isBulkPrinting} size="sm" className="bg-green-600 hover:bg-green-500 text-white gap-1.5 text-xs">
                 {isBulkPrinting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />} Print PDF ({selectedIds.size})
               </Button>
             )}
@@ -344,11 +357,7 @@ export default function MapList() {
                       Map Editor
                     </button>
                   </Link>
-                  <Link to={`/editor-pro?id=${map.id}`} className="flex-1">
-                    <button className="w-full py-1.5 text-[10px] font-semibold rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors">
-                      ✦ Editor Pro
-                    </button>
-                  </Link>
+
                   <button
                     onClick={() => setEditTarget(map)}
                     className="px-2.5 py-1.5 text-[10px] font-semibold rounded-lg bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 transition-colors"
@@ -473,6 +482,17 @@ export default function MapList() {
         mapData={editTarget}
         onClose={() => setEditTarget(null)}
         onSave={(data) => updateMapMutation.mutate({ id: editTarget.id, data })}
+      />
+
+      {/* Bulk Print Dialog */}
+      <BulkPrintDialog
+        open={showBulkPrint}
+        onClose={() => setShowBulkPrint(false)}
+        onPrint={async (opts) => {
+          setShowBulkPrint(false);
+          await handleBulkPrint(opts);
+        }}
+        selectedCount={selectedIds.size}
       />
 
       <BottomNav />

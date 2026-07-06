@@ -98,7 +98,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
     const lbl2 = obj.label2 || "";
     labelSvg = `${label ? `<text x="${mouzaSplit.centerA.x}" y="${mouzaSplit.centerA.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${lbl2 ? `<text x="${mouzaSplit.centerB.x}" y="${mouzaSplit.centerB.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${lbl2}</text>` : ""}`;
   } else {
-    const mogaNumSvg = obj.mogaNumber ? `<text x="${obj.x + 4}" y="${obj.y + 4}" text-anchor="start" dominant-baseline="hanging" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize}" fill="${getMogaColor(C.labelColor)}">M${obj.mogaNumber}</text>` : "";
+    const mogaNumSvg = obj.mogaNumber ? `<text x="${obj.x + 4}" y="${obj.y + 4}" text-anchor="start" dominant-baseline="hanging" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize}" fill="${getMogaColor(C.labelColor)}">مو${obj.mogaNumber}</text>` : "";
     labelSvg = `${mogaNumSvg}${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
   }
 
