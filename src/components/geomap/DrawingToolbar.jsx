@@ -1,15 +1,15 @@
 import React from "react";
-import { Slash, Pentagon, Square, Circle, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Slash, Pentagon, Square, Circle, MapPin, Trash2, Download, Layers } from "lucide-react";
 
 const TOOLS = [
-  { id: "line", icon: Slash, label: "Draw Line" },
-  { id: "polygon", icon: Pentagon, label: "Draw Polygon (Mustateel)" },
-  { id: "square", icon: Square, label: "Draw Rectangle" },
-  { id: "circle", icon: Circle, label: "Draw Circle" },
-  { id: "marker", icon: MapPin, label: "Drop Marker" },
+  { id: "line", icon: Slash, label: "Measure Line" },
+  { id: "polygon", icon: Pentagon, label: "Draw Polygon" },
+  { id: "rectangle", icon: Square, label: "Measure Rectangle" },
+  { id: "circle", icon: Circle, label: "Measure Circle" },
+  { id: "marker", icon: MapPin, label: "Place Marker" },
 ];
 
-export default function DrawingToolbar({ activeTool, onToolChange, onClear }) {
+export default function DrawingToolbar({ activeTool, onToolChange, onClear, onExport, onLayerToggle, layerVisible }) {
   return (
     <div className="absolute bottom-5 left-3 z-[1000] flex flex-col items-center gap-1 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5">
       {TOOLS.map(({ id, icon: Icon, label }) => (
@@ -28,19 +28,24 @@ export default function DrawingToolbar({ activeTool, onToolChange, onClear }) {
       ))}
       <div className="w-7 h-px bg-slate-200 my-0.5" />
       <button
-        onClick={() => onToolChange(activeTool === "edit" ? null : "edit")}
-        title="Edit / Move"
+        onClick={onLayerToggle}
+        title="Toggle Layers"
         className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
-          activeTool === "edit"
-            ? "bg-amber-500 text-white"
-            : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+          layerVisible ? "bg-emerald-500 text-white" : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
         }`}
       >
-        <Pencil className="w-4 h-4" />
+        <Layers className="w-4 h-4" />
+      </button>
+      <button
+        onClick={onExport}
+        title="Export / Screenshot"
+        className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all"
+      >
+        <Download className="w-4 h-4" />
       </button>
       <button
         onClick={onClear}
-        title="Delete All"
+        title="Delete All Measurements"
         className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all"
       >
         <Trash2 className="w-4 h-4" />

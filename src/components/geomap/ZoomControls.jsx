@@ -1,7 +1,7 @@
 import React from "react";
-import { Plus, Minus, Crosshair, Search } from "lucide-react";
+import { Plus, Minus, Crosshair } from "lucide-react";
 
-export default function ZoomControls({ onZoomIn, onZoomOut, onCenter, onSearch }) {
+export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive }) {
   return (
     <div className="absolute top-16 left-3 z-[1000] flex flex-col items-center gap-1.5">
       <div className="bg-white rounded-xl shadow-xl border border-slate-200 flex flex-col overflow-hidden">
@@ -13,11 +13,16 @@ export default function ZoomControls({ onZoomIn, onZoomOut, onCenter, onSearch }
           <Minus className="w-4 h-4" />
         </button>
       </div>
-      <button onClick={onCenter} className="w-9 h-9 bg-white rounded-xl shadow-xl border border-slate-200 flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors" title="Center / Locate Me">
+      <button
+        onClick={onGPS}
+        className={`w-9 h-9 rounded-xl shadow-xl border flex items-center justify-center transition-all ${
+          gpsActive
+            ? "bg-blue-500 text-white border-blue-600 animate-pulse"
+            : "bg-white text-blue-600 border-slate-200 hover:bg-blue-50"
+        }`}
+        title="GPS Location"
+      >
         <Crosshair className="w-4 h-4" />
-      </button>
-      <button onClick={onSearch} className="w-9 h-9 bg-white rounded-xl shadow-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors" title="Search">
-        <Search className="w-4 h-4" />
       </button>
     </div>
   );

@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { X, MapPin, Crosshair, RotateCw, Layers, Trash2, ChevronDown } from "lucide-react";
+import React from "react";
+import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function OverlayPanel({
   maps,
@@ -8,6 +8,9 @@ export default function OverlayPanel({
   availableMogas,
   selectedMoga,
   onSelectMoga,
+  controlPoints,
+  placedMarkers,
+  overlayReady,
   overlay,
   onPlaceMode,
   onRotationChange,
@@ -15,8 +18,11 @@ export default function OverlayPanel({
   mustateelAreas,
   onClose,
 }) {
+  const stepIdx = placedMarkers.length; // 0, 1, 2, or 3 (done)
   const mustateels = mustateelAreas || [];
   const totalAcres = mustateels.reduce((s, m) => s + m.acres, 0);
+  const expectedAcres = mustateels.reduce((s, m) => s + m.expected, 0);
+  const accuracyPct = expectedAcres > 0 ? Math.min(100, (1 - Math.abs(totalAcres - expectedAcres) / expectedAcres) * 100) : 0;
 
   return (
     <div className="absolute top-14 right-3 z-[1000] w-72 bg-[#1B2A3A] rounded-xl shadow-2xl border border-white/10 overflow-hidden">
@@ -24,38 +30,35 @@ export default function OverlayPanel({
       <div className="flex items-center justify-between px-3 h-10 bg-[#15212E]">
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-blue-400" />
-          <span className="text-xs font-bold text-white tracking-wide">Moga Overlay</span>
+          <span className="text-xs font-bold text-white tracking-wide">GIS Overlay</span>
         </div>
         <button onClick={onClose} className="w-6 h-6 flex items-center justify-center text-white/60 hover:text-white">
           <X className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="p-3 space-y-2.5">
+      <div className="p-3 space-y-2.5 max-h-[calc(100vh-200px)] overflow-y-auto">
         {/* Map selector */}
         <div>
-          <label className="text-[10px] text-white/50 font-semibold uppercase tracking-wide block mb-1">Select Map</label>
-          <div className="relative">
-            <select
-              value={selectedMapId}
-              onChange={(e) => onSelectMap(e.target.value)}
-              className="appearance-none w-full bg-white/10 text-white text-xs font-medium px-2.5 pr-7 h-8 rounded-md border border-white/15 cursor-pointer hover:bg-white/15 focus:outline-none focus:ring-1 focus:ring-blue-400"
-            >
-              <option value="" className="text-slate-700">— Pick a map —</option>
-              {maps.map(m => (
-                <option key={m.id} value={m.id} className="text-slate-700">
-                  {m.title}{m.village ? ` · ${m.village}` : ""}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-3 h-3 text-white/50 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
+          <label className="text-[10px] text-white/50 font-semibold uppercase tracking-wide block mb-1">Select Cadastral Map</label>
+          <select
+            value={selectedMapId}
+            onChange={(e) => onSelectMap(e.target.value)}
+            className="w-full bg-white/10 text-white text-xs font-medium px-2.5 h-8 rounded-md border border-white/15 cursor-pointer hover:bg-white/15 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          >
+            <option value="" className="text-slate-700">— Pick a map —</option>
+            {maps.map(m => (
+              <option key={m.id} value={m.id} className="text-slate-700">
+                {m.title}{m.village ? ` · ${m.village}` : ""}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Moga selector */}
-        {availableMogas.length > 0 && (
+        {availableMogas.length > 0 && overlayReady && (
           <div>
-            <label className="text-[10px] text-white/50 font-semibold uppercase tracking-wide block mb-1">Moga Number</label>
+            <label className="text-[10px] text-white/50 font-semibold uppercase tracking-wide block mb-1">Moga Filter</label>
             <div className="flex flex-wrap gap-1">
               <button
                 onClick={() => onSelectMoga("")}
@@ -75,23 +78,59 @@ export default function OverlayPanel({
           </div>
         )}
 
-        {/* Place / anchor controls */}
-        {overlay && (
+        {/* 3-Point Control Marker Workflow */}
+        {selectedMapId && !overlayReady && controlPoints && (
+          <div className="bg-white/5 rounded-lg p-2.5 space-y-2">
+            <div className="flex items-center gap-1.5">
+              <Crosshair className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-[10px] text-white/70 font-semibold">Ground Control Points</span>
+            </div>
+            <p className="text-[9px] text-white/40 leading-relaxed">
+              Place 3 markers on the satellite map at the same locations as these cadastral map corners. The system auto-calculates scale, rotation & position.
+            </p>
+            {controlPoints.map((cp, i) => {
+              const placed = i < stepIdx;
+              const active = i === stepIdx;
+              return (
+                <div key={i} className={`flex items-center gap-2 px-2 py-1.5 rounded-md transition-all ${
+                  placed ? "bg-green-600/20" : active ? "bg-blue-600/30 animate-pulse" : "bg-white/5"
+                }`}>
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                    placed ? "bg-green-500 text-white" : active ? "bg-blue-500 text-white" : "bg-white/10 text-white/40"
+                  }`}>
+                    {placed ? "✓" : i + 1}
+                  </div>
+                  <span className={`text-[10px] font-medium ${placed ? "text-green-300" : active ? "text-blue-200" : "text-white/40"}`}>
+                    {cp.label}
+                  </span>
+                  {placed && <CheckCircle2 className="w-3 h-3 text-green-400 ml-auto" />}
+                  {active && <span className="text-[9px] text-blue-300 ml-auto">Click on map…</span>}
+                </div>
+              );
+            })}
+            {stepIdx === 3 && (
+              <div className="flex items-center gap-1.5 text-green-400 text-[10px] font-bold pt-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Computing transform…
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Overlay status & controls */}
+        {overlayReady && overlay && (
           <>
             <div className="h-px bg-white/10 my-1" />
-            <button
-              onClick={onPlaceMode}
-              className={`w-full h-8 rounded-md text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${overlay.placing ? "bg-green-600 text-white animate-pulse" : "bg-blue-600 text-white hover:bg-blue-500"}`}
-            >
-              <Crosshair className="w-3.5 h-3.5" />
-              {overlay.placing ? "Click on map to place…" : "Reposition Anchor"}
-            </button>
+            <div className="flex items-center gap-1.5 text-green-400 text-[10px] font-bold">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Overlay Active — Auto-Georeferenced
+            </div>
 
-            {/* Rotation slider */}
+            {/* Fine rotation adjustment */}
             <div className="bg-white/5 rounded-lg p-2.5">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <RotateCw className="w-3.5 h-3.5 text-blue-400" />
-                <span className="text-[10px] text-white/70 font-semibold">Rotation</span>
+                <span className="text-[10px] text-white/70 font-semibold">Fine Rotation</span>
                 <span className="text-[10px] text-white font-mono ml-auto">{overlay.rotation}°</span>
               </div>
               <input
@@ -101,31 +140,40 @@ export default function OverlayPanel({
               />
               <div className="flex gap-1 mt-1">
                 <button onClick={() => onRotationChange(0)} className="text-[9px] px-1.5 py-0.5 bg-white/10 text-white/60 rounded hover:bg-white/20">Reset</button>
-                <button onClick={() => onRotationChange(overlay.rotation - 15)} className="text-[9px] px-1.5 py-0.5 bg-white/10 text-white/60 rounded hover:bg-white/20">-15°</button>
-                <button onClick={() => onRotationChange(overlay.rotation + 15)} className="text-[9px] px-1.5 py-0.5 bg-white/10 text-white/60 rounded hover:bg-white/20">+15°</button>
+                <button onClick={() => onRotationChange(overlay.rotation - 1)} className="text-[9px] px-1.5 py-0.5 bg-white/10 text-white/60 rounded hover:bg-white/20">-1°</button>
+                <button onClick={() => onRotationChange(overlay.rotation + 1)} className="text-[9px] px-1.5 py-0.5 bg-white/10 text-white/60 rounded hover:bg-white/20">+1°</button>
               </div>
             </div>
 
-            {/* Mustateel list with locked areas */}
+            {/* Area verification */}
             {mustateels.length > 0 && (
-              <div className="bg-white/5 rounded-lg p-2 max-h-40 overflow-y-auto">
+              <div className="bg-white/5 rounded-lg p-2.5">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] text-white/70 font-semibold">Mustateels ({mustateels.length})</span>
-                  <span className="text-[10px] text-green-400 font-mono font-bold">{totalAcres.toFixed(1)} ac</span>
+                  <span className="text-[10px] text-white/70 font-semibold">Area Verification</span>
+                  <span className={`text-[10px] font-mono font-bold ${accuracyPct > 98 ? "text-green-400" : accuracyPct > 90 ? "text-yellow-400" : "text-red-400"}`}>
+                    {accuracyPct.toFixed(1)}% match
+                  </span>
                 </div>
                 <div className="space-y-0.5">
-                  {mustateels.map(m => (
+                  {mustateels.slice(0, 8).map(m => (
                     <div key={m.id} className="flex items-center justify-between text-[10px]">
                       <span className="text-white/60 flex items-center gap-1">
                         <MapPin className="w-2.5 h-2.5 text-red-400" />
                         {m.label || "—"}
                       </span>
-                      <span className="text-green-400 font-mono font-bold">{m.acres.toFixed(2)} ac</span>
+                      <span className="font-mono">
+                        <span className="text-green-400">{m.acres.toFixed(2)}</span>
+                        <span className="text-white/30"> / {m.expected.toFixed(2)} ac</span>
+                      </span>
                     </div>
                   ))}
+                  {mustateels.length > 8 && (
+                    <div className="text-[9px] text-white/40 text-center pt-0.5">+{mustateels.length - 8} more</div>
+                  )}
                 </div>
-                <div className="mt-1.5 pt-1.5 border-t border-white/10 text-[9px] text-white/40 text-center">
-                  ✓ Area locked to mustateel definition
+                <div className="mt-1.5 pt-1.5 border-t border-white/10 flex justify-between text-[9px]">
+                  <span className="text-white/50">Total: {totalAcres.toFixed(2)} ac</span>
+                  <span className="text-white/50">Expected: {expectedAcres.toFixed(2)} ac</span>
                 </div>
               </div>
             )}
@@ -134,15 +182,15 @@ export default function OverlayPanel({
               onClick={onClear}
               className="w-full h-8 rounded-md text-xs font-bold bg-red-600/20 text-red-400 hover:bg-red-600/30 flex items-center justify-center gap-1.5 transition-all"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5" />
               Remove Overlay
             </button>
           </>
         )}
 
-        {!overlay && (
+        {!selectedMapId && (
           <div className="text-[10px] text-white/40 text-center py-2 leading-relaxed">
-            Pick a map, then click on the satellite view to place the overlay. Mustateel areas are locked to 10 acres.
+            Select a cadastral map to begin auto-georeferencing.
           </div>
         )}
       </div>
