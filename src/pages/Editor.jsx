@@ -148,30 +148,41 @@ export default function Editor() {
     enabled: !!mapId,
   });
 
+  const loadedMapIdRef = useRef(null);
+
   const saveMutation = useMutation({
     mutationFn: (data) => base44.entities.LandMap.update(mapId, data),
     onSuccess: () => {
       toast.success("Map saved", { duration: 1500 });
-      queryClient.invalidateQueries({ queryKey: ["map", mapId] });
+      // Update cache silently — DO NOT invalidate/refetch (causes load effect to overwrite local edits)
+      queryClient.setQueryData(["map", mapId], (old) => old ? { ...old, ...{
+        drawing_data: dsmRef.current.serialize(),
+        total_parcels: dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length,
+        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+      } } : old);
     },
     onError: () => toast.error("Save failed"),
   });
 
+  // Load map data ONLY on first load for a given map ID.
+  // Guard prevents refetches from overwriting unsaved local edits.
   useEffect(() => {
-    if (mapData?.drawing_data) {
+    if (!mapData || mapData.id === loadedMapIdRef.current) return;
+    loadedMapIdRef.current = mapData.id;
+    if (mapData.drawing_data) {
       const loaded = DrawingStateManager.deserialize(mapData.drawing_data);
       dsmRef.current = new DrawingStateManager(loaded);
       setObjects([...dsmRef.current.objects]);
       syncUndoRedo();
     }
-    if (mapData?.viewport) {
+    if (mapData.viewport) {
       try {
         const vp = JSON.parse(mapData.viewport);
         if (vp.zoom) setZoom(vp.zoom);
         if (vp.pan) setPan(vp.pan);
       } catch {}
     }
-  }, [mapData?.id]);
+  }, [mapData]);
 
   const syncUndoRedo = () => {
     setCanUndo(dsmRef.current.historyIdx > 0);
@@ -189,20 +200,25 @@ export default function Editor() {
     autoSaveTimer.current = setTimeout(() => saveRef.current(), 400);
   };
 
+  // Track current mapId for unmount save (cleanup has [] deps, can't read fresh mapId)
+  const mapIdRef = useRef(mapId);
+  mapIdRef.current = mapId;
+
   // Save on unmount / navigate away — direct API call so it survives unmount.
   // Also removes stale query cache so fresh data is loaded on next visit.
   useEffect(() => {
     return () => {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-      if (!mapId) return;
+      const currentMapId = mapIdRef.current;
+      if (!currentMapId) return;
       const parcels = dsmRef.current.getByType("mustateel").length +
         dsmRef.current.getByType("muraba").length;
-      base44.entities.LandMap.update(mapId, {
+      base44.entities.LandMap.update(currentMapId, {
         drawing_data: dsmRef.current.serialize(),
         total_parcels: parcels,
         viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
       }).then(() => {
-        queryClient.removeQueries({ queryKey: ["map", mapId] });
+        queryClient.removeQueries({ queryKey: ["map", currentMapId] });
       }).catch(() => {});
     };
   }, []);
@@ -579,7 +595,7 @@ export default function Editor() {
 
   const handleStatusChange = (status) => {
     saveMutation.mutate({ status });
-    queryClient.invalidateQueries({ queryKey: ["map", mapId] });
+    queryClient.setQueryData(["map", mapId], (old) => old ? { ...old, status } : old);
   };
 
   // Keyboard shortcuts
