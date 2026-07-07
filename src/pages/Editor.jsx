@@ -146,6 +146,8 @@ export default function Editor() {
     queryKey: ["map", mapId],
     queryFn: () => base44.entities.LandMap.filter({ id: mapId }).then(r => r[0]),
     enabled: !!mapId,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   const loadedMapIdRef = useRef(null);
@@ -154,12 +156,15 @@ export default function Editor() {
     mutationFn: (data) => base44.entities.LandMap.update(mapId, data),
     onSuccess: () => {
       toast.success("Map saved", { duration: 1500 });
-      // Update cache silently — DO NOT invalidate/refetch (causes load effect to overwrite local edits)
+      // Update cache silently — DO NOT invalidate/refetch the map query
+      // (causes load effect to overwrite local edits)
       queryClient.setQueryData(["map", mapId], (old) => old ? { ...old, ...{
         drawing_data: dsmRef.current.serialize(),
         total_parcels: dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length,
         viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
       } } : old);
+      // Refresh the maps list so MapList shows updated parcel count / status
+      queryClient.invalidateQueries({ queryKey: ["maps"] });
     },
     onError: () => toast.error("Save failed"),
   });
@@ -205,12 +210,26 @@ export default function Editor() {
   mapIdRef.current = mapId;
 
   // Save on unmount / navigate away — direct API call so it survives unmount.
-  // Also removes stale query cache so fresh data is loaded on next visit.
+  // CRITICAL: Only save if data was actually loaded (loadedMapIdRef is set).
+  // Without this guard, navigating away before data loads overwrites server data with [].
+  // Also refreshes the maps list so MapList shows current data on return.
   useEffect(() => {
     return () => {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
       const currentMapId = mapIdRef.current;
       if (!currentMapId) return;
+      // Don't save if map data was never loaded — would overwrite server data with empty
+      if (!loadedMapIdRef.current) {
+        queryClient.removeQueries({ queryKey: ["map", currentMapId] });
+        queryClient.invalidateQueries({ queryKey: ["maps"] });
+        return;
+      }
+      const objs = dsmRef.current.objects;
+      if (objs.length === 0) {
+        queryClient.removeQueries({ queryKey: ["map", currentMapId] });
+        queryClient.invalidateQueries({ queryKey: ["maps"] });
+        return;
+      }
       const parcels = dsmRef.current.getByType("mustateel").length +
         dsmRef.current.getByType("muraba").length;
       base44.entities.LandMap.update(currentMapId, {
@@ -219,7 +238,10 @@ export default function Editor() {
         viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
       }).then(() => {
         queryClient.removeQueries({ queryKey: ["map", currentMapId] });
-      }).catch(() => {});
+        queryClient.invalidateQueries({ queryKey: ["maps"] });
+      }).catch(() => {
+        queryClient.invalidateQueries({ queryKey: ["maps"] });
+      });
     };
   }, []);
 
