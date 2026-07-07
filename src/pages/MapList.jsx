@@ -60,6 +60,7 @@ export default function MapList() {
   const [showBulkPrint, setShowBulkPrint] = useState(false);
   const fileInputRef = useRef(null);
   const [uploadTitle, setUploadTitle] = useState("");
+  const [importing, setImporting] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.LandMap.delete(id),
@@ -74,14 +75,20 @@ export default function MapList() {
   const handleUploadMap = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setImporting(true);
     const reader = new FileReader();
+    reader.onerror = () => { toast.error("Could not read file"); setImporting(false); };
     reader.onload = async (ev) => {
       try {
-        const data = JSON.parse(ev.target.result);
+        let data;
+        try { data = JSON.parse(ev.target.result); }
+        catch { throw new Error("File is not valid JSON"); }
         const objs = data.objects || data;
-        if (!Array.isArray(objs)) throw new Error("Invalid");
-        const title = data.mapData?.title || file.name.replace(/\.chakbandi\.json$|\.json$/i, "");
-        const created = await base44.entities.LandMap.create({
+        if (!Array.isArray(objs)) throw new Error("File must contain a map objects array");
+        if (objs.length === 0) throw new Error("Map file contains no objects");
+        const title = data.mapData?.title || file.name.replace(/\.chakbandi\.json$|\.json$/i, "") || "Imported Map";
+        const side = data.mapData?.mogha_side || data.mapData?.moghaSide;
+        const mapFields = {
           title,
           village: data.mapData?.village || "",
           tehsil: data.mapData?.tehsil || "",
@@ -89,19 +96,21 @@ export default function MapList() {
           section: data.mapData?.section || "",
           rajbah: data.mapData?.rajbah || "",
           moga_number: data.mapData?.moga_number || data.mapData?.mogaNumber || "",
-          mogha_side: data.mapData?.mogha_side || data.mapData?.moghaSide || "",
           zilladar_section: data.mapData?.zilladar_section || "",
           status: data.mapData?.status || "draft",
           drawing_data: JSON.stringify(objs),
           total_parcels: objs.filter(o => ["mustateel","muraba"].includes(o.type)).length,
-          viewport: data.viewport ? JSON.stringify(data.viewport) : undefined,
-        });
+        };
+        if (side === "L" || side === "R") mapFields.mogha_side = side;
+        if (data.viewport) mapFields.viewport = JSON.stringify(data.viewport);
+        const created = await base44.entities.LandMap.create(mapFields);
         queryClient.invalidateQueries({ queryKey: ["maps"] });
         toast.success(`Map imported: ${title}`);
         navigate(`/editor?id=${created.id}`);
-      } catch {
-        toast.error("Invalid map file — must be a .chakbandi.json export");
+      } catch (err) {
+        toast.error("Import failed: " + (err.message || "unknown error"));
       }
+      setImporting(false);
     };
     reader.readAsText(file);
     e.target.value = "";
@@ -264,10 +273,10 @@ export default function MapList() {
                 {isBulkPrinting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />} Print PDF ({selectedIds.size})
               </Button>
             )}
-            <Button onClick={() => fileInputRef.current?.click()} size="sm" variant="outline" className="text-xs gap-1.5 border-slate-300">
-              <Upload className="w-3.5 h-3.5" /> Import
+            <Button onClick={() => fileInputRef.current?.click()} size="sm" variant="outline" className="text-xs gap-1.5 border-slate-300" disabled={importing}>
+              {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} Import
             </Button>
-            <input ref={fileInputRef} type="file" accept=".json,.chakbandi.json" onChange={handleUploadMap} className="hidden" />
+            <input ref={fileInputRef} type="file" accept=".json,.chakbandi.json,application/json" onChange={handleUploadMap} className="sr-only" tabIndex={-1} />
             <Button onClick={() => setShowCreate(true)} size="sm" className="bg-blue-600 hover:bg-blue-500 text-white gap-1.5 text-xs">
               <Plus className="w-3.5 h-3.5" /> New
             </Button>

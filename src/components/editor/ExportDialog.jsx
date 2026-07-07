@@ -720,46 +720,46 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-sm">
+      <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-sm">
         <DialogHeader>
-          <DialogTitle className="font-heading text-white">Export / Download Map</DialogTitle>
+          <DialogTitle className="font-heading text-slate-800">Export / Download Map</DialogTitle>
         </DialogHeader>
-        <div className="rounded-lg overflow-hidden border border-slate-700 bg-white flex items-center justify-center p-1">
+        <div className="rounded-lg overflow-hidden border border-slate-200 bg-white flex items-center justify-center p-1">
           <canvas ref={previewCanvasRef} className="max-w-full max-h-48 object-contain" />
         </div>
-        <p className="text-[10px] text-slate-500 text-center -mt-1">Live preview — this is exactly how your export will look</p>
+        <p className="text-[10px] text-slate-400 text-center -mt-1">Live preview — this is exactly how your export will look</p>
         <div className="flex items-center gap-2 justify-center flex-wrap">
           <span className="text-[10px] text-slate-500">Page:</span>
           <select
             value={pageSize}
             onChange={e => setPageSize(e.target.value)}
-            className="text-[10px] bg-slate-800 border border-slate-700 text-slate-300 rounded px-1 py-0.5 cursor-pointer"
+            className="text-[10px] bg-white border border-slate-300 text-slate-700 rounded px-1 py-0.5 cursor-pointer"
             title="Page Size"
           >
             {["A4", "A3", "A2", "A1", "A0"].map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button onClick={() => setPageOrientation("landscape")} className={`text-[10px] px-2 py-0.5 rounded ${pageOrientation === "landscape" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>Landscape</button>
-          <button onClick={() => setPageOrientation("portrait")} className={`text-[10px] px-2 py-0.5 rounded ${pageOrientation === "portrait" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>Portrait</button>
+          <button onClick={() => setPageOrientation("landscape")} className={`text-[10px] px-2 py-0.5 rounded ${pageOrientation === "landscape" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>Landscape</button>
+          <button onClick={() => setPageOrientation("portrait")} className={`text-[10px] px-2 py-0.5 rounded ${pageOrientation === "portrait" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>Portrait</button>
           <label className="flex items-center gap-1 cursor-pointer">
             <input type="checkbox" checked={showLegendInExport} onChange={e => setShowLegendInExport(e.target.checked)} className="w-3 h-3 accent-blue-500" />
-            <span className="text-[10px] text-slate-400" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>علامات</span>
+            <span className="text-[10px] text-slate-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>علامات</span>
           </label>
         </div>
         <div className="space-y-2 py-2 max-h-[70vh] overflow-y-auto">
           {EXPORTS.map(({ label, desc, icon: Icon, color, action, key }) => (
             <button key={key} onClick={() => action()}
               disabled={loading === key}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-700 hover:bg-slate-800 transition-colors text-left disabled:opacity-60">
-              <div className={`w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center ${color}`}>
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-left disabled:opacity-60">
+              <div className={`w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center ${color}`}>
                 <Icon className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">{label}</p>
+                <p className="text-sm font-semibold text-slate-800">{label}</p>
                 <p className="text-xs text-slate-500">{desc}</p>
               </div>
               {loading === key
-                ? <span className="ml-auto text-xs text-blue-400 animate-pulse">...</span>
-                : <Download className="w-4 h-4 text-slate-600 ml-auto" />
+                ? <span className="ml-auto text-xs text-blue-500 animate-pulse">...</span>
+                : <Download className="w-4 h-4 text-slate-400 ml-auto" />
               }
             </button>
           ))}
