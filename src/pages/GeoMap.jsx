@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useMemo, useEffect } from "react"
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { MapContainer, TileLayer, Marker, Polygon, Polyline, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { ChevronDown, Layers } from "lucide-react";
@@ -12,10 +12,14 @@ import MapHeader from "@/components/geomap/MapHeader";
 import ZoomControls from "@/components/geomap/ZoomControls";
 import Compass from "@/components/geomap/Compass";
 import OverlayPanel from "@/components/geomap/OverlayPanel";
+import OverlayLayer from "@/components/geomap/OverlayLayer";
+import MeasurementInfo from "@/components/geomap/MeasurementInfo";
+import MarkerPopup from "@/components/geomap/MarkerPopup";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import {
-  getOverlayRefPoint, parcelToLatLngs, polylineToLatLngs,
-  polygonAreaAcres, parcelExpectedAcres,
+  getControlPoints, computeAffineTransform, polygonAreaSqMeters, sqMetersToUnits,
+  parcelExpectedAcres, haversine, polylineLength, rectMeasurements, circleMeasurements,
+  fmtDist, fmtArea,
 } from "@/lib/geoOverlay";
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -28,19 +32,56 @@ L.Icon.Default.mergeOptions({
 const SAT_URL = "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}";
 const HYBRID_URL = "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}";
 
-const ANCHOR_ICON = L.divIcon({
-  html: '<div style="width:24px;height:24px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.5);cursor:move;"></div>',
+// Colored marker icon factory
+function coloredIcon(color) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>`;
+  return L.divIcon({ html: svg, className: "", iconSize: [28, 28], iconAnchor: [14, 28] });
+}
+
+// Control point marker (numbered)
+function controlIcon(num) {
+  return L.divIcon({
+    html: `<div style="width:32px;height:32px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white;">${num}</div>`,
+    className: "",
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+}
+
+// GPS user location marker (blue dot)
+const GPS_ICON = L.divIcon({
+  html: `<div style="width:20px;height:20px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 0 12px rgba(59,130,246,0.8);"></div>`,
   className: "",
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-  draggable: true,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
 });
 
-function MapController({ onMapClick, onMapReady, onMapInstance }) {
+function MapController({ onMapClick, onMapInstance, onZoomChange }) {
   const map = useMapEvents({
     click: (e) => onMapClick && onMapClick(e.latlng),
+    zoomend: () => onZoomChange && onZoomChange(map.getZoom()),
   });
-  useEffect(() => { if (map) onMapInstance && onMapInstance(map); }, [map, onMapInstance]);
+  useEffect(() => { if (map) { onMapInstance && onMapInstance(map); onZoomChange && onZoomChange(map.getZoom()); } }, [map]);
+  return null;
+}
+
+// GPS tracker component — continuously updates user position
+function GPSTracker({ active, onPosition }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!active) return;
+    if (!navigator.geolocation) return;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        onPosition(latlng, pos.coords.accuracy);
+        map.flyTo([latlng.lat, latlng.lng], Math.max(map.getZoom(), 16), { duration: 0.5 });
+      },
+      (err) => { console.warn("GPS error:", err.message); },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [active, map, onPosition]);
   return null;
 }
 
@@ -48,25 +89,39 @@ export default function GeoMap() {
   const navigate = useNavigate();
   const mapRef = useRef(null);
   const [center] = useState([32.2889, 72.3525]);
+  const [zoom, setZoom] = useState(13);
   const [hybrid, setHybrid] = useState(true);
   const [activeTool, setActiveTool] = useState(null);
-  const [shapes, setShapes] = useState([]);
-  const [draft, setDraft] = useState([]);
   const [filters, setFilters] = useState({ district: "", tehsil: "", village: "" });
 
-  // Overlay state
+  // GPS
+  const [gpsActive, setGpsActive] = useState(false);
+  const [gpsPosition, setGpsPosition] = useState(null);
+  const [gpsAccuracy, setGpsAccuracy] = useState(null);
+
+  // Overlay / georeferencing
   const [showOverlayPanel, setShowOverlayPanel] = useState(true);
   const [selectedMapId, setSelectedMapId] = useState("");
   const [selectedMoga, setSelectedMoga] = useState("");
-  const [overlay, setOverlay] = useState(null); // { anchor:{lat,lng}, rotation, placing }
+  const [controlPoints, setControlPoints] = useState(null); // canvas points from map
+  const [placedMarkers, setPlacedMarkers] = useState([]); // geo points placed by user
+  const [overlay, setOverlay] = useState(null); // { transform, rotation }
+  const [killaVisible, setKillaVisible] = useState(true);
+  const [layerVisible, setLayerVisible] = useState(true);
 
-  // Load all maps for dropdowns
+  // Measurement tools state
+  const [markers, setMarkers] = useState([]); // user markers
+  const [measurements, setMeasurements] = useState([]); // completed measurements
+  const [draft, setDraft] = useState(null); // active drawing draft
+  const [liveMeasurement, setLiveMeasurement] = useState(null); // live measurement for display
+  const [mouseLatLng, setMouseLatLng] = useState(null);
+
+  // ─── DATA ────────────────────────────────────────────────────
   const { data: maps } = useQuery({
     queryKey: ["geomap-maps"],
     queryFn: () => base44.entities.LandMap.list("-updated_date", 500),
   });
 
-  // Load the selected map's drawing data
   const { data: selectedMap } = useQuery({
     queryKey: ["geomap-map", selectedMapId],
     queryFn: () => base44.entities.LandMap.filter({ id: selectedMapId }).then(r => r[0]),
@@ -82,7 +137,6 @@ export default function GeoMap() {
   const tehsils = useMemo(() => [...new Set((maps || []).filter(m => !filters.district || m.district === filters.district).map(m => m.tehsil).filter(Boolean))].sort(), [maps, filters.district]);
   const villages = useMemo(() => [...new Set((maps || []).filter(m => (!filters.district || m.district === filters.district) && (!filters.tehsil || m.tehsil === filters.tehsil)).map(m => m.village).filter(Boolean))].sort(), [maps, filters.district, filters.tehsil]);
 
-  // Available mogas in the selected map
   const availableMogas = useMemo(() => {
     const s = new Set();
     for (const o of mapObjects) {
@@ -91,81 +145,158 @@ export default function GeoMap() {
     return [...s].sort((a, b) => parseInt(a) - parseInt(b));
   }, [mapObjects]);
 
-  // Filter objects by selected moga
-  const overlayObjects = useMemo(() => {
-    if (!selectedMoga) return mapObjects;
-    return mapObjects.filter(o => {
-      if (o.type === "chakbandi") return o.mogaNumber === selectedMoga;
-      if (o.type === "mustateel") return o.mogaNumber === selectedMoga || !o.mogaNumber;
-      return ["canal", "khal", "road", "mouza"].includes(o.type);
-    });
-  }, [mapObjects, selectedMoga]);
+  // ─── OVERLAY COMPUTATION ──────────────────────────────────────
+  // Auto-compute affine transform when 3 markers are placed
+  useEffect(() => {
+    if (!controlPoints || placedMarkers.length < 3 || !selectedMapId) return;
+    const transform = computeAffineTransform(controlPoints, placedMarkers);
+    if (transform) {
+      setOverlay({ transform, rotation: 0 });
+      // Fit map to overlay bounds
+      const allLatLngs = [];
+      for (const o of mapObjects) {
+        if (["mustateel", "muraba", "acre"].includes(o.type)) {
+          const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
+          for (const [cx, cy] of corners) allLatLngs.push(transform.transform(cx, cy));
+        } else if (o.points?.length) {
+          for (const p of o.points) allLatLngs.push(transform.transform(p.x, p.y));
+        }
+      }
+      if (allLatLngs.length > 0 && mapRef.current) {
+        const bounds = L.latLngBounds(allLatLngs.map(p => [p.lat, p.lng]));
+        mapRef.current.flyToBounds(bounds, { padding: [80, 80], duration: 1 });
+      }
+    }
+  }, [controlPoints, placedMarkers, selectedMapId, mapObjects]);
 
-  // Reference point (rotation pivot) for the overlay
-  const refPoint = useMemo(() => getOverlayRefPoint(overlayObjects), [overlayObjects]);
-
-  // Convert overlay objects to geo polygons/polylines
-  const overlayGeo = useMemo(() => {
-    if (!overlay || !overlay.anchor) return { parcels: [], lines: [] };
-    const { lat, lng } = overlay.anchor;
-    const rot = overlay.rotation || 0;
-    const parcels = overlayObjects
-      .filter(o => ["mustateel", "muraba", "acre"].includes(o.type))
+  // Mustateel area verification
+  const mustateelAreas = useMemo(() => {
+    if (!overlay?.transform) return [];
+    return mapObjects
+      .filter(o => o.type === "mustateel")
       .map(o => {
-        const latlngs = parcelToLatLngs(o, { lat, lng }, refPoint.x, refPoint.y, rot);
-        return { id: o.id, type: o.type, label: o.label || "", latlngs, acres: polygonAreaAcres(latlngs), expected: parcelExpectedAcres(o) };
+        const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
+        const latlngs = corners.map(([cx, cy]) => overlay.transform.transform(cx, cy));
+        return { id: o.id, label: o.label || "", acres: sqMetersToUnits(polygonAreaSqMeters(latlngs)).acres, expected: parcelExpectedAcres(o) };
       });
-    const lines = overlayObjects
-      .filter(o => ["canal", "khal", "road", "chakbandi", "mouza"].includes(o.type) && o.points?.length >= 2)
-      .map(o => ({ id: o.id, type: o.type, name: o.name || "", latlngs: polylineToLatLngs(o, { lat, lng }, refPoint.x, refPoint.y, rot) }));
-    return { parcels, lines };
-  }, [overlay, overlayObjects, refPoint]);
+  }, [overlay, mapObjects]);
 
-  const handleMapInstance = useCallback((m) => { mapRef.current = m; }, []);
-
+  // ─── MAP CLICK HANDLER ───────────────────────────────────────
   const handleMapClick = useCallback((latlng) => {
-    // If overlay placing mode is active, set the anchor
-    if (overlay?.placing) {
-      setOverlay(prev => ({ ...prev, anchor: latlng, placing: false }));
-      mapRef.current?.flyTo(latlng, mapRef.current?.getZoom() || 15);
+    // 1. Control point placement (if in georeferencing mode)
+    if (controlPoints && placedMarkers.length < 3) {
+      setPlacedMarkers(prev => [...prev, latlng]);
       return;
     }
-    // Otherwise, handle drawing tools
+
+    // 2. Measurement tools
     if (!activeTool) return;
+
     if (activeTool === "marker") {
-      setShapes(prev => [...prev, { id: Date.now(), type: "marker", latlng, color: "#ef4444" }]);
-    } else if (activeTool === "polygon") {
-      setDraft(prev => [...prev, latlng]);
-    } else if (activeTool === "circle") {
-      setShapes(prev => [...prev, { id: Date.now(), type: "circle", latlng, color: "#ef4444" }]);
-    } else if (activeTool === "square") {
+      setMarkers(prev => [...prev, { id: Date.now(), latlng, title: "", color: "#ef4444" }]);
+    } else if (activeTool === "line") {
       setDraft(prev => {
-        if (prev.length === 0) return [latlng];
-        const start = prev[0];
-        setShapes(s => [...s, { id: Date.now(), type: "rect", points: [[start.lat, start.lng], [start.lat, latlng.lng], [latlng.lat, latlng.lng], [latlng.lat, start.lng]], color: "#ef4444" }]);
-        return [];
+        if (!prev) return { type: "line", points: [latlng] };
+        return { ...prev, points: [...prev.points, latlng] };
+      });
+    } else if (activeTool === "polygon") {
+      setDraft(prev => {
+        if (!prev) return { type: "polygon", points: [latlng] };
+        return { ...prev, points: [...prev.points, latlng] };
+      });
+    } else if (activeTool === "rectangle") {
+      setDraft(prev => {
+        if (!prev || prev.points.length === 0) return { type: "rectangle", points: [latlng] };
+        const c1 = prev.points[0];
+        const c2 = latlng;
+        const rect = { type: "rectangle", points: [c1, c2] };
+        const m = rectMeasurements(c1, c2);
+        setMeasurements(me => [...me, { id: Date.now(), ...rect, measurement: { type: "rectangle", ...m } }]);
+        return null;
+      });
+    } else if (activeTool === "circle") {
+      setDraft(prev => {
+        if (!prev) return { type: "circle", center: latlng, radius: 0 };
+        // Second click finalizes with current radius
+        const r = haversine(prev.center.lat, prev.center.lng, latlng.lat, latlng.lng);
+        const m = circleMeasurements(prev.center.lat, prev.center.lng, r);
+        setMeasurements(me => [...me, { id: Date.now(), center: prev.center, radius: r, measurement: { type: "circle", ...m } }]);
+        return null;
       });
     }
-  }, [activeTool, overlay]);
+  }, [controlPoints, placedMarkers.length, activeTool]);
 
-  const finishPolygon = useCallback(() => {
-    if (draft.length >= 3) {
-      setShapes(prev => [...prev, { id: Date.now(), type: "polygon", points: draft, color: "#ef4444" }]);
+  // ─── LIVE MEASUREMENT (mouse move) ─────────────────────────────
+  const handleMouseMove = useCallback((latlng) => {
+    setMouseLatLng(latlng);
+    if (!draft) { setLiveMeasurement(null); return; }
+
+    if (draft.type === "line" && draft.points.length >= 1) {
+      const last = draft.points[draft.points.length - 1];
+      const d = haversine(last.lat, last.lng, latlng.lat, latlng.lng);
+      const total = polylineLength([...draft.points, latlng]);
+      setLiveMeasurement({ type: "line", length: total, segment: d });
+    } else if (draft.type === "polygon" && draft.points.length >= 1) {
+      const pts = [...draft.points, latlng];
+      const area = polygonAreaSqMeters(pts);
+      const perim = polylineLength(pts);
+      setLiveMeasurement({ type: "polygon", area, perimeter: perim });
+    } else if (draft.type === "circle" && draft.center) {
+      const r = haversine(draft.center.lat, draft.center.lng, latlng.lat, latlng.lng);
+      setLiveMeasurement({ type: "circle", radius: r, ...circleMeasurements(draft.center.lat, draft.center.lng, r) });
+    } else if (draft.type === "rectangle" && draft.points?.length === 1) {
+      const m = rectMeasurements(draft.points[0], latlng);
+      setLiveMeasurement({ type: "rectangle", ...m });
+    } else {
+      setLiveMeasurement(null);
     }
-    setDraft([]);
   }, [draft]);
 
-  const handleZoomIn = () => mapRef.current?.zoomIn();
-  const handleZoomOut = () => mapRef.current?.zoomOut();
-  const handleCenter = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => mapRef.current?.flyTo([pos.coords.latitude, pos.coords.longitude], 16),
-        () => {}
-      );
+  // ─── FINISH DRAWING (double-click) ───────────────────────────
+  const handleDoubleClick = useCallback(() => {
+    if (!draft) return;
+    if (draft.type === "line" && draft.points.length >= 2) {
+      const len = polylineLength(draft.points);
+      setMeasurements(me => [...me, { id: Date.now(), type: "line", points: draft.points, measurement: { type: "line", length: len } }]);
+    } else if (draft.type === "polygon" && draft.points.length >= 3) {
+      const area = polygonAreaSqMeters(draft.points);
+      const perim = polylineLength([...draft.points, draft.points[0]]);
+      setMeasurements(me => [...me, { id: Date.now(), type: "polygon", points: draft.points, measurement: { type: "polygon", area, perimeter: perim } }]);
     }
+    setDraft(null);
+    setLiveMeasurement(null);
+  }, [draft]);
+
+  // Mouse move tracker for live measurements
+  function MouseTracker() {
+    useMapEvents({
+      mousemove: (e) => handleMouseMove(e.latlng),
+      dblclick: () => handleDoubleClick(),
+    });
+    return null;
+  }
+
+  // ─── HANDLERS ─────────────────────────────────────────────────
+  const handleMapInstance = useCallback((m) => { mapRef.current = m; }, []);
+
+  const handleZoomIn = () => mapRef.current?.flyTo(mapRef.current.getCenter(), mapRef.current.getZoom() + 1);
+  const handleZoomOut = () => mapRef.current?.flyTo(mapRef.current.getCenter(), mapRef.current.getZoom() - 1);
+
+  const handleGPS = () => {
+    if (gpsActive) { setGpsActive(false); setGpsPosition(null); return; }
+    if (!navigator.geolocation) { alert("GPS not available"); return; }
+    setGpsActive(true);
   };
-  const handleSearch = () => { if (selectedMap) mapRef.current?.flyTo(center, 15); };
+
+  const handleSelectMap = (id) => {
+    setSelectedMapId(id);
+    setSelectedMoga("");
+    setPlacedMarkers([]);
+    setOverlay(null);
+    const objs = id ? DrawingStateManager.deserialize(maps?.find(m => m.id === id)?.drawing_data || "[]") : [];
+    const cps = getControlPoints(objs);
+    setControlPoints(cps);
+  };
 
   const handleFilterSelect = (field, value) => {
     setFilters(prev => {
@@ -176,93 +307,135 @@ export default function GeoMap() {
     });
   };
 
-  const handleSelectMap = (id) => {
-    setSelectedMapId(id);
+  const handleClearOverlay = () => {
+    setOverlay(null);
+    setPlacedMarkers([]);
+    setControlPoints(null);
+    setSelectedMapId("");
     setSelectedMoga("");
-    // Initialize overlay with anchor at current center, ready for placing
-    setOverlay({ anchor: null, rotation: 0, placing: true });
   };
 
-  const handleAnchorDrag = useCallback((e) => {
-    const latlng = e.target.getLatLng();
-    setOverlay(prev => prev ? { ...prev, anchor: { lat: latlng.lat, lng: latlng.lng } } : prev);
-  }, []);
+  const handleClearMeasurements = () => { setMeasurements([]); setDraft(null); setLiveMeasurement(null); };
 
-  const handleClearShapes = () => { setShapes([]); setDraft([]); };
-  const handleClearOverlay = () => { setOverlay(null); setSelectedMapId(""); setSelectedMoga(""); };
+  const handleMarkerUpdate = (id, changes) => { setMarkers(prev => prev.map(m => m.id === id ? { ...m, ...changes } : m)); };
+  const handleMarkerDelete = (id) => { setMarkers(prev => prev.filter(m => m.id !== id)); };
+
+  const handleExport = () => {
+    if (!mapRef.current) return;
+    // Simple screenshot via leaflet-image would need a package; for now alert
+    alert("Export: Use your browser's screenshot tool (Ctrl+Shift+S) or print to PDF via browser.");
+  };
+
+  const handleRotationChange = (deg) => { setOverlay(prev => prev ? { ...prev, rotation: deg } : prev); };
 
   const tileUrl = hybrid ? HYBRID_URL : SAT_URL;
 
-  const lineColors = {
-    canal: "#0284c7", khal: "#2563eb", road: "#b45309",
-    chakbandi: "#22c55e", mouza: "#000000",
-  };
+  // ─── GPS accuracy circle ──────────────────────────────────────
+  const gpsAccuracyCircle = gpsPosition && gpsAccuracy ? (
+    <Circle center={[gpsPosition.lat, gpsPosition.lng]} radius={gpsAccuracy} pathOptions={{ color: "#3b82f6", fillColor: "#3b82f6", fillOpacity: 0.1, weight: 1 }} />
+  ) : null;
+
+  // Draft preview rendering
+  const draftPreview = useMemo(() => {
+    if (!draft) return null;
+    if (draft.type === "line" && draft.points.length >= 1) {
+      const pts = [...draft.points];
+      if (mouseLatLng) pts.push(mouseLatLng);
+      return <Polyline positions={pts.map(p => [p.lat, p.lng])} pathOptions={{ color: "#ef4444", weight: 3, dashArray: "6,4" }} />;
+    }
+    if (draft.type === "polygon" && draft.points.length >= 1) {
+      const pts = [...draft.points];
+      if (mouseLatLng) pts.push(mouseLatLng);
+      return <>
+        <Polyline positions={pts.map(p => [p.lat, p.lng])} pathOptions={{ color: "#ef4444", weight: 2, dashArray: "6,4" }} />
+        {pts.length >= 3 && <Polygon positions={pts.map(p => [p.lat, p.lng])} pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.15, dashArray: "6,4" }} />}
+      </>;
+    }
+    if (draft.type === "circle" && draft.center) {
+      const r = mouseLatLng ? haversine(draft.center.lat, draft.center.lng, mouseLatLng.lat, mouseLatLng.lng) : 0;
+      return <Circle center={[draft.center.lat, draft.center.lng]} radius={r} pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.12, weight: 2, dashArray: "6,4" }} />;
+    }
+    if (draft.type === "rectangle" && draft.points?.length === 1 && mouseLatLng) {
+      const c1 = draft.points[0];
+      const corners = [[c1.lat, c1.lng], [c1.lat, mouseLatLng.lng], [mouseLatLng.lat, mouseLatLng.lng], [mouseLatLng.lat, c1.lng]];
+      return <Polygon positions={corners} pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.12, weight: 2, dashArray: "6,4" }} />;
+    }
+    return null;
+  }, [draft, mouseLatLng]);
 
   return (
     <div className="fixed inset-0 bg-[#0f1923] z-40">
       <MapContainer
         center={center}
-        zoom={13}
+        zoom={zoom}
         className="w-full h-full"
         style={{ background: "#0f1923" }}
         doubleClickZoom={false}
+        zoomControl={false}
+        attributionControl={false}
       >
-        <TileLayer url={tileUrl} attribution="Google Earth" />
-        <MapController onMapClick={handleMapClick} onMapInstance={handleMapInstance} />
+        <TileLayer url={tileUrl} />
+        <MapController onMapClick={handleMapClick} onMapInstance={handleMapInstance} onZoomChange={setZoom} />
+        <MouseTracker />
+        <GPSTracker active={gpsActive} onPosition={(pos, acc) => { setGpsPosition(pos); setGpsAccuracy(acc); }} />
 
-        {/* Overlay parcels (mustateels/murabas/acres) */}
-        {overlayGeo.parcels.map(p => (
-          <Polygon
-            key={p.id}
-            positions={p.latlngs.map(l => [l.lat, l.lng])}
-            pathOptions={{
-              color: p.type === "mustateel" ? "#ef4444" : p.type === "muraba" ? "#f97316" : "#eab308",
-              fillColor: p.type === "mustateel" ? "#ef4444" : p.type === "muraba" ? "#f97316" : "#eab308",
-              fillOpacity: 0.35,
-              weight: 2,
-            }}
-          >
-          </Polygon>
-        ))}
+        {/* GPS marker + accuracy circle */}
+        {gpsAccuracyCircle}
+        {gpsPosition && <Marker position={[gpsPosition.lat, gpsPosition.lng]} icon={GPS_ICON} />}
 
-        {/* Overlay lines (canals/khals/roads/chakbandi) */}
-        {overlayGeo.lines.map(l => (
-          <Polyline
-            key={l.id}
-            positions={l.latlngs.map(pt => [pt.lat, pt.lng])}
-            pathOptions={{ color: lineColors[l.type] || "#666", weight: l.type === "canal" ? 4 : 2, dashArray: l.type === "mouza" ? "10,6" : null }}
-          />
-        ))}
-
-        {/* Overlay anchor marker (draggable) */}
-        {overlay?.anchor && (
-          <Marker
-            position={[overlay.anchor.lat, overlay.anchor.lng]}
-            icon={ANCHOR_ICON}
-            draggable
-            eventHandlers={{ dragend: handleAnchorDrag }}
+        {/* Overlay layer — all map details */}
+        {layerVisible && overlay?.transform && (
+          <OverlayLayer
+            objects={mapObjects}
+            transform={overlay.transform}
+            zoom={zoom}
+            killaVisible={killaVisible}
+            mogaFilter={selectedMoga}
           />
         )}
 
-        {/* Free-draw shapes */}
-        {shapes.map((s) => {
-          if (s.type === "polygon") return <Polygon key={s.id} positions={s.points.map(p => [p.lat, p.lng])} pathOptions={{ color: s.color, fillColor: s.color, fillOpacity: 0.4 }} />;
-          if (s.type === "rect") return <Polygon key={s.id} positions={s.points} pathOptions={{ color: s.color, fillColor: s.color, fillOpacity: 0.4 }} />;
-          if (s.type === "marker") return <Marker key={s.id} position={[s.latlng.lat, s.latlng.lng]} />;
+        {/* Control point markers (during georeferencing) */}
+        {placedMarkers.map((m, i) => (
+          <Marker key={i} position={[m.lat, m.lng]} icon={controlIcon(i + 1)} />
+        ))}
+
+        {/* Completed measurements */}
+        {measurements.map(m => {
+          if (m.type === "line") return (
+            <Polyline key={m.id} positions={m.points.map(p => [p.lat, p.lng])} pathOptions={{ color: "#ef4444", weight: 3 }}>
+              <Tooltip permanent direction="top"><span className="text-xs font-bold">{fmtDist(m.measurement.length)}</span></Tooltip>
+            </Polyline>
+          );
+          if (m.type === "polygon") return (
+            <Polygon key={m.id} positions={m.points.map(p => [p.lat, p.lng])} pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.2, weight: 2 }}>
+              <Tooltip permanent direction="top"><span className="text-xs font-bold">{fmtArea(m.measurement.area)}</span></Tooltip>
+            </Polygon>
+          );
+          if (m.type === "rectangle") return (
+            <Polygon key={m.id} positions={[[m.points[0].lat, m.points[0].lng], [m.points[0].lat, m.points[1].lng], [m.points[1].lat, m.points[1].lng], [m.points[1].lat, m.points[0].lng]]} pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.2, weight: 2 }}>
+              <Tooltip permanent direction="top"><span className="text-xs font-bold">{fmtArea(m.measurement.area)}</span></Tooltip>
+            </Polygon>
+          );
+          if (m.type === "circle") return (
+            <Circle key={m.id} center={[m.center.lat, m.center.lng]} radius={m.radius} pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.15, weight: 2 }}>
+              <Tooltip permanent direction="top"><span className="text-xs font-bold">{fmtArea(m.measurement.area)}</span></Tooltip>
+            </Circle>
+          );
           return null;
         })}
 
-        {draft.length > 0 && (
-          <>
-            <Polyline positions={draft.map(p => [p.lat, p.lng])} pathOptions={{ color: "#ef4444", dashArray: "6,4" }} />
-            {draft.length >= 3 && (
-              <Polygon positions={[...draft, draft[0]].map(p => [p.lat, p.lng])} pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.2, dashArray: "6,4" }} />
-            )}
-          </>
-        )}
+        {/* Draft preview */}
+        {draftPreview}
+
+        {/* User markers with popup */}
+        {markers.map(m => (
+          <Marker key={m.id} position={[m.latlng.lat, m.latlng.lng]} icon={coloredIcon(m.color)}>
+            <MarkerPopup marker={m} onUpdate={handleMarkerUpdate} onDelete={handleMarkerDelete} />
+          </Marker>
+        ))}
       </MapContainer>
 
-      {/* Overlay UI */}
+      {/* UI Overlays */}
       <MapHeader
         districts={districts}
         tehsils={tehsils}
@@ -274,16 +447,16 @@ export default function GeoMap() {
         onMenu={() => navigate("/")}
       />
 
-      <ZoomControls onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onCenter={handleCenter} onSearch={handleSearch} />
+      <ZoomControls onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onGPS={handleGPS} gpsActive={gpsActive} />
       <Compass />
 
-      {/* Overlay toggle button */}
+      {/* Overlay toggle */}
       <button
         onClick={() => setShowOverlayPanel(v => !v)}
         className={`absolute top-14 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
       >
         <Layers className="w-3.5 h-3.5" />
-        Moga Overlay
+        GIS Overlay
       </button>
 
       {showOverlayPanel && (
@@ -294,25 +467,47 @@ export default function GeoMap() {
           availableMogas={availableMogas}
           selectedMoga={selectedMoga}
           onSelectMoga={setSelectedMoga}
+          controlPoints={controlPoints}
+          placedMarkers={placedMarkers}
+          overlayReady={!!overlay}
           overlay={overlay}
-          onPlaceMode={() => setOverlay(prev => prev ? { ...prev, placing: true } : prev)}
-          onRotationChange={(deg) => setOverlay(prev => prev ? { ...prev, rotation: deg } : prev)}
+          onRotationChange={handleRotationChange}
           onClear={handleClearOverlay}
-          mustateelAreas={overlayGeo.parcels.filter(p => p.type === "mustateel")}
+          mustateelAreas={mustateelAreas}
           onClose={() => setShowOverlayPanel(false)}
         />
       )}
 
-      <DrawingToolbar activeTool={activeTool} onToolChange={setActiveTool} onClear={handleClearShapes} />
-
-      {activeTool === "polygon" && draft.length >= 3 && (
-        <button onClick={finishPolygon} className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] px-4 h-9 bg-green-600 text-white text-xs font-bold rounded-full shadow-xl hover:bg-green-500 transition-colors">
-          ✓ Finish Mustateel ({draft.length} pts)
+      {/* Killa visibility toggle */}
+      {overlay && (
+        <button
+          onClick={() => setKillaVisible(v => !v)}
+          className={`absolute top-14 right-[20rem] z-[1000] px-2 h-8 rounded-full shadow-xl text-[10px] font-bold transition-all ${killaVisible ? "bg-emerald-500 text-white" : "bg-white text-slate-400"}`}
+        >
+          Killa #{killaVisible ? "On" : "Off"}
         </button>
       )}
-      {activeTool === "polygon" && draft.length < 3 && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] px-3 h-8 bg-black/80 text-white text-[11px] font-medium rounded-full shadow-xl flex items-center">
-          Click to add {3 - draft.length} more point(s)…
+
+      <DrawingToolbar
+        activeTool={activeTool}
+        onToolChange={setActiveTool}
+        onClear={handleClearMeasurements}
+        onExport={handleExport}
+        onLayerToggle={() => setLayerVisible(v => !v)}
+        layerVisible={layerVisible}
+      />
+
+      {/* Live measurement info */}
+      <MeasurementInfo measurement={liveMeasurement} draft={draft} zoom={zoom} />
+
+      {/* Active tool hint */}
+      {activeTool && !liveMeasurement && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-black/80 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center">
+          {activeTool === "line" && "Click points to measure distance · Double-click to finish"}
+          {activeTool === "polygon" && "Click to add polygon vertices · Double-click to finish"}
+          {activeTool === "rectangle" && "Click two opposite corners"}
+          {activeTool === "circle" && "Click center, then click edge"}
+          {activeTool === "marker" && "Click to place a marker"}
         </div>
       )}
 
@@ -321,16 +516,9 @@ export default function GeoMap() {
         onClick={() => setHybrid(v => !v)}
         className="absolute bottom-5 right-3 z-[1000] flex items-center gap-1.5 px-4 h-9 bg-[#1A4550] text-white text-xs font-bold rounded-full shadow-xl hover:bg-[#2C5E6D] transition-colors"
       >
-        {hybrid ? "Hybrid Satellite" : "Satellite"}
+        {hybrid ? "Hybrid Satellite" : "Pure Satellite"}
         <ChevronDown className="w-3.5 h-3.5" />
       </button>
-
-      {/* Overlay info badge */}
-      {overlay?.anchor && overlayGeo.parcels.length > 0 && (
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 backdrop-blur-sm px-3 h-8 rounded-full shadow-md flex items-center gap-2 text-[11px] font-semibold text-slate-600">
-          {overlayGeo.parcels.length} parcels · {overlayGeo.parcels.reduce((s, p) => s + p.acres, 0).toFixed(1)} acres · drag blue pin to move · rotate in panel
-        </div>
-      )}
     </div>
   );
 }
