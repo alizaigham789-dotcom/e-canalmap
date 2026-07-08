@@ -142,7 +142,7 @@ export default function Editor() {
     });
   };
 
-  const { data: mapData } = useQuery({
+  const { data: mapData, isLoading: isLoadingMap } = useQuery({
     queryKey: ["map", mapId],
     queryFn: () => base44.entities.LandMap.filter({ id: mapId }).then(r => r[0]),
     enabled: !!mapId,
@@ -627,7 +627,7 @@ export default function Editor() {
       if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); handleUndo(); }
       if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.shiftKey && e.key === "z"))) { e.preventDefault(); handleRedo(); }
       if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); handleSave(); }
-      if ((e.ctrlKey || e.metaKey) && e.key === "p") { e.preventDefault(); setShowPrint(true); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "p") { e.preventDefault(); saveRef.current(); setShowPrint(true); }
       if ((e.ctrlKey || e.metaKey) && e.key === "a") { e.preventDefault(); handleSelectAll(); }
       if ((e.ctrlKey || e.metaKey) && e.key === "c") { e.preventDefault(); handleCopy(); }
       if ((e.ctrlKey || e.metaKey) && e.key === "v") { e.preventDefault(); handlePaste(); }
@@ -664,6 +664,20 @@ export default function Editor() {
     );
   }
 
+  // Loading gate — wait for map data to load before allowing interaction.
+  // This prevents race conditions where imported/drawn objects get overwritten
+  // by a late-arriving query response.
+  if (isLoadingMap && !loadedMapIdRef.current) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin"></div>
+          <p className="text-xs text-slate-500 font-mono">Loading map data…</p>
+        </div>
+      </div>
+    );
+  }
+
   const draftActive = !!(canalDraft || chakbandiDraft || khalDraft || roadDraft || mouzaDraft);
 
   return (
@@ -677,7 +691,7 @@ export default function Editor() {
         onStopDrawing={handleStopDrawing}
         canalDraftActive={draftActive}
         onUndoPoint={handleUndoPoint}
-        onExport={() => setShowExport(true)}
+        onExport={() => { saveRef.current(); setShowExport(true); }}
         onEditDetails={() => setShowMapDetails(true)}
       />
 
@@ -789,7 +803,7 @@ export default function Editor() {
             )}
             <Button variant="ghost" size="icon"
               className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shadow-md"
-              onClick={() => setShowPrint(true)}
+              onClick={() => { saveRef.current(); setShowPrint(true); }}
               title="Print Preview (Ctrl+P)">
               <Printer className="w-4 h-4" />
             </Button>

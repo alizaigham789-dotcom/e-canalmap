@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
+import { toast } from "sonner";
 import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintHeaderHTML, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, svgMogaFraction, chakbandiLabelPosition, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas } from "@/lib/printRenderHelpers";
 
@@ -316,6 +317,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const ix = (pw - iw) / 2;
 
     const win = window.open("", "_blank");
+    if (!win) { toast.error("Popup blocked — allow popups for this site"); setLoading(null); return; }
     win.document.write(`<!DOCTYPE html><html><head><title>Khaka Dasti</title>
     <style>
       @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
@@ -332,7 +334,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     ${footerHTML}
     </body></html>`);
     win.document.close();
-    setTimeout(() => { win.print(); setLoading(null); }, 800);
+    win.onload = () => { setTimeout(() => { win.print(); setLoading(null); }, 500); };
   };
 
   // ---- Export as Vector PDF (SVG in print window) — single page, Urdu header ----
@@ -381,6 +383,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     </svg>`;
 
     const win = window.open("", "_blank");
+    if (!win) { toast.error("Popup blocked — allow popups for this site"); setLoading(null); return; }
     win.document.write(`<!DOCTYPE html><html><head><title>Khaka Dasti</title>
     <style>
       @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
@@ -397,7 +400,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     ${footerHTML}
     </body></html>`);
     win.document.close();
-    setTimeout(() => { win.print(); setLoading(null); }, 800);
+    win.onload = () => { setTimeout(() => { win.print(); setLoading(null); }, 500); };
   };
 
   function objToSVG(o, bbox) {

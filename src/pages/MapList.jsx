@@ -96,7 +96,7 @@ export default function MapList() {
           section: data.mapData?.section || "",
           rajbah: data.mapData?.rajbah || "",
           moga_number: data.mapData?.moga_number || data.mapData?.mogaNumber || "",
-          zilladar_section: data.mapData?.zilladar_section || "",
+          zilladar_section: data.mapData?.zilladar_section || data.mapData?.section || "",
           status: data.mapData?.status || "draft",
           drawing_data: JSON.stringify(objs),
           total_parcels: objs.filter(o => ["mustateel","muraba"].includes(o.type)).length,
@@ -132,7 +132,7 @@ export default function MapList() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.LandMap.create(data),
+    mutationFn: (data) => base44.entities.LandMap.create({ ...data, zilladar_section: data.zilladar_section || data.section }),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["maps"] });
       setShowCreate(false);
@@ -440,7 +440,7 @@ export default function MapList() {
             </div>
             {[
               { key: "rajbah", label: "Rajbah / Canal Minor (راجباہ)", placeholder: "e.g. Roda Minor" },
-              { key: "section", label: "Section (سیکشن)", placeholder: "e.g. Ganjial" },
+              { key: "section", label: "Section / Zilladar Section (سیکشن / ضلعداری سیکشن)", placeholder: "e.g. Ganjial" },
               { key: "tehsil", label: "Sub Division (سب ڈویژن)", placeholder: "e.g. Qaidabad" },
               { key: "district", label: "Division (ڈویژن)", placeholder: "e.g. Khushab" },
             ].map(({ key, label, placeholder }) => (

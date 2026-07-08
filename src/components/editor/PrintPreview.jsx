@@ -511,7 +511,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     }
 
     const win = window.open("", "_blank");
-    if (!win) return;
+    if (!win) { return; }
     const printLegendSVG = showLegendInPrint ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos) : "";
     win.document.write(`<!DOCTYPE html><html><head>
       <title>Khaka Dasti</title>
@@ -541,7 +541,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       ${footerHTML}
     </body></html>`);
     win.document.close();
-    win.onload = () => win.print();
+    win.onload = () => { setTimeout(() => win.print(), 500); };
   };
 
   // ─── SVG DOWNLOAD ────────────────────────────────────────────────────────────

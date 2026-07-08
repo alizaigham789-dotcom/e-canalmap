@@ -25,7 +25,13 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
 
   if (!open) return null;
 
-  const f = (key, val) => setForm(p => ({ ...p, [key]: val }));
+  const f = (key, val) => setForm(p => {
+    // Auto-fill zilladar_section from section (user wants same name in both)
+    if (key === "section") {
+      return { ...p, section: val, zilladar_section: val };
+    }
+    return { ...p, [key]: val };
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
