@@ -9,6 +9,7 @@ import LayerPanel from "@/components/editor/LayerPanel";
 import MogaFilterPanel from "@/components/editor/MogaFilterPanel";
 import StatusBar from "@/components/editor/StatusBar";
 import EditorHeader from "@/components/editor/EditorHeader";
+import MapHeaderLine from "@/components/editor/MapHeaderLine";
 import ExportDialog from "@/components/editor/ExportDialog";
 import LegendPanel from "@/components/editor/LegendPanel";
 import MapScanDialog from "@/components/editor/MapScanDialog";
@@ -694,6 +695,8 @@ export default function Editor() {
         onExport={() => { saveRef.current(); setShowExport(true); }}
         onEditDetails={() => setShowMapDetails(true)}
       />
+
+      <MapHeaderLine mapData={mapData} />
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Tool Panel */}
