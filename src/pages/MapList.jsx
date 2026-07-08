@@ -11,7 +11,7 @@ import BottomNav from "@/components/BottomNav";
 import MapDetailsDialog from "@/components/editor/MapDetailsDialog";
 import BulkPrintDialog from "@/components/editor/BulkPrintDialog";
 import { buildSVG, getObjectsBounds } from "@/lib/svgMapBuilder";
-import { DIMENSIONS, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML } from "@/lib/gisEngine";
+import { DIMENSIONS, calculateChakbandiGCA, buildPrintFooterHTML } from "@/lib/gisEngine";
 import { svgCCAGCAFractionBox, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
 
 const STATUS_COLORS = {
@@ -200,11 +200,9 @@ export default function MapList() {
 
       const bounds = getObjectsBounds(objects);
       const legendSVG = showLegend ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, C, bounds) : "";
-      const headerHTML = buildPrintHeaderHTML(map, null, 0);
       const footerHTML = buildPrintFooterHTML(map);
 
       pagesHTML += `<div class="map-page">
-        ${headerHTML}
         <div class="map-wrap">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}" preserveAspectRatio="xMidYMid meet" style="max-width:100%;max-height:100%;display:block;">
             <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>

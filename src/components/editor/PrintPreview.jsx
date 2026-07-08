@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
 import { svgCanalNameOnPath, svgMogaFraction, svgMogaFractionBox, svgCCAGCAFractionBox, chakbandiLabelPosition, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
 import { Move } from "lucide-react";
 
@@ -374,7 +374,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [pageOrientation, setPageOrientation] = useState("landscape");
   const [pageSize, setPageSize] = useState("A4");
   const [showLegendInPrint, setShowLegendInPrint] = useState(true);
-  const [showHeaderBorder, setShowHeaderBorder] = useState(false);
   const [showPageBorder, setShowPageBorder] = useState(false);
   const [legendCustomPos, setLegendCustomPos] = useState(null); // null = auto; {x, y} in SVG coords
   const [legendMoveMode, setLegendMoveMode] = useState(false);
@@ -488,8 +487,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const handlePrint = () => {
     if (!svgData) return;
     const totalGCA = calculateTotalGCA(objects);
-    const headerHTML = buildPrintHeaderHTML(mapData, mogaFilter, totalGCA, { showBorder: showHeaderBorder });
-    const footerHTML = buildPrintFooterHTML(mapData, { showBorder: showHeaderBorder });
+    const footerHTML = buildPrintFooterHTML(mapData);
 
     // Auto-calculated CCA/GCA for each chakbandi — use user's centerLabel if entered,
     // positioned ABOVE the chakbandi boundary (not at centroid)
@@ -528,7 +526,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
       </style>
     </head><body>
-      ${headerHTML}
       <div class="map-wrap">
         <svg xmlns="http://www.w3.org/2000/svg"
              viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
@@ -654,12 +651,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               className="w-3 h-3 accent-blue-500" />
             <span className="text-[10px] text-slate-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>علامات دکھائیں</span>
           </label>
-          {/* Header border toggle */}
-          <label className="flex items-center gap-1.5 cursor-pointer select-none">
-            <input type="checkbox" checked={showHeaderBorder} onChange={e => setShowHeaderBorder(e.target.checked)}
-              className="w-3 h-3 accent-blue-500" />
-            <span className="text-[10px] text-slate-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>ہیڈر باکس</span>
-          </label>
           {/* Page border toggle */}
           <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <input type="checkbox" checked={showPageBorder} onChange={e => setShowPageBorder(e.target.checked)}
@@ -697,9 +688,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             style={{ width: `${scale}%`, minWidth: 500, border: showPageBorder ? `2px solid #3b82f6` : "none" }}
             onClick={handlePreviewClick}
           >
-            {/* Urdu header — Khaka Dasti */}
-            <div dangerouslySetInnerHTML={{ __html: buildPrintHeaderHTML(mapData, mogaFilter, gcaData.total, { showBorder: showHeaderBorder }) }} />
-
             {/* SVG Map — pure inline vector (no img tag, preserves cross sizes exactly) */}
             {inlineSvgMarkup ? (
               <svg
@@ -716,7 +704,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             <div style={{ padding:"6px 14px", borderTop:"1px solid #bbb", display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6, fontSize:9, color:"#777" }}>
             </div>
             {/* Signature footer — مرتب کنندہ / ضلعدار at the end */}
-            <div dangerouslySetInnerHTML={{ __html: buildPrintFooterHTML(mapData, { showBorder: showHeaderBorder }) }} />
+            <div dangerouslySetInnerHTML={{ __html: buildPrintFooterHTML(mapData) }} />
           </div>
         </div>
       </div>
