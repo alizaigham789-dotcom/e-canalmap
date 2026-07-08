@@ -976,6 +976,42 @@ export function getMogaColor(labelColor) {
   return isBlackDefault ? "#2563eb" : "#000000";
 }
 
+// Single-line Urdu header text — shared by the editor top bar, print preview and exports
+export function buildMapHeaderText(mapData) {
+  const number = mapData?.moga_number || "_____";
+  const side = mapData?.mogha_side || "";
+  const rajbah = mapData?.rajbah || "_____";
+  const village = mapData?.village || "_____";
+  const zilladarSection = mapData?.zilladar_section || "_____";
+  const tehsil = mapData?.tehsil || "_____";
+  const district = mapData?.district || "_____";
+  return `خاکہ دستی موگہ نمبری${number}${side ? `/${side}` : ""}، راجباہ ${rajbah}،موضع ${village}، ضلعداری سیکشن ${zilladarSection}، سب ڈویژن ${tehsil} ڈویژن ${district}`;
+}
+
+// Bordered single-line header box for print/export output — auto-shrinks to fit one line
+export function buildPrintHeaderHTML(mapData) {
+  const text = buildMapHeaderText(mapData);
+  const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
+  return `<div style="width:100%;box-sizing:border-box;padding:4px 10px;">
+    <div id="print-header-box" style="border:2px solid #000; border-radius:4px; padding:6px 14px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box;">
+      <span id="print-header-text" style="white-space:nowrap; font-family:${uf}; font-weight:bold; font-size:28px; direction:rtl;">${text}</span>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var box = document.getElementById('print-header-box');
+      var txt = document.getElementById('print-header-text');
+      if (!box || !txt) return;
+      var size = 28;
+      txt.style.fontSize = size + 'px';
+      while (txt.scrollWidth > box.clientWidth - 4 && size > 8) {
+        size -= 1;
+        txt.style.fontSize = size + 'px';
+      }
+    })();
+  </script>`;
+}
+
 export function buildPrintFooterHTML(mapData, options = {}) {
   const { showBorder = false } = options;
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";

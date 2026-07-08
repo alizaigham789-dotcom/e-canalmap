@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
+import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 import { svgCanalNameOnPath, svgMogaFraction, svgMogaFractionBox, svgCCAGCAFractionBox, chakbandiLabelPosition, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
 import { Move } from "lucide-react";
 
@@ -487,6 +488,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const handlePrint = () => {
     if (!svgData) return;
     const totalGCA = calculateTotalGCA(objects);
+    const headerHTML = buildPrintHeaderHTML(mapData);
     const footerHTML = buildPrintFooterHTML(mapData);
 
     // Auto-calculated CCA/GCA for each chakbandi — use user's centerLabel if entered,
@@ -526,6 +528,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
       </style>
     </head><body>
+      ${headerHTML}
       <div class="map-wrap">
         <svg xmlns="http://www.w3.org/2000/svg"
              viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
@@ -688,6 +691,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             style={{ width: `${scale}%`, minWidth: 500, border: showPageBorder ? `2px solid #3b82f6` : "none" }}
             onClick={handlePreviewClick}
           >
+            <PrintHeaderBox mapData={mapData} />
             {/* SVG Map — pure inline vector (no img tag, preserves cross sizes exactly) */}
             {inlineSvgMarkup ? (
               <svg

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "lucide-react";
 import { toast } from "sonner";
-import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintFooterHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintFooterHTML, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, svgMogaFraction, chakbandiLabelPosition, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas } from "@/lib/printRenderHelpers";
 
 
@@ -304,6 +304,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const canvas = renderToCanvas(2);
     const imgData = canvas.toDataURL("image/jpeg", 0.95);
     const totalGCA = calculateTotalGCA(objects);
+    const headerHTML = buildPrintHeaderHTML(mapData);
     const footerHTML = buildPrintFooterHTML(mapData);
     // A4 landscape: fit map on single page
     const _ps = PAGE_SIZES[pageSize] || PAGE_SIZES.A4;
@@ -327,6 +328,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       .map-area img { max-width:100%; max-height:100%; width:auto; height:auto; }
       @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
     </style></head><body>
+    ${headerHTML}
     <div class="map-area"><img src="${imgData}" /></div>
     ${footerHTML}
     </body></html>`);
@@ -341,6 +343,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const W = bbox.maxX - bbox.minX;
     const H = bbox.maxY - bbox.minY;
     const totalGCA = calculateTotalGCA(objects);
+    const headerHTML = buildPrintHeaderHTML(mapData);
     const footerHTML = buildPrintFooterHTML(mapData);
 
     // CCA/GCA fraction labels for chakbandis — at labelPos, in fraction boxes
@@ -391,6 +394,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       .map-wrap svg { max-width:100%; max-height:100%; width:auto; height:auto; display:block; }
       @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
     </style></head><body>
+    ${headerHTML}
     <div class="map-wrap">${svgContent}</div>
     ${footerHTML}
     </body></html>`);

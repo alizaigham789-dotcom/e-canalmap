@@ -1,13 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { buildMapHeaderText } from "@/lib/gisEngine";
 
-// Single-line Urdu header shown at the top of the Map Editor.
+// Bordered single-line Urdu header box shown above the map in Print Preview / Export.
 // Auto-shrinks font size so the full line always fits in one row.
-export default function MapHeaderLine({ mapData }) {
+export default function PrintHeaderBox({ mapData }) {
   const wrapRef = useRef(null);
   const textRef = useRef(null);
   const [fontSize, setFontSize] = useState(28);
-
   const headerText = buildMapHeaderText(mapData);
 
   useEffect(() => {
@@ -16,11 +15,11 @@ export default function MapHeaderLine({ mapData }) {
     if (!wrap || !text) return;
 
     const MAX_SIZE = 28;
-    const MIN_SIZE = 10;
+    const MIN_SIZE = 8;
     let size = MAX_SIZE;
     text.style.fontSize = `${size}px`;
 
-    while (text.scrollWidth > wrap.clientWidth && size > MIN_SIZE) {
+    while (text.scrollWidth > wrap.clientWidth - 4 && size > MIN_SIZE) {
       size -= 1;
       text.style.fontSize = `${size}px`;
     }
@@ -28,15 +27,15 @@ export default function MapHeaderLine({ mapData }) {
   }, [headerText]);
 
   return (
-    <div ref={wrapRef} className="w-full px-4 py-1.5 bg-white border-b border-slate-200 overflow-hidden">
-      <p
+    <div ref={wrapRef} className="w-full px-3 py-1.5 mb-2 border-2 border-black rounded flex items-center justify-center overflow-hidden bg-white shrink-0">
+      <span
         ref={textRef}
         dir="rtl"
-        className="whitespace-nowrap text-center font-bold text-slate-900"
-        style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif", fontSize: `${fontSize}px`, lineHeight: 1.6 }}
+        className="whitespace-nowrap font-bold text-black"
+        style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif", fontSize: `${fontSize}px` }}
       >
         {headerText}
-      </p>
+      </span>
     </div>
   );
 }
