@@ -980,27 +980,45 @@ export function getMogaColor(labelColor) {
 // PRINT HEADER BUILDER — Urdu "Khaka Dasti" header for print/export
 // ============================================================
 // Single-line Urdu header — خاکہ دستی موگہ نمبری ... راجباہ ... سیکشن ... سب ڈویژن ... ڈویژن ...
-export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA) {
-  const mogaNum = mogaFilter || mapData?.moga_number || "____";
-  const mogaSide = mapData?.mogha_side ? `/${mapData.mogha_side}` : "";
-  const rajbah = mapData?.rajbah || "____";
-  const village = mapData?.village || "____";
-  const zilladarSection = mapData?.zilladar_section || "____";
-  const subDiv = mapData?.tehsil || "____";
-  const division = mapData?.district || "____";
+export function buildPrintHeaderHTML(mapData, mogaFilter, totalGCA, options = {}) {
+  const { showBorder = false } = options;
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
 
-  const mogaStr = mogaSide ? `${mogaNum}/${mapData.mogha_side}` : mogaNum;
-  return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-bottom:4px;">
+  const mogaNum = mogaFilter || mapData?.moga_number || "";
+  const mogaSide = mapData?.mogha_side || "";
+  const rajbah = mapData?.rajbah || "";
+  const village = mapData?.village || "";
+  const zilladarSection = mapData?.zilladar_section || "";
+  const subDiv = mapData?.tehsil || "";
+  const division = mapData?.district || "";
+
+  // Build segments — only include fields that have data entered
+  const segs = [];
+  segs.push("خاکہ دستی");
+  if (mogaNum) {
+    const mogaStr = mogaSide ? `${mogaNum}/${mogaSide}` : mogaNum;
+    segs.push(`موگہ نمبری <span style="font-family:'Rajdhani',Arial,sans-serif; direction:ltr; unicode-bidi:isolate;">${mogaStr}</span>`);
+  }
+  if (rajbah) segs.push(`راجباہ ${rajbah}`);
+  if (village) segs.push(`موضع ${village}`);
+  if (zilladarSection) segs.push(`ضلعداری سیکشن ${zilladarSection}`);
+  if (subDiv) segs.push(`سب ڈویژن ${subDiv}`);
+  if (division) segs.push(`ڈویژن ${division}`);
+  const headerText = segs.join("، ");
+
+  const borderStyle = showBorder ? "border:2px solid #000;" : "";
+  return `<div style="${borderStyle} font-family:${uf}; direction:rtl; margin-bottom:4px;">
     <div style="padding:2px 8px; text-align:center; font-size:clamp(11px,1.8vw,18px); font-weight:bold; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-      خاکہ دستی موگہ نمبری <span style="font-family:'Rajdhani',Arial,sans-serif; direction:ltr; unicode-bidi:isolate;">${mogaStr}</span>، راجباہ ${rajbah}، موضع ${village}، ضلعداری سیکشن ${zilladarSection}، سب ڈویزن ${subDiv}، ڈویزن ${division}
+      ${headerText}
     </div>
   </div>`;
 }
 
-export function buildPrintFooterHTML(mapData) {
+export function buildPrintFooterHTML(mapData, options = {}) {
+  const { showBorder = false } = options;
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
-  return `<div style="border:2px solid #000; font-family:${uf}; direction:rtl; margin-top:2px; padding:18px 16px; display:flex; justify-content:space-between; font-size:22px; font-weight:bold;">
+  const borderStyle = showBorder ? "border:2px solid #000;" : "";
+  return `<div style="${borderStyle} font-family:${uf}; direction:rtl; margin-top:2px; padding:18px 16px; display:flex; justify-content:space-between; font-size:22px; font-weight:bold;">
     <span>مرتب کنندہ _______________</span>
     <span>ضلعدار _______________</span>
   </div>`;

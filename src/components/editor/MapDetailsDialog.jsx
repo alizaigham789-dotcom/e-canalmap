@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
   const [form, setForm] = useState({
-    title: "", moga_number: "", rajbah: "", section: "",
+    title: "", moga_number: "", rajbah: "", village: "",
     zilladar_section: "", tehsil: "", district: "", mogha_side: "L",
   });
 
@@ -14,7 +14,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
         title: mapData.title || "",
         moga_number: mapData.moga_number || "",
         rajbah: mapData.rajbah || "",
-        section: mapData.section || "",
+        village: mapData.village || "",
         zilladar_section: mapData.zilladar_section || "",
         tehsil: mapData.tehsil || "",
         district: mapData.district || "",
@@ -25,13 +25,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
 
   if (!open) return null;
 
-  const f = (key, val) => setForm(p => {
-    // Auto-fill zilladar_section from section (user wants same name in both)
-    if (key === "section") {
-      return { ...p, section: val, zilladar_section: val };
-    }
-    return { ...p, [key]: val };
-  });
+  const f = (key, val) => setForm(p => ({ ...p, [key]: val }));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -56,7 +50,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
             خاکہ دستی&nbsp;&nbsp;
             موگہ نمبری {form.moga_number ? `${form.moga_number}/${form.mogha_side}` : "_____"}&nbsp;&nbsp;
             راجباہ {form.rajbah || "_____"}&nbsp;&nbsp;
-            موضع {form.section || "_____"}&nbsp;&nbsp;
+            موضع {form.village || "_____"}&nbsp;&nbsp;
             ضلعداری سیکشن {form.zilladar_section || "_____"}&nbsp;&nbsp;
             تحصیل {form.tehsil || "_____"}&nbsp;&nbsp;
             ضلع {form.district || "_____"}
@@ -101,13 +95,13 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
               placeholder="Canal / Minor name" />
           </div>
 
-          {/* Section / Mouza */}
+          {/* Mozah / Village */}
           <div>
             <label className="block text-[10px] text-slate-500 uppercase tracking-widest mb-1" dir="rtl"
-              style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>موضع (سیکشن)</label>
-            <input value={form.section} onChange={e => f("section", e.target.value)}
+              style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>موضع</label>
+            <input value={form.village} onChange={e => f("village", e.target.value)}
               className="w-full border border-slate-200 rounded-lg h-8 px-3 text-sm text-slate-800 focus:outline-none focus:border-blue-400"
-              placeholder="Section / Village" />
+              placeholder="Village / Mozah" />
           </div>
 
           {/* Zilladar Section */}

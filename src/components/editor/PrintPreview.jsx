@@ -374,6 +374,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [pageOrientation, setPageOrientation] = useState("landscape");
   const [pageSize, setPageSize] = useState("A4");
   const [showLegendInPrint, setShowLegendInPrint] = useState(true);
+  const [showHeaderBorder, setShowHeaderBorder] = useState(false);
+  const [showPageBorder, setShowPageBorder] = useState(false);
   const [legendCustomPos, setLegendCustomPos] = useState(null); // null = auto; {x, y} in SVG coords
   const [legendMoveMode, setLegendMoveMode] = useState(false);
   const legendDragRef = useRef(null);
@@ -486,8 +488,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const handlePrint = () => {
     if (!svgData) return;
     const totalGCA = calculateTotalGCA(objects);
-    const headerHTML = buildPrintHeaderHTML(mapData, mogaFilter, totalGCA);
-    const footerHTML = buildPrintFooterHTML(mapData);
+    const headerHTML = buildPrintHeaderHTML(mapData, mogaFilter, totalGCA, { showBorder: showHeaderBorder });
+    const footerHTML = buildPrintFooterHTML(mapData, { showBorder: showHeaderBorder });
 
     // Auto-calculated CCA/GCA for each chakbandi — use user's centerLabel if entered,
     // positioned ABOVE the chakbandi boundary (not at centroid)
@@ -520,7 +522,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
         * { margin:0; padding:0; box-sizing:border-box; }
         html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; }
-        body { display: flex; flex-direction: column;${pageBorderStyle !== "none" && pageBorderStyle ? ` border:2px ${pageBorderStyle} #3b82f6;` : ""} }
+        body { display: flex; flex-direction: column;${showPageBorder ? ` border:2px solid #3b82f6;` : ""} }
         .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .map-wrap svg { max-width:100%; max-height:100%; width:auto; height:auto; display:block; }
         @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
@@ -652,6 +654,18 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               className="w-3 h-3 accent-blue-500" />
             <span className="text-[10px] text-slate-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>علامات دکھائیں</span>
           </label>
+          {/* Header border toggle */}
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input type="checkbox" checked={showHeaderBorder} onChange={e => setShowHeaderBorder(e.target.checked)}
+              className="w-3 h-3 accent-blue-500" />
+            <span className="text-[10px] text-slate-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>ہیڈر باکس</span>
+          </label>
+          {/* Page border toggle */}
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input type="checkbox" checked={showPageBorder} onChange={e => setShowPageBorder(e.target.checked)}
+              className="w-3 h-3 accent-blue-500" />
+            <span className="text-[10px] text-slate-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>پیج باکس</span>
+          </label>
           {showLegendInPrint && (
             <>
               <button
@@ -680,11 +694,11 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
           <div
             ref={svgWrapRef}
             className={`bg-white shadow-2xl relative ${legendMoveMode ? "cursor-crosshair ring-4 ring-green-400/50" : ""}`}
-            style={{ width: `${scale}%`, minWidth: 500, border: pageBorderStyle !== "none" ? `2px ${pageBorderStyle} #3b82f6` : "none" }}
+            style={{ width: `${scale}%`, minWidth: 500, border: showPageBorder ? `2px solid #3b82f6` : "none" }}
             onClick={handlePreviewClick}
           >
             {/* Urdu header — Khaka Dasti */}
-            <div dangerouslySetInnerHTML={{ __html: buildPrintHeaderHTML(mapData, mogaFilter, gcaData.total) }} />
+            <div dangerouslySetInnerHTML={{ __html: buildPrintHeaderHTML(mapData, mogaFilter, gcaData.total, { showBorder: showHeaderBorder }) }} />
 
             {/* SVG Map — pure inline vector (no img tag, preserves cross sizes exactly) */}
             {inlineSvgMarkup ? (
@@ -702,7 +716,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             <div style={{ padding:"6px 14px", borderTop:"1px solid #bbb", display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6, fontSize:9, color:"#777" }}>
             </div>
             {/* Signature footer — مرتب کنندہ / ضلعدار at the end */}
-            <div dangerouslySetInnerHTML={{ __html: buildPrintFooterHTML(mapData) }} />
+            <div dangerouslySetInnerHTML={{ __html: buildPrintFooterHTML(mapData, { showBorder: showHeaderBorder }) }} />
           </div>
         </div>
       </div>

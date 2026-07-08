@@ -52,7 +52,7 @@ export default function MapList() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
-  const [newMap, setNewMap] = useState({ title: "", village: "", district: "", tehsil: "", section: "", rajbah: "", moga_number: "", mogha_side: "" });
+  const [newMap, setNewMap] = useState({ title: "", village: "", district: "", tehsil: "", section: "", zilladar_section: "", rajbah: "", moga_number: "", mogha_side: "" });
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -132,11 +132,11 @@ export default function MapList() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.LandMap.create({ ...data, zilladar_section: data.zilladar_section || data.section }),
+    mutationFn: (data) => base44.entities.LandMap.create({ ...data }),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["maps"] });
       setShowCreate(false);
-      setNewMap({ title: "", village: "", district: "", tehsil: "", section: "", rajbah: "", moga_number: "", mogha_side: "" });
+      setNewMap({ title: "", village: "", district: "", tehsil: "", section: "", zilladar_section: "", rajbah: "", moga_number: "", mogha_side: "" });
       toast.success("Map created");
       navigate(`/editor?id=${created.id}`);
     },
@@ -440,7 +440,8 @@ export default function MapList() {
             </div>
             {[
               { key: "rajbah", label: "Rajbah / Canal Minor (راجباہ)", placeholder: "e.g. Roda Minor" },
-              { key: "section", label: "Section / Zilladar Section (سیکشن / ضلعداری سیکشن)", placeholder: "e.g. Ganjial" },
+              { key: "section", label: "Section (سیکشن)", placeholder: "e.g. Ganjial" },
+              { key: "zilladar_section", label: "Zilladar Section (ضلعداری سیکشن)", placeholder: "e.g. Roda" },
               { key: "tehsil", label: "Sub Division (سب ڈویژن)", placeholder: "e.g. Qaidabad" },
               { key: "district", label: "Division (ڈویژن)", placeholder: "e.g. Khushab" },
             ].map(({ key, label, placeholder }) => (
