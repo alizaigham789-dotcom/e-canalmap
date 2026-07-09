@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator } from "lucide-react";
+import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator, Ban } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { calculateChakbandiGCA } from "@/lib/gisEngine";
 
@@ -102,6 +102,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
             <>
               <Separator className="bg-slate-100" />
               <Field label="Label" value={local.label || ""} onChange={v => commit("label", v)} placeholder="Optional label" />
+              <ExclusionToggle local={local} commit={commit} />
               <FillStyleControl local={local} commit={commit} />
               <div className="text-[10px] text-slate-400 font-mono">220 ft × 198 ft</div>
             </>
@@ -125,6 +126,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
                 <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
               </div>
+              <ExclusionToggle local={local} commit={commit} />
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Moga Number</label>
                 <Input
@@ -158,6 +160,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
                 <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
               </div>
+              <ExclusionToggle local={local} commit={commit} />
               <FillStyleControl local={local} commit={commit} />
               <KillaStyleControl local={local} commit={commit} />
               <div className="text-[10px] text-slate-400 font-mono">1100 ft × 990 ft • 25 Killas</div>
@@ -243,9 +246,9 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 </div>
                 <Button size="sm" variant="outline" className="w-full h-6 text-[10px] border-green-300 text-green-700 hover:bg-green-100"
                   onClick={() => {
-                    const mustateels = allObjects.filter(o => o.type === "mustateel");
+                    const parcels = allObjects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
                     const canals = allObjects.filter(o => o.type === "canal");
-                    const gca = calculateChakbandiGCA(selectedObj, mustateels, canals);
+                    const gca = calculateChakbandiGCA(selectedObj, parcels, canals);
                     commitMultiple(local.ccaEqualsGca
                       ? { cca: String(gca), gca: String(gca), centerLabel: `(${gca}/${gca})` }
                       : { gca: String(gca), centerLabel: `(${local.cca ?? gca}/${gca})` });
@@ -401,6 +404,17 @@ function SpacingControl({ label, value, min, max, step, onChange, unit }) {
           onClick={() => onChange(Math.min(max, value + step))}>+</Button>
         <span className="text-xs text-slate-600 font-mono w-10 text-center">{value}{unit}</span>
       </div>
+    </div>
+  );
+}
+
+function ExclusionToggle({ local, commit }) {
+  return (
+    <div className="flex items-center justify-between p-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+      <label className="text-[10px] text-slate-600 flex items-center gap-1" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
+        <Ban className="w-3 h-3 text-slate-500" /> چکبندی سے اخراج
+      </label>
+      <Switch checked={!!local.excluded} onCheckedChange={v => commit("excluded", v)} className="scale-75" />
     </div>
   );
 }

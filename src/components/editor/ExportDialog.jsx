@@ -5,6 +5,7 @@ import { Download, FileText, Globe, Map, Table2, Image, FileImage, Film } from "
 import { toast } from "sonner";
 import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintFooterHTML, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, svgMogaFraction, chakbandiLabelPosition, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas } from "@/lib/printRenderHelpers";
+import { drawExclusionHatchOnCanvas } from "@/components/editor/GISRenderer";
 
 
 export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {}, pageBorderStyle = "none" }) {
@@ -127,6 +128,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         }
       }
       // Bold outer boundary — user's colour + thickness setting, same as editor/print
+      if (o.excluded) drawExclusionHatchOnCanvas(ctx, o, zoom);
       ctx.strokeStyle = C.mustateelStroke || "#000000"; ctx.lineWidth = MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness); ctx.strokeRect(o.x, o.y, o.w, o.h);
       // Label(s) — split above/below if a mouza line crosses this parcel
       const mSplit = getMustateelMouzaSplit(o, objects.filter(m => m.type === "mouza"));
@@ -152,6 +154,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       for (let r=1;r<5;r++){ctx.moveTo(o.x,o.y+r*cellH);ctx.lineTo(o.x+o.w,o.y+r*cellH);}
       ctx.stroke();
       // Bold outer boundary (thicker than mustateel)
+      if (o.excluded) drawExclusionHatchOnCanvas(ctx, o, zoom);
       ctx.strokeStyle = C.murabaStroke || "#000000"; ctx.lineWidth = 4.5; ctx.strokeRect(o.x, o.y, o.w, o.h);
       if (o.label) {
         ctx.fillStyle = C.labelColor || "#1e293b"; ctx.font = `900 ${Math.min(o.w, o.h)*0.28}px Rajdhani, sans-serif`;
@@ -160,6 +163,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       }
     } else if (o.type === "acre") {
       ctx.fillStyle = o.fillColor || C.acreFill || "rgba(234,179,8,0.08)"; ctx.fillRect(o.x,o.y,o.w,o.h);
+      if (o.excluded) drawExclusionHatchOnCanvas(ctx, o, zoom);
       ctx.strokeStyle = C.acreStroke || "#eab308"; ctx.lineWidth = 1.5/zoom; ctx.strokeRect(o.x,o.y,o.w,o.h);
     } else if (o.type === "canal" && o.points?.length >= 2) {
       const halfW = (o.width || DIMENSIONS.CANAL_WIDTH)/2;
@@ -423,7 +427,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const mogaLbl = o.mogaNumber ? `<text x="${o.x+4}" y="${o.y+4}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="bold" fill="${_mogaClr}" text-anchor="start" dominant-baseline="hanging">M${o.mogaNumber}</text>` : "";
         lbl = `${mogaLbl}${o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}`;
       }
-      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;
+      const hatch = o.excluded ? svgExclusionHatchSVG(o, "must") : "";
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}${hatch}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;
     }
     if (o.type === "muraba") {
       const cellW=o.w/5, cellH=o.h/5;
@@ -436,10 +441,12 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       for(let c=1;c<5;c++) gridLines.push(`<line x1="${o.x+c*cellW}" y1="${o.y}" x2="${o.x+c*cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`);
       for(let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="1.2"/>`);
       const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.28}" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
-      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#000" stroke-width="4.5" stroke-linejoin="miter"/>${lbl}`;
+      const hatch = o.excluded ? svgExclusionHatchSVG(o, "murb") : "";
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}${hatch}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#000" stroke-width="4.5" stroke-linejoin="miter"/>${lbl}`;
     }
     if (o.type === "acre") {
-      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${C.acreStroke || "#555"}" stroke-width="1"/>`;
+      const hatch = o.excluded ? svgExclusionHatchSVG(o, "acre") : "";
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${C.acreStroke || "#555"}" stroke-width="1"/>${hatch}`;
     }
     if (o.type === "canal" && o.points?.length >= 2) {
       // Canal — bilateral buffer with water fill + two bank lines (matches editor/print)
@@ -769,6 +776,16 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       </DialogContent>
     </Dialog>
   );
+}
+
+function svgExclusionHatchSVG(obj, prefix = "excl") {
+  const id = `${prefix}_${obj.x}_${obj.y}`;
+  const spacing = 14;
+  let lines = "";
+  for (let d = -obj.h; d < obj.w; d += spacing) {
+    lines += `<line x1="${(obj.x + d).toFixed(1)}" y1="${obj.y.toFixed(1)}" x2="${(obj.x + d + obj.h).toFixed(1)}" y2="${(obj.y + obj.h).toFixed(1)}" stroke="rgba(120,120,120,0.55)" stroke-width="1.5"/>`;
+  }
+  return `<clipPath id="${id}"><rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}"/></clipPath><g clip-path="url(#${id})">${lines}</g>`;
 }
 
 function downloadText(text, filename, mimeType) {

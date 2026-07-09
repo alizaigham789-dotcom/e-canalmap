@@ -86,6 +86,8 @@ export function drawGrid(ctx, W, H, zoom, pan, gridFlags = {}) {
 // LAYER 1+2: Parcels (fill then boundary)
 // ============================================================
 export function drawAcre(ctx, obj, isSelected, zoom, C) {
+  // Exclusion hatch — drawn first, above fill, below boundary
+  if (obj.excluded) drawExclusionHatchOnCanvas(ctx, obj, zoom);
   // Layer 1: Fill
   const fs = obj.fillStyle || "solid";
   if (fs === "solid") {
@@ -117,6 +119,8 @@ export function drawAcre(ctx, obj, isSelected, zoom, C) {
 }
 
 export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = true, mouzaSplit = null) {
+  // Exclusion hatch — drawn first, above fill, below boundary
+  if (obj.excluded) drawExclusionHatchOnCanvas(ctx, obj, zoom);
   const ks = obj.killaStyle || {};
   const fs = obj.fillStyle || "solid";
 
@@ -231,6 +235,8 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
 }
 
 export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = true) {
+  // Exclusion hatch — drawn first, above fill, below boundary
+  if (obj.excluded) drawExclusionHatchOnCanvas(ctx, obj, zoom);
   const ks = obj.killaStyle || {};
   const fs = obj.fillStyle || "solid";
 
@@ -909,4 +915,27 @@ export function drawOutletDraft(ctx, outletDraft, snapPos, zoom) {
 function hexToRgb(hex) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? `${parseInt(result[1],16)},${parseInt(result[2],16)},${parseInt(result[3],16)}` : "239,68,68";
+}
+
+// ---- Diagonal exclusion hatch — for parcels marked "excluded" from chakbandi ----
+// Draws uniform 45° diagonal lines inside the parcel rectangle, clipped to its bounds.
+// Used in editor canvas, print preview (canvas), and exports.
+export function drawExclusionHatchOnCanvas(ctx, obj, zoom) {
+  const spacing = 14; // world units between lines
+  const diag = Math.hypot(obj.w, obj.h);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(obj.x, obj.y, obj.w, obj.h);
+  ctx.clip();
+  ctx.strokeStyle = "rgba(120,120,120,0.55)";
+  ctx.lineWidth = 1.5 / zoom;
+  ctx.lineCap = "butt";
+  ctx.beginPath();
+  // Walk from bottom-left corner outward in `spacing` steps
+  for (let d = -obj.h; d < obj.w; d += spacing) {
+    ctx.moveTo(obj.x + d, obj.y);
+    ctx.lineTo(obj.x + d + obj.h, obj.y + obj.h);
+  }
+  ctx.stroke();
+  ctx.restore();
 }

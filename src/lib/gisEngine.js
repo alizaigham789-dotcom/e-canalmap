@@ -918,6 +918,7 @@ export function calculateChakbandiGCA(chakbandi, parcels, canals = []) {
 
   let totalAcres = 0;
   for (const p of parcels) {
+    if (p.excluded) continue; // excluded parcels don't count in GCA
     let killaCols, killaRows;
     if (p.type === "acre") { killaCols = 1; killaRows = 1; }
     else if (p.type === "mustateel") { killaCols = 2; killaRows = 5; }

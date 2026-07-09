@@ -106,6 +106,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
   ${killaLabels}
+  ${obj.excluded ? svgExclusionHatch(obj, `must_${idx}`) : ""}
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness)}" stroke-linejoin="miter"/>
   ${labelSvg}
 </g>`;
@@ -141,9 +142,21 @@ function svgMuraba(obj, C, idx, showKilla = true) {
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
   ${killaLabels}
+  ${obj.excluded ? svgExclusionHatch(obj, `murb_${idx}`) : ""}
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="6.5" stroke-linejoin="miter"/>
   ${label ? `<text x="${obj.x + obj.w/2}" y="${obj.y + obj.h/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}
 </g>`;
+}
+
+function svgExclusionHatch(obj, idx) {
+  const id = `excl_${idx}`;
+  const spacing = 14;
+  const diag = Math.ceil(Math.hypot(obj.w, obj.h)) + spacing;
+  let lines = "";
+  for (let d = -obj.h; d < obj.w; d += spacing) {
+    lines += `<line x1="${(obj.x + d).toFixed(1)}" y1="${obj.y.toFixed(1)}" x2="${(obj.x + d + obj.h).toFixed(1)}" y2="${(obj.y + obj.h).toFixed(1)}" stroke="rgba(120,120,120,0.55)" stroke-width="1.5"/>`;
+  }
+  return `<clipPath id="${id}"><rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}"/></clipPath><g clip-path="url(#${id})">${lines}</g>`;
 }
 
 function svgAcre(obj, C, idx) {
@@ -153,6 +166,7 @@ function svgAcre(obj, C, idx) {
   return `
 <g key="acre_${idx}">
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1"/>
+  ${obj.excluded ? svgExclusionHatch(obj, idx) : ""}
   ${obj.label ? `<text x="${obj.x + obj.w/2}" y="${obj.y + obj.h/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${obj.label}</text>` : ""}
 </g>`;
 }
