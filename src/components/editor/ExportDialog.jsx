@@ -258,7 +258,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     if (o.type === "outlet" && o.start && o.end) {
       // Moga — size 10× canal width for print/export legibility
       const color = o.outletColor || C.outletStroke || "#06b6d4";
-      const size = DIMENSIONS.CANAL_WIDTH * 10;
+      const size = DIMENSIONS.CANAL_WIDTH * 9;
       const half = size / 2;
       const { x: sx, y: sy } = o.start;
       const { x: ex, y: ey } = o.end;
@@ -523,7 +523,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }
     if (o.type==="outlet" && o.start && o.end) {
       const color = o.outletColor || C.outletStroke || "#06b6d4";
-      const size = DIMENSIONS.CANAL_WIDTH * 10;
+      const size = DIMENSIONS.CANAL_WIDTH * 9;
       const half = size / 2;
       const { x: sx, y: sy } = o.start;
       const { x: ex, y: ey } = o.end;

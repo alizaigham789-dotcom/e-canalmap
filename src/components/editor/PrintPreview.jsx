@@ -311,7 +311,7 @@ function svgRoad(obj, C, idx) {
 function svgOutlet(obj, C, idx, mogaScale = 1) {
   if (!obj.start || !obj.end) return "";
   const color = obj.outletColor || C.outletStroke || "#06b6d4";
-  const size = DIMENSIONS.CANAL_WIDTH * 10;
+  const size = DIMENSIONS.CANAL_WIDTH * 9;
   const half = size / 2;
   const { x: sx, y: sy } = obj.start;
   const { x: ex, y: ey } = obj.end;
