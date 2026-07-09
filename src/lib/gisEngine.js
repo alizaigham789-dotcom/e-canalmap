@@ -1004,7 +1004,7 @@ export function buildPrintHeaderHTML(mapData) {
   const text = buildMapHeaderText(mapData);
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
   return `<div style="width:100%;box-sizing:border-box;padding:4px 10px;">
-    <div id="print-header-box" style="border:2px solid #000; border-radius:4px; padding:6px 14px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box;">
+    <div id="print-header-box" style="border-bottom:2px solid #000; padding:6px 14px 8px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box;">
       <span id="print-header-text" style="white-space:nowrap; font-family:${uf}; font-weight:bold; font-size:28px; direction:rtl;">${text}</span>
     </div>
   </div>

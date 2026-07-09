@@ -27,7 +27,7 @@ export default function PrintHeaderBox({ mapData }) {
   }, [headerText]);
 
   return (
-    <div ref={wrapRef} className="w-full px-3 py-1.5 mb-2 border-2 border-black rounded flex items-center justify-center overflow-hidden bg-white shrink-0">
+    <div ref={wrapRef} className="w-full px-3 py-1.5 mb-2 border-b-2 border-black flex items-center justify-center overflow-hidden bg-white shrink-0">
       <span
         ref={textRef}
         dir="rtl"
