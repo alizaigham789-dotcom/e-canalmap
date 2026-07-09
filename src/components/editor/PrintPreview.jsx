@@ -98,7 +98,16 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
     const lbl2Final = lbl2 || label || "";
     labelSvg = `${label ? `<text x="${mouzaSplit.centerA.x}" y="${mouzaSplit.centerA.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${lbl2Final ? `<text x="${mouzaSplit.centerB.x}" y="${mouzaSplit.centerB.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${lbl2Final}</text>` : ""}`;
   } else {
-    labelSvg = `${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
+    const hasLabel2 = !!obj.label2;
+    const cx = obj.x + obj.w/2;
+    if (hasLabel2) {
+      const splitFont2 = Math.min(obj.w, obj.h) * 0.26;
+      const labelY2 = labelY - splitFont2 * 0.6;
+      const label2Y2 = labelY + splitFont2 * 0.6;
+      labelSvg = `${label ? `<text x="${cx}" y="${labelY2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont2}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}<text x="${cx}" y="${label2Y2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont2}" fill="${C.labelColor||'#1e293b'}">${obj.label2}</text>`;
+    } else {
+      labelSvg = `${label ? `<text x="${cx}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
+    }
   }
 
   return `

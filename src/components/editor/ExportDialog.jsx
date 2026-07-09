@@ -139,10 +139,19 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         if (o.label) ctx.fillText(o.label, mSplit.centerA.x, mSplit.centerA.y);
         if (o.label2 || o.label) ctx.fillText(o.label2 || o.label, mSplit.centerB.x, mSplit.centerB.y);
-      } else if (o.label) {
-        ctx.font = `900 ${Math.min(o.w, o.h) * 0.35}px Rajdhani, sans-serif`;
+      } else {
+        // No mouza split — show label (and label2 if it exists, stacked)
+        const cx = o.x + o.w/2, cy = o.y + o.h/2;
+        const hasLabel2 = !!o.label2;
+        const fontPx = Math.min(o.w, o.h) * (hasLabel2 ? 0.26 : 0.35);
+        ctx.font = `900 ${fontPx}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(o.label, o.x + o.w/2, o.y + o.h/2);
+        const labelY = hasLabel2 ? cy - fontPx * 0.6 : cy;
+        if (o.label) ctx.fillText(o.label, cx, labelY);
+        if (hasLabel2) {
+          ctx.font = `900 ${fontPx}px Rajdhani, sans-serif`;
+          ctx.fillText(o.label2, cx, cy + fontPx * 0.6);
+        }
       }
     } else if (o.type === "muraba") {
       ctx.fillStyle = "#ffffff";
@@ -418,7 +427,11 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const lbl2Val = o.label2 || o.label || "";
         lbl = `${o.label ? `<text x="${mSplit.centerA.x}" y="${mSplit.centerA.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${lbl2Val ? `<text x="${mSplit.centerB.x}" y="${mSplit.centerB.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${lbl2Val}</text>` : ""}`;
       } else {
-        lbl = `${o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}`;
+        const cx = o.x+o.w/2, cy = o.y+o.h/2;
+        const hasLbl2 = !!o.label2;
+        const fontPx = Math.min(o.w,o.h) * (hasLbl2 ? 0.26 : 0.35);
+        const lblY = hasLbl2 ? cy - fontPx * 0.6 : cy;
+        lbl = `${o.label ? `<text x="${cx}" y="${lblY}" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${hasLbl2 ? `<text x="${cx}" y="${cy + fontPx * 0.6}" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label2}</text>` : ""}`;
       }
       const hatch = o.excluded ? svgExclusionHatchSVG(o, "must") : "";
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}${hatch}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;

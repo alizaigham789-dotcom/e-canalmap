@@ -207,18 +207,26 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     ctx.save();
     ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
     ctx.fillStyle = C.labelColor || "#1e293b";
-    // Measure text at a large size, then scale down to fit within boundary
-    const maxFontPx = Math.min(obj.w, obj.h) * 0.38; // world units, ~38% of smallest dim
+    // If label2 exists but no mouza split detected, still show it below the main label
+    const hasLabel2 = !!obj.label2;
+    const maxFontPx = Math.min(obj.w, obj.h) * (hasLabel2 ? 0.26 : 0.38);
     ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
     const measured = ctx.measureText(obj.label || "");
-    // Scale to fit: ensure text width < 80% of obj.w
     const fitScale = Math.min(1, (obj.w * 0.80) / (measured.width || 1));
     const finalFont = maxFontPx * fitScale;
     ctx.font = `900 ${finalFont}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    const labelY = (obj.showOwner && obj.ownerName) ? centerY - finalFont * 0.35 : centerY;
+    // If label2 exists, show label in top half and label2 in bottom half
+    const labelY = hasLabel2 ? centerY - finalFont * 0.6 : ((obj.showOwner && obj.ownerName) ? centerY - finalFont * 0.35 : centerY);
     ctx.fillText(obj.label || "", centerX, labelY);
-    if (obj.showOwner && obj.ownerName) {
+    if (hasLabel2) {
+      ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
+      const measured2 = ctx.measureText(obj.label2 || "");
+      const fitScale2 = Math.min(1, (obj.w * 0.80) / (measured2.width || 1));
+      const finalFont2 = maxFontPx * fitScale2;
+      ctx.font = `900 ${finalFont2}px Rajdhani, sans-serif`;
+      ctx.fillText(obj.label2, centerX, centerY + finalFont * 0.6);
+    } else if (obj.showOwner && obj.ownerName) {
       ctx.fillStyle = "rgba(100,116,139,0.9)";
       const ownerFont = Math.min(obj.w, obj.h) * 0.10;
       ctx.font = `${ownerFont}px Inter, sans-serif`;

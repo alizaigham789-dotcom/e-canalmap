@@ -172,9 +172,39 @@ export default function Editor() {
 
   // Load map data ONLY on first load for a given map ID.
   // Guard prevents refetches from overwriting unsaved local edits.
+  // Also checks sessionStorage for a backup saved during HMR/unmount race conditions.
   useEffect(() => {
     if (!mapData || mapData.id === loadedMapIdRef.current) return;
     loadedMapIdRef.current = mapData.id;
+
+    // Check sessionStorage for a backup saved during unmount (HMR race condition)
+    const backupKey = `chakbandi_backup_${mapData.id}`;
+    try {
+      const backupRaw = sessionStorage.getItem(backupKey);
+      if (backupRaw) {
+        const backup = JSON.parse(backupRaw);
+        // Only use backup if it has more objects than server data (i.e. newer)
+        const serverObjs = mapData.drawing_data ? DrawingStateManager.deserialize(mapData.drawing_data) : [];
+        if (backup.objects && backup.objects.length >= serverObjs.length) {
+          dsmRef.current = new DrawingStateManager(backup.objects);
+          setObjects([...dsmRef.current.objects]);
+          syncUndoRedo();
+          if (backup.viewport) {
+            try {
+              const vp = JSON.parse(backup.viewport);
+              if (vp.zoom) setZoom(vp.zoom);
+              if (vp.pan) setPan(vp.pan);
+            } catch {}
+          }
+          sessionStorage.removeItem(backupKey);
+          // Save to server to sync the recovered data
+          saveRef.current();
+          return;
+        }
+        sessionStorage.removeItem(backupKey);
+      }
+    } catch {}
+
     if (mapData.drawing_data) {
       const loaded = DrawingStateManager.deserialize(mapData.drawing_data);
       dsmRef.current = new DrawingStateManager(loaded);
@@ -213,6 +243,7 @@ export default function Editor() {
   // Save on unmount / navigate away — direct API call so it survives unmount.
   // CRITICAL: Only save if data was actually loaded (loadedMapIdRef is set).
   // Without this guard, navigating away before data loads overwrites server data with [].
+  // Also saves to sessionStorage as a backup for HMR race conditions (hot-reload unmount/remount).
   // Also refreshes the maps list so MapList shows current data on return.
   useEffect(() => {
     return () => {
@@ -233,6 +264,15 @@ export default function Editor() {
       }
       const parcels = dsmRef.current.getByType("mustateel").length +
         dsmRef.current.getByType("muraba").length;
+      // SYNCHRONOUS backup to sessionStorage — survives HMR remount race condition
+      try {
+        sessionStorage.setItem(`chakbandi_backup_${currentMapId}`, JSON.stringify({
+          objects: dsmRef.current.objects,
+          viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+          timestamp: Date.now(),
+        }));
+      } catch {}
+      // Async save to server
       base44.entities.LandMap.update(currentMapId, {
         drawing_data: dsmRef.current.serialize(),
         total_parcels: parcels,
@@ -240,6 +280,10 @@ export default function Editor() {
       }).then(() => {
         queryClient.removeQueries({ queryKey: ["map", currentMapId] });
         queryClient.invalidateQueries({ queryKey: ["maps"] });
+        // Clear backup after successful server save (give 5s grace for remount to pick it up)
+        setTimeout(() => {
+          try { sessionStorage.removeItem(`chakbandi_backup_${currentMapId}`); } catch {}
+        }, 5000);
       }).catch(() => {
         queryClient.invalidateQueries({ queryKey: ["maps"] });
       });
