@@ -77,13 +77,13 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
 
     // CCA/GCA fraction labels for chakbandis — at labelPos, in fraction boxes
     {
-      const _mustateels = objects.filter(o => o.type === "mustateel");
+      const _parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
       const _canals = objects.filter(o => o.type === "canal");
       const _chakbandis = objects.filter(o => o.type === "chakbandi");
       const gcaFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
       for (const ch of _chakbandis) {
         if (ch.points?.length >= 3) {
-          const gca = calculateChakbandiGCA(ch, _mustateels, _canals);
+          const gca = calculateChakbandiGCA(ch, _parcels, _canals);
           if (gca > 0 || ch.centerLabel) {
             const lp = getChakbandiLabelPos(ch);
             if (!lp) continue;
@@ -347,14 +347,14 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     const footerHTML = buildPrintFooterHTML(mapData);
 
     // CCA/GCA fraction labels for chakbandis — at labelPos, in fraction boxes
-    const mustateels = objects.filter(o => o.type === "mustateel");
+    const parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
     const canals = objects.filter(o => o.type === "canal");
     const chakbandis = objects.filter(o => o.type === "chakbandi");
     const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
     let gcaLabels = "";
     for (const ch of chakbandis) {
       if (ch.points?.length >= 3) {
-        const gca = calculateChakbandiGCA(ch, mustateels, canals);
+        const gca = calculateChakbandiGCA(ch, parcels, canals);
         if (gca > 0 || ch.centerLabel) {
           const lp = getChakbandiLabelPos(ch);
           if (!lp) continue;

@@ -324,6 +324,14 @@ export function drawCCAGCAFractionBoxOnCanvas(ctx, ccaText, gcaText, cx, cy, fon
   const ccaStr = String(ccaText || "");
   const gcaStr = String(gcaText || "");
   if (!ccaStr && !gcaStr) return;
+  if (!ccaStr) {
+    ctx.fillStyle = "#166534";
+    ctx.font = `bold ${fontPx}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(gcaStr, cx, cy);
+    return;
+  }
   const padX = fontPx * 0.4, padY = fontPx * 0.3;
   const textW = fontPx * Math.max(ccaStr.length, gcaStr.length, 1) * 0.58;
   const boxW = textW + padX * 2;
@@ -364,6 +372,9 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
   const ccaStr = String(ccaText || "");
   const gcaStr = String(gcaText || "");
   if (!ccaStr && !gcaStr) return "";
+  if (!ccaStr) {
+    return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="#166534">${gcaStr}</text>`;
+  }
   const padX = fontPx * 0.4, padY = fontPx * 0.3;
   const textW = fontPx * Math.max(ccaStr.length, gcaStr.length, 1) * 0.58;
   const boxW = textW + padX * 2;
@@ -392,14 +403,10 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
 // Otherwise auto-calculate from GCA.
 export function getCCAGCAText(chakbandi, gcaValue) {
   if (chakbandi.centerLabel) {
-    const parts = chakbandi.centerLabel.split("/");
-    if (parts.length >= 2) {
-      return { cca: parts[0].trim(), gca: parts[1].trim() };
+      return { cca: "", gca: chakbandi.centerLabel };
     }
-    return { cca: chakbandi.centerLabel, gca: "" };
-  }
-  const gcaText = acresToAcreKanalText(gcaValue || 0);
-  return { cca: `${gcaText} سی سی اے`, gca: `${gcaText} جی سی اے` };
+    const gcaText = acresToAcreKanalText(gcaValue || 0);
+    return { cca: "", gca: gcaText };
 }
 
 // ─── Legend SVG: 2-column table (sign | name), 3× bigger ────────────────

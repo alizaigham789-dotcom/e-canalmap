@@ -136,7 +136,7 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
 
   // Grid snap — snap to cadastral grid corners
   if (gridSnap) {
-    if (activeTool === "acre") {
+    if (activeTool === "acre" || activeTool === "measure") {
       const gx = Math.round(wx / DIMENSIONS.ACRE.width) * DIMENSIONS.ACRE.width;
       const gy = Math.round(wy / DIMENSIONS.ACRE.height) * DIMENSIONS.ACRE.height;
       if (Math.hypot(wx - gx, wy - gy) < threshold * 3) { bestX = gx; bestY = gy; bestDist = 0; }
@@ -905,7 +905,7 @@ export function doesCanalCrossMustateel(canal, mustateel) {
 // whatever portion of that killa is covered by a canal. Since each killa is measured
 // independently by fractional coverage, acres split by a canal (or across several
 // killas) are automatically summed into accurate totals without double counting.
-export function calculateChakbandiGCA(chakbandi, mustateels, canals = []) {
+export function calculateChakbandiGCA(chakbandi, parcels, canals = []) {
   if (!chakbandi.points || chakbandi.points.length < 3) return 0;
   const polygon = chakbandi.points;
   const canalPolys = (canals || []).map(c => {
@@ -917,12 +917,16 @@ export function calculateChakbandiGCA(chakbandi, mustateels, canals = []) {
   }).filter(Boolean);
 
   let totalAcres = 0;
-  for (const m of mustateels) {
-    const killaCols = 2, killaRows = 5;
-    const cellW = m.w / killaCols, cellH = m.h / killaRows;
+  for (const p of parcels) {
+    let killaCols, killaRows;
+    if (p.type === "acre") { killaCols = 1; killaRows = 1; }
+    else if (p.type === "mustateel") { killaCols = 2; killaRows = 5; }
+    else if (p.type === "muraba") { killaCols = 5; killaRows = 5; }
+    else continue;
+    const cellW = p.w / killaCols, cellH = p.h / killaRows;
     for (let r = 0; r < killaRows; r++) {
       for (let c = 0; c < killaCols; c++) {
-        const cellRect = { x: m.x + c * cellW, y: m.y + r * cellH, w: cellW, h: cellH };
+        const cellRect = { x: p.x + c * cellW, y: p.y + r * cellH, w: cellW, h: cellH };
         let fraction = rectAreaFractionInPolygon(cellRect, polygon);
         if (fraction <= 0) continue;
         for (const canalPoly of canalPolys) {
@@ -949,29 +953,29 @@ export function acresToAcreKanalText(acres) {
 }
 
 // GCA using canal buffer polygon as boundary (when no chakbandi exists)
-export function calculateCanalBoundaryGCA(canal, mustateels, otherCanals = []) {
+export function calculateCanalBoundaryGCA(canal, parcels, otherCanals = []) {
   if (!canal.points || canal.points.length < 2) return 0;
   const halfW = (canal.width || DIMENSIONS.CANAL_WIDTH) / 2;
   const left = getParallelPolyline(canal.points, -halfW);
   const right = getParallelPolyline(canal.points, halfW);
   const polygon = [...left, ...right.reverse()];
   if (polygon.length < 3) return 0;
-  return calculateChakbandiGCA({ points: polygon }, mustateels, otherCanals);
+  return calculateChakbandiGCA({ points: polygon }, parcels, otherCanals);
 }
 
 // Total GCA: chakbandi boundaries first; if none, fall back to canal boundaries
 export function calculateTotalGCA(objects) {
   const chakbandis = objects.filter(o => o.type === "chakbandi");
-  const mustateels = objects.filter(o => o.type === "mustateel");
+  const parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
   const canals = objects.filter(o => o.type === "canal");
   let total = 0;
   if (chakbandis.length > 0) {
     for (const ch of chakbandis) {
-      total += calculateChakbandiGCA(ch, mustateels, canals);
+      total += calculateChakbandiGCA(ch, parcels, canals);
     }
   } else {
     for (const canal of canals) {
-      total += calculateCanalBoundaryGCA(canal, mustateels, canals.filter(c => c.id !== canal.id));
+      total += calculateCanalBoundaryGCA(canal, parcels, canals.filter(c => c.id !== canal.id));
     }
   }
   return total;

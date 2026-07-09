@@ -179,14 +179,14 @@ export default function MapList() {
       const svgData = buildSVG(objects, C, null, { mustateel: true, muraba: true });
       if (!svgData) continue;
 
-      const mustateels = objects.filter(o => o.type === "mustateel");
+      const parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
       const canals = objects.filter(o => o.type === "canal");
       const chakbandis = objects.filter(o => o.type === "chakbandi");
       const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
       let gcaLabels = "";
       for (const ch of chakbandis) {
         if (ch.points?.length >= 3) {
-          const gca = calculateChakbandiGCA(ch, mustateels, canals);
+          const gca = calculateChakbandiGCA(ch, parcels, canals);
           if (gca > 0 || ch.centerLabel) {
             const lp = getChakbandiLabelPos(ch);
             if (!lp) continue;

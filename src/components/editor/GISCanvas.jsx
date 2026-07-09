@@ -132,14 +132,14 @@ const GISCanvas = forwardRef(function GISCanvas(
 
     // CCA/GCA fraction labels for chakbandis — drawn above all objects in boxes
     {
-      const _mustateels = objects.filter(o => o.type === "mustateel");
+      const _parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
       const _canals = objects.filter(o => o.type === "canal");
       const _chakbandis = objects.filter(o => o.type === "chakbandi");
       const gcaFontWorld = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
       const gcaFont = Math.max(12, Math.min(24, gcaFontWorld * zoom)) / zoom;
       for (const ch of _chakbandis) {
         if (ch.points?.length >= 3) {
-          const gca = calculateChakbandiGCA(ch, _mustateels, _canals);
+          const gca = calculateChakbandiGCA(ch, _parcels, _canals);
           if (gca > 0 || ch.centerLabel) {
             const lp = getChakbandiLabelPos(ch);
             if (!lp) continue;
@@ -560,7 +560,7 @@ const GISCanvas = forwardRef(function GISCanvas(
 
     if (activeTool === "measure") {
       // Click adds a polygon vertex
-      setMeasurePoly(prev => prev ? [...prev, { x: worldRaw.x, y: worldRaw.y }] : [{ x: worldRaw.x, y: worldRaw.y }]);
+      setMeasurePoly(prev => prev ? [...prev, { x: snapped.x, y: snapped.y }] : [{ x: snapped.x, y: snapped.y }]);
       setMeasureResult(null);
       return;
     }
