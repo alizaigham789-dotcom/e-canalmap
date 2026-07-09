@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { X, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -22,11 +24,29 @@ function Field({ label, children }) {
 
 const inputClass = "w-full border border-slate-300 rounded-xl h-10 px-3 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors";
 
+// Fields that get autocomplete suggestions from previously saved maps
+const AUTOCOMPLETE_KEYS = ["rajbah", "village", "zilladar_section", "tehsil", "district", "moga_number"];
+
 export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
   const [form, setForm] = useState({
     title: "", moga_number: "", rajbah: "", village: "",
     zilladar_section: "", tehsil: "", district: "", mogha_side: "L",
   });
+
+  // Fetch existing maps once — shared/cached with MapList via the same query key
+  const { data: maps = [] } = useQuery({
+    queryKey: ["maps"],
+    queryFn: () => base44.entities.LandMap.list("-created_date", 200),
+    staleTime: 60 * 1000,
+  });
+
+  // Build unique sorted suggestion lists per field from previously saved values
+  const suggestions = AUTOCOMPLETE_KEYS.reduce((acc, key) => {
+    const set = new Set();
+    maps.forEach(m => { const v = m[key]; if (v) set.add(String(v)); });
+    acc[key] = Array.from(set).sort((a, b) => a.localeCompare(b, "ur"));
+    return acc;
+  }, {});
 
   useEffect(() => {
     if (mapData) {
@@ -102,38 +122,39 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
                 value={form.moga_number}
                 onChange={e => f("moga_number", e.target.value.replace(/\D/g, ""))}
                 inputMode="numeric"
+                list="dl-moga_number"
                 placeholder="e.g. 13223"
                 className={`${inputClass} flex-1 font-mono`}
               />
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              Saved value: {form.moga_number ? `${form.mogha_side}/${form.moga_number}` : "—"}
+              Saved value: {form.moga_number ? `${form.moga_number}/${form.mogha_side}` : "—"}
             </p>
           </Field>
 
           <Field label="راجباہ">
             <input value={form.rajbah} onChange={e => f("rajbah", e.target.value)}
-              className={inputClass} placeholder="Canal / Minor name" />
+              list="dl-rajbah" className={inputClass} placeholder="Canal / Minor name" />
           </Field>
 
           <Field label="موضع">
             <input value={form.village} onChange={e => f("village", e.target.value)}
-              className={inputClass} placeholder="Village / Mozah" />
+              list="dl-village" className={inputClass} placeholder="Village / Mozah" />
           </Field>
 
           <Field label="ضلعداری سیکشن">
             <input value={form.zilladar_section} onChange={e => f("zilladar_section", e.target.value)}
-              className={inputClass} placeholder="Zilladar Section" />
+              list="dl-zilladar_section" className={inputClass} placeholder="Zilladar Section" />
           </Field>
 
           <Field label="سب ڈویژن">
             <input value={form.tehsil} onChange={e => f("tehsil", e.target.value)}
-              className={inputClass} placeholder="Sub Division / Tehsil" />
+              list="dl-tehsil" className={inputClass} placeholder="Sub Division / Tehsil" />
           </Field>
 
           <Field label="ڈویژن">
             <input value={form.district} onChange={e => f("district", e.target.value)}
-              className={inputClass} placeholder="Division / District" />
+              list="dl-district" className={inputClass} placeholder="Division / District" />
           </Field>
         </div>
 
@@ -143,6 +164,13 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
             <Save className="w-3.5 h-3.5" /> محفوظ کریں
           </Button>
         </div>
+
+        {/* Autocomplete suggestion lists (hidden datalists) */}
+        {AUTOCOMPLETE_KEYS.map(key => (
+          <datalist key={key} id={`dl-${key}`}>
+            {suggestions[key].map(v => <option key={v} value={v} />)}
+          </datalist>
+        ))}
       </div>
     </div>
   );
