@@ -996,7 +996,8 @@ export function buildMapHeaderText(mapData) {
   const zilladarSection = mapData?.zilladar_section || "_____";
   const tehsil = mapData?.tehsil || "_____";
   const district = mapData?.district || "_____";
-  return `خاکہ دستی موگہ نمبری${side ? `${side}/` : ""}${number}، راجباہ ${rajbah}،موضع ${village}، ضلعداری سیکشن ${zilladarSection}، سب ڈویژن ${tehsil}، ڈویژن ${district}`;
+  const mogaToken = `${side ? `${side}/` : ""}${number}`;
+  return `خاکہ دستی موگہ نمبری\u2066${mogaToken}\u2069، راجباہ ${rajbah}،موضع ${village}، ضلعداری سیکشن ${zilladarSection}، سب ڈویژن ${tehsil}، ڈویژن ${district}`;
 }
 
 // Bordered single-line header box for print/export output — auto-shrinks to fit one line
