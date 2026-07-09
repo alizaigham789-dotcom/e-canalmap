@@ -914,8 +914,8 @@ function hexToRgb(hex) {
 // Draws uniform 45° diagonal lines inside the parcel rectangle, clipped to its bounds.
 // Used in editor canvas, print preview (canvas), and exports.
 export function drawExclusionHatchOnCanvas(ctx, obj, zoom) {
-  const spacing = 24; // world units between lines — wider for clarity
-  const color = "rgba(0,0,0,0.75)"; // black
+  const spacing = obj.exclusionSpacing || 24; // world units between lines — user-adjustable
+  const color = obj.exclusionColor || "#000000"; // default black
   const lineWidth = 1 / zoom; // matches acre/killa grid line width
 
   // Determine which rectangles to hatch — per-acre for mustateels, whole parcel otherwise

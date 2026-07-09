@@ -771,9 +771,13 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
 }
 
 function svgExclusionHatchSVG(obj, prefix = "excl") {
-  const spacing = 24;
-  const color = "rgba(0,0,0,0.75)";
-  const width = 1.2; // matches killa grid line width
+  const spacing = obj.exclusionSpacing || 24;
+  const color = obj.exclusionColor || "#000000";
+  // Print: line width = 25% less than the parcel's own boundary width
+  let width;
+  if (obj.type === "mustateel") width = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness) * 0.75;
+  else if (obj.type === "muraba") width = 6.5 * 0.75;
+  else width = 1 * 0.75;
 
   let rects;
   if (obj.excludedAcres && obj.type === "mustateel") {

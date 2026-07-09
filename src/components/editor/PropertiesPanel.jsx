@@ -401,6 +401,8 @@ function SpacingControl({ label, value, min, max, step, onChange, unit }) {
 
 function ExclusionToggle({ local, commit }) {
   const isMustateel = local.type === "mustateel";
+  const exclusionColor = local.exclusionColor || "#000000";
+  const exclusionSpacing = local.exclusionSpacing || 24;
   return (
     <div className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
       <div className="flex items-center justify-between">
@@ -409,6 +411,19 @@ function ExclusionToggle({ local, commit }) {
         </label>
         <Switch checked={!!local.excluded} onCheckedChange={v => commit("excluded", v)} className="scale-75" />
       </div>
+      {local.excluded && (
+        <div className="flex items-center gap-2 border-t border-slate-200 pt-2">
+          <label className="text-[9px] text-slate-400 shrink-0">Fill</label>
+          <input type="color" value={exclusionColor}
+            onChange={e => commit("exclusionColor", e.target.value)}
+            className="h-5 w-7 rounded cursor-pointer border border-slate-200" />
+          <label className="text-[9px] text-slate-400 shrink-0">Spacing</label>
+          <input type="range" min={8} max={60} step={2} value={exclusionSpacing}
+            onChange={e => commit("exclusionSpacing", parseInt(e.target.value))}
+            className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+          <span className="text-[9px] font-mono text-slate-500 w-6">{exclusionSpacing}</span>
+        </div>
+      )}
       {isMustateel && local.excluded && <MustateelAcreCheckboxes local={local} commit={commit} />}
     </div>
   );
