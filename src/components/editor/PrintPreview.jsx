@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 import { svgCanalNameOnPath, svgMogaFraction, svgMogaFractionBox, svgCCAGCAFractionBox, chakbandiLabelPosition, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
 import { Move } from "lucide-react";
@@ -97,8 +97,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
     const lbl2 = obj.label2 || "";
     labelSvg = `${label ? `<text x="${mouzaSplit.centerA.x}" y="${mouzaSplit.centerA.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${lbl2 ? `<text x="${mouzaSplit.centerB.x}" y="${mouzaSplit.centerB.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${lbl2}</text>` : ""}`;
   } else {
-    const mogaNumSvg = obj.mogaNumber ? `<text x="${obj.x + 4}" y="${obj.y + 4}" text-anchor="start" dominant-baseline="hanging" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize}" fill="${getMogaColor(C.labelColor)}">مو${obj.mogaNumber}</text>` : "";
-    labelSvg = `${mogaNumSvg}${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
+    labelSvg = `${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
   }
 
   return `
@@ -149,14 +148,31 @@ function svgMuraba(obj, C, idx, showKilla = true) {
 }
 
 function svgExclusionHatch(obj, idx) {
-  const id = `excl_${idx}`;
-  const spacing = 14;
-  const diag = Math.ceil(Math.hypot(obj.w, obj.h)) + spacing;
-  let lines = "";
-  for (let d = -obj.h; d < obj.w; d += spacing) {
-    lines += `<line x1="${(obj.x + d).toFixed(1)}" y1="${obj.y.toFixed(1)}" x2="${(obj.x + d + obj.h).toFixed(1)}" y2="${(obj.y + obj.h).toFixed(1)}" stroke="rgba(120,120,120,0.55)" stroke-width="1.5"/>`;
+  const spacing = 24;
+  const color = "rgba(0,0,0,0.75)";
+  const width = 1.2; // matches killa grid line width
+
+  let rects;
+  if (obj.excludedAcres && obj.type === "mustateel") {
+    rects = getMustateelKillaCells(obj)
+      .filter(cell => obj.excludedAcres[cell.killa - 1])
+      .map(cell => ({ x: cell.x, y: cell.y, w: cell.w, h: cell.h }));
+  } else {
+    rects = [{ x: obj.x, y: obj.y, w: obj.w, h: obj.h }];
   }
-  return `<clipPath id="${id}"><rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}"/></clipPath><g clip-path="url(#${id})">${lines}</g>`;
+  if (rects.length === 0) return "";
+
+  let result = "";
+  for (let i = 0; i < rects.length; i++) {
+    const rect = rects[i];
+    const id = `excl_${idx}_${i}`;
+    let lines = "";
+    for (let d = -rect.h; d < rect.w; d += spacing) {
+      lines += `<line x1="${(rect.x + d).toFixed(1)}" y1="${rect.y.toFixed(1)}" x2="${(rect.x + d + rect.h).toFixed(1)}" y2="${(rect.y + rect.h).toFixed(1)}" stroke="${color}" stroke-width="${width}"/>`;
+    }
+    result += `<clipPath id="${id}"><rect x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}"/></clipPath><g clip-path="url(#${id})">${lines}</g>`;
+  }
+  return result;
 }
 
 function svgAcre(obj, C, idx) {
@@ -350,7 +366,7 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}) {
   let svgParts = [];
   sorted.forEach((obj, idx) => {
     switch (obj.type) {
-      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects))); break;
+      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects))); break;
       case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba)); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
       case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW)); break;

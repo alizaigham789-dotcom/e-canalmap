@@ -119,7 +119,7 @@ const GISCanvas = forwardRef(function GISCanvas(
 
       const kv = killaVisibility || { mustateel: true, muraba: true };
       if (obj.type === "acre") drawAcre(ctx, obj, isSelected, zoom, C);
-      else if (obj.type === "mustateel") drawMustateel(ctx, obj, isSelected, zoom, C, obj.showKillaNumbers !== false && kv.mustateel !== false, getMustateelMouzaSplit(obj, mouzaObjects));
+      else if (obj.type === "mustateel") drawMustateel(ctx, obj, isSelected, zoom, C, obj.excluded || (obj.showKillaNumbers !== false && kv.mustateel !== false), getMustateelMouzaSplit(obj, mouzaObjects));
       else if (obj.type === "muraba") drawMuraba(ctx, obj, isSelected, zoom, C, obj.showKillaNumbers !== false && kv.muraba !== false);
       else if (obj.type === "canal") drawCanal(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "khal") drawKhal(ctx, obj, isSelected, zoom, C);

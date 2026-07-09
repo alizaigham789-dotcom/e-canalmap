@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage } from "lucide-react";
 import { toast } from "sonner";
-import { getMustateeelKillaGrid, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintFooterHTML, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, drawSmoothPath, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, calculateCanalBoundaryGCA, buildPrintFooterHTML, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionOnCanvas, svgMogaFraction, chakbandiLabelPosition, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas } from "@/lib/printRenderHelpers";
 import { drawExclusionHatchOnCanvas } from "@/components/editor/GISRenderer";
 
@@ -118,7 +118,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       for (let r = 1; r < 5; r++) { ctx.moveTo(o.x, o.y + r*cellH); ctx.lineTo(o.x + o.w, o.y + r*cellH); }
       ctx.stroke();
       // Killa numbers — respect killaVisibility
-      if (killaVisibility.mustateel !== false) {
+      if (o.excluded || killaVisibility.mustateel !== false) {
         const grid = getMustateeelKillaGrid();
         ctx.fillStyle = "rgba(0,0,0,0.70)";
         ctx.font = `bold ${Math.max(8, Math.min(cellW, cellH) * 0.28)}px Rajdhani, sans-serif`;
@@ -255,13 +255,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke(); ctx.setLineDash([]);
     }
-    // Moga number on mustateel — same font as label, blue (or black if label is non-black)
-    if (o.type === "mustateel" && o.mogaNumber) {
-      ctx.fillStyle = getMogaColor(C.labelColor);
-      ctx.font = `bold ${Math.min(o.w, o.h) * 0.35}px Rajdhani, sans-serif`;
-      ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.fillText(`M${o.mogaNumber}`, o.x + 4, o.y + 4);
-    } else if (o.type === "outlet" && o.start && o.end) {
+    if (o.type === "outlet" && o.start && o.end) {
       // Moga — size 10× canal width for print/export legibility
       const color = o.outletColor || C.outletStroke || "#06b6d4";
       const size = DIMENSIONS.CANAL_WIDTH * 10;
@@ -411,7 +405,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const cellW = o.w/2, cellH = o.h/5;
       const grid = getMustateeelKillaGrid();
       const killaFontSize = Math.max(6, Math.min(cellW, cellH) * 0.28);
-      const killaLabels = killaVisibility.mustateel !== false ? grid.flatMap((row,r) =>
+      const killaLabels = (o.excluded || killaVisibility.mustateel !== false) ? grid.flatMap((row,r) =>
         row.map((n,c) => `<text x="${o.x+c*cellW+cellW/2}" y="${o.y+r*cellH+cellH/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${killaFontSize}" font-weight="bold" fill="rgba(0,0,0,0.70)" text-anchor="middle" dominant-baseline="middle">${n}</text>`)
       ).join("") : "";
       const gridLines = [`<line x1="${o.x+cellW}" y1="${o.y}" x2="${o.x+cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`];
@@ -423,9 +417,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const splitFont = Math.min(o.w, o.h) * 0.26;
         lbl = `${o.label ? `<text x="${mSplit.centerA.x}" y="${mSplit.centerA.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${o.label2 ? `<text x="${mSplit.centerB.x}" y="${mSplit.centerB.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label2}</text>` : ""}`;
       } else {
-        const _mogaClr = getMogaColor(C.labelColor);
-      const mogaLbl = o.mogaNumber ? `<text x="${o.x+4}" y="${o.y+4}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="bold" fill="${_mogaClr}" text-anchor="start" dominant-baseline="hanging">M${o.mogaNumber}</text>` : "";
-        lbl = `${mogaLbl}${o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}`;
+        lbl = `${o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}`;
       }
       const hatch = o.excluded ? svgExclusionHatchSVG(o, "must") : "";
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}${hatch}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;
@@ -779,13 +771,31 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
 }
 
 function svgExclusionHatchSVG(obj, prefix = "excl") {
-  const id = `${prefix}_${obj.x}_${obj.y}`;
-  const spacing = 14;
-  let lines = "";
-  for (let d = -obj.h; d < obj.w; d += spacing) {
-    lines += `<line x1="${(obj.x + d).toFixed(1)}" y1="${obj.y.toFixed(1)}" x2="${(obj.x + d + obj.h).toFixed(1)}" y2="${(obj.y + obj.h).toFixed(1)}" stroke="rgba(120,120,120,0.55)" stroke-width="1.5"/>`;
+  const spacing = 24;
+  const color = "rgba(0,0,0,0.75)";
+  const width = 1.2; // matches killa grid line width
+
+  let rects;
+  if (obj.excludedAcres && obj.type === "mustateel") {
+    rects = getMustateelKillaCells(obj)
+      .filter(cell => obj.excludedAcres[cell.killa - 1])
+      .map(cell => ({ x: cell.x, y: cell.y, w: cell.w, h: cell.h }));
+  } else {
+    rects = [{ x: obj.x, y: obj.y, w: obj.w, h: obj.h }];
   }
-  return `<clipPath id="${id}"><rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}"/></clipPath><g clip-path="url(#${id})">${lines}</g>`;
+  if (rects.length === 0) return "";
+
+  let result = "";
+  for (let i = 0; i < rects.length; i++) {
+    const rect = rects[i];
+    const id = `${prefix}_${i}_${rect.x}_${rect.y}`;
+    let lines = "";
+    for (let d = -rect.h; d < rect.w; d += spacing) {
+      lines += `<line x1="${(rect.x + d).toFixed(1)}" y1="${rect.y.toFixed(1)}" x2="${(rect.x + d + rect.h).toFixed(1)}" y2="${(rect.y + rect.h).toFixed(1)}" stroke="${color}" stroke-width="${width}"/>`;
+    }
+    result += `<clipPath id="${id}"><rect x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}"/></clipPath><g clip-path="url(#${id})">${lines}</g>`;
+  }
+  return result;
 }
 
 function downloadText(text, filename, mimeType) {

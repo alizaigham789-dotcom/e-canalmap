@@ -297,6 +297,19 @@ export function getMustateeelKillaGrid() {
   return [[1, 10], [2, 9], [3, 8], [4, 7], [5, 6]];
 }
 
+// Returns 10 killa cell rects {killa, x, y, w, h} for a mustateel parcel
+export function getMustateelKillaCells(obj) {
+  const cellW = obj.w / 2, cellH = obj.h / 5;
+  const grid = getMustateeelKillaGrid();
+  const cells = [];
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 2; c++) {
+      cells.push({ killa: grid[r][c], x: obj.x + c * cellW, y: obj.y + r * cellH, w: cellW, h: cellH });
+    }
+  }
+  return cells;
+}
+
 export function getMurabaKillaGrid() {
   return [
     [1, 2, 3, 4, 5],
@@ -927,6 +940,10 @@ export function calculateChakbandiGCA(chakbandi, parcels, canals = []) {
     const cellW = p.w / killaCols, cellH = p.h / killaRows;
     for (let r = 0; r < killaRows; r++) {
       for (let c = 0; c < killaCols; c++) {
+        // Skip individually excluded acres in mustateels
+        if (p.excludedAcres && p.type === "mustateel") {
+          if (p.excludedAcres[getMustateeelKillaGrid()[r][c] - 1]) continue;
+        }
         const cellRect = { x: p.x + c * cellW, y: p.y + r * cellH, w: cellW, h: cellH };
         let fraction = rectAreaFractionInPolygon(cellRect, polygon);
         if (fraction <= 0) continue;

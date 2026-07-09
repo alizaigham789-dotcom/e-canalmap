@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMogaColor, calculateChakbandiGCA, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMogaColor, calculateChakbandiGCA, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
 import { drawMogaFractionBoxOnCanvas, getOutletLabelPos } from "@/lib/printRenderHelpers";
 
 // ---- Anti-aliased zoom-clamped font size ----
@@ -222,13 +222,6 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
       const ownerFont = Math.min(obj.w, obj.h) * 0.10;
       ctx.font = `${ownerFont}px Inter, sans-serif`;
       ctx.fillText(obj.ownerName, centerX, labelY + finalFont * 0.55);
-    }
-    // Moga number — same font size as mustateel label, blue (or black if label is non-black)
-    if (obj.mogaNumber) {
-      ctx.fillStyle = getMogaColor(C.labelColor);
-      ctx.font = `bold ${maxFontPx}px Rajdhani, sans-serif`;
-      ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.fillText(`M${obj.mogaNumber}`, obj.x + 4/zoom, obj.y + 4/zoom);
     }
     ctx.restore();
   }
@@ -921,21 +914,37 @@ function hexToRgb(hex) {
 // Draws uniform 45° diagonal lines inside the parcel rectangle, clipped to its bounds.
 // Used in editor canvas, print preview (canvas), and exports.
 export function drawExclusionHatchOnCanvas(ctx, obj, zoom) {
-  const spacing = 14; // world units between lines
-  const diag = Math.hypot(obj.w, obj.h);
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(obj.x, obj.y, obj.w, obj.h);
-  ctx.clip();
-  ctx.strokeStyle = "rgba(120,120,120,0.55)";
-  ctx.lineWidth = 1.5 / zoom;
-  ctx.lineCap = "butt";
-  ctx.beginPath();
-  // Walk from bottom-left corner outward in `spacing` steps
-  for (let d = -obj.h; d < obj.w; d += spacing) {
-    ctx.moveTo(obj.x + d, obj.y);
-    ctx.lineTo(obj.x + d + obj.h, obj.y + obj.h);
+  const spacing = 24; // world units between lines — wider for clarity
+  const color = "rgba(0,0,0,0.75)"; // black
+  const lineWidth = 1 / zoom; // matches acre/killa grid line width
+
+  // Determine which rectangles to hatch — per-acre for mustateels, whole parcel otherwise
+  let rects;
+  if (obj.excludedAcres && obj.type === "mustateel") {
+    rects = getMustateelKillaCells(obj)
+      .filter(cell => obj.excludedAcres[cell.killa - 1])
+      .map(cell => ({ x: cell.x, y: cell.y, w: cell.w, h: cell.h }));
+  } else {
+    rects = [{ x: obj.x, y: obj.y, w: obj.w, h: obj.h }];
   }
-  ctx.stroke();
+  if (rects.length === 0) return;
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = "butt";
+  for (const rect of rects) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rect.x, rect.y, rect.w, rect.h);
+    ctx.clip();
+    ctx.beginPath();
+    for (let d = -rect.h; d < rect.w; d += spacing) {
+      ctx.moveTo(rect.x + d, rect.y);
+      ctx.lineTo(rect.x + d + rect.h, rect.y + rect.h);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
   ctx.restore();
 }

@@ -127,15 +127,6 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
               </div>
               <ExclusionToggle local={local} commit={commit} />
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Moga Number</label>
-                <Input
-                  value={local.mogaNumber || ""}
-                  onChange={e => commit("mogaNumber", e.target.value)}
-                  placeholder="e.g. 1, 2, 3…"
-                  className="h-7 text-xs bg-green-50 border-green-200 text-green-800 placeholder:text-green-300 focus:border-green-500 font-mono"
-                />
-              </div>
               <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 5} min={1} max={10} step={1} onChange={v => commit("boundaryThickness", v)} />
               <FillStyleControl local={local} commit={commit} />
               <KillaStyleControl local={local} commit={commit} />
@@ -409,12 +400,39 @@ function SpacingControl({ label, value, min, max, step, onChange, unit }) {
 }
 
 function ExclusionToggle({ local, commit }) {
+  const isMustateel = local.type === "mustateel";
   return (
-    <div className="flex items-center justify-between p-1.5 bg-slate-50 border border-slate-200 rounded-lg">
-      <label className="text-[10px] text-slate-600 flex items-center gap-1" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
-        <Ban className="w-3 h-3 text-slate-500" /> چکبندی سے اخراج
-      </label>
-      <Switch checked={!!local.excluded} onCheckedChange={v => commit("excluded", v)} className="scale-75" />
+    <div className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-[10px] text-slate-600 flex items-center gap-1" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
+          <Ban className="w-3 h-3 text-slate-500" /> چکبندی سے اخراج
+        </label>
+        <Switch checked={!!local.excluded} onCheckedChange={v => commit("excluded", v)} className="scale-75" />
+      </div>
+      {isMustateel && local.excluded && <MustateelAcreCheckboxes local={local} commit={commit} />}
+    </div>
+  );
+}
+
+function MustateelAcreCheckboxes({ local, commit }) {
+  // Default: all 10 acres ticked (chakbandi ikhraj = all included)
+  const acres = local.excludedAcres || Array(10).fill(true);
+  const toggle = (idx) => {
+    const next = Array.from(acres);
+    next[idx] = !next[idx];
+    commit("excludedAcres", next);
+  };
+  return (
+    <div className="border-t border-slate-200 pt-2 mt-1">
+      <label className="text-[9px] text-slate-400 uppercase tracking-wider block mb-1">Acre Ikhraj (1–10)</label>
+      <div className="grid grid-cols-5 gap-1">
+        {Array.from({ length: 10 }, (_, i) => (
+          <label key={i} className="flex items-center gap-1 text-[9px] text-slate-600 cursor-pointer select-none">
+            <input type="checkbox" checked={!!acres[i]} onChange={() => toggle(i)} className="w-2.5 h-2.5 accent-blue-600 cursor-pointer" />
+            <span>{i + 1}</span>
+          </label>
+        ))}
+      </div>
     </div>
   );
 }
