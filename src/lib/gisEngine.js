@@ -841,12 +841,37 @@ export function getMustateelMouzaSplit(obj, mouzaObjects) {
       const sideB = corners.filter(c => sideOf(c) < 0);
       // Only valid if both sides have at least one corner (line actually divides the rectangle)
       if (sideA.length === 0 || sideB.length === 0) continue;
-      const centroid = (poly) => ({
-        x: poly.reduce((s, p) => s + p.x, 0) / poly.length,
-        y: poly.reduce((s, p) => s + p.y, 0) / poly.length,
-      });
-      const cA = centroid([...sideA, i1, i2]);
-      const cB = centroid([...sideB, i1, i2]);
+      // Proper polygon centroid for each half — places labels clearly on each side
+      // of the mouza line (above/below for horizontal, left/right for vertical).
+      const polyCentroid = (poly) => {
+        if (poly.length < 3) {
+          return { x: poly.reduce((s, p) => s + p.x, 0) / Math.max(1, poly.length),
+                   y: poly.reduce((s, p) => s + p.y, 0) / Math.max(1, poly.length) };
+        }
+        let area2 = 0, cx = 0, cy = 0;
+        for (let i = 0; i < poly.length; i++) {
+          const j = (i + 1) % poly.length;
+          const cross = poly[i].x * poly[j].y - poly[j].x * poly[i].y;
+          area2 += cross;
+          cx += (poly[i].x + poly[j].x) * cross;
+          cy += (poly[i].y + poly[j].y) * cross;
+        }
+        const a = area2 / 2;
+        if (Math.abs(a) < 1e-6) {
+          return { x: poly.reduce((s, p) => s + p.x, 0) / poly.length,
+                   y: poly.reduce((s, p) => s + p.y, 0) / poly.length };
+        }
+        return { x: cx / (6 * a), y: cy / (6 * a) };
+      };
+      // Build each half polygon: sort corners + intersections in correct winding order
+      const buildHalfPoly = (sideCorners) => {
+        const pts = [...sideCorners, i1, i2];
+        const mx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+        const my = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+        return pts.slice().sort((a, b) => Math.atan2(a.y - my, a.x - mx) - Math.atan2(b.y - my, b.x - mx));
+      };
+      const cA = polyCentroid(buildHalfPoly(sideA));
+      const cB = polyCentroid(buildHalfPoly(sideB));
       return { mouzaId: mouza.id, centerA: cA, centerB: cB };
     }
   }

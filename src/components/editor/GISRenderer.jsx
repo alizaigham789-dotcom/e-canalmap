@@ -187,6 +187,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     ctx.save();
     ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
     ctx.fillStyle = C.labelColor || "#1e293b";
+    // Compute proper polygon centroids for each half — placed clearly above/below (or left/right) of the mouza line
     const maxFontPx = Math.min(obj.w, obj.h) * 0.26;
     const drawSplitLabel = (text, center) => {
       if (!text) return;
@@ -199,7 +200,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
       ctx.fillText(text, center.x, center.y);
     };
     drawSplitLabel(obj.label || "", mouzaSplit.centerA);
-    drawSplitLabel(obj.label2 || "", mouzaSplit.centerB);
+    drawSplitLabel(obj.label2 || obj.label || "", mouzaSplit.centerB);
     ctx.restore();
   } else {
     const centerX = obj.x + obj.w / 2, centerY = obj.y + obj.h / 2;

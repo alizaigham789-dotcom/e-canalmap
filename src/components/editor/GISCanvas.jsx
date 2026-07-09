@@ -473,8 +473,8 @@ const GISCanvas = forwardRef(function GISCanvas(
       const rect = canvasRef.current.getBoundingClientRect();
       const px = e.clientX - rect.left;
       const py = e.clientY - rect.top;
-      const threshold = 45;
-      const maxSpeed = 5; // moderate speed — prevents crooked lines
+      const threshold = 90;
+      const maxSpeed = 9; // faster auto-pan so users can draw on large maps without hand tool
       let dx = 0, dy = 0;
       if (px < threshold) dx = maxSpeed * (1 - px / threshold);
       else if (px > rect.width - threshold) dx = -maxSpeed * ((px - (rect.width - threshold)) / threshold);

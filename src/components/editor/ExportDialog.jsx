@@ -138,7 +138,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         ctx.font = `900 ${splitFont}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         if (o.label) ctx.fillText(o.label, mSplit.centerA.x, mSplit.centerA.y);
-        if (o.label2) ctx.fillText(o.label2, mSplit.centerB.x, mSplit.centerB.y);
+        if (o.label2 || o.label) ctx.fillText(o.label2 || o.label, mSplit.centerB.x, mSplit.centerB.y);
       } else if (o.label) {
         ctx.font = `900 ${Math.min(o.w, o.h) * 0.35}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -415,7 +415,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       let lbl;
       if (mSplit) {
         const splitFont = Math.min(o.w, o.h) * 0.26;
-        lbl = `${o.label ? `<text x="${mSplit.centerA.x}" y="${mSplit.centerA.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${o.label2 ? `<text x="${mSplit.centerB.x}" y="${mSplit.centerB.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label2}</text>` : ""}`;
+        const lbl2Val = o.label2 || o.label || "";
+        lbl = `${o.label ? `<text x="${mSplit.centerA.x}" y="${mSplit.centerA.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${lbl2Val ? `<text x="${mSplit.centerB.x}" y="${mSplit.centerB.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${lbl2Val}</text>` : ""}`;
       } else {
         lbl = `${o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.35}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}`;
       }

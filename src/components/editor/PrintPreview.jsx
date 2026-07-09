@@ -95,7 +95,8 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
   if (mouzaSplit) {
     const splitFont = Math.min(obj.w, obj.h) * 0.26;
     const lbl2 = obj.label2 || "";
-    labelSvg = `${label ? `<text x="${mouzaSplit.centerA.x}" y="${mouzaSplit.centerA.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${lbl2 ? `<text x="${mouzaSplit.centerB.x}" y="${mouzaSplit.centerB.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${lbl2}</text>` : ""}`;
+    const lbl2Final = lbl2 || label || "";
+    labelSvg = `${label ? `<text x="${mouzaSplit.centerA.x}" y="${mouzaSplit.centerA.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${lbl2Final ? `<text x="${mouzaSplit.centerB.x}" y="${mouzaSplit.centerB.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${lbl2Final}</text>` : ""}`;
   } else {
     labelSvg = `${label ? `<text x="${obj.x + obj.w/2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
   }
