@@ -68,7 +68,7 @@ function parallelSmoothClosedPath(pts, offset) {
 
 // ─── SVG OBJECT RENDERERS ─────────────────────────────────────────────────────
 function svgExclusionHatch(obj, idx) {
-  const spacing = obj.exclusionSpacing || 24;
+  const spacing = obj.exclusionSpacing || 60;
   const color = obj.exclusionColor || "#000000";
   // Print: line width = 25% less than the parcel's own boundary width
   let width;
@@ -318,10 +318,11 @@ function svgOutlet(obj, C, idx) {
   const h2y = (ey - headLen * Math.sin(angle) - headW * Math.cos(angle)).toFixed(1);
   const numFont = mogaNumberFont();
   const lp = getOutletLabelPos(obj);
-  const numLabel = svgMogaFractionBox(obj.mogha_number, obj.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#4a6772");
+  const numLabel = svgMogaFractionBox(obj.mogha_number, obj.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#0891b2");
+  const r = size * 0.2;
   return `<g key="outlet_${idx}">
-    <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
-    <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size * 0.25).toFixed(1)}" stroke-linecap="round"/>
+    <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size}" height="${size}" rx="${r.toFixed(1)}" fill="${color}" stroke="#0e7490" stroke-width="2"/>
+    <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size * 0.3).toFixed(1)}" stroke-linecap="round"/>
     <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
     ${numLabel}
   </g>`;

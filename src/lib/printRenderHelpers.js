@@ -239,39 +239,43 @@ export function getChakbandiLabelPos(obj) {
 // ─── CANVAS: moga fraction inside a square box ───────────────────────────
 // Draws number over line over R/L, all inside a coloured box with border.
 // The box prevents the moga label from mixing with mustateel numbers.
-export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxColor, borderColor) {
+export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxColor, borderColor, scale = 1) {
   if (!num && !side) return;
   const numStr = String(num || "");
   const sideStr = String(side || "");
-  // Fixed box = 2 acres (440×198); font reduced to fit
-  const f = MOGA_BOX_FONT;
-  const boxW = MOGA_BOX_W;
-  const boxH = MOGA_BOX_H;
+  const f = MOGA_BOX_FONT * scale;
+  const boxW = MOGA_BOX_W * scale;
+  const boxH = MOGA_BOX_H * scale;
   const bx = cx - boxW / 2, by = cy - boxH / 2;
   const textW = f * Math.max(numStr.length, sideStr.length, 1) * 0.65;
+  const r = 14 * scale;
+  const ink = "#0c4a6e";
 
-  // Shadow + light transparent background
   ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.3)";
-  ctx.shadowBlur = 10;
-  ctx.shadowOffsetX = 4;
-  ctx.shadowOffsetY = 4;
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.fillRect(bx, by, boxW, boxH);
-  ctx.restore();
-  ctx.strokeStyle = borderColor || "#4a6772";
-  ctx.lineWidth = Math.max(1.5, f * 0.07);
-  ctx.strokeRect(bx, by, boxW, boxH);
-
-  // Fraction inside — vertically centred
+  // Soft shadow
+  ctx.fillStyle = "rgba(0,0,0,0.12)";
+  ctx.beginPath();
+  if (ctx.roundRect) { ctx.roundRect(bx + 3, by + 4, boxW, boxH, r); }
+  else { ctx.rect(bx + 3, by + 4, boxW, boxH); }
+  ctx.fill();
+  // Rounded box
+  ctx.fillStyle = boxColor || "rgba(255,255,255,0.88)";
+  ctx.strokeStyle = borderColor || "#0891b2";
+  ctx.lineWidth = Math.max(1.5, f * 0.06);
+  ctx.beginPath();
+  if (ctx.roundRect) { ctx.roundRect(bx, by, boxW, boxH, r); }
+  else { ctx.rect(bx, by, boxW, boxH); }
+  ctx.fill();
+  ctx.stroke();
+  // Fraction inside
   const lineY = cy;
   const numY = cy - f * 0.55;
   const sideY = cy + f * 0.55;
-  const inkColor = "#000000";
 
-  ctx.fillStyle = inkColor;
-  ctx.strokeStyle = inkColor;
-  ctx.lineWidth = Math.max(1.5, f * 0.08);
+  ctx.fillStyle = ink;
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = Math.max(1.5, f * 0.07);
+  ctx.lineCap = "round";
   ctx.textAlign = "center";
 
   if (numStr) {
@@ -288,32 +292,35 @@ export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxC
     ctx.textBaseline = "middle";
     ctx.fillText(sideStr, cx, sideY);
   }
+  ctx.restore();
 }
 
 // ─── SVG: moga fraction inside a square box ──────────────────────────────
-export function svgMogaFractionBox(num, side, cx, cy, fontPx, boxColor, borderColor) {
+export function svgMogaFractionBox(num, side, cx, cy, fontPx, boxColor, borderColor, scale = 1) {
   if (!num && !side) return "";
   const numStr = String(num || "");
   const sideStr = String(side || "");
-  // Fixed box = 2 acres (440×198); font reduced to fit
-  const f = MOGA_BOX_FONT;
-  const boxW = MOGA_BOX_W;
-  const boxH = MOGA_BOX_H;
+  const f = MOGA_BOX_FONT * scale;
+  const boxW = MOGA_BOX_W * scale;
+  const boxH = MOGA_BOX_H * scale;
   const bx = cx - boxW / 2, by = cy - boxH / 2;
   const textW = f * Math.max(numStr.length, sideStr.length, 1) * 0.65;
   const lineY = cy;
   const numY = cy - f * 0.55;
   const sideY = cy + f * 0.55;
+  const r = 14 * scale;
+  const ink = "#0c4a6e";
+  const sw = Math.max(1.5, f * 0.06);
 
-  // Shadow + light transparent background
-  let svg = `<rect x="${(bx+4).toFixed(1)}" y="${(by+4).toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" fill="rgba(0,0,0,0.18)"/>`;
-  svg += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" fill="rgba(255,255,255,0.55)" stroke="${borderColor || '#4a6772'}" stroke-width="${Math.max(1.5, f * 0.07).toFixed(1)}"/>`;
+  // Soft shadow + rounded box with light background
+  let svg = `<rect x="${(bx+3).toFixed(1)}" y="${(by+4).toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" rx="${r.toFixed(1)}" fill="rgba(0,0,0,0.12)"/>`;
+  svg += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" rx="${r.toFixed(1)}" fill="${boxColor || 'rgba(255,255,255,0.88)'}" stroke="${borderColor || '#0891b2'}" stroke-width="${sw.toFixed(1)}"/>`;
   if (numStr) {
-    svg += `<text x="${cx.toFixed(1)}" y="${numY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${f.toFixed(1)}" fill="#000">${numStr}</text>`;
+    svg += `<text x="${cx.toFixed(1)}" y="${numY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${f.toFixed(1)}" fill="${ink}">${numStr}</text>`;
   }
-  svg += `<line x1="${(cx - textW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + textW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="#000" stroke-width="${Math.max(1.5, f * 0.08).toFixed(1)}"/>`;
+  svg += `<line x1="${(cx - textW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + textW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="${ink}" stroke-width="${Math.max(1.5, f * 0.07).toFixed(1)}" stroke-linecap="round"/>`;
   if (sideStr) {
-    svg += `<text x="${cx.toFixed(1)}" y="${sideY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(f * 0.8).toFixed(1)}" fill="#000">${sideStr}</text>`;
+    svg += `<text x="${cx.toFixed(1)}" y="${sideY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(f * 0.8).toFixed(1)}" fill="${ink}">${sideStr}</text>`;
   }
   return svg;
 }

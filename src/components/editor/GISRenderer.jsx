@@ -607,32 +607,40 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
   const len = Math.hypot(ex - sx, ey - sy);
   const color = isSelected ? "#67e8f9" : (obj.outletColor || C.outletStroke || "#06b6d4");
   const half = blockSize / 2;
+  const r = blockSize * 0.2;
 
+  // Rounded block at canal junction
+  ctx.save();
   ctx.fillStyle = color;
-  ctx.fillRect(sx - half, sy - half, blockSize, blockSize);
+  ctx.beginPath();
+  if (ctx.roundRect) { ctx.roundRect(sx - half, sy - half, blockSize, blockSize, r); }
+  else { ctx.rect(sx - half, sy - half, blockSize, blockSize); }
+  ctx.fill();
   ctx.strokeStyle = "#0e7490"; ctx.lineWidth = 2/zoom;
-  ctx.strokeRect(sx - half, sy - half, blockSize, blockSize);
+  ctx.stroke();
+  ctx.restore();
 
+  // Arrow shaft — prominent, beautiful alongside canal
   ctx.save(); ctx.translate(sx, sy); ctx.rotate(angle);
-  ctx.strokeStyle = color; ctx.lineWidth = (3 * scale) / zoom;
+  ctx.strokeStyle = color; ctx.lineWidth = (4 * scale) / zoom;
   ctx.lineCap = "round";
   ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+  // Elegant arrowhead
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(len, 0);
-  ctx.lineTo(len - (22*scale)/zoom, -(14*scale)/zoom);
-  ctx.lineTo(len - (22*scale)/zoom, (14*scale)/zoom);
+  ctx.lineTo(len - (24*scale)/zoom, -(15*scale)/zoom);
+  ctx.lineTo(len - (18*scale)/zoom, 0);
+  ctx.lineTo(len - (24*scale)/zoom, (15*scale)/zoom);
   ctx.closePath(); ctx.fill();
+  ctx.restore();
 
-  ctx.restore(); // end rotated arrow context
-
-  // Moga number — fraction (number/line/R) inside a square box at labelPos
-  // Box prevents the moga label from mixing with mustateel numbers
+  // Moga number — fraction inside a rounded box at labelPos (draggable)
   const moghaNum = obj.mogha_number || "";
   const moghaSide = obj.mogha_side || "";
   if (moghaNum || moghaSide) {
     const lp = getOutletLabelPos(obj);
-    drawMogaFractionBoxOnCanvas(ctx, moghaNum, moghaSide, lp.x, lp.y, 0, "rgba(120,225,245,0.92)", "#4a6772");
+    drawMogaFractionBoxOnCanvas(ctx, moghaNum, moghaSide, lp.x, lp.y, 0, "rgba(120,225,245,0.92)", "#0891b2", 0.5);
   }
 }
 
@@ -914,7 +922,7 @@ function hexToRgb(hex) {
 // Draws uniform 45° diagonal lines inside the parcel rectangle, clipped to its bounds.
 // Used in editor canvas, print preview (canvas), and exports.
 export function drawExclusionHatchOnCanvas(ctx, obj, zoom) {
-  const spacing = obj.exclusionSpacing || 24; // world units between lines — user-adjustable
+  const spacing = obj.exclusionSpacing || 60; // default maximum, user can decrease
   const color = obj.exclusionColor || "#000000"; // default black
   const lineWidth = 1 / zoom; // matches acre/killa grid line width
 

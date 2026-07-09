@@ -148,7 +148,7 @@ function svgMuraba(obj, C, idx, showKilla = true) {
 }
 
 function svgExclusionHatch(obj, idx) {
-  const spacing = obj.exclusionSpacing || 24;
+  const spacing = obj.exclusionSpacing || 60;
   const color = obj.exclusionColor || "#000000";
   // Print: line width = 25% less than the parcel's own boundary width
   let width;
@@ -308,7 +308,7 @@ function svgRoad(obj, C, idx) {
 </g>`;
 }
 
-function svgOutlet(obj, C, idx) {
+function svgOutlet(obj, C, idx, mogaScale = 1) {
   if (!obj.start || !obj.end) return "";
   const color = obj.outletColor || C.outletStroke || "#06b6d4";
   const size = DIMENSIONS.CANAL_WIDTH * 10;
@@ -321,13 +321,13 @@ function svgOutlet(obj, C, idx) {
   const h1y = (ey - headLen * Math.sin(angle) + headW * Math.cos(angle)).toFixed(1);
   const h2x = (ex - headLen * Math.cos(angle) + headW * Math.sin(angle)).toFixed(1);
   const h2y = (ey - headLen * Math.sin(angle) - headW * Math.cos(angle)).toFixed(1);
-  // Moga number — fraction inside a square box at labelPos (draggable)
   const numFont = mogaNumberFont();
   const lp = getOutletLabelPos(obj);
-  const numLabel = svgMogaFractionBox(obj.mogha_number, obj.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#4a6772");
+  const numLabel = svgMogaFractionBox(obj.mogha_number, obj.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#0891b2", mogaScale);
+  const r = size * 0.2;
   return `<g key="outlet_${idx}">
-    <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
-    <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size * 0.25).toFixed(1)}" stroke-linecap="round"/>
+    <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size}" height="${size}" rx="${r.toFixed(1)}" fill="${color}" stroke="#0e7490" stroke-width="2"/>
+    <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size * 0.3).toFixed(1)}" stroke-linecap="round"/>
     <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
     ${numLabel}
   </g>`;
@@ -341,7 +341,7 @@ function svgMouza(obj, C, idx) {
 }
 
 // ─── MAIN SVG GENERATOR ───────────────────────────────────────────────────────
-function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}) {
+function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, mogaScale = 1) {
   const C = colorSettings || {};
   const bounds = getObjectsBounds(objects);
   if (!bounds) return null;
@@ -378,7 +378,7 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}) {
       case "khal":      svgParts.push(svgKhal(obj, C, idx)); break;
       case "road":      svgParts.push(svgRoad(obj, C, idx)); break;
       case "mouza":     svgParts.push(svgMouza(obj, C, idx)); break;
-      case "outlet":    svgParts.push(svgOutlet(obj, C, idx)); break;
+      case "outlet":    svgParts.push(svgOutlet(obj, C, idx, mogaScale)); break;
       default: break;
     }
   });
@@ -442,7 +442,13 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   }, [bwMode, colorSettings]);
 
   const svgData = useMemo(
-    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility),
+    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 0.5),
+    [objects, effectiveColors, mogaFilter, killaVisibility]
+  );
+
+  // Full-scale SVG for actual print / SVG download — moga at 100%
+  const printSvgData = useMemo(
+    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 1),
     [objects, effectiveColors, mogaFilter, killaVisibility]
   );
 
@@ -502,13 +508,13 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos) : "";
 
-  const svgString = svgData
+  const svgString = printSvgData
     ? `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
-     width="${svgData.viewW}" height="${svgData.viewH}">
-  <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
-  ${svgData.svgBody}
+     viewBox="${printSvgData.viewX} ${printSvgData.viewY} ${printSvgData.viewW} ${printSvgData.viewH}"
+     width="${printSvgData.viewW}" height="${printSvgData.viewH}">
+  <rect x="${printSvgData.viewX}" y="${printSvgData.viewY}" width="${printSvgData.viewW}" height="${printSvgData.viewH}" fill="white"/>
+  ${printSvgData.svgBody}
   ${gcaSvgLabels}
   ${legendSVG}
 </svg>`
@@ -569,7 +575,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
              preserveAspectRatio="xMidYMid meet"
              style="max-width:100%;max-height:100%;display:block;">
           <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
-          ${svgData.svgBody}
+          ${printSvgData.svgBody}
           ${gcaLabels}
           ${printLegendSVG}
         </svg>

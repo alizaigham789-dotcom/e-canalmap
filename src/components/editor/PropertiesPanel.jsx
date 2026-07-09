@@ -402,7 +402,7 @@ function SpacingControl({ label, value, min, max, step, onChange, unit }) {
 function ExclusionToggle({ local, commit }) {
   const isMustateel = local.type === "mustateel";
   const exclusionColor = local.exclusionColor || "#000000";
-  const exclusionSpacing = local.exclusionSpacing || 24;
+  const exclusionSpacing = local.exclusionSpacing || 60;
   return (
     <div className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
       <div className="flex items-center justify-between">

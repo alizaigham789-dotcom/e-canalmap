@@ -21,7 +21,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     if (!open || !previewCanvasRef.current) return;
     const bbox = getBBox();
     const scale = Math.min(600 / (bbox.maxX - bbox.minX || 1), 400 / (bbox.maxY - bbox.minY || 1), 1.5);
-    const src = renderToCanvas(scale);
+    const src = renderToCanvas(scale, 0.5);
     const dest = previewCanvasRef.current;
     dest.width = src.width; dest.height = src.height;
     dest.getContext("2d").drawImage(src, 0, 0);
@@ -52,7 +52,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
   }
 
   // ---- Render all objects to an offscreen canvas ----
-  function renderToCanvas(scale = 1) {
+  function renderToCanvas(scale = 1, mogaScale = 1) {
     const bbox = getBBox();
     const W = (bbox.maxX - bbox.minX) * scale;
     const H = (bbox.maxY - bbox.minY) * scale;
@@ -73,7 +73,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     });
 
     for (const o of sorted) {
-      drawObj(ctx, o, scale);
+      drawObj(ctx, o, scale, mogaScale);
     }
 
     // CCA/GCA fraction labels for chakbandis — at labelPos, in fraction boxes
@@ -103,7 +103,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     return canvas;
   }
 
-  function drawObj(ctx, o, scale) {
+  function drawObj(ctx, o, scale, mogaScale = 1) {
     const zoom = scale;
     if (o.type === "mustateel") {
       // No shade fill — white background
@@ -277,7 +277,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       if (o.mogha_number || o.mogha_side) {
         const numFont = mogaNumberFont();
         const lp = getOutletLabelPos(o);
-        drawMogaFractionBoxOnCanvas(ctx, o.mogha_number, o.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#4a6772");
+        drawMogaFractionBoxOnCanvas(ctx, o.mogha_number, o.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#0891b2", mogaScale);
       }
     }
   }
@@ -536,7 +536,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       // Moga number — fraction inside a square box at labelPos (draggable)
       const numFont = mogaNumberFont();
       const _lp = getOutletLabelPos(o);
-      const numLbl = svgMogaFractionBox(o.mogha_number, o.mogha_side, _lp.x, _lp.y, numFont, "rgba(120,225,245,0.92)", "#4a6772");
+      const numLbl = svgMogaFractionBox(o.mogha_number, o.mogha_side, _lp.x, _lp.y, numFont, "rgba(120,225,245,0.92)", "#0891b2");
       return `<g>
         <rect x="${(sx-half).toFixed(1)}" y="${(sy-half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
         <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size*0.25).toFixed(1)}" stroke-linecap="round"/>
@@ -771,7 +771,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
 }
 
 function svgExclusionHatchSVG(obj, prefix = "excl") {
-  const spacing = obj.exclusionSpacing || 24;
+  const spacing = obj.exclusionSpacing || 60;
   const color = obj.exclusionColor || "#000000";
   // Print: line width = 25% less than the parcel's own boundary width
   let width;
