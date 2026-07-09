@@ -74,7 +74,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
           dir="rtl" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif" }}>
           <span className="text-sm font-bold text-slate-800">
             خاکہ دستی&nbsp;&nbsp;
-            موگہ نمبری {form.moga_number ? `${form.mogha_side}/${form.moga_number}` : "_____"}&nbsp;&nbsp;
+            موگہ نمبری {form.moga_number ? `${form.moga_number}/${form.mogha_side}` : "_____"}&nbsp;&nbsp;
             راجباہ {form.rajbah || "_____"}&nbsp;&nbsp;
             موضع {form.village || "_____"}&nbsp;&nbsp;
             ضلعداری سیکشن {form.zilladar_section || "_____"}&nbsp;&nbsp;
