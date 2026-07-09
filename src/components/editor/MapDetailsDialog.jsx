@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { X, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AutocompleteInput from "@/components/editor/AutocompleteInput";
 
 // Parses a legacy combined value like "L/13223" or "R/13223" into { side, number }.
 function splitMogaValue(value, fallbackSide) {
@@ -118,11 +119,12 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
                 <option value="L">L</option>
                 <option value="R">R</option>
               </select>
-              <input
+              <AutocompleteInput
                 value={form.moga_number}
-                onChange={e => f("moga_number", e.target.value.replace(/\D/g, ""))}
+                onChange={v => f("moga_number", v)}
+                suggestions={suggestions.moga_number}
                 inputMode="numeric"
-                list="dl-moga_number"
+                numeric
                 placeholder="e.g. 13223"
                 className={`${inputClass} flex-1 font-mono`}
               />
@@ -133,28 +135,28 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
           </Field>
 
           <Field label="راجباہ">
-            <input value={form.rajbah} onChange={e => f("rajbah", e.target.value)}
-              list="dl-rajbah" className={inputClass} placeholder="Canal / Minor name" />
+            <AutocompleteInput value={form.rajbah} onChange={v => f("rajbah", v)}
+              suggestions={suggestions.rajbah} placeholder="Canal / Minor name" className={inputClass} />
           </Field>
 
           <Field label="موضع">
-            <input value={form.village} onChange={e => f("village", e.target.value)}
-              list="dl-village" className={inputClass} placeholder="Village / Mozah" />
+            <AutocompleteInput value={form.village} onChange={v => f("village", v)}
+              suggestions={suggestions.village} placeholder="Village / Mozah" className={inputClass} />
           </Field>
 
           <Field label="ضلعداری سیکشن">
-            <input value={form.zilladar_section} onChange={e => f("zilladar_section", e.target.value)}
-              list="dl-zilladar_section" className={inputClass} placeholder="Zilladar Section" />
+            <AutocompleteInput value={form.zilladar_section} onChange={v => f("zilladar_section", v)}
+              suggestions={suggestions.zilladar_section} placeholder="Zilladar Section" className={inputClass} />
           </Field>
 
           <Field label="سب ڈویژن">
-            <input value={form.tehsil} onChange={e => f("tehsil", e.target.value)}
-              list="dl-tehsil" className={inputClass} placeholder="Sub Division / Tehsil" />
+            <AutocompleteInput value={form.tehsil} onChange={v => f("tehsil", v)}
+              suggestions={suggestions.tehsil} placeholder="Sub Division / Tehsil" className={inputClass} />
           </Field>
 
           <Field label="ڈویژن">
-            <input value={form.district} onChange={e => f("district", e.target.value)}
-              list="dl-district" className={inputClass} placeholder="Division / District" />
+            <AutocompleteInput value={form.district} onChange={v => f("district", v)}
+              suggestions={suggestions.district} placeholder="Division / District" className={inputClass} />
           </Field>
         </div>
 
@@ -165,12 +167,6 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
           </Button>
         </div>
 
-        {/* Autocomplete suggestion lists (hidden datalists) */}
-        {AUTOCOMPLETE_KEYS.map(key => (
-          <datalist key={key} id={`dl-${key}`}>
-            {suggestions[key].map(v => <option key={v} value={v} />)}
-          </datalist>
-        ))}
       </div>
     </div>
   );
