@@ -866,7 +866,7 @@ export function pointInPolygon(point, polygon) {
 // Fraction (0–1) of a rectangle that lies inside a polygon — point-sampling
 export function rectAreaFractionInPolygon(rect, polygon) {
   if (!polygon || polygon.length < 3) return 0;
-  const SAMPLES = 16;
+  const SAMPLES = 24;
   let inside = 0;
   const total = SAMPLES * SAMPLES;
   for (let i = 0; i < SAMPLES; i++) {
@@ -934,7 +934,18 @@ export function calculateChakbandiGCA(chakbandi, mustateels, canals = []) {
       }
     }
   }
-  return Math.round(totalAcres * 10) / 10;
+  // Round to the nearest kanal (1 acre = 8 kanal) for an exact, kanal-aligned measurement
+  return Math.round(totalAcres * 8) / 8;
+}
+
+// Format acres as "X ایکڑ Y کنال" (1 acre = 8 kanal) — exact kanal-aligned display
+export function acresToAcreKanalText(acres) {
+  const totalKanal = Math.round((acres || 0) * 8);
+  const wholeAcres = Math.floor(totalKanal / 8);
+  const kanals = totalKanal % 8;
+  if (wholeAcres > 0 && kanals > 0) return `${wholeAcres} ایکڑ ${kanals} کنال`;
+  if (wholeAcres > 0) return `${wholeAcres} ایکڑ`;
+  return `${kanals} کنال`;
 }
 
 // GCA using canal buffer polygon as boundary (when no chakbandi exists)

@@ -4,7 +4,7 @@
 // and canal name text-on-path — used by PrintPreview & ExportDialog
 // ============================================================
 
-import { getParallelPolyline, DIMENSIONS } from "@/lib/gisEngine";
+import { getParallelPolyline, DIMENSIONS, acresToAcreKanalText } from "@/lib/gisEngine";
 
 // Moga fraction box = 2 acres (440×198), font reduced to fit
 const MOGA_BOX_W = DIMENSIONS.ACRE.width * 2.5;  // 550 (bigger box)
@@ -398,8 +398,8 @@ export function getCCAGCAText(chakbandi, gcaValue) {
     }
     return { cca: chakbandi.centerLabel, gca: "" };
   }
-  const gca = gcaValue || 0;
-  return { cca: `${gca} سی سی اے`, gca: `${gca} جی سی اے` };
+  const gcaText = acresToAcreKanalText(gcaValue || 0);
+  return { cca: `${gcaText} سی سی اے`, gca: `${gcaText} جی سی اے` };
 }
 
 // ─── Legend SVG: 2-column table (sign | name), 3× bigger ────────────────
