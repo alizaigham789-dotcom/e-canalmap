@@ -438,7 +438,6 @@ export default function MapList() {
             </div>
             {[
               { key: "rajbah", label: "Rajbah / Canal Minor (راجباہ)", placeholder: "e.g. Roda Minor" },
-              { key: "section", label: "Section (سیکشن)", placeholder: "e.g. Ganjial" },
               { key: "zilladar_section", label: "Zilladar Section (ضلعداری سیکشن)", placeholder: "e.g. Roda" },
               { key: "tehsil", label: "Sub Division (سب ڈویژن)", placeholder: "e.g. Qaidabad" },
               { key: "district", label: "Division (ڈویژن)", placeholder: "e.g. Khushab" },
