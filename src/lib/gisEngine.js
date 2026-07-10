@@ -885,9 +885,17 @@ export function getMustateelMouzaSplit(obj, mouzaObjects) {
         const my = pts.reduce((s, p) => s + p.y, 0) / pts.length;
         return pts.slice().sort((a, b) => Math.atan2(a.y - my, a.x - mx) - Math.atan2(b.y - my, b.x - mx));
       };
-      const cA = polyCentroid(buildHalfPoly(sideA));
-      const cB = polyCentroid(buildHalfPoly(sideB));
-      return { mouzaId: mouza.id, centerA: cA, centerB: cB };
+      const polyA = buildHalfPoly(sideA);
+      const polyB = buildHalfPoly(sideB);
+      const cA = polyCentroid(polyA);
+      const cB = polyCentroid(polyB);
+      const bboxOf = (poly) => {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const p of poly) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
+        return { w: maxX - minX, h: maxY - minY };
+      };
+      const bA = bboxOf(polyA), bB = bboxOf(polyB);
+      return { mouzaId: mouza.id, centerA: cA, centerB: cB, widthA: bA.w, heightA: bA.h, widthB: bB.w, heightB: bB.h };
     }
   }
   return null;

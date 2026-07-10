@@ -188,19 +188,21 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
     ctx.fillStyle = C.labelColor || "#1e293b";
     // Compute proper polygon centroids for each half — placed clearly above/below (or left/right) of the mouza line
-    const maxFontPx = Math.min(obj.w, obj.h) * 0.26;
-    const drawSplitLabel = (text, center) => {
+    const drawSplitLabel = (text, center, halfW) => {
       if (!text) return;
+      let maxFontPx = Math.min(obj.w, obj.h) * 0.26;
       ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
       const measured = ctx.measureText(text);
-      const fitScale = Math.min(1, (obj.w * 0.35) / (measured.width || 1));
-      const finalFont = maxFontPx * fitScale;
-      ctx.font = `900 ${finalFont}px Rajdhani, sans-serif`;
+      const maxW = (halfW || obj.w * 0.5) * 0.80;
+      if (measured.width > maxW) {
+        maxFontPx = Math.max(8, maxFontPx * (maxW / measured.width));
+        ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
+      }
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(text, center.x, center.y);
     };
-    drawSplitLabel(obj.label || "", mouzaSplit.centerA);
-    drawSplitLabel(obj.label2 || obj.label || "", mouzaSplit.centerB);
+    drawSplitLabel(obj.label || "", mouzaSplit.centerA, mouzaSplit.widthA);
+    drawSplitLabel(obj.label2 || obj.label || "", mouzaSplit.centerB, mouzaSplit.widthB);
     ctx.restore();
   } else {
     // No mouza line crossing — show only label1 (single label centered)

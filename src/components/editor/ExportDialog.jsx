@@ -134,18 +134,18 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const mSplit = getMustateelMouzaSplit(o, objects.filter(m => m.type === "mouza"));
       ctx.fillStyle = C.labelColor || "#1e293b";
       if (mSplit) {
-        const drawFit = (text, cx, cy) => {
+        const drawFit = (text, cx, cy, halfW) => {
           if (!text) return;
           let fpx = Math.min(o.w, o.h) * 0.26;
           ctx.font = `900 ${fpx}px Rajdhani, sans-serif`;
           const mw = ctx.measureText(text).width;
-          const maxW = o.w * 0.35;
+          const maxW = (halfW || o.w * 0.5) * 0.80;
           if (mw > maxW) { fpx = Math.max(8, fpx * (maxW / mw)); ctx.font = `900 ${fpx}px Rajdhani, sans-serif`; }
           ctx.fillText(text, cx, cy);
         };
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        drawFit(o.label, mSplit.centerA.x, mSplit.centerA.y);
-        drawFit(o.label2 || o.label, mSplit.centerB.x, mSplit.centerB.y);
+        drawFit(o.label, mSplit.centerA.x, mSplit.centerA.y, mSplit.widthA);
+        drawFit(o.label2 || o.label, mSplit.centerB.x, mSplit.centerB.y, mSplit.widthB);
       } else {
         // No mouza split — show only label1 centered
         const cx = o.x + o.w/2, cy = o.y + o.h/2;
@@ -428,15 +428,15 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       let lbl;
       if (mSplit) {
         const lbl2Val = o.label2 || o.label || "";
-        const fitFontSvg = (text) => {
+        const fitFontSvg = (text, halfW) => {
           let fpx = Math.min(o.w, o.h) * 0.26;
           const estW = text.length * fpx * 0.6;
-          const maxW = o.w * 0.35;
+          const maxW = (halfW || o.w * 0.5) * 0.80;
           if (estW > maxW) fpx = Math.max(8, maxW / (text.length * 0.6));
           return fpx;
         };
-        const f1 = fitFontSvg(o.label || "");
-        const f2 = fitFontSvg(lbl2Val);
+        const f1 = fitFontSvg(o.label || "", mSplit.widthA);
+        const f2 = fitFontSvg(lbl2Val, mSplit.widthB);
         lbl = `${o.label ? `<text x="${mSplit.centerA.x}" y="${mSplit.centerA.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${f1}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${lbl2Val ? `<text x="${mSplit.centerB.x}" y="${mSplit.centerB.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${f2}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${lbl2Val}</text>` : ""}`;
       } else {
         // No mouza split — show only label1 centered
