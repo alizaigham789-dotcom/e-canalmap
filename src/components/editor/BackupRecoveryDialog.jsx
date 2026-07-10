@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Database, RefreshCw, CheckCircle2, AlertTriangle, RotateCcw, Loader2 } from "lucide-react";
 import { getAllBackups } from "@/lib/mapBackup";
+import { getMaxSnapshot } from "@/lib/serverSnapshot";
 import { base44 } from "@/api/base44Client";
 
 const PARCEL_TYPES = ["acre", "mustateel", "muraba"];
@@ -47,6 +48,16 @@ export default function BackupRecoveryDialog({ mapIds, onClose }) {
       // Read all IndexedDB backup versions
       const idbVersions = await getAllBackups(id);
 
+      // Read server peak snapshot (cross-device recovery source)
+      const serverSnap = await getMaxSnapshot(id);
+      const serverSnapBackup = [];
+      if (serverSnap && serverSnap.drawing_data) {
+        try {
+          const snapObjs = JSON.parse(serverSnap.drawing_data);
+          if (snapObjs.length > 0) serverSnapBackup.push({ objects: snapObjs, viewport: serverSnap.viewport, editorSettings: serverSnap.editor_settings, timestamp: new Date(serverSnap.created_date).getTime(), source: "Server Snapshot" });
+        } catch {}
+      }
+
       // Read sessionStorage backup
       const sessionBackups = [];
       try {
@@ -61,6 +72,7 @@ export default function BackupRecoveryDialog({ mapIds, onClose }) {
 
       // Combine all backup sources
       const allBackups = [
+        ...serverSnapBackup,
         ...sessionBackups.map(b => ({ ...b, source: "Session Storage" })),
         ...idbVersions.map(b => ({ ...b, source: "IndexedDB" })),
       ].filter(b => b.objects && b.objects.length > 0);

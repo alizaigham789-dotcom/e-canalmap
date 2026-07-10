@@ -1,0 +1,43 @@
+{
+  "name": "MapSnapshot",
+  "type": "object",
+  "properties": {
+    "map_id": {
+      "type": "string",
+      "description": "Reference to the LandMap id this snapshot protects"
+    },
+    "map_title": {
+      "type": "string",
+      "description": "Denormalized map title for display in recovery UI"
+    },
+    "moga_number": {
+      "type": "string",
+      "description": "Denormalized moga number for display/filtering"
+    },
+    "drawing_data": {
+      "type": "string",
+      "description": "JSON string of all canvas objects captured at the peak non-parcel count"
+    },
+    "viewport": {
+      "type": "string",
+      "description": "JSON string of zoom/pan state"
+    },
+    "editor_settings": {
+      "type": "string",
+      "description": "JSON string of editor settings (layers, colors, snap, killa, grid)"
+    },
+    "non_parcel_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Count of non-parcel objects (canals, khals, chakbandis, mouzas, outlets, damage markers) at capture time"
+    },
+    "total_parcels": {
+      "type": "number",
+      "default": 0,
+      "description": "Count of parcel objects (acre/mustateel/muraba) at capture time"
+    }
+  },
+  "required": [
+    "map_id"
+  ]
+}

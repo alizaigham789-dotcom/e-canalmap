@@ -26,6 +26,7 @@ import {
 } from "@/lib/gisEngine";
 import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, Wand2 } from "lucide-react";
 import { saveBackup, getBackup, setLastMapId } from "@/lib/mapBackup";
+import { saveMaxSnapshot, getMaxSnapshot } from "@/lib/serverSnapshot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
@@ -117,6 +118,7 @@ export default function Editor() {
   const loadedNonParcelCountRef = useRef(0);
   const forceSaveRef = useRef(false); // when true, skip the data-loss safeguard
   const explicitDeleteRef = useRef(false); // set true on user-initiated delete — lowers the safeguard baseline
+  const serverMaxNonParcelRef = useRef(0); // all-time peak non-parcel count — gates server snapshot upserts (only ever rises)
   const clipboardRef = useRef([]);
   const zoomRef = useRef(zoom);
   const panRef = useRef(pan);
@@ -202,6 +204,24 @@ export default function Editor() {
 
   const loadedMapIdRef = useRef(null);
 
+  // Server-side peak snapshot — upsert MapSnapshot when the current non-parcel
+  // count exceeds the all-time peak (serverMaxNonParcelRef). Low-write: only
+  // fires on new peaks, so debounced saves mostly skip it. Never downgrades the
+  // stored peak, making the recovery source immune to blank-save overwrites.
+  const trySnapshot = () => {
+    const cur = countNonParcels(dsmRef.current.objects);
+    if (cur <= 0 || cur <= serverMaxNonParcelRef.current) return;
+    const cached = queryClient.getQueryData(["map", mapId]);
+    saveMaxSnapshot(mapId, {
+      title: cached?.title,
+      moga_number: cached?.moga_number,
+      objects: dsmRef.current.objects,
+      drawingData: dsmRef.current.serialize(),
+      viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+      editorSettings: settingsRef.current(),
+    }).then(result => { if (result != null) serverMaxNonParcelRef.current = result; }).catch(() => {});
+  };
+
   const saveMutation = useMutation({
     mutationFn: (data) => base44.entities.LandMap.update(mapId, data),
     onSuccess: () => {
@@ -216,6 +236,8 @@ export default function Editor() {
       } } : old);
       // Refresh the maps list so MapList shows updated parcel count / status
       queryClient.invalidateQueries({ queryKey: ["maps"] });
+      // Server-side peak snapshot — upsert when non-parcel count hits a new high
+      trySnapshot();
     },
     onError: () => toast.error("Save failed"),
   });
@@ -248,10 +270,11 @@ export default function Editor() {
 
     (async () => {
       // ── PARALLEL HYDRATION ──────────────────────────────────────────────
-      // Gather Server + sessionStorage + IndexedDB simultaneously, then pick
-      // the version with the MAXIMUM non-parcel object count. This guarantees
-      // the map loads with the most complete user data — recovering lost
-      // canals/chakbandis/khals/mouzas/outlets from whichever source has them.
+      // Gather Server + sessionStorage + IndexedDB + Server Peak Snapshot,
+      // then pick the version with the MAXIMUM non-parcel object count. This
+      // guarantees the map loads with the most complete user data — recovering
+      // lost canals/chakbandis/khals/mouzas/outlets from any source, including
+      // the cross-device server snapshot.
       const backupKey = `chakbandi_backup_${mapData.id}`;
 
       // Source A: sessionStorage (synchronous)
@@ -270,11 +293,19 @@ export default function Editor() {
       const idbViewport = idbBackup?.viewport || null;
       const idbSettings = idbBackup?.editorSettings || null;
 
+      // Source C: Server peak snapshot (cross-device recovery — survives even
+      // if the editing device's browser storage is cleared)
+      const maxSnap = await getMaxSnapshot(mapData.id);
+      const snapObjs = maxSnap?.drawing_data ? DrawingStateManager.deserialize(maxSnap.drawing_data) : null;
+      const snapViewport = maxSnap?.viewport || null;
+      const snapSettings = maxSnap?.editor_settings || null;
+
       // Build candidate list with non-parcel + total counts
       const candidates = [];
       if (serverObjs.length > 0) candidates.push({ src: "server", objects: serverObjs, viewport: mapData.viewport, settings: mapData.editor_settings, np: serverNonParcelCount, total: serverObjs.length });
       if (sessionObjs) candidates.push({ src: "session", objects: sessionObjs, viewport: sessionViewport, settings: sessionSettings, np: countNonParcels(sessionObjs), total: sessionObjs.length, clearSession: true });
       if (idbObjs) candidates.push({ src: "indexeddb", objects: idbObjs, viewport: idbViewport, settings: idbSettings, np: countNonParcels(idbObjs), total: idbObjs.length });
+      if (snapObjs) candidates.push({ src: "server_snapshot", objects: snapObjs, viewport: snapViewport, settings: snapSettings, np: countNonParcels(snapObjs), total: snapObjs.length });
 
       // Pick the version with the most non-parcel objects; tiebreak by total count
       let best = null;
@@ -285,7 +316,8 @@ export default function Editor() {
 
       // Hydrate from the winning source
       dsmRef.current = new DrawingStateManager(best.objects);
-      loadedNonParcelCountRef.current = best.np; // acts as maxValidNonParcelCountRef baseline
+      loadedNonParcelCountRef.current = best.np; // safeguard baseline (lowerable on explicit delete)
+      serverMaxNonParcelRef.current = Math.max(maxSnap?.non_parcel_count || 0, best.np); // peak tracker (only rises)
       setObjects([...dsmRef.current.objects]);
       syncUndoRedo();
       if (best.viewport) {
@@ -293,10 +325,10 @@ export default function Editor() {
       }
       applySettings(best.settings);
 
-      // ── AUTO-HEAL: if a backup won over the server (more non-parcels), push
-      // it back to the server so the corrupted/blank server state is recovered.
-      // This is how 21671R / 28000 R get restored when their editing device
-      // reopens them — the local backup heals the server automatically.
+      // ── AUTO-HEAL: if a backup/snapshot won over the server (more non-parcels),
+      // push it back to the server AND refresh the peak snapshot so the recovered
+      // state is permanently protected cross-device. This is how 21671R / 28000 R
+      // get restored — whichever source has the canals/chakbandis heals the server.
       if (best.src !== "server" && best.np > serverNonParcelCount) {
         if (best.clearSession) { try { sessionStorage.removeItem(backupKey); } catch {} }
         const recoveredPayload = {
@@ -308,9 +340,16 @@ export default function Editor() {
         queryClient.setQueryData(["map", mapData.id], (old) => old ? { ...old, ...recoveredPayload } : old);
         base44.entities.LandMap.update(mapData.id, recoveredPayload).then(() => {
           queryClient.invalidateQueries({ queryKey: ["maps"] });
-          toast.success(`Recovered ${best.np} non-parcel objects from ${best.src === "session" ? "session backup" : "crash backup"}`, { duration: 4000 });
+          const srcLabel = best.src === "session" ? "session backup" : best.src === "server_snapshot" ? "server snapshot" : "crash backup";
+          toast.success(`Recovered ${best.np} non-parcel objects from ${srcLabel}`, { duration: 4000 });
         }).catch(() => {});
         saveBackup(mapData.id, { objects: best.objects, viewport: best.viewport, editorSettings: best.settings });
+        // Protect the recovered state with a fresh server peak snapshot
+        saveMaxSnapshot(mapData.id, {
+          title: mapData.title, moga_number: mapData.moga_number,
+          objects: best.objects, drawingData: recoveredPayload.drawing_data,
+          viewport: recoveredPayload.viewport, editorSettings: recoveredPayload.editor_settings,
+        }).then(result => { if (result != null) serverMaxNonParcelRef.current = result; }).catch(() => {});
       }
     })();
   }, [mapData]);
@@ -505,6 +544,7 @@ export default function Editor() {
           editor_settings: savedSettings,
         } : old);
         queryClient.invalidateQueries({ queryKey: ["maps"] });
+        trySnapshot(); // protect peak state in the server snapshot
         // Clear backup after successful server save (give 5s grace for remount to pick it up)
         setTimeout(() => {
           try { sessionStorage.removeItem(`chakbandi_backup_${currentMapId}`); } catch {}
@@ -938,6 +978,7 @@ export default function Editor() {
     }).then(() => {
       loadedNonParcelCountRef.current = nonParcels;
       queryClient.invalidateQueries({ queryKey: ["maps"] });
+      trySnapshot();
       toast.success(`Permanent Save complete — ${allObjs.length} objects (${parcels} parcels, ${nonParcels} lines/features)`, { duration: 3000 });
       setPermSaving(false);
     }).catch(() => {
