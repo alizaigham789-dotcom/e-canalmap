@@ -216,8 +216,8 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     const finalFont = maxFontPx * fitScale;
     ctx.font = `900 ${finalFont}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    // If label2 exists, show label in top half and label2 in bottom half
-    const labelY = hasLabel2 ? centerY - finalFont * 0.6 : ((obj.showOwner && obj.ownerName) ? centerY - finalFont * 0.35 : centerY);
+    // Both labels stacked above the center dotted line (upper half)
+    const labelY = hasLabel2 ? centerY - finalFont * 1.2 : ((obj.showOwner && obj.ownerName) ? centerY - finalFont * 0.35 : centerY);
     ctx.fillText(obj.label || "", centerX, labelY);
     if (hasLabel2) {
       ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
@@ -225,7 +225,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
       const fitScale2 = Math.min(1, (obj.w * 0.80) / (measured2.width || 1));
       const finalFont2 = maxFontPx * fitScale2;
       ctx.font = `900 ${finalFont2}px Rajdhani, sans-serif`;
-      ctx.fillText(obj.label2, centerX, centerY + finalFont * 0.6);
+      ctx.fillText(obj.label2, centerX, centerY - finalFont * 0.2);
     } else if (obj.showOwner && obj.ownerName) {
       ctx.fillStyle = "rgba(100,116,139,0.9)";
       const ownerFont = Math.min(obj.w, obj.h) * 0.10;
