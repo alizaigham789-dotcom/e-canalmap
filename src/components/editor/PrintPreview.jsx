@@ -1,17 +1,12 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, getMogaColor, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, canalLength, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
-import { svgCanalNameOnPath, svgMogaFraction, svgMogaFractionBox, svgCCAGCAFractionBox, chakbandiLabelPosition, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
+import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
 import { Move } from "lucide-react";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
-
-function hexToRgbStr(hex) {
-  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "239,68,68";
-}
 
 function getObjectsBounds(objects) {
   if (!objects || objects.length === 0) return null;
@@ -420,10 +415,25 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [pageSize, setPageSize] = useState("A4");
   const [showLegendInPrint, setShowLegendInPrint] = useState(true);
   const [showPageBorder, setShowPageBorder] = useState(false);
-  const [legendCustomPos, setLegendCustomPos] = useState(null); // null = auto; {x, y} in SVG coords
   const [legendMoveMode, setLegendMoveMode] = useState(false);
-  const legendDragRef = useRef(null);
   const svgWrapRef = useRef(null);
+
+  // Persist legend position per-map in localStorage so it survives close/reopen
+  const legendKey = mapData?.id ? `legend_pos_${mapData.id}` : null;
+  const [legendCustomPos, setLegendCustomPos] = useState(() => {
+    if (!legendKey) return null;
+    try {
+      const saved = localStorage.getItem(legendKey);
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const updateLegendPos = useCallback((pos) => {
+    setLegendCustomPos(pos);
+    if (legendKey) {
+      if (pos) localStorage.setItem(legendKey, JSON.stringify(pos));
+      else localStorage.removeItem(legendKey);
+    }
+  }, [legendKey]);
 
   // Extract all mogas from objects
   const availableMogas = useMemo(() => {
@@ -479,10 +489,10 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     if (!legendMoveMode) return;
     const pos = screenToSVG(e.clientX, e.clientY);
     if (pos) {
-      setLegendCustomPos(pos);
+      updateLegendPos(pos);
       setLegendMoveMode(false);
     }
-  }, [legendMoveMode, screenToSVG]);
+  }, [legendMoveMode, screenToSVG, updateLegendPos]);
 
   // Auto-calculate CCA/GCA per chakbandi — use user's centerLabel if entered
   const gcaData = useMemo(() => {
@@ -722,7 +732,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               </button>
               {legendCustomPos !== null && (
                 <button
-                  onClick={() => setLegendCustomPos(null)}
+                  onClick={() => updateLegendPos(null)}
                   className="text-[10px] px-2 py-1 rounded font-medium bg-white text-slate-600 border border-slate-200 hover:text-slate-900"
                   title="Reset legend position to auto"
                 >

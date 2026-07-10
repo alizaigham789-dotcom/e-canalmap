@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMogaColor, calculateChakbandiGCA, canalLength, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont } from "@/lib/gisEngine";
 import { drawMogaFractionBoxOnCanvas, getOutletLabelPos } from "@/lib/printRenderHelpers";
 
 // ---- Anti-aliased zoom-clamped font size ----
