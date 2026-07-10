@@ -6,6 +6,48 @@
 
 import { getParallelPolyline, DIMENSIONS, acresToAcreKanalText } from "@/lib/gisEngine";
 
+// Detect Urdu/Arabic script — switches canal name rendering to a connected
+// RTL label in Jameel Noori Nastaleeq (char-by-char on-path breaks the joins).
+export function isUrduText(text) {
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text || "");
+}
+
+// Midpoint + upright tangent angle of a polyline (for placing a single label)
+function canalMidpointAngle(points) {
+  const mid = Math.floor(points.length / 2);
+  const a = points[Math.max(0, mid - 1)];
+  const b = points[Math.min(points.length - 1, mid)];
+  let angle = Math.atan2(b.y - a.y, b.x - a.x);
+  if (angle > Math.PI / 2 || angle < -Math.PI / 2) angle += Math.PI; // keep upright
+  return { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, angle };
+}
+
+// CANVAS: Urdu canal name — single rotated connected label at the midpoint
+function drawCanalNameUrduOnCanvas(ctx, points, text, fontSize) {
+  const { cx, cy, angle } = canalMidpointAngle(points);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  ctx.font = `bold ${fontSize}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  try { ctx.direction = "rtl"; } catch {}
+  ctx.strokeStyle = "rgba(0,0,0,0.85)";
+  ctx.lineWidth = Math.max(2, fontSize * 0.18);
+  ctx.lineJoin = "round";
+  ctx.strokeText(text, 0, 0);
+  ctx.fillStyle = "#fef08a";
+  ctx.fillText(text, 0, 0);
+  ctx.restore();
+}
+
+// SVG: Urdu canal name — single rotated connected label at the midpoint
+function svgCanalNameUrdu(points, text, fontSize) {
+  const { cx, cy, angle } = canalMidpointAngle(points);
+  const deg = (angle * 180) / Math.PI;
+  return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="#fef08a" stroke="rgba(0,0,0,0.85)" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" direction="rtl" transform="rotate(${deg.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})">${text}</text>`;
+}
+
 // Moga fraction box = 2 acres (440×198), font reduced to fit
 const MOGA_BOX_W = DIMENSIONS.ACRE.width * 5;     // 1100 (2× bigger)
 const MOGA_BOX_H = DIMENSIONS.ACRE.height * 2.8;   // ~554 (2× taller)
@@ -58,6 +100,7 @@ function pointAtDistance(points, segLens, segIdx, segRemaining) {
 // Bright yellow fill + dark outline, repeats every ~5 acres (1100 ft).
 export function drawCanalNameOnCanvas(ctx, points, text, fontSize) {
   if (!points || points.length < 2 || !text) return;
+  if (isUrduText(text)) { drawCanalNameUrduOnCanvas(ctx, points, text, fontSize); return; }
   const { segLens, total } = pathSegments(points);
   if (total < 1) return;
 
@@ -114,6 +157,7 @@ export function drawCanalNameOnCanvas(ctx, points, text, fontSize) {
 // positioned and rotated to follow the path. Repeats every ~5 acres.
 export function svgCanalNameOnPath(points, text, fontSize) {
   if (!points || points.length < 2 || !text) return "";
+  if (isUrduText(text)) return svgCanalNameUrdu(points, text, fontSize);
   const { segLens, total } = pathSegments(points);
   if (total < 1) return "";
 

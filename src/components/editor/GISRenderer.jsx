@@ -5,7 +5,7 @@
 // ============================================================
 
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont } from "@/lib/gisEngine";
-import { drawMogaFractionBoxOnCanvas, getOutletLabelPos } from "@/lib/printRenderHelpers";
+import { drawMogaFractionBoxOnCanvas, getOutletLabelPos, isUrduText } from "@/lib/printRenderHelpers";
 
 // ---- Anti-aliased zoom-clamped font size ----
 // For print: use a larger effective min so labels are always readable regardless of zoom
@@ -360,6 +360,48 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   if (obj.name) {
     drawTextOnCanalPath(ctx, obj.points, obj.name, zoom);
   }
+
+  // Endpoint nodes — identical marker at the head (start) and tail (end) so both
+  // canal terminators show as a single node, with the same shape on both ends.
+  const nodeR = halfW * 1.3;
+  ctx.fillStyle = bankColor;
+  for (const pt of [obj.points[0], obj.points[obj.points.length - 1]]) {
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, nodeR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5 / zoom;
+    ctx.stroke();
+  }
+}
+
+// ─── Urdu canal name — single connected label in Jameel Noori Nastaleeq ─────
+// Urdu is a connected RTL script: char-by-char on-path rendering breaks the
+// joins. So the Urdu name is drawn as one whole rotated string at the canal
+// midpoint, kept upright, in Jameel Noori Nastaleeq.
+function drawCanalNameUrduEditor(ctx, points, text, zoom) {
+  const cfWorld = canalNameFont();
+  const cf = screenClampedFont(cfWorld, zoom, 12, 32);
+  const mid = Math.floor(points.length / 2);
+  const a = points[Math.max(0, mid - 1)];
+  const b = points[Math.min(points.length - 1, mid)];
+  let angle = Math.atan2(b.y - a.y, b.x - a.x);
+  if (angle > Math.PI / 2 || angle < -Math.PI / 2) angle += Math.PI;
+  const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  ctx.font = `bold ${cf}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  try { ctx.direction = "rtl"; } catch {}
+  ctx.strokeStyle = "rgba(0,0,0,0.85)";
+  ctx.lineWidth = Math.max(2, cf * 0.18);
+  ctx.lineJoin = "round";
+  ctx.strokeText(text, 0, 0);
+  ctx.fillStyle = "#fef08a";
+  ctx.fillText(text, 0, 0);
+  ctx.restore();
 }
 
 // ─── Text-on-canal-path ──────────────────────────────────────────────────────
@@ -368,6 +410,7 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
 // 5 acres ≈ 1100 ft of canal frontage (1 acre = 220 ft frontage).
 function drawTextOnCanalPath(ctx, points, text, zoom) {
   if (!points || points.length < 2 || !text) return;
+  if (isUrduText(text)) { drawCanalNameUrduEditor(ctx, points, text, zoom); return; }
   const cfWorld = canalNameFont();
   const cf = screenClampedFont(cfWorld, zoom, 12, 32);
   ctx.font = `bold ${cf}px Rajdhani, sans-serif`;

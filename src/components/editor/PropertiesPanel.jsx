@@ -161,7 +161,10 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
           {selectedObj.type === "canal" && (
             <>
               <Separator className="bg-slate-100" />
-              <Field label="Canal Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Nurpur Distry" />
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Canal Name <span className="text-blue-400 normal-case font-normal" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>اردو سپورٹ</span></label>
+                <Input value={local.name || ""} onChange={e => commit("name", e.target.value)} dir="auto" placeholder="e.g. Nurpur Distry / نور پور" className="h-7 text-xs bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500" />
+              </div>
               <SpacingControl label="Line Spacing" value={local.width || 14} min={2} max={150} step={2} onChange={v => commit("width", v)} unit="ft" />
               <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
             </>
