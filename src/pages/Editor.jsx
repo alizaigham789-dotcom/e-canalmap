@@ -151,6 +151,18 @@ export default function Editor() {
       viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
       editor_settings: settingsRef.current(),
     };
+    // SYNCHRONOUS cache update — ensures remount sees latest data even before API resolves
+    queryClient.setQueryData(["map", mapId], (old) => old ? { ...old, ...payload } : old);
+    // SYNCHRONOUS sessionStorage backup — survives HMR remount & tab crash
+    try {
+      sessionStorage.setItem(`chakbandi_backup_${mapId}`, JSON.stringify({
+        objects: dsmRef.current.objects,
+        viewport: payload.viewport,
+        editorSettings: payload.editor_settings,
+        timestamp: Date.now(),
+      }));
+    } catch {}
+    // Async server save via mutation
     saveMutation.mutate(payload);
     // IndexedDB crash-recovery backup — survives app kill / phone reboot
     saveBackup(mapId, {
@@ -281,12 +293,23 @@ export default function Editor() {
 
   const scheduleAutoSave = () => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => saveRef.current(), 400);
+    autoSaveTimer.current = setTimeout(() => saveRef.current(), 200);
   };
 
   // Track current mapId for unmount save (cleanup has [] deps, can't read fresh mapId)
   const mapIdRef = useRef(mapId);
   mapIdRef.current = mapId;
+
+  // Periodic safety save — every 10s, ensures nothing is lost even if
+  // auto-save timer was cleared or a save silently failed
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (loadedMapIdRef.current && mapIdRef.current && dsmRef.current.objects.length > 0) {
+        saveRef.current();
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // beforeunload — fire-and-forget IndexedDB backup when user closes tab / refreshes.
   // The server save is async and may not complete before the browser kills the page,
@@ -338,23 +361,32 @@ export default function Editor() {
       const parcels = dsmRef.current.getByType("mustateel").length +
         dsmRef.current.getByType("muraba").length;
       // SYNCHRONOUS backup to sessionStorage — survives HMR remount race condition
-      try {
-        sessionStorage.setItem(`chakbandi_backup_${currentMapId}`, JSON.stringify({
-          objects: dsmRef.current.objects,
-          viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
-          timestamp: Date.now(),
-        }));
-      } catch {}
-      // IndexedDB crash-recovery backup — survives app kill / phone reboot
-      saveBackup(currentMapId, {
-        objects: dsmRef.current.objects,
-        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
-        editorSettings: settingsRef.current(),
-      });
-      // Async save to server
       const savedDrawingData = dsmRef.current.serialize();
       const savedViewport = JSON.stringify({ zoom: zoomRef.current, pan: panRef.current });
       const savedSettings = settingsRef.current();
+      try {
+        sessionStorage.setItem(`chakbandi_backup_${currentMapId}`, JSON.stringify({
+          objects: dsmRef.current.objects,
+          viewport: savedViewport,
+          editorSettings: savedSettings,
+          timestamp: Date.now(),
+        }));
+      } catch {}
+      // SYNCHRONOUS cache update — ensures remount sees latest data immediately
+      queryClient.setQueryData(["map", currentMapId], (old) => old ? {
+        ...old,
+        drawing_data: savedDrawingData,
+        total_parcels: parcels,
+        viewport: savedViewport,
+        editor_settings: savedSettings,
+      } : old);
+      // IndexedDB crash-recovery backup — survives app kill / phone reboot
+      saveBackup(currentMapId, {
+        objects: dsmRef.current.objects,
+        viewport: savedViewport,
+        editorSettings: savedSettings,
+      });
+      // Async save to server
       base44.entities.LandMap.update(currentMapId, {
         drawing_data: savedDrawingData,
         total_parcels: parcels,
