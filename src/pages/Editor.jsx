@@ -661,7 +661,13 @@ export default function Editor() {
   };
 
   const handleStatusChange = (status) => {
-    saveMutation.mutate({ status });
+    // Always include drawing_data — prevents objects from being wiped on server
+    saveMutation.mutate({
+      status,
+      drawing_data: dsmRef.current.serialize(),
+      total_parcels: dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length,
+      viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+    });
     queryClient.setQueryData(["map", mapId], (old) => old ? { ...old, status } : old);
   };
 
