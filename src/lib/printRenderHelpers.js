@@ -7,9 +7,9 @@
 import { getParallelPolyline, DIMENSIONS, acresToAcreKanalText } from "@/lib/gisEngine";
 
 // Moga fraction box = 2 acres (440×198), font reduced to fit
-const MOGA_BOX_W = DIMENSIONS.ACRE.width * 2.5;  // 550 (bigger box)
-const MOGA_BOX_H = DIMENSIONS.ACRE.height * 1.4;  // ~277 (taller so font fits)
-const MOGA_BOX_FONT = 140;                        // slightly bigger than mustateel (132)
+const MOGA_BOX_W = DIMENSIONS.ACRE.width * 5;     // 1100 (2× bigger)
+const MOGA_BOX_H = DIMENSIONS.ACRE.height * 2.8;   // ~554 (2× taller)
+const MOGA_BOX_FONT = 280;                          // 2× bigger moga number
 
 // Mustateel label font (for legend font matching in print/export)
 const MUSTATEEL_LABEL_FONT = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30; // 132
@@ -244,30 +244,11 @@ export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxC
   const numStr = String(num || "");
   const sideStr = String(side || "");
   const f = MOGA_BOX_FONT * scale;
-  const boxW = MOGA_BOX_W * scale;
-  const boxH = MOGA_BOX_H * scale;
-  const bx = cx - boxW / 2, by = cy - boxH / 2;
   const textW = f * Math.max(numStr.length, sideStr.length, 1) * 0.65;
-  const r = 14 * scale;
   const ink = "#0c4a6e";
 
   ctx.save();
-  // Soft shadow
-  ctx.fillStyle = "rgba(0,0,0,0.12)";
-  ctx.beginPath();
-  if (ctx.roundRect) { ctx.roundRect(bx + 3, by + 4, boxW, boxH, r); }
-  else { ctx.rect(bx + 3, by + 4, boxW, boxH); }
-  ctx.fill();
-  // Rounded box
-  ctx.fillStyle = boxColor || "rgba(255,255,255,0.88)";
-  ctx.strokeStyle = borderColor || "#0891b2";
-  ctx.lineWidth = Math.max(1.5, f * 0.06);
-  ctx.beginPath();
-  if (ctx.roundRect) { ctx.roundRect(bx, by, boxW, boxH, r); }
-  else { ctx.rect(bx, by, boxW, boxH); }
-  ctx.fill();
-  ctx.stroke();
-  // Fraction inside
+  // No box — background only behind the number text
   const lineY = cy;
   const numY = cy - f * 0.55;
   const sideY = cy + f * 0.55;
@@ -281,6 +262,12 @@ export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxC
   if (numStr) {
     ctx.font = `bold ${f}px Rajdhani, sans-serif`;
     ctx.textBaseline = "middle";
+    // Background only behind the number text
+    const numW = ctx.measureText(numStr).width;
+    ctx.fillStyle = boxColor || "rgba(120,225,245,0.92)";
+    ctx.fillRect(cx - numW / 2 - f * 0.1, numY - f * 0.5, numW + f * 0.2, f);
+    // Number text
+    ctx.fillStyle = ink;
     ctx.fillText(numStr, cx, numY);
   }
   ctx.beginPath();
@@ -301,21 +288,17 @@ export function svgMogaFractionBox(num, side, cx, cy, fontPx, boxColor, borderCo
   const numStr = String(num || "");
   const sideStr = String(side || "");
   const f = MOGA_BOX_FONT * scale;
-  const boxW = MOGA_BOX_W * scale;
-  const boxH = MOGA_BOX_H * scale;
-  const bx = cx - boxW / 2, by = cy - boxH / 2;
   const textW = f * Math.max(numStr.length, sideStr.length, 1) * 0.65;
   const lineY = cy;
   const numY = cy - f * 0.55;
   const sideY = cy + f * 0.55;
-  const r = 14 * scale;
   const ink = "#0c4a6e";
-  const sw = Math.max(1.5, f * 0.06);
 
-  // Soft shadow + rounded box with light background
-  let svg = `<rect x="${(bx+3).toFixed(1)}" y="${(by+4).toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" rx="${r.toFixed(1)}" fill="rgba(0,0,0,0.12)"/>`;
-  svg += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${boxW.toFixed(1)}" height="${boxH.toFixed(1)}" rx="${r.toFixed(1)}" fill="${boxColor || 'rgba(255,255,255,0.88)'}" stroke="${borderColor || '#0891b2'}" stroke-width="${sw.toFixed(1)}"/>`;
+  // No box — background only behind the number text
+  let svg = "";
   if (numStr) {
+    const numW = f * numStr.length * 0.65;
+    svg += `<rect x="${(cx - numW/2 - f * 0.1).toFixed(1)}" y="${(numY - f * 0.5).toFixed(1)}" width="${(numW + f * 0.2).toFixed(1)}" height="${f.toFixed(1)}" fill="${boxColor || 'rgba(120,225,245,0.92)'}"/>`;
     svg += `<text x="${cx.toFixed(1)}" y="${numY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${f.toFixed(1)}" fill="${ink}">${numStr}</text>`;
   }
   svg += `<line x1="${(cx - textW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + textW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="${ink}" stroke-width="${Math.max(1.5, f * 0.07).toFixed(1)}" stroke-linecap="round"/>`;
