@@ -426,8 +426,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const strokeColor = C.mustateelStroke || "#000";
       const mSplit = getMustateelMouzaSplit(o, objects.filter(m => m.type === "mouza")) || (o.label2 ? { centerA: { x: o.x + o.w/2, y: o.y + o.h*0.25 }, centerB: { x: o.x + o.w/2, y: o.y + o.h*0.75 }, widthA: o.w, widthB: o.w } : null);
       let lbl;
-      if (mSplit) {
-        const lbl2Val = o.label2 || o.label || "";
+      if (mSplit && o.label2) {
+        const lbl2Val = o.label2;
         const fitFontSvg = (text, halfW) => {
           let fpx = Math.min(o.w, o.h) * 0.26;
           const estW = text.length * fpx * 0.6;

@@ -87,8 +87,8 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
   const labelY = obj.y + obj.h / 2;
 
   let labelSvg;
-  if (mouzaSplit) {
-    const lbl2Final = (obj.label2 || "") || label || "";
+  if (mouzaSplit && obj.label2) {
+    const lbl2Final = obj.label2;
     const fitFont = (text, halfW) => {
       let fpx = Math.min(obj.w, obj.h) * 0.26;
       const estW = text.length * fpx * 0.6;

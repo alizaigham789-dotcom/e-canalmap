@@ -182,8 +182,9 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
   }
 
   // Layer 5: Center label(s) — fixed world-unit size so ALL mustateels look same regardless of label length
-  // If a mouza boundary splits this parcel, draw 2 labels (one on each side) instead of 1
-  if (mouzaSplit) {
+  // If a mouza boundary splits this parcel AND user entered label2, draw 2 labels (one on each side)
+  // If no label2, draw only ONE centered label (treat as normal mustateel)
+  if (mouzaSplit && obj.label2) {
     ctx.save();
     ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
     ctx.fillStyle = C.labelColor || "#1e293b";
@@ -202,7 +203,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
       ctx.fillText(text, center.x, center.y);
     };
     drawSplitLabel(obj.label || "", mouzaSplit.centerA, mouzaSplit.widthA);
-    drawSplitLabel(obj.label2 || obj.label || "", mouzaSplit.centerB, mouzaSplit.widthB);
+    drawSplitLabel(obj.label2, mouzaSplit.centerB, mouzaSplit.widthB);
     ctx.restore();
   } else {
     // No mouza line crossing — show only label1 (single label centered)
