@@ -804,6 +804,21 @@ export function getMustateelMouzaSplit(obj, mouzaObjects) {
   for (const mouza of mouzaObjects) {
     if (!mouza.points || mouza.points.length < 2) continue;
 
+    // Only split if the mouza line actually passes through the INTERIOR of the mustateel.
+    // If it only runs along boundary edges or touches corners, keep a single label.
+    const eps = Math.min(obj.w, obj.h) * 0.02;
+    const isInterior = (p) =>
+      p.x > obj.x + eps && p.x < obj.x + obj.w - eps &&
+      p.y > obj.y + eps && p.y < obj.y + obj.h - eps;
+    let entersInterior = false;
+    for (let i = 0; i < mouza.points.length - 1; i++) {
+      const a = mouza.points[i], b = mouza.points[i + 1];
+      if (isInterior(a) || isInterior(b)) { entersInterior = true; break; }
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      if (isInterior(mid)) { entersInterior = true; break; }
+    }
+    if (!entersInterior) continue;
+
     // Collect ALL entry/exit points where the mouza polyline crosses the mustateel boundary.
     // This handles multi-segment mouza lines, lines that start/end inside the mustateel,
     // and lines that cross through any acre of the mustateel.
