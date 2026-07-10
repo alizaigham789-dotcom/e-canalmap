@@ -375,7 +375,7 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
   let svgParts = [];
   sorted.forEach((obj, idx) => {
     switch (obj.type) {
-      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects))); break;
+      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null))); break;
       case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba)); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
       case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW)); break;

@@ -165,7 +165,7 @@ export default function Editor() {
     queryFn: () => base44.entities.LandMap.filter({ id: mapId }).then(r => r[0]),
     enabled: !!mapId,
     staleTime: 0,
-    gcTime: 0,
+    gcTime: 300000, // keep cached data 5 min after unmount so remount uses latest saved state
   });
 
   const loadedMapIdRef = useRef(null);
@@ -288,6 +288,31 @@ export default function Editor() {
   const mapIdRef = useRef(mapId);
   mapIdRef.current = mapId;
 
+  // beforeunload — fire-and-forget IndexedDB backup when user closes tab / refreshes.
+  // The server save is async and may not complete before the browser kills the page,
+  // but IndexedDB writes complete synchronously enough to survive.
+  useEffect(() => {
+    const handler = () => {
+      const currentMapId = mapIdRef.current;
+      if (!currentMapId || !loadedMapIdRef.current) return;
+      try {
+        sessionStorage.setItem(`chakbandi_backup_${currentMapId}`, JSON.stringify({
+          objects: dsmRef.current.objects,
+          viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+          editorSettings: settingsRef.current(),
+          timestamp: Date.now(),
+        }));
+      } catch {}
+      saveBackup(currentMapId, {
+        objects: dsmRef.current.objects,
+        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+        editorSettings: settingsRef.current(),
+      });
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
   // Save on unmount / navigate away — direct API call so it survives unmount.
   // CRITICAL: Only save if data was actually loaded (loadedMapIdRef is set).
   // Without this guard, navigating away before data loads overwrites server data with [].
@@ -327,13 +352,24 @@ export default function Editor() {
         editorSettings: settingsRef.current(),
       });
       // Async save to server
+      const savedDrawingData = dsmRef.current.serialize();
+      const savedViewport = JSON.stringify({ zoom: zoomRef.current, pan: panRef.current });
+      const savedSettings = settingsRef.current();
       base44.entities.LandMap.update(currentMapId, {
-        drawing_data: dsmRef.current.serialize(),
+        drawing_data: savedDrawingData,
         total_parcels: parcels,
-        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
-        editor_settings: settingsRef.current(),
+        viewport: savedViewport,
+        editor_settings: savedSettings,
       }).then(() => {
-        queryClient.removeQueries({ queryKey: ["map", currentMapId] });
+        // Update cache with saved data instead of destroying it — so remount
+        // immediately sees the latest state without waiting for a refetch.
+        queryClient.setQueryData(["map", currentMapId], (old) => old ? {
+          ...old,
+          drawing_data: savedDrawingData,
+          total_parcels: parcels,
+          viewport: savedViewport,
+          editor_settings: savedSettings,
+        } : old);
         queryClient.invalidateQueries({ queryKey: ["maps"] });
         // Clear backup after successful server save (give 5s grace for remount to pick it up)
         setTimeout(() => {
@@ -734,7 +770,14 @@ export default function Editor() {
       viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
       editor_settings: settingsRef.current(),
     });
-    queryClient.setQueryData(["map", mapId], (old) => old ? { ...old, status } : old);
+    queryClient.setQueryData(["map", mapId], (old) => old ? {
+      ...old,
+      status,
+      drawing_data: dsmRef.current.serialize(),
+      total_parcels: dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length,
+      viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+      editor_settings: settingsRef.current(),
+    } : old);
   };
 
   // Keyboard shortcuts

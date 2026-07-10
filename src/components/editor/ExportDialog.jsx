@@ -131,7 +131,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       if (o.excluded) drawExclusionHatchOnCanvas(ctx, o, zoom);
       ctx.strokeStyle = C.mustateelStroke || "#000000"; ctx.lineWidth = MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness); ctx.strokeRect(o.x, o.y, o.w, o.h);
       // Label(s) — split above/below if a mouza line crosses this parcel
-      const mSplit = getMustateelMouzaSplit(o, objects.filter(m => m.type === "mouza"));
+      const mSplit = getMustateelMouzaSplit(o, objects.filter(m => m.type === "mouza")) || (o.label2 ? { centerA: { x: o.x + o.w/2, y: o.y + o.h*0.25 }, centerB: { x: o.x + o.w/2, y: o.y + o.h*0.75 }, widthA: o.w, widthB: o.w } : null);
       ctx.fillStyle = C.labelColor || "#1e293b";
       if (mSplit) {
         const drawFit = (text, cx, cy, halfW) => {
@@ -424,7 +424,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const gridLines = [`<line x1="${o.x+cellW}" y1="${o.y}" x2="${o.x+cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`];
       for (let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="1.2"/>`);
       const strokeColor = C.mustateelStroke || "#000";
-      const mSplit = getMustateelMouzaSplit(o, objects.filter(m => m.type === "mouza"));
+      const mSplit = getMustateelMouzaSplit(o, objects.filter(m => m.type === "mouza")) || (o.label2 ? { centerA: { x: o.x + o.w/2, y: o.y + o.h*0.25 }, centerB: { x: o.x + o.w/2, y: o.y + o.h*0.75 }, widthA: o.w, widthB: o.w } : null);
       let lbl;
       if (mSplit) {
         const lbl2Val = o.label2 || o.label || "";

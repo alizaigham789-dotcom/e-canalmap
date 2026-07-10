@@ -883,6 +883,19 @@ export function getMustateelMouzaSplit(obj, mouzaObjects) {
       return { mouzaId: mouza.id, centerA: cA, centerB: cB, widthA: bA.w, heightA: bA.h, widthB: bB.w, heightB: bB.h };
     }
   }
+
+  // Fallback: if no mouza line crosses but the user has entered a label2,
+  // split the parcel in half vertically so both labels are visible.
+  if (obj.label2) {
+    return {
+      mouzaId: null,
+      centerA: { x: obj.x + obj.w / 2, y: obj.y + obj.h * 0.25 },
+      centerB: { x: obj.x + obj.w / 2, y: obj.y + obj.h * 0.75 },
+      widthA: obj.w, heightA: obj.h / 2,
+      widthB: obj.w, heightB: obj.h / 2,
+    };
+  }
+
   return null;
 }
 
