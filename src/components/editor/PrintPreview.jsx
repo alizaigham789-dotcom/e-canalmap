@@ -97,7 +97,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
     const fitFont = (text) => {
       let fpx = Math.min(obj.w, obj.h) * 0.26;
       const estW = text.length * fpx * 0.6;
-      const maxW = obj.w * 0.72;
+      const maxW = obj.w * 0.35;
       if (estW > maxW) fpx = Math.max(8, maxW / (text.length * 0.6));
       return fpx;
     };

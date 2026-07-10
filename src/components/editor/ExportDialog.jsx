@@ -139,7 +139,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
           let fpx = Math.min(o.w, o.h) * 0.26;
           ctx.font = `900 ${fpx}px Rajdhani, sans-serif`;
           const mw = ctx.measureText(text).width;
-          const maxW = o.w * 0.72;
+          const maxW = o.w * 0.35;
           if (mw > maxW) { fpx = Math.max(8, fpx * (maxW / mw)); ctx.font = `900 ${fpx}px Rajdhani, sans-serif`; }
           ctx.fillText(text, cx, cy);
         };
@@ -431,7 +431,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const fitFontSvg = (text) => {
           let fpx = Math.min(o.w, o.h) * 0.26;
           const estW = text.length * fpx * 0.6;
-          const maxW = o.w * 0.72;
+          const maxW = o.w * 0.35;
           if (estW > maxW) fpx = Math.max(8, maxW / (text.length * 0.6));
           return fpx;
         };

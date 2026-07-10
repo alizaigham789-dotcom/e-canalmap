@@ -193,7 +193,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
       if (!text) return;
       ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
       const measured = ctx.measureText(text);
-      const fitScale = Math.min(1, (obj.w * 0.75) / (measured.width || 1));
+      const fitScale = Math.min(1, (obj.w * 0.35) / (measured.width || 1));
       const finalFont = maxFontPx * fitScale;
       ctx.font = `900 ${finalFont}px Rajdhani, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
