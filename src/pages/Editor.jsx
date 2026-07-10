@@ -116,6 +116,7 @@ export default function Editor() {
   // accidental data loss (e.g. canals/chakbandis disappearing from DSM during HMR)
   const loadedNonParcelCountRef = useRef(0);
   const forceSaveRef = useRef(false); // when true, skip the data-loss safeguard
+  const explicitDeleteRef = useRef(false); // set true on user-initiated delete — lowers the safeguard baseline
   const clipboardRef = useRef([]);
   const zoomRef = useRef(zoom);
   const panRef = useRef(pan);
@@ -157,8 +158,8 @@ export default function Editor() {
     // overwriting good server data with partial state. User can use "Permanent Save"
     // to force-save if the deletion was intentional.
     const currentNonParcel = countNonParcels(dsmRef.current.objects);
-    if (!forceSaveRef.current && loadedNonParcelCountRef.current > 0 && currentNonParcel === 0) {
-      console.warn(`[SAVE BLOCKED] Non-parcel objects dropped from ${loadedNonParcelCountRef.current} to 0 — use Permanent Save to override`);
+    if (!forceSaveRef.current && loadedNonParcelCountRef.current > 0 && currentNonParcel < loadedNonParcelCountRef.current) {
+      console.warn(`[SAVE BLOCKED] Non-parcel objects dropped from ${loadedNonParcelCountRef.current} to ${currentNonParcel} — use Permanent Save to override`);
       return;
     }
     forceSaveRef.current = false; // reset force flag after one save
@@ -228,6 +229,7 @@ export default function Editor() {
     setLastMapId(mapData.id);
 
     const serverObjs = mapData.drawing_data ? DrawingStateManager.deserialize(mapData.drawing_data) : [];
+    const serverNonParcelCount = countNonParcels(serverObjs);
     const applySettings = (settingsJson) => {
       if (!settingsJson) return;
       try {
@@ -251,7 +253,7 @@ export default function Editor() {
         const backupRaw = sessionStorage.getItem(backupKey);
         if (backupRaw) {
           const backup = JSON.parse(backupRaw);
-          if (backup.objects && backup.objects.length >= serverObjs.length) {
+          if (backup.objects && countNonParcels(backup.objects) >= serverNonParcelCount) {
             dsmRef.current = new DrawingStateManager(backup.objects);
             loadedNonParcelCountRef.current = countNonParcels(backup.objects);
             setObjects([...dsmRef.current.objects]);
@@ -268,9 +270,9 @@ export default function Editor() {
         }
       } catch {}
 
-      // 2. IndexedDB backup (crash / phone reboot) — use if it has MORE objects than server
+      // 2. IndexedDB backup (crash / phone reboot) — use if it has MORE non-parcel objects than server
       const idbBackup = await getBackup(mapData.id);
-      if (idbBackup && idbBackup.objects && idbBackup.objects.length > serverObjs.length) {
+      if (idbBackup && idbBackup.objects && countNonParcels(idbBackup.objects) > serverNonParcelCount) {
         dsmRef.current = new DrawingStateManager(idbBackup.objects);
         loadedNonParcelCountRef.current = countNonParcels(idbBackup.objects);
         setObjects([...dsmRef.current.objects]);
@@ -310,13 +312,46 @@ export default function Editor() {
   const syncObjects = () => {
     setObjects([...dsmRef.current.objects]);
     syncUndoRedo();
-    // Track max non-parcel count — if canals/chakbandis/etc. were ever present,
-    // the data-loss safeguard uses this baseline to prevent accidental wipe.
     const currentNonParcel = countNonParcels(dsmRef.current.objects);
-    if (currentNonParcel > loadedNonParcelCountRef.current) {
+    // If the user explicitly deleted an object, lower the safeguard baseline to the
+    // new count so the decrease is treated as intentional (not data loss).
+    if (explicitDeleteRef.current) {
+      loadedNonParcelCountRef.current = currentNonParcel;
+      explicitDeleteRef.current = false;
+    } else if (currentNonParcel > loadedNonParcelCountRef.current) {
+      // Otherwise track the max — the safeguard uses this baseline to prevent accidental wipe.
       loadedNonParcelCountRef.current = currentNonParcel;
     }
+    // SYNCHRONOUS BACKUP — React Query cache + sessionStorage + IndexedDB, on every
+    // modification, BEFORE any async API call. Ensures data survives navigation/crash.
+    syncBackup();
     scheduleAutoSave();
+  };
+
+  // Synchronous backup — writes current state to all three local stores immediately.
+  // Called from syncObjects on every add/modify/delete so nothing is lost between saves.
+  const syncBackup = () => {
+    const currentMapId = mapIdRef.current;
+    if (!currentMapId || !loadedMapIdRef.current) return;
+    const drawingData = dsmRef.current.serialize();
+    const vp = JSON.stringify({ zoom: zoomRef.current, pan: panRef.current });
+    const settings = settingsRef.current();
+    const parcels = dsmRef.current.getByType("mustateel").length +
+      dsmRef.current.getByType("muraba").length;
+    // React Query cache — synchronous, survives remount
+    queryClient.setQueryData(["map", currentMapId], (old) => old ? {
+      ...old, drawing_data: drawingData, total_parcels: parcels, viewport: vp, editor_settings: settings,
+    } : old);
+    // sessionStorage — synchronous, survives HMR remount & tab crash
+    try {
+      sessionStorage.setItem(`chakbandi_backup_${currentMapId}`, JSON.stringify({
+        objects: dsmRef.current.objects, viewport: vp, editorSettings: settings, timestamp: Date.now(),
+      }));
+    } catch {}
+    // IndexedDB — crash recovery (app kill / phone reboot)
+    saveBackup(currentMapId, {
+      objects: dsmRef.current.objects, viewport: vp, editorSettings: settings,
+    });
   };
 
   const scheduleAutoSave = () => {
@@ -386,14 +421,31 @@ export default function Editor() {
         queryClient.invalidateQueries({ queryKey: ["maps"] });
         return;
       }
-      // DATA-LOSS SAFEGUARD: If non-parcel objects (canals, chakbandis, etc.) suddenly
-      // dropped to 0 while the server had some, skip the server save to avoid destroying
-      // good data. The sessionStorage/IndexedDB backups above still capture current state
-      // for crash recovery, but the server is not overwritten with partial data.
+      // DATA-LOSS SAFEGUARD: If non-parcel objects (canals, chakbandis, etc.) decreased
+      // below the loaded baseline without an explicit delete, skip the server save to
+      // avoid destroying good data. Local backups are still written below so the
+      // highest-count version is always recoverable on next load.
       const currentNonParcelUnmount = countNonParcels(objs);
-      if (loadedNonParcelCountRef.current > 0 && currentNonParcelUnmount === 0) {
-        console.warn(`[UNMOUNT SAVE BLOCKED] Non-parcel objects dropped from ${loadedNonParcelCountRef.current} to 0 — server data preserved`);
-        queryClient.removeQueries({ queryKey: ["map", currentMapId] });
+      const saveBlocked = loadedNonParcelCountRef.current > 0 &&
+        currentNonParcelUnmount < loadedNonParcelCountRef.current;
+      if (saveBlocked) {
+        console.warn(`[UNMOUNT SAVE BLOCKED] Non-parcel objects dropped from ${loadedNonParcelCountRef.current} to ${currentNonParcelUnmount} — server data preserved, local backups written`);
+        // Still write synchronous local backups so data is recoverable from the
+        // highest-count version on next load (sessionStorage + IndexedDB + cache).
+        const blockedDrawingData = dsmRef.current.serialize();
+        const blockedViewport = JSON.stringify({ zoom: zoomRef.current, pan: panRef.current });
+        const blockedSettings = settingsRef.current();
+        try {
+          sessionStorage.setItem(`chakbandi_backup_${currentMapId}`, JSON.stringify({
+            objects: dsmRef.current.objects, viewport: blockedViewport, editorSettings: blockedSettings, timestamp: Date.now(),
+          }));
+        } catch {}
+        saveBackup(currentMapId, {
+          objects: dsmRef.current.objects, viewport: blockedViewport, editorSettings: blockedSettings,
+        });
+        queryClient.setQueryData(["map", currentMapId], (old) => old ? {
+          ...old, drawing_data: blockedDrawingData, viewport: blockedViewport, editor_settings: blockedSettings,
+        } : old);
         queryClient.invalidateQueries({ queryKey: ["maps"] });
         return;
       }
@@ -463,6 +515,7 @@ export default function Editor() {
 
   const handleAddObject = useCallback((type, data) => {
     if (type === "__delete__") {
+      explicitDeleteRef.current = true;
       dsmRef.current.remove(data.id);
       if (selectedId === data.id) setSelectedId(null);
       syncObjects();
@@ -722,6 +775,7 @@ export default function Editor() {
   };
 
   const handleDeleteObject = (id) => {
+    explicitDeleteRef.current = true;
     dsmRef.current.remove(id);
     setSelectedId(null);
     syncObjects();
