@@ -98,19 +98,9 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
     const lbl2Final = lbl2 || label || "";
     labelSvg = `${label ? `<text x="${mouzaSplit.centerA.x}" y="${mouzaSplit.centerA.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${lbl2Final ? `<text x="${mouzaSplit.centerB.x}" y="${mouzaSplit.centerB.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont}" fill="${C.labelColor||'#1e293b'}">${lbl2Final}</text>` : ""}`;
   } else {
-    const hasLabel2 = !!obj.label2;
+    // No mouza split — show only label1 centered
     const cx = obj.x + obj.w/2;
-    if (hasLabel2) {
-      let splitFont2 = Math.min(obj.w, obj.h) * 0.26;
-      const maxLen = Math.max(label.length, (obj.label2||"").length);
-      const estW = maxLen * splitFont2 * 0.6;
-      if (estW > obj.w * 0.80) splitFont2 = Math.max(8, (obj.w * 0.80) / (maxLen * 0.6));
-      const labelY2 = labelY - splitFont2 * 1.2;
-      const label2Y2 = labelY - splitFont2 * 0.2;
-      labelSvg = `${label ? `<text x="${cx}" y="${labelY2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont2}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}<text x="${cx}" y="${label2Y2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${splitFont2}" fill="${C.labelColor||'#1e293b'}">${obj.label2}</text>`;
-    } else {
-      labelSvg = `${label ? `<text x="${cx}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
-    }
+    labelSvg = `${label ? `<text x="${cx}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
   }
 
   return `

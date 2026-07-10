@@ -140,20 +140,15 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         if (o.label) ctx.fillText(o.label, mSplit.centerA.x, mSplit.centerA.y);
         if (o.label2 || o.label) ctx.fillText(o.label2 || o.label, mSplit.centerB.x, mSplit.centerB.y);
       } else {
-        // No mouza split — both labels stacked above center dotted line
+        // No mouza split — show only label1 centered
         const cx = o.x + o.w/2, cy = o.y + o.h/2;
-        const hasLabel2 = !!o.label2;
-        let fontPx = Math.min(o.w, o.h) * (hasLabel2 ? 0.26 : 0.35);
+        let fontPx = Math.min(o.w, o.h) * 0.35;
         ctx.font = `900 ${fontPx}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        if (hasLabel2) {
-          const mw = Math.max(ctx.measureText(o.label || "").width, ctx.measureText(o.label2).width);
-          const maxW = o.w * 0.80;
-          if (mw > maxW) { fontPx = Math.max(8, fontPx * (maxW / mw)); ctx.font = `900 ${fontPx}px Rajdhani, sans-serif`; }
-        }
-        const labelY = hasLabel2 ? cy - fontPx * 1.2 : cy;
-        if (o.label) ctx.fillText(o.label, cx, labelY);
-        if (hasLabel2) ctx.fillText(o.label2, cx, cy - fontPx * 0.2);
+        const measured = ctx.measureText(o.label || "");
+        const maxW = o.w * 0.80;
+        if (measured.width > maxW) { fontPx = Math.max(8, fontPx * (maxW / measured.width)); ctx.font = `900 ${fontPx}px Rajdhani, sans-serif`; }
+        if (o.label) ctx.fillText(o.label, cx, cy);
       }
     } else if (o.type === "muraba") {
       ctx.fillStyle = "#ffffff";
@@ -429,16 +424,10 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const lbl2Val = o.label2 || o.label || "";
         lbl = `${o.label ? `<text x="${mSplit.centerA.x}" y="${mSplit.centerA.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${lbl2Val ? `<text x="${mSplit.centerB.x}" y="${mSplit.centerB.y}" font-family="Rajdhani,Arial,sans-serif" font-size="${splitFont}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${lbl2Val}</text>` : ""}`;
       } else {
+        // No mouza split — show only label1 centered
         const cx = o.x+o.w/2, cy = o.y+o.h/2;
-        const hasLbl2 = !!o.label2;
-        let fontPx = Math.min(o.w,o.h) * (hasLbl2 ? 0.26 : 0.35);
-        if (hasLbl2) {
-          const maxLen = Math.max((o.label||"").length, (o.label2||"").length);
-          const estW = maxLen * fontPx * 0.6;
-          if (estW > o.w * 0.80) fontPx = Math.max(8, (o.w * 0.80) / (maxLen * 0.6));
-        }
-        const lblY = hasLbl2 ? cy - fontPx * 1.2 : cy;
-        lbl = `${o.label ? `<text x="${cx}" y="${lblY}" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}${hasLbl2 ? `<text x="${cx}" y="${cy - fontPx * 0.2}" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label2}</text>` : ""}`;
+        let fontPx = Math.min(o.w,o.h) * 0.35;
+        lbl = `${o.label ? `<text x="${cx}" y="${cy}" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}`;
       }
       const hatch = o.excluded ? svgExclusionHatchSVG(o, "must") : "";
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}${hatch}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;

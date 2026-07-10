@@ -203,30 +203,21 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     drawSplitLabel(obj.label2 || obj.label || "", mouzaSplit.centerB);
     ctx.restore();
   } else {
+    // No mouza line crossing — show only label1 (single label centered)
     const centerX = obj.x + obj.w / 2, centerY = obj.y + obj.h / 2;
     ctx.save();
     ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
     ctx.fillStyle = C.labelColor || "#1e293b";
-    // If label2 exists but no mouza split detected, still show it below the main label
-    const hasLabel2 = !!obj.label2;
-    const maxFontPx = Math.min(obj.w, obj.h) * (hasLabel2 ? 0.26 : 0.38);
+    const maxFontPx = Math.min(obj.w, obj.h) * 0.38;
     ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
     const measured = ctx.measureText(obj.label || "");
     const fitScale = Math.min(1, (obj.w * 0.80) / (measured.width || 1));
     const finalFont = maxFontPx * fitScale;
     ctx.font = `900 ${finalFont}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    // Both labels stacked above the center dotted line (upper half)
-    const labelY = hasLabel2 ? centerY - finalFont * 1.2 : ((obj.showOwner && obj.ownerName) ? centerY - finalFont * 0.35 : centerY);
+    const labelY = (obj.showOwner && obj.ownerName) ? centerY - finalFont * 0.35 : centerY;
     ctx.fillText(obj.label || "", centerX, labelY);
-    if (hasLabel2) {
-      ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
-      const measured2 = ctx.measureText(obj.label2 || "");
-      const fitScale2 = Math.min(1, (obj.w * 0.80) / (measured2.width || 1));
-      const finalFont2 = maxFontPx * fitScale2;
-      ctx.font = `900 ${finalFont2}px Rajdhani, sans-serif`;
-      ctx.fillText(obj.label2, centerX, centerY - finalFont * 0.2);
-    } else if (obj.showOwner && obj.ownerName) {
+    if (obj.showOwner && obj.ownerName) {
       ctx.fillStyle = "rgba(100,116,139,0.9)";
       const ownerFont = Math.min(obj.w, obj.h) * 0.10;
       ctx.font = `${ownerFont}px Inter, sans-serif`;
