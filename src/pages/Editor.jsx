@@ -14,6 +14,7 @@ import ExportDialog from "@/components/editor/ExportDialog";
 import LegendPanel from "@/components/editor/LegendPanel";
 import MapScanDialog from "@/components/editor/MapScanDialog";
 import AICommandPanel from "@/components/editor/AICommandPanel";
+import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
 
 import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
 import PrintPreview from "@/components/editor/PrintPreview";
@@ -91,6 +92,7 @@ export default function Editor() {
   const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [showMapDetails, setShowMapDetails] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
   // damage marker is now a simple line — no dialog state needed
   const [canalDraft, setCanalDraft] = useState(null);
   const [chakbandiDraft, setChakbandiDraft] = useState(null);
@@ -973,6 +975,7 @@ export default function Editor() {
         onUndoPoint={handleUndoPoint}
         onExport={() => { saveRef.current(); setShowExport(true); }}
         onEditDetails={() => setShowMapDetails(true)}
+        onRecovery={() => setShowRecovery(true)}
       />
 
       <MapHeaderLine mapData={mapData} />
@@ -1323,6 +1326,14 @@ export default function Editor() {
         onClose={() => setShowMapDetails(false)}
         onSave={(data) => handleSave(data)}
       />
+
+      {/* Backup Recovery Dialog */}
+      {showRecovery && mapData && (
+        <BackupRecoveryDialog
+          mapIds={[{ id: mapData.id, title: mapData.title, moga_number: mapData.moga_number }]}
+          onClose={() => setShowRecovery(false)}
+        />
+      )}
 
       {/* Moga Group / Name Dialog */}
       {showGroupDialog && (

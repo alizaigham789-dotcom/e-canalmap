@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Globe, Download, Loader2, Pencil, Check, X, Square, StopCircle, Undo2, Settings2, Lock } from "lucide-react";
+import { ArrowLeft, Save, Globe, Download, Loader2, Pencil, Check, X, Square, StopCircle, Undo2, Settings2, Lock, Database } from "lucide-react";
 
 const STATUS_COLORS = {
   draft: "border-slate-500/30 bg-slate-500/10 text-slate-400",
@@ -17,7 +17,7 @@ const STATUS_COLORS = {
 export default function EditorHeader({
   mapData, onSave, onPermanentSave, permSaving, onStatusChange, isSaving,
   activeTool, onStopDrawing, canalDraftActive,
-  onUndoPoint, onExport, onEditDetails
+  onUndoPoint, onExport, onEditDetails, onRecovery
 }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
@@ -157,6 +157,17 @@ export default function EditorHeader({
         {permSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
         <span className="hidden sm:inline">Permanent Save</span>
         <span className="sm:hidden">Lock</span>
+      </Button>
+
+      {/* Backup Recovery */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="w-7 h-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+        onClick={onRecovery}
+        title="Backup Recovery — بیک اپ سے ری سٹور"
+      >
+        <Database className="w-3.5 h-3.5" />
       </Button>
     </header>
   );
