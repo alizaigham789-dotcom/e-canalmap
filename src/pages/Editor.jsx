@@ -110,6 +110,10 @@ export default function Editor() {
   const dsmRef = useRef(new DrawingStateManager([]));
   const autoSaveTimer = useRef(null);
   const canvasRef = useRef(null);
+  // Track non-parcel object count from initial load — used to detect and block
+  // accidental data loss (e.g. canals/chakbandis disappearing from DSM during HMR)
+  const loadedNonParcelCountRef = useRef(0);
+  const forceSaveRef = useRef(false); // when true, skip the data-loss safeguard
   const clipboardRef = useRef([]);
   const zoomRef = useRef(zoom);
   const panRef = useRef(pan);
@@ -141,8 +145,21 @@ export default function Editor() {
 
   // Always-current save function — avoids stale closures in debounced autosave & unmount
   const saveRef = useRef(() => {});
+  const NON_PARCEL_TYPES = ["canal", "chakbandi", "khal", "road", "mouza", "outlet", "damageMarker"];
+  const countNonParcels = (objs) => objs.filter(o => NON_PARCEL_TYPES.includes(o.type)).length;
+
   saveRef.current = () => {
     if (!mapId) return;
+    // DATA-LOSS SAFEGUARD: If non-parcel objects (canals, chakbandis, khals, mouzas, etc.)
+    // suddenly dropped to 0 while the server had some, block auto-save to prevent
+    // overwriting good server data with partial state. User can use "Permanent Save"
+    // to force-save if the deletion was intentional.
+    const currentNonParcel = countNonParcels(dsmRef.current.objects);
+    if (!forceSaveRef.current && loadedNonParcelCountRef.current > 0 && currentNonParcel === 0) {
+      console.warn(`[SAVE BLOCKED] Non-parcel objects dropped from ${loadedNonParcelCountRef.current} to 0 — use Permanent Save to override`);
+      return;
+    }
+    forceSaveRef.current = false; // reset force flag after one save
     const parcels = dsmRef.current.getByType("mustateel").length +
       dsmRef.current.getByType("muraba").length;
     const payload = {
@@ -234,6 +251,7 @@ export default function Editor() {
           const backup = JSON.parse(backupRaw);
           if (backup.objects && backup.objects.length >= serverObjs.length) {
             dsmRef.current = new DrawingStateManager(backup.objects);
+            loadedNonParcelCountRef.current = countNonParcels(backup.objects);
             setObjects([...dsmRef.current.objects]);
             syncUndoRedo();
             if (backup.viewport) {
@@ -252,6 +270,7 @@ export default function Editor() {
       const idbBackup = await getBackup(mapData.id);
       if (idbBackup && idbBackup.objects && idbBackup.objects.length > serverObjs.length) {
         dsmRef.current = new DrawingStateManager(idbBackup.objects);
+        loadedNonParcelCountRef.current = countNonParcels(idbBackup.objects);
         setObjects([...dsmRef.current.objects]);
         syncUndoRedo();
         if (idbBackup.viewport) {
@@ -266,6 +285,7 @@ export default function Editor() {
       if (mapData.drawing_data) {
         const loaded = DrawingStateManager.deserialize(mapData.drawing_data);
         dsmRef.current = new DrawingStateManager(loaded);
+        loadedNonParcelCountRef.current = countNonParcels(loaded);
         setObjects([...dsmRef.current.objects]);
         syncUndoRedo();
       }
@@ -288,6 +308,12 @@ export default function Editor() {
   const syncObjects = () => {
     setObjects([...dsmRef.current.objects]);
     syncUndoRedo();
+    // Track max non-parcel count — if canals/chakbandis/etc. were ever present,
+    // the data-loss safeguard uses this baseline to prevent accidental wipe.
+    const currentNonParcel = countNonParcels(dsmRef.current.objects);
+    if (currentNonParcel > loadedNonParcelCountRef.current) {
+      loadedNonParcelCountRef.current = currentNonParcel;
+    }
     scheduleAutoSave();
   };
 
@@ -354,6 +380,17 @@ export default function Editor() {
       }
       const objs = dsmRef.current.objects;
       if (objs.length === 0) {
+        queryClient.removeQueries({ queryKey: ["map", currentMapId] });
+        queryClient.invalidateQueries({ queryKey: ["maps"] });
+        return;
+      }
+      // DATA-LOSS SAFEGUARD: If non-parcel objects (canals, chakbandis, etc.) suddenly
+      // dropped to 0 while the server had some, skip the server save to avoid destroying
+      // good data. The sessionStorage/IndexedDB backups above still capture current state
+      // for crash recovery, but the server is not overwritten with partial data.
+      const currentNonParcelUnmount = countNonParcels(objs);
+      if (loadedNonParcelCountRef.current > 0 && currentNonParcelUnmount === 0) {
+        console.warn(`[UNMOUNT SAVE BLOCKED] Non-parcel objects dropped from ${loadedNonParcelCountRef.current} to 0 — server data preserved`);
         queryClient.removeQueries({ queryKey: ["map", currentMapId] });
         queryClient.invalidateQueries({ queryKey: ["maps"] });
         return;
@@ -793,6 +830,55 @@ export default function Editor() {
     });
   };
 
+  // PERMANENT SAVE — force-saves ALL layers (parcels + canals + chakbandis + khals +
+  // mouzas + outlets + damage markers) to the server, bypassing the data-loss safeguard.
+  // Updates the loaded non-parcel count so future auto-saves use the new baseline.
+  const [permSaving, setPermSaving] = useState(false);
+  const handlePermanentSave = () => {
+    if (!mapId) return;
+    const allObjs = dsmRef.current.objects;
+    const parcels = dsmRef.current.getByType("mustateel").length +
+      dsmRef.current.getByType("muraba").length;
+    const nonParcels = countNonParcels(allObjs);
+    setPermSaving(true);
+    forceSaveRef.current = true;
+    // Synchronous backups
+    try {
+      sessionStorage.setItem(`chakbandi_backup_${mapId}`, JSON.stringify({
+        objects: allObjs,
+        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+        editorSettings: settingsRef.current(),
+        timestamp: Date.now(),
+      }));
+    } catch {}
+    saveBackup(mapId, {
+      objects: allObjs,
+      viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+      editorSettings: settingsRef.current(),
+    });
+    queryClient.setQueryData(["map", mapId], (old) => old ? {
+      ...old,
+      drawing_data: dsmRef.current.serialize(),
+      total_parcels: parcels,
+      viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+      editor_settings: settingsRef.current(),
+    } : old);
+    base44.entities.LandMap.update(mapId, {
+      drawing_data: dsmRef.current.serialize(),
+      total_parcels: parcels,
+      viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+      editor_settings: settingsRef.current(),
+    }).then(() => {
+      loadedNonParcelCountRef.current = nonParcels;
+      queryClient.invalidateQueries({ queryKey: ["maps"] });
+      toast.success(`Permanent Save complete — ${allObjs.length} objects (${parcels} parcels, ${nonParcels} lines/features)`, { duration: 3000 });
+      setPermSaving(false);
+    }).catch(() => {
+      toast.error("Permanent Save failed — please try again");
+      setPermSaving(false);
+    });
+  };
+
   const handleStatusChange = (status) => {
     // Always include drawing_data + editor_settings — prevents objects/settings from being wiped on server
     saveMutation.mutate({
@@ -877,6 +963,8 @@ export default function Editor() {
       <EditorHeader
         mapData={mapData}
         onSave={handleSave}
+        onPermanentSave={handlePermanentSave}
+        permSaving={permSaving}
         onStatusChange={handleStatusChange}
         isSaving={saveMutation.isPending}
         activeTool={activeTool}

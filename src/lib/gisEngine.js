@@ -792,100 +792,78 @@ function lineSide(px, py, ax, ay, bx, by) {
 
 export function getMustateelMouzaSplit(obj, mouzaObjects) {
   if (!mouzaObjects || mouzaObjects.length === 0) return null;
+
+  const rectContains = (p) =>
+    p.x >= obj.x && p.x <= obj.x + obj.w &&
+    p.y >= obj.y && p.y <= obj.y + obj.h;
+
   const corners = [
     { x: obj.x, y: obj.y }, { x: obj.x + obj.w, y: obj.y },
     { x: obj.x + obj.w, y: obj.y + obj.h }, { x: obj.x, y: obj.y + obj.h },
   ];
   const edges = [[corners[0], corners[1]], [corners[1], corners[2]], [corners[2], corners[3]], [corners[3], corners[0]]];
-  const rectContains = (p) =>
-    p.x >= obj.x && p.x <= obj.x + obj.w &&
-    p.y >= obj.y && p.y <= obj.y + obj.h;
 
   for (const mouza of mouzaObjects) {
     if (!mouza.points || mouza.points.length < 2) continue;
 
-    // Collect ALL entry/exit points where the mouza polyline crosses the mustateel boundary.
-    // This handles multi-segment mouza lines, lines that start/end inside the mustateel,
-    // and lines that cross through any acre of the mustateel.
-    const crossings = [];
+    // Collect ALL relevant points: those inside the rect + edge crossing points.
+    // This handles stepped/complex mouza lines correctly.
+    const pts = [];
+    const addPt = (p) => {
+      if (!pts.some(q => Math.hypot(q.x - p.x, q.y - p.y) < 0.5)) pts.push({ x: p.x, y: p.y });
+    };
+
     for (let i = 0; i < mouza.points.length - 1; i++) {
       const a = mouza.points[i], b = mouza.points[i + 1];
       const segMinX = Math.min(a.x, b.x), segMaxX = Math.max(a.x, b.x);
       const segMinY = Math.min(a.y, b.y), segMaxY = Math.max(a.y, b.y);
       if (segMaxX < obj.x || segMinX > obj.x + obj.w || segMaxY < obj.y || segMinY > obj.y + obj.h) continue;
 
-      edges.forEach(([e1, e2], edgeIdx) => {
+      if (rectContains(a)) addPt(a);
+      if (rectContains(b)) addPt(b);
+      for (const [e1, e2] of edges) {
         const ip = segIntersect(a, b, e1, e2);
-        if (ip && !crossings.some(c => Math.hypot(c.x - ip.x, c.y - ip.y) < 0.5)) {
-          crossings.push({ ...ip, edgeIdx });
-        }
-      });
+        if (ip) addPt(ip);
+      }
     }
 
-    // If the polyline starts inside the mustateel, add the start point
-    if (rectContains(mouza.points[0]) && !crossings.some(c => Math.hypot(c.x - mouza.points[0].x, c.y - mouza.points[0].y) < 0.5)) {
-      crossings.unshift({ ...mouza.points[0], edgeIdx: -1 });
-    }
-    // If the polyline ends inside the mustateel, add the end point
-    const lastMouzaPt = mouza.points[mouza.points.length - 1];
-    if (rectContains(lastMouzaPt) && !crossings.some(c => Math.hypot(c.x - lastMouzaPt.x, c.y - lastMouzaPt.y) < 0.5)) {
-      crossings.push({ ...lastMouzaPt, edgeIdx: -1 });
-    }
+    if (pts.length < 2) continue;
 
-    // Need at least 2 points to form a split line
-    if (crossings.length >= 2) {
-      const i1 = crossings[0];
-      const i2 = crossings[crossings.length - 1];
-      const sideOf = (p) => lineSide(p.x, p.y, i1.x, i1.y, i2.x, i2.y);
-      const sideA = corners.filter(c => sideOf(c) >= 0);
-      const sideB = corners.filter(c => sideOf(c) < 0);
-      // Only valid if both sides have at least one corner (line actually divides the rectangle)
-      if (sideA.length === 0 || sideB.length === 0) continue;
-      // Proper polygon centroid for each half — places labels clearly on each side
-      // of the mouza line (above/below for horizontal, left/right for vertical).
-      const polyCentroid = (poly) => {
-        if (poly.length < 3) {
-          return { x: poly.reduce((s, p) => s + p.x, 0) / Math.max(1, poly.length),
-                   y: poly.reduce((s, p) => s + p.y, 0) / Math.max(1, poly.length) };
-        }
-        let area2 = 0, cx = 0, cy = 0;
-        for (let i = 0; i < poly.length; i++) {
-          const j = (i + 1) % poly.length;
-          const cross = poly[i].x * poly[j].y - poly[j].x * poly[i].y;
-          area2 += cross;
-          cx += (poly[i].x + poly[j].x) * cross;
-          cy += (poly[i].y + poly[j].y) * cross;
-        }
-        const a = area2 / 2;
-        if (Math.abs(a) < 1e-6) {
-          return { x: poly.reduce((s, p) => s + p.x, 0) / poly.length,
-                   y: poly.reduce((s, p) => s + p.y, 0) / poly.length };
-        }
-        return { x: cx / (6 * a), y: cy / (6 * a) };
+    // Determine dominant direction of the mouza line through this rectangle
+    const xs = pts.map(p => p.x);
+    const ys = pts.map(p => p.y);
+    const xRange = Math.max(...xs) - Math.min(...xs);
+    const yRange = Math.max(...ys) - Math.min(...ys);
+
+    if (xRange >= yRange) {
+      // Horizontal-ish line → split top/bottom. Labels placed clearly above and below.
+      const avgY = ys.reduce((s, y) => s + y, 0) / ys.length;
+      const topCenter = { x: obj.x + obj.w / 2, y: (obj.y + avgY) / 2 };
+      const bottomCenter = { x: obj.x + obj.w / 2, y: (avgY + obj.y + obj.h) / 2 };
+      return {
+        mouzaId: mouza.id,
+        centerA: topCenter,
+        centerB: bottomCenter,
+        widthA: obj.w, heightA: Math.max(10, avgY - obj.y),
+        widthB: obj.w, heightB: Math.max(10, obj.y + obj.h - avgY),
       };
-      // Build each half polygon: sort corners + intersections in correct winding order
-      const buildHalfPoly = (sideCorners) => {
-        const pts = [...sideCorners, i1, i2];
-        const mx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
-        const my = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-        return pts.slice().sort((a, b) => Math.atan2(a.y - my, a.x - mx) - Math.atan2(b.y - my, b.x - mx));
+    } else {
+      // Vertical-ish line → split left/right. Labels placed clearly on each side.
+      const avgX = xs.reduce((s, x) => s + x, 0) / xs.length;
+      const leftCenter = { x: (obj.x + avgX) / 2, y: obj.y + obj.h / 2 };
+      const rightCenter = { x: (avgX + obj.x + obj.w) / 2, y: obj.y + obj.h / 2 };
+      return {
+        mouzaId: mouza.id,
+        centerA: leftCenter,
+        centerB: rightCenter,
+        widthA: Math.max(10, avgX - obj.x), heightA: obj.h,
+        widthB: Math.max(10, obj.x + obj.w - avgX), heightB: obj.h,
       };
-      const polyA = buildHalfPoly(sideA);
-      const polyB = buildHalfPoly(sideB);
-      const cA = polyCentroid(polyA);
-      const cB = polyCentroid(polyB);
-      const bboxOf = (poly) => {
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const p of poly) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
-        return { w: maxX - minX, h: maxY - minY };
-      };
-      const bA = bboxOf(polyA), bB = bboxOf(polyB);
-      return { mouzaId: mouza.id, centerA: cA, centerB: cB, widthA: bA.w, heightA: bA.h, widthB: bB.w, heightB: bB.h };
     }
   }
 
   // Fallback: if no mouza line crosses but the user has entered a label2,
-  // split the parcel in half vertically so both labels are visible.
+  // split the parcel in half so both labels are visible.
   if (obj.label2) {
     return {
       mouzaId: null,

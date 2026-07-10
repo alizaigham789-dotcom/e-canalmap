@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Globe, Download, Loader2, Pencil, Check, X, Square, StopCircle, Undo2, Settings2 } from "lucide-react";
+import { ArrowLeft, Save, Globe, Download, Loader2, Pencil, Check, X, Square, StopCircle, Undo2, Settings2, Lock } from "lucide-react";
 
 const STATUS_COLORS = {
   draft: "border-slate-500/30 bg-slate-500/10 text-slate-400",
@@ -15,7 +15,7 @@ const STATUS_COLORS = {
 };
 
 export default function EditorHeader({
-  mapData, onSave, onStatusChange, isSaving,
+  mapData, onSave, onPermanentSave, permSaving, onStatusChange, isSaving,
   activeTool, onStopDrawing, canalDraftActive,
   onUndoPoint, onExport, onEditDetails
 }) {
@@ -144,6 +144,19 @@ export default function EditorHeader({
       >
         {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
         Save
+      </Button>
+
+      {/* Permanent Save — force-saves ALL layers, bypasses data-loss safeguard */}
+      <Button
+        size="sm"
+        onClick={onPermanentSave}
+        disabled={permSaving}
+        className="h-7 text-xs bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5"
+        title="تمام کو محفوظ کریں — تمام پرتیں مستقل طور پر محفوظ ہو جائیں گی"
+      >
+        {permSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+        <span className="hidden sm:inline">Permanent Save</span>
+        <span className="sm:hidden">Lock</span>
       </Button>
     </header>
   );
