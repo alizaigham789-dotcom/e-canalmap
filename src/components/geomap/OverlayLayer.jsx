@@ -156,6 +156,30 @@ function ChakbandiLine({ obj, latlngs, zoom }) {
   );
 }
 
+function OutletMarker({ obj, latlngs, zoom }) {
+  const fontSize = labelFontSize(zoom);
+  if (!latlngs || latlngs.length < 2) return null;
+  return (
+    <>
+      <Polyline
+        positions={latlngs.map(p => [p.lat, p.lng])}
+        pathOptions={{ color: "#06b6d4", weight: Math.max(2, 4 - (18 - zoom) * 0.25), opacity: 0.9 }}
+      />
+      <CircleMarker
+        center={[latlngs[0].lat, latlngs[0].lng]}
+        radius={Math.max(3, 5 - (18 - zoom) * 0.3)}
+        pathOptions={{ color: "#0e7490", fillColor: "#06b6d4", fillOpacity: 0.9, weight: 2 }}
+      >
+        <Tooltip permanent direction="top" className="moga-label" opacity={0.95}>
+          <span style={{ fontSize: `${fontSize * 0.62}px`, fontWeight: 700, color: "#0e7490", backgroundColor: "rgba(255,255,255,0.92)", padding: "1px 4px", borderRadius: 2, fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
+            موگہ {obj.mogha_number || ""}{obj.mogha_side ? `/${obj.mogha_side}` : ""}
+          </span>
+        </Tooltip>
+      </CircleMarker>
+    </>
+  );
+}
+
 function MouzaLine({ obj, latlngs, zoom }) {
   const fontSize = labelFontSize(zoom);
   return (
@@ -182,8 +206,9 @@ const MemoKhal = memo(KhalLine);
 const MemoRoad = memo(RoadLine);
 const MemoChakbandi = memo(ChakbandiLine);
 const MemoMouza = memo(MouzaLine);
+const MemoOutlet = memo(OutletMarker);
 
-const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi"];
+const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet"];
 
 // Precompute killa center lat/lng for mustateels
 function computeKillaLatLngs(obj, transform) {
@@ -218,6 +243,8 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
         if (obj.type === "mustateel" && killaVisible) {
           killaLatLngs = computeKillaLatLngs(obj, transform);
         }
+      } else if (obj.start && obj.end) {
+        latlngs = [transform.transform(obj.start.x, obj.start.y), transform.transform(obj.end.x, obj.end.y)];
       } else if (obj.points?.length >= 2) {
         latlngs = canvasPolylineToLatLngs(obj, transform);
       } else return null;
@@ -237,6 +264,7 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
           case "road": return <MemoRoad key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "chakbandi": return <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "mouza": return <MemoMouza key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
+          case "outlet": return <MemoOutlet key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           default: return null;
         }
       })}

@@ -207,6 +207,61 @@ export function computeAffineTransform(canvasPts, geoPts) {
   };
 }
 
+// ─── ONE-CLICK PLACEMENT TRANSFORM ──────────────────────────────
+// Places the cadastral map's upper-left corner at a clicked geo point,
+// with true scale: 1 canvas unit = 1 foot = 0.3048 m, so one mustateel
+// (440×990 ft = 435,600 sq ft) covers exactly 10 acres on the ground.
+// Optional rotation (degrees) rotates the whole overlay around the
+// placed upper-left corner.
+export const FT_TO_M = 0.3048;
+
+export function getBoundingBox(objects) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const o of objects) {
+    if (["acre", "mustateel", "muraba"].includes(o.type)) {
+      minX = Math.min(minX, o.x); minY = Math.min(minY, o.y);
+      maxX = Math.max(maxX, o.x + o.w); maxY = Math.max(maxY, o.y + o.h);
+    } else if (o.points?.length) {
+      for (const p of o.points) {
+        minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+      }
+    } else if (o.start && o.end) {
+      minX = Math.min(minX, o.start.x, o.end.x); minY = Math.min(minY, o.start.y, o.end.y);
+      maxX = Math.max(maxX, o.start.x, o.end.x); maxY = Math.max(maxY, o.start.y, o.end.y);
+    }
+  }
+  if (minX === Infinity) return null;
+  return { minX, minY, maxX, maxY };
+}
+
+export function computeOneClickTransform(geoPt, objects, rotationDeg = 0) {
+  const bbox = getBoundingBox(objects);
+  if (!bbox) return null;
+  const { minX, minY } = bbox;
+  const refLat = geoPt.lat, refLng = geoPt.lng;
+  const cosLat = Math.cos((refLat * Math.PI) / 180);
+  const mPerDegLng = M_PER_DEG_LAT * cosLat;
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cosR = Math.cos(rad), sinR = Math.sin(rad);
+
+  return {
+    transform: (cx, cy) => {
+      const dx = cx - minX;        // feet east of upper-left
+      const dy = cy - minY;        // feet south of upper-left (canvas y grows downward)
+      const east0 = dx * FT_TO_M;   // meters east
+      const north0 = -dy * FT_TO_M; // meters north (y down = south, so negative)
+      const east = east0 * cosR - north0 * sinR;
+      const north = east0 * sinR + north0 * cosR;
+      return {
+        lat: refLat + north / M_PER_DEG_LAT,
+        lng: refLng + east / mPerDegLng,
+      };
+    },
+    refLat, refLng, minX, minY,
+  };
+}
+
 // Convert canvas objects to geo lat/lng using the affine transform
 export function canvasRectToLatLngs(obj, transform) {
   const corners = [

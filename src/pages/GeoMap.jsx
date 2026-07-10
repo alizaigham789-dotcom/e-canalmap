@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers } from "lucide-react";
+import { ChevronDown, Layers, MapPin } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -17,7 +17,7 @@ import MeasurementInfo from "@/components/geomap/MeasurementInfo";
 import MarkerPopup from "@/components/geomap/MarkerPopup";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import {
-  getControlPoints, computeAffineTransform, polygonAreaSqMeters, sqMetersToUnits,
+  computeOneClickTransform, polygonAreaSqMeters, sqMetersToUnits,
   parcelExpectedAcres, haversine, polylineLength, rectMeasurements, circleMeasurements,
   fmtDist, fmtArea,
 } from "@/lib/geoOverlay";
@@ -103,9 +103,9 @@ export default function GeoMap() {
   const [showOverlayPanel, setShowOverlayPanel] = useState(true);
   const [selectedMapId, setSelectedMapId] = useState("");
   const [selectedMoga, setSelectedMoga] = useState("");
-  const [controlPoints, setControlPoints] = useState(null); // canvas points from map
-  const [placedMarkers, setPlacedMarkers] = useState([]); // geo points placed by user
-  const [overlay, setOverlay] = useState(null); // { transform, rotation }
+  const [placementPoint, setPlacementPoint] = useState(null); // single geo point = overlay upper-left corner
+  const [placing, setPlacing] = useState(false); // single-click placement mode
+  const [overlay, setOverlay] = useState(null); // { transform, rotation, placementPoint }
   const [killaVisible, setKillaVisible] = useState(true);
   const [layerVisible, setLayerVisible] = useState(true);
 
@@ -146,28 +146,31 @@ export default function GeoMap() {
   }, [mapObjects]);
 
   // ─── OVERLAY COMPUTATION ──────────────────────────────────────
-  // Auto-compute affine transform when 3 markers are placed
+  // One-click placement: the clicked point becomes the upper-left corner
+  // of the cadastral map, scaled so one mustateel = exactly 10 acres.
   useEffect(() => {
-    if (!controlPoints || placedMarkers.length < 3 || !selectedMapId) return;
-    const transform = computeAffineTransform(controlPoints, placedMarkers);
-    if (transform) {
-      setOverlay({ transform, rotation: 0 });
-      // Fit map to overlay bounds
-      const allLatLngs = [];
-      for (const o of mapObjects) {
-        if (["mustateel", "muraba", "acre"].includes(o.type)) {
-          const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
-          for (const [cx, cy] of corners) allLatLngs.push(transform.transform(cx, cy));
-        } else if (o.points?.length) {
-          for (const p of o.points) allLatLngs.push(transform.transform(p.x, p.y));
-        }
-      }
-      if (allLatLngs.length > 0 && mapRef.current) {
-        const bounds = L.latLngBounds(allLatLngs.map(p => [p.lat, p.lng]));
-        mapRef.current.flyToBounds(bounds, { padding: [80, 80], duration: 1 });
+    if (!placementPoint || !selectedMapId || mapObjects.length === 0) return;
+    const transform = computeOneClickTransform(placementPoint, mapObjects, 0);
+    if (!transform) return;
+    setOverlay({ transform, rotation: 0, placementPoint });
+    // Fit map to overlay bounds
+    const allLatLngs = [];
+    for (const o of mapObjects) {
+      if (["mustateel", "muraba", "acre"].includes(o.type)) {
+        const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
+        for (const [cx, cy] of corners) allLatLngs.push(transform.transform(cx, cy));
+      } else if (o.points?.length) {
+        for (const p of o.points) allLatLngs.push(transform.transform(p.x, p.y));
+      } else if (o.start && o.end) {
+        allLatLngs.push(transform.transform(o.start.x, o.start.y));
+        allLatLngs.push(transform.transform(o.end.x, o.end.y));
       }
     }
-  }, [controlPoints, placedMarkers, selectedMapId, mapObjects]);
+    if (allLatLngs.length > 0 && mapRef.current) {
+      const bounds = L.latLngBounds(allLatLngs.map(p => [p.lat, p.lng]));
+      mapRef.current.flyToBounds(bounds, { padding: [80, 80], duration: 1 });
+    }
+  }, [placementPoint, selectedMapId, mapObjects]);
 
   // Mustateel area verification
   const mustateelAreas = useMemo(() => {
@@ -183,9 +186,10 @@ export default function GeoMap() {
 
   // ─── MAP CLICK HANDLER ───────────────────────────────────────
   const handleMapClick = useCallback((latlng) => {
-    // 1. Control point placement (if in georeferencing mode)
-    if (controlPoints && placedMarkers.length < 3) {
-      setPlacedMarkers(prev => [...prev, latlng]);
+    // 1. Single-click placement — clicked point becomes the overlay's upper-left corner
+    if (placing && selectedMapId) {
+      setPlacementPoint(latlng);
+      setPlacing(false);
       return;
     }
 
@@ -224,7 +228,7 @@ export default function GeoMap() {
         return null;
       });
     }
-  }, [controlPoints, placedMarkers.length, activeTool]);
+  }, [placing, selectedMapId, activeTool]);
 
   // ─── LIVE MEASUREMENT (mouse move) ─────────────────────────────
   const handleMouseMove = useCallback((latlng) => {
@@ -291,11 +295,9 @@ export default function GeoMap() {
   const handleSelectMap = (id) => {
     setSelectedMapId(id);
     setSelectedMoga("");
-    setPlacedMarkers([]);
+    setPlacementPoint(null);
     setOverlay(null);
-    const objs = id ? DrawingStateManager.deserialize(maps?.find(m => m.id === id)?.drawing_data || "[]") : [];
-    const cps = getControlPoints(objs);
-    setControlPoints(cps);
+    setPlacing(!!id); // enter single-click placement mode when a map is chosen
   };
 
   const handleFilterSelect = (field, value) => {
@@ -309,10 +311,16 @@ export default function GeoMap() {
 
   const handleClearOverlay = () => {
     setOverlay(null);
-    setPlacedMarkers([]);
-    setControlPoints(null);
+    setPlacementPoint(null);
+    setPlacing(false);
     setSelectedMapId("");
     setSelectedMoga("");
+  };
+
+  const handleRePlace = () => {
+    setOverlay(null);
+    setPlacementPoint(null);
+    setPlacing(true);
   };
 
   const handleClearMeasurements = () => { setMeasurements([]); setDraft(null); setLiveMeasurement(null); };
@@ -326,7 +334,13 @@ export default function GeoMap() {
     alert("Export: Use your browser's screenshot tool (Ctrl+Shift+S) or print to PDF via browser.");
   };
 
-  const handleRotationChange = (deg) => { setOverlay(prev => prev ? { ...prev, rotation: deg } : prev); };
+  const handleRotationChange = (deg) => {
+    setOverlay(prev => {
+      if (!prev?.placementPoint || mapObjects.length === 0) return prev;
+      const transform = computeOneClickTransform(prev.placementPoint, mapObjects, deg);
+      return transform ? { transform, rotation: deg, placementPoint: prev.placementPoint } : prev;
+    });
+  };
 
   const tileUrl = hybrid ? HYBRID_URL : SAT_URL;
 
@@ -394,10 +408,10 @@ export default function GeoMap() {
           />
         )}
 
-        {/* Control point markers (during georeferencing) */}
-        {placedMarkers.map((m, i) => (
-          <Marker key={i} position={[m.lat, m.lng]} icon={controlIcon(i + 1)} />
-        ))}
+        {/* Overlay anchor — single marker at the placed upper-left corner */}
+        {placementPoint && (
+          <Marker position={[placementPoint.lat, placementPoint.lng]} icon={controlIcon(1)} />
+        )}
 
         {/* Completed measurements */}
         {measurements.map(m => {
@@ -467,11 +481,11 @@ export default function GeoMap() {
           availableMogas={availableMogas}
           selectedMoga={selectedMoga}
           onSelectMoga={setSelectedMoga}
-          controlPoints={controlPoints}
-          placedMarkers={placedMarkers}
+          placing={placing}
           overlayReady={!!overlay}
           overlay={overlay}
           onRotationChange={handleRotationChange}
+          onRePlace={handleRePlace}
           onClear={handleClearOverlay}
           mustateelAreas={mustateelAreas}
           onClose={() => setShowOverlayPanel(false)}
@@ -499,6 +513,14 @@ export default function GeoMap() {
 
       {/* Live measurement info */}
       <MeasurementInfo measurement={liveMeasurement} draft={draft} zoom={zoom} />
+
+      {/* Placement hint — single-click mode */}
+      {placing && selectedMapId && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 z-[1001] bg-blue-600 text-white text-xs font-bold px-4 h-9 rounded-full shadow-2xl flex items-center gap-2 animate-pulse">
+          <MapPin className="w-4 h-4" />
+          نقشہ پر کلک کریں — اوپری بائیں کونے میں لگے گا
+        </div>
+      )}
 
       {/* Active tool hint */}
       {activeTool && !liveMeasurement && (

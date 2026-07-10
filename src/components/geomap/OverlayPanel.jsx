@@ -8,17 +8,15 @@ export default function OverlayPanel({
   availableMogas,
   selectedMoga,
   onSelectMoga,
-  controlPoints,
-  placedMarkers,
+  placing,
   overlayReady,
   overlay,
-  onPlaceMode,
   onRotationChange,
+  onRePlace,
   onClear,
   mustateelAreas,
   onClose,
 }) {
-  const stepIdx = placedMarkers.length; // 0, 1, 2, or 3 (done)
   const mustateels = mustateelAreas || [];
   const totalAcres = mustateels.reduce((s, m) => s + m.acres, 0);
   const expectedAcres = mustateels.reduce((s, m) => s + m.expected, 0);
@@ -78,40 +76,22 @@ export default function OverlayPanel({
           </div>
         )}
 
-        {/* 3-Point Control Marker Workflow */}
-        {selectedMapId && !overlayReady && controlPoints && (
+        {/* One-click placement */}
+        {selectedMapId && !overlayReady && (
           <div className="bg-white/5 rounded-lg p-2.5 space-y-2">
             <div className="flex items-center gap-1.5">
               <Crosshair className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-[10px] text-white/70 font-semibold">Ground Control Points</span>
+              <span className="text-[10px] text-white/70 font-semibold">Place Upper-Left Corner</span>
             </div>
             <p className="text-[9px] text-white/40 leading-relaxed">
-              Place 3 markers on the satellite map at the same locations as these cadastral map corners. The system auto-calculates scale, rotation & position.
+              {placing
+                ? "نقشہ پر کلک کریں — ہر مستطیل بالکل 10 ایکڑ کا رقبہ ڈھانپے گا۔"
+                : "Click once on the satellite to anchor the upper-left corner. Scale is fixed so one mustateel = exactly 10 acres."}
             </p>
-            {controlPoints.map((cp, i) => {
-              const placed = i < stepIdx;
-              const active = i === stepIdx;
-              return (
-                <div key={i} className={`flex items-center gap-2 px-2 py-1.5 rounded-md transition-all ${
-                  placed ? "bg-green-600/20" : active ? "bg-blue-600/30 animate-pulse" : "bg-white/5"
-                }`}>
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                    placed ? "bg-green-500 text-white" : active ? "bg-blue-500 text-white" : "bg-white/10 text-white/40"
-                  }`}>
-                    {placed ? "✓" : i + 1}
-                  </div>
-                  <span className={`text-[10px] font-medium ${placed ? "text-green-300" : active ? "text-blue-200" : "text-white/40"}`}>
-                    {cp.label}
-                  </span>
-                  {placed && <CheckCircle2 className="w-3 h-3 text-green-400 ml-auto" />}
-                  {active && <span className="text-[9px] text-blue-300 ml-auto">Click on map…</span>}
-                </div>
-              );
-            })}
-            {stepIdx === 3 && (
-              <div className="flex items-center gap-1.5 text-green-400 text-[10px] font-bold pt-1">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Computing transform…
+            {placing && (
+              <div className="flex items-center gap-1.5 text-blue-300 text-[10px] font-bold animate-pulse">
+                <Crosshair className="w-3.5 h-3.5" />
+                Click on map to place…
               </div>
             )}
           </div>
@@ -178,6 +158,13 @@ export default function OverlayPanel({
               </div>
             )}
 
+            <button
+              onClick={onRePlace}
+              className="w-full h-8 rounded-md text-xs font-bold bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 flex items-center justify-center gap-1.5 transition-all"
+            >
+              <Crosshair className="w-3.5 h-3.5" />
+              Re-place Corner
+            </button>
             <button
               onClick={onClear}
               className="w-full h-8 rounded-md text-xs font-bold bg-red-600/20 text-red-400 hover:bg-red-600/30 flex items-center justify-center gap-1.5 transition-all"
