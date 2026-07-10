@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
-import { Shield, LogOut, Globe, Lock } from "lucide-react";
+import { Shield, LogOut, Globe, Lock, Database } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
 
 const MODULES = [
   {
@@ -130,6 +131,7 @@ const MODULES = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [showRecovery, setShowRecovery] = useState(false);
 
   const { data: currentUser } = useQuery({
     queryKey: ["me"],
@@ -137,6 +139,11 @@ export default function Dashboard() {
   });
 
   const isAdmin = currentUser?.role === "admin";
+
+  const recoveryMaps = [
+    { id: "6a50caf149f33fc254601cbd", title: "21671R", moga_number: "21671" },
+    { id: "6a50b6f0e3b0ded6529f78ac", title: "28000 R", moga_number: "28000" },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 pb-20 antialiased">
@@ -153,6 +160,13 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowRecovery(true)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-slate-100 transition-colors"
+              title="Backup Recovery"
+            >
+              <Database className="w-4 h-4" strokeWidth={2} />
+            </button>
             {currentUser?.role === "admin" && (
               <button onClick={() => navigate("/admin")} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors">
                 <Shield className="w-4 h-4" strokeWidth={2} />
@@ -220,6 +234,10 @@ export default function Dashboard() {
       </main>
 
       <BottomNav />
+
+      {showRecovery && (
+        <BackupRecoveryDialog mapIds={recoveryMaps} onClose={() => setShowRecovery(false)} />
+      )}
     </div>
   );
 }
