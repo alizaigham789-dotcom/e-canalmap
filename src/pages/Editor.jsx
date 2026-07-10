@@ -247,60 +247,71 @@ export default function Editor() {
     };
 
     (async () => {
-      // 1. sessionStorage backup (HMR race condition)
+      // ── PARALLEL HYDRATION ──────────────────────────────────────────────
+      // Gather Server + sessionStorage + IndexedDB simultaneously, then pick
+      // the version with the MAXIMUM non-parcel object count. This guarantees
+      // the map loads with the most complete user data — recovering lost
+      // canals/chakbandis/khals/mouzas/outlets from whichever source has them.
       const backupKey = `chakbandi_backup_${mapData.id}`;
+
+      // Source A: sessionStorage (synchronous)
+      let sessionObjs = null, sessionViewport = null, sessionSettings = null;
       try {
-        const backupRaw = sessionStorage.getItem(backupKey);
-        if (backupRaw) {
-          const backup = JSON.parse(backupRaw);
-          if (backup.objects && countNonParcels(backup.objects) >= serverNonParcelCount) {
-            dsmRef.current = new DrawingStateManager(backup.objects);
-            loadedNonParcelCountRef.current = countNonParcels(backup.objects);
-            setObjects([...dsmRef.current.objects]);
-            syncUndoRedo();
-            if (backup.viewport) {
-              try { const vp = JSON.parse(backup.viewport); if (vp.zoom) setZoom(vp.zoom); if (vp.pan) setPan(vp.pan); } catch {}
-            }
-            sessionStorage.removeItem(backupKey);
-            applySettings(mapData.editor_settings);
-            saveRef.current();
-            return;
-          }
-          sessionStorage.removeItem(backupKey);
+        const raw = sessionStorage.getItem(backupKey);
+        if (raw) {
+          const b = JSON.parse(raw);
+          if (b.objects) { sessionObjs = b.objects; sessionViewport = b.viewport; sessionSettings = b.editorSettings; }
         }
       } catch {}
 
-      // 2. IndexedDB backup (crash / phone reboot) — use if it has MORE non-parcel objects than server
+      // Source B: IndexedDB (async — crash / phone reboot recovery)
       const idbBackup = await getBackup(mapData.id);
-      if (idbBackup && idbBackup.objects && countNonParcels(idbBackup.objects) > serverNonParcelCount) {
-        dsmRef.current = new DrawingStateManager(idbBackup.objects);
-        loadedNonParcelCountRef.current = countNonParcels(idbBackup.objects);
-        setObjects([...dsmRef.current.objects]);
-        syncUndoRedo();
-        if (idbBackup.viewport) {
-          try { const vp = JSON.parse(idbBackup.viewport); if (vp.zoom) setZoom(vp.zoom); if (vp.pan) setPan(vp.pan); } catch {}
-        }
-        applySettings(idbBackup.editorSettings || mapData.editor_settings);
-        saveRef.current();
-        return;
-      }
+      const idbObjs = idbBackup?.objects || null;
+      const idbViewport = idbBackup?.viewport || null;
+      const idbSettings = idbBackup?.editorSettings || null;
 
-      // 3. Server data
-      if (mapData.drawing_data) {
-        const loaded = DrawingStateManager.deserialize(mapData.drawing_data);
-        dsmRef.current = new DrawingStateManager(loaded);
-        loadedNonParcelCountRef.current = countNonParcels(loaded);
-        setObjects([...dsmRef.current.objects]);
-        syncUndoRedo();
+      // Build candidate list with non-parcel + total counts
+      const candidates = [];
+      if (serverObjs.length > 0) candidates.push({ src: "server", objects: serverObjs, viewport: mapData.viewport, settings: mapData.editor_settings, np: serverNonParcelCount, total: serverObjs.length });
+      if (sessionObjs) candidates.push({ src: "session", objects: sessionObjs, viewport: sessionViewport, settings: sessionSettings, np: countNonParcels(sessionObjs), total: sessionObjs.length, clearSession: true });
+      if (idbObjs) candidates.push({ src: "indexeddb", objects: idbObjs, viewport: idbViewport, settings: idbSettings, np: countNonParcels(idbObjs), total: idbObjs.length });
+
+      // Pick the version with the most non-parcel objects; tiebreak by total count
+      let best = null;
+      for (const c of candidates) {
+        if (!best || c.np > best.np || (c.np === best.np && c.total > best.total)) best = c;
       }
-      if (mapData.viewport) {
-        try {
-          const vp = JSON.parse(mapData.viewport);
-          if (vp.zoom) setZoom(vp.zoom);
-          if (vp.pan) setPan(vp.pan);
-        } catch {}
+      if (!best) best = { src: "server", objects: [], viewport: mapData.viewport, settings: mapData.editor_settings, np: 0, total: 0 };
+
+      // Hydrate from the winning source
+      dsmRef.current = new DrawingStateManager(best.objects);
+      loadedNonParcelCountRef.current = best.np; // acts as maxValidNonParcelCountRef baseline
+      setObjects([...dsmRef.current.objects]);
+      syncUndoRedo();
+      if (best.viewport) {
+        try { const vp = JSON.parse(best.viewport); if (vp.zoom) setZoom(vp.zoom); if (vp.pan) setPan(vp.pan); } catch {}
       }
-      applySettings(mapData.editor_settings);
+      applySettings(best.settings);
+
+      // ── AUTO-HEAL: if a backup won over the server (more non-parcels), push
+      // it back to the server so the corrupted/blank server state is recovered.
+      // This is how 21671R / 28000 R get restored when their editing device
+      // reopens them — the local backup heals the server automatically.
+      if (best.src !== "server" && best.np > serverNonParcelCount) {
+        if (best.clearSession) { try { sessionStorage.removeItem(backupKey); } catch {} }
+        const recoveredPayload = {
+          drawing_data: dsmRef.current.serialize(),
+          total_parcels: dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length,
+          viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+          editor_settings: settingsRef.current(),
+        };
+        queryClient.setQueryData(["map", mapData.id], (old) => old ? { ...old, ...recoveredPayload } : old);
+        base44.entities.LandMap.update(mapData.id, recoveredPayload).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["maps"] });
+          toast.success(`Recovered ${best.np} non-parcel objects from ${best.src === "session" ? "session backup" : "crash backup"}`, { duration: 4000 });
+        }).catch(() => {});
+        saveBackup(mapData.id, { objects: best.objects, viewport: best.viewport, editorSettings: best.settings });
+      }
     })();
   }, [mapData]);
 
