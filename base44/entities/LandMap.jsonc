@@ -64,6 +64,10 @@
       "type": "string",
       "description": "JSON string of zoom/pan state"
     },
+    "editor_settings": {
+      "type": "string",
+      "description": "JSON string of editor settings (layers, colors, snap, killa, grid flags)"
+    },
     "thumbnail_url": {
       "type": "string"
     },

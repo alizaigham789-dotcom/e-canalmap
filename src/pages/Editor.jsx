@@ -24,6 +24,7 @@ import {
   saveToClipboard, loadFromClipboard, hasClipboard,
 } from "@/lib/gisEngine";
 import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, Wand2 } from "lucide-react";
+import { saveBackup, getBackup, setLastMapId } from "@/lib/mapBackup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
@@ -130,16 +131,32 @@ export default function Editor() {
   panRef.current = pan;
   mustateelStartNumRef.current = mustateelStartNum;
 
+  // Build a JSON string of all editor settings to persist across sessions
+  const settingsRef = useRef(null);
+  const buildEditorSettings = () => JSON.stringify({
+    layers, colorSettings, bgColor, pageBorderStyle,
+    snapSettings, killaVisibility, killaNumbersGlobal, visibleMogas, gridFlags,
+  });
+  settingsRef.current = buildEditorSettings;
+
   // Always-current save function — avoids stale closures in debounced autosave & unmount
   const saveRef = useRef(() => {});
   saveRef.current = () => {
     if (!mapId) return;
     const parcels = dsmRef.current.getByType("mustateel").length +
       dsmRef.current.getByType("muraba").length;
-    saveMutation.mutate({
+    const payload = {
       drawing_data: dsmRef.current.serialize(),
       total_parcels: parcels,
       viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+      editor_settings: settingsRef.current(),
+    };
+    saveMutation.mutate(payload);
+    // IndexedDB crash-recovery backup — survives app kill / phone reboot
+    saveBackup(mapId, {
+      objects: dsmRef.current.objects,
+      viewport: payload.viewport,
+      editorSettings: payload.editor_settings,
     });
   };
 
@@ -163,6 +180,7 @@ export default function Editor() {
         drawing_data: dsmRef.current.serialize(),
         total_parcels: dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length,
         viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+        editor_settings: settingsRef.current(),
       } } : old);
       // Refresh the maps list so MapList shows updated parcel count / status
       queryClient.invalidateQueries({ queryKey: ["maps"] });
@@ -176,48 +194,78 @@ export default function Editor() {
   useEffect(() => {
     if (!mapData || mapData.id === loadedMapIdRef.current) return;
     loadedMapIdRef.current = mapData.id;
+    setLastMapId(mapData.id);
 
-    // Check sessionStorage for a backup saved during unmount (HMR race condition)
-    const backupKey = `chakbandi_backup_${mapData.id}`;
-    try {
-      const backupRaw = sessionStorage.getItem(backupKey);
-      if (backupRaw) {
-        const backup = JSON.parse(backupRaw);
-        // Only use backup if it has more objects than server data (i.e. newer)
-        const serverObjs = mapData.drawing_data ? DrawingStateManager.deserialize(mapData.drawing_data) : [];
-        if (backup.objects && backup.objects.length >= serverObjs.length) {
-          dsmRef.current = new DrawingStateManager(backup.objects);
-          setObjects([...dsmRef.current.objects]);
-          syncUndoRedo();
-          if (backup.viewport) {
-            try {
-              const vp = JSON.parse(backup.viewport);
-              if (vp.zoom) setZoom(vp.zoom);
-              if (vp.pan) setPan(vp.pan);
-            } catch {}
+    const serverObjs = mapData.drawing_data ? DrawingStateManager.deserialize(mapData.drawing_data) : [];
+    const applySettings = (settingsJson) => {
+      if (!settingsJson) return;
+      try {
+        const s = JSON.parse(settingsJson);
+        if (s.layers) setLayers(s.layers);
+        if (s.colorSettings) setColorSettings(s.colorSettings);
+        if (s.bgColor) setBgColor(s.bgColor);
+        if (s.pageBorderStyle) setPageBorderStyle(s.pageBorderStyle);
+        if (s.snapSettings) setSnapSettings(s.snapSettings);
+        if (s.killaVisibility) setKillaVisibility(s.killaVisibility);
+        if (typeof s.killaNumbersGlobal === "boolean") setKillaNumbersGlobal(s.killaNumbersGlobal);
+        if (s.visibleMogas) setVisibleMogas(s.visibleMogas);
+        if (s.gridFlags) setGridFlags(s.gridFlags);
+      } catch {}
+    };
+
+    (async () => {
+      // 1. sessionStorage backup (HMR race condition)
+      const backupKey = `chakbandi_backup_${mapData.id}`;
+      try {
+        const backupRaw = sessionStorage.getItem(backupKey);
+        if (backupRaw) {
+          const backup = JSON.parse(backupRaw);
+          if (backup.objects && backup.objects.length >= serverObjs.length) {
+            dsmRef.current = new DrawingStateManager(backup.objects);
+            setObjects([...dsmRef.current.objects]);
+            syncUndoRedo();
+            if (backup.viewport) {
+              try { const vp = JSON.parse(backup.viewport); if (vp.zoom) setZoom(vp.zoom); if (vp.pan) setPan(vp.pan); } catch {}
+            }
+            sessionStorage.removeItem(backupKey);
+            applySettings(mapData.editor_settings);
+            saveRef.current();
+            return;
           }
           sessionStorage.removeItem(backupKey);
-          // Save to server to sync the recovered data
-          saveRef.current();
-          return;
         }
-        sessionStorage.removeItem(backupKey);
-      }
-    } catch {}
-
-    if (mapData.drawing_data) {
-      const loaded = DrawingStateManager.deserialize(mapData.drawing_data);
-      dsmRef.current = new DrawingStateManager(loaded);
-      setObjects([...dsmRef.current.objects]);
-      syncUndoRedo();
-    }
-    if (mapData.viewport) {
-      try {
-        const vp = JSON.parse(mapData.viewport);
-        if (vp.zoom) setZoom(vp.zoom);
-        if (vp.pan) setPan(vp.pan);
       } catch {}
-    }
+
+      // 2. IndexedDB backup (crash / phone reboot) — use if it has MORE objects than server
+      const idbBackup = await getBackup(mapData.id);
+      if (idbBackup && idbBackup.objects && idbBackup.objects.length > serverObjs.length) {
+        dsmRef.current = new DrawingStateManager(idbBackup.objects);
+        setObjects([...dsmRef.current.objects]);
+        syncUndoRedo();
+        if (idbBackup.viewport) {
+          try { const vp = JSON.parse(idbBackup.viewport); if (vp.zoom) setZoom(vp.zoom); if (vp.pan) setPan(vp.pan); } catch {}
+        }
+        applySettings(idbBackup.editorSettings || mapData.editor_settings);
+        saveRef.current();
+        return;
+      }
+
+      // 3. Server data
+      if (mapData.drawing_data) {
+        const loaded = DrawingStateManager.deserialize(mapData.drawing_data);
+        dsmRef.current = new DrawingStateManager(loaded);
+        setObjects([...dsmRef.current.objects]);
+        syncUndoRedo();
+      }
+      if (mapData.viewport) {
+        try {
+          const vp = JSON.parse(mapData.viewport);
+          if (vp.zoom) setZoom(vp.zoom);
+          if (vp.pan) setPan(vp.pan);
+        } catch {}
+      }
+      applySettings(mapData.editor_settings);
+    })();
   }, [mapData]);
 
   const syncUndoRedo = () => {
@@ -272,11 +320,18 @@ export default function Editor() {
           timestamp: Date.now(),
         }));
       } catch {}
+      // IndexedDB crash-recovery backup — survives app kill / phone reboot
+      saveBackup(currentMapId, {
+        objects: dsmRef.current.objects,
+        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+        editorSettings: settingsRef.current(),
+      });
       // Async save to server
       base44.entities.LandMap.update(currentMapId, {
         drawing_data: dsmRef.current.serialize(),
         total_parcels: parcels,
         viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+        editor_settings: settingsRef.current(),
       }).then(() => {
         queryClient.removeQueries({ queryKey: ["map", currentMapId] });
         queryClient.invalidateQueries({ queryKey: ["maps"] });
@@ -289,6 +344,15 @@ export default function Editor() {
       });
     };
   }, []);
+
+  // Auto-save when editor settings change (layers, colors, snap, killa, grid, etc.)
+  // Only fires after the map has loaded — avoids overwriting restored settings.
+  const settingsAppliedRef = useRef(false);
+  useEffect(() => {
+    if (!loadedMapIdRef.current) return;
+    if (!settingsAppliedRef.current) { settingsAppliedRef.current = true; return; }
+    scheduleAutoSave();
+  }, [layers, colorSettings, bgColor, pageBorderStyle, snapSettings, killaVisibility, killaNumbersGlobal, visibleMogas, gridFlags]);
 
   const handleAddObject = useCallback((type, data) => {
     if (type === "__delete__") {
@@ -656,17 +720,19 @@ export default function Editor() {
       drawing_data: dsmRef.current.serialize(),
       total_parcels: parcels,
       viewport: JSON.stringify({ zoom, pan }),
+      editor_settings: settingsRef.current(),
       ...extra,
     });
   };
 
   const handleStatusChange = (status) => {
-    // Always include drawing_data — prevents objects from being wiped on server
+    // Always include drawing_data + editor_settings — prevents objects/settings from being wiped on server
     saveMutation.mutate({
       status,
       drawing_data: dsmRef.current.serialize(),
       total_parcels: dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length,
       viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+      editor_settings: settingsRef.current(),
     });
     queryClient.setQueryData(["map", mapId], (old) => old ? { ...old, status } : old);
   };
