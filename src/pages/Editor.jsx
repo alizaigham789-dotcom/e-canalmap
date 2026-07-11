@@ -995,10 +995,10 @@ export default function Editor() {
       viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
       editor_settings: settingsRef.current(),
     }).then(() => {
-      // Never lower the safeguard baseline — if non-parcels dropped below the loaded
-      // peak (e.g. after a workspace move / HMR remount with stale data), keep the
-      // higher baseline so future auto-saves stay protected.
-      loadedNonParcelCountRef.current = Math.max(loadedNonParcelCountRef.current, nonParcels);
+      // After explicit Permanent Save, reset the safeguard baseline to the current count —
+      // the user confirmed this state is intentional (including any deletions).
+      // Auto-heal on next load will restore from the server snapshot if a higher peak exists.
+      loadedNonParcelCountRef.current = nonParcels;
       queryClient.invalidateQueries({ queryKey: ["maps"] });
       trySnapshot();
       toast.success(`Permanent Save complete — ${allObjs.length} objects (${parcels} parcels, ${nonParcels} lines/features)`, { duration: 3000 });
