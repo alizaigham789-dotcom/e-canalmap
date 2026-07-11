@@ -826,9 +826,28 @@ export default function Editor() {
   };
 
   const handleDeleteObject = (id) => {
+    const obj = dsmRef.current.objects.find(o => o.id === id);
+    const wasMustateel = obj?.type === "mustateel";
+    const idx = dsmRef.current.objects.findIndex(o => o.id === id);
     explicitDeleteRef.current = true;
     dsmRef.current.remove(id);
-    setSelectedId(null);
+    if (wasMustateel) {
+      // Auto-select the previous mustateel so the user can keep deleting / editing
+      // without re-selecting each time. Falls back to the next mustateel, then null.
+      const remaining = dsmRef.current.objects;
+      let prev = null;
+      for (let i = idx - 1; i >= 0; i--) {
+        if (remaining[i]?.type === "mustateel") { prev = remaining[i]; break; }
+      }
+      if (!prev) {
+        for (let i = idx; i < remaining.length; i++) {
+          if (remaining[i]?.type === "mustateel") { prev = remaining[i]; break; }
+        }
+      }
+      setSelectedId(prev ? prev.id : null);
+    } else if (selectedId === id) {
+      setSelectedId(null);
+    }
     syncObjects();
   };
 
@@ -1019,7 +1038,7 @@ export default function Editor() {
       if ((e.ctrlKey || e.metaKey) && e.key === "v") { e.preventDefault(); handlePaste(); }
       if (e.key === "Escape") handleStopDrawing();
       if (e.key === "Delete" || e.key === "Backspace") {
-        if (selectedId) handleDeleteObject(selectedId);
+        if (selectedId) { e.preventDefault(); handleDeleteObject(selectedId); }
       }
       const shortcuts = { v: "select", h: "pan", d: "move", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", u: "mouza", g: "damageMarker", x: "measure", e: "eraser", f: "fitView", q: "boxSelect" };
       if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) {

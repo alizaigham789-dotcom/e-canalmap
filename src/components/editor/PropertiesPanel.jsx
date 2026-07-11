@@ -167,6 +167,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               </div>
               <SpacingControl label="Line Spacing" value={local.width || 14} min={2} max={150} step={2} onChange={v => commit("width", v)} unit="ft" />
               <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
+              <p className="text-[9px] text-slate-400">Double-click any anchor point to delete it (remove extra points)</p>
             </>
           )}
 

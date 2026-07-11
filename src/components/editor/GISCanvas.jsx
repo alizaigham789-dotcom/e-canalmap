@@ -535,6 +535,11 @@ const GISCanvas = forwardRef(function GISCanvas(
       if (movingObj && ["mustateel", "muraba", "acre"].includes(movingObj.type)) {
         const snapped = snapMovePosition({ ...movingObj, x: newX, y: newY }, objectsRef.current);
         newX = snapped.x; newY = snapped.y;
+        // Block move if it would overlap another parcel — same rule as drawing
+        const overlaps = objectsRef.current
+          .filter(o => o.id !== movingObj.id && ["mustateel", "muraba", "acre"].includes(o.type))
+          .some(o => rectsOverlap({ x: newX, y: newY, w: movingObj.w, h: movingObj.h }, o));
+        if (overlaps) return;
         onUpdateObject(movingObjId.current, { x: newX, y: newY });
       } else if (movingObj && movingObjOrigPoints.current) {
         const dx = worldRaw.x - moveOffset.current.x;
@@ -738,15 +743,23 @@ const GISCanvas = forwardRef(function GISCanvas(
       const selectedObj = selectedId ? objectsRef.current.find(o => o.id === selectedId) : null;
       if (selectedObj && ["chakbandi", "canal", "khal"].includes(selectedObj.type) && selectedObj.points) {
         const vThresh = 10 / zoom;
-        const onVertex = selectedObj.points.some(p => Math.hypot(p.x - worldRaw.x, p.y - worldRaw.y) < vThresh);
-        if (!onVertex) {
-          const near = nearestPointOnPolyline(worldRaw.x, worldRaw.y, selectedObj.points);
-          if (near && near.dist < 15 / zoom) {
-            const newPoints = [...selectedObj.points];
-            newPoints.splice(near.segIdx + 1, 0, { x: near.x, y: near.y });
+        const vIdx = selectedObj.points.findIndex(p => Math.hypot(p.x - worldRaw.x, p.y - worldRaw.y) < vThresh);
+        if (vIdx !== -1) {
+          // Double-click on an existing anchor point → delete it (remove extra points).
+          // Keep at least 2 points so the line stays valid.
+          if (selectedObj.points.length > 2) {
+            const newPoints = selectedObj.points.filter((_, i) => i !== vIdx);
             onUpdateObject(selectedObj.id, { points: newPoints });
-            return;
           }
+          return;
+        }
+        // Not on a vertex → insert a new anchor point on the nearest line segment
+        const near = nearestPointOnPolyline(worldRaw.x, worldRaw.y, selectedObj.points);
+        if (near && near.dist < 15 / zoom) {
+          const newPoints = [...selectedObj.points];
+          newPoints.splice(near.segIdx + 1, 0, { x: near.x, y: near.y });
+          onUpdateObject(selectedObj.id, { points: newPoints });
+          return;
         }
       }
       const hit = hitTest(worldRaw.x, worldRaw.y, objectsRef.current);
