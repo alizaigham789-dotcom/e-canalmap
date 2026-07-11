@@ -12,40 +12,58 @@ export function isUrduText(text) {
   return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text || "");
 }
 
-// Midpoint + upright tangent angle of a polyline (for placing a single label)
-function canalMidpointAngle(points) {
-  const mid = Math.floor(points.length / 2);
-  const a = points[Math.max(0, mid - 1)];
-  const b = points[Math.min(points.length - 1, mid)];
-  let angle = Math.atan2(b.y - a.y, b.x - a.x);
-  if (angle > Math.PI / 2 || angle < -Math.PI / 2) angle += Math.PI; // keep upright
-  return { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, angle };
-}
-
-// CANVAS: Urdu canal name — single rotated connected label at the midpoint
+// CANVAS: Urdu canal name — repeating connected labels along the path.
+// Urdu is a connected RTL script, so the whole name is drawn as one string at
+// regular intervals (every ~5 acres), kept upright, in Jameel Noori Nastaleeq.
 function drawCanalNameUrduOnCanvas(ctx, points, text, fontSize) {
-  const { cx, cy, angle } = canalMidpointAngle(points);
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(angle);
+  const { segLens, total } = pathSegments(points);
+  if (total < 1) return;
+  const repeatSpacing = 1100;
   ctx.font = `bold ${fontSize}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  try { ctx.direction = "rtl"; } catch {}
-  ctx.strokeStyle = "rgba(0,0,0,0.85)";
-  ctx.lineWidth = Math.max(2, fontSize * 0.18);
-  ctx.lineJoin = "round";
-  ctx.strokeText(text, 0, 0);
-  ctx.fillStyle = "#fef08a";
-  ctx.fillText(text, 0, 0);
-  ctx.restore();
+  const labelW = ctx.measureText(text).width || (text.length * fontSize * 0.5);
+  for (let dist = labelW / 2; dist + labelW / 2 < total; dist += repeatSpacing) {
+    let segIdx = 0, segRem = segLens[0];
+    const adv = advanceAlongPath(segLens, segIdx, segRem, dist);
+    if (!adv) break;
+    const pos = pointAtDistance(points, segLens, adv.segIdx, adv.segRemaining);
+    if (!pos) break;
+    let ang = pos.angle;
+    if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI; // keep upright
+    ctx.save();
+    ctx.translate(pos.x, pos.y);
+    ctx.rotate(ang);
+    try { ctx.direction = "rtl"; } catch {}
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.lineWidth = Math.max(2, fontSize * 0.18);
+    ctx.lineJoin = "round";
+    ctx.strokeText(text, 0, 0);
+    ctx.fillStyle = "#fef08a";
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
 }
 
-// SVG: Urdu canal name — single rotated connected label at the midpoint
+// SVG: Urdu canal name — repeating connected labels along the path
 function svgCanalNameUrdu(points, text, fontSize) {
-  const { cx, cy, angle } = canalMidpointAngle(points);
-  const deg = (angle * 180) / Math.PI;
-  return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="#fef08a" stroke="rgba(0,0,0,0.85)" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" direction="rtl" transform="rotate(${deg.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})">${text}</text>`;
+  const { segLens, total } = pathSegments(points);
+  if (total < 1) return "";
+  const repeatSpacing = 1100;
+  const labelW = text.length * fontSize * 0.6;
+  let svg = "";
+  for (let dist = labelW / 2; dist + labelW / 2 < total; dist += repeatSpacing) {
+    let segIdx = 0, segRem = segLens[0];
+    const adv = advanceAlongPath(segLens, segIdx, segRem, dist);
+    if (!adv) break;
+    const pos = pointAtDistance(points, segLens, adv.segIdx, adv.segRemaining);
+    if (!pos) break;
+    let ang = pos.angle;
+    if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
+    const deg = (ang * 180) / Math.PI;
+    svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="#fef08a" stroke="rgba(0,0,0,0.85)" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" direction="rtl" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${text}</text>`;
+  }
+  return svg;
 }
 
 // Moga fraction box = 2 acres (440×198), font reduced to fit

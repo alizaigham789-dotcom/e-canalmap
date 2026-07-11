@@ -253,16 +253,11 @@ function svgCanal(obj, C, idx) {
   // Font = mustateel label font + 2 points
   const cf = canalNameFont();
   const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf) : "";
-  // Endpoint nodes — identical marker at head & tail (single node, matching shape)
-  const startPt = obj.points[0], endPt = obj.points[obj.points.length - 1];
-  const nodeR = halfW * 1.3;
-  const nodesSvg = `<circle cx="${startPt.x.toFixed(1)}" cy="${startPt.y.toFixed(1)}" r="${nodeR.toFixed(1)}" fill="${strokeColor}" stroke="#ffffff" stroke-width="1.5"/><circle cx="${endPt.x.toFixed(1)}" cy="${endPt.y.toFixed(1)}" r="${nodeR.toFixed(1)}" fill="${strokeColor}" stroke="#ffffff" stroke-width="1.5"/>`;
   return `
 <g key="canal_${idx}">
   <path d="${fillPath}" fill="${fillColor}" />
   <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  ${nodesSvg}
   ${nameSvg}
 </g>`;
 }

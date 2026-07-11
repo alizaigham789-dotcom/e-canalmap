@@ -152,14 +152,24 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
     }
 
-    // Vertex handles for the selected chakbandi/canal/khal — draggable editing
+    // Vertex handles for the selected chakbandi/canal/khal — draggable editing.
+    // Canal start & end show square anchor handles (matching shape on both ends);
+    // intermediate vertices stay circular. Edit-only — never drawn in print/preview.
     const selObj = objects.find(o => o.id === selectedId);
     if (selObj && ["chakbandi", "canal", "khal"].includes(selObj.type) && selObj.points) {
-      for (const p of selObj.points) {
+      const pts = selObj.points;
+      const isCanal = selObj.type === "canal";
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
         ctx.fillStyle = "#3b82f6";
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 1.5 / zoom;
-        ctx.beginPath(); ctx.arc(p.x, p.y, 6 / zoom, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        if (isCanal && (i === 0 || i === pts.length - 1)) {
+          const s = 12 / zoom;
+          ctx.beginPath(); ctx.rect(p.x - s / 2, p.y - s / 2, s, s); ctx.fill(); ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.arc(p.x, p.y, 6 / zoom, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        }
       }
     }
 

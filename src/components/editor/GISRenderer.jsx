@@ -357,51 +357,59 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
 
   // Layer 5: Canal name INSIDE the blue canal — repeats every ~5 acres along the path,
   // follows canal geometry (straight or curved), highly visible colour, 5× font size.
+  // English: char-by-char on path. Urdu: whole connected labels at the same intervals.
   if (obj.name) {
     drawTextOnCanalPath(ctx, obj.points, obj.name, zoom);
   }
-
-  // Endpoint nodes — identical marker at the head (start) and tail (end) so both
-  // canal terminators show as a single node, with the same shape on both ends.
-  const nodeR = halfW * 1.3;
-  ctx.fillStyle = bankColor;
-  for (const pt of [obj.points[0], obj.points[obj.points.length - 1]]) {
-    ctx.beginPath();
-    ctx.arc(pt.x, pt.y, nodeR, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 1.5 / zoom;
-    ctx.stroke();
-  }
 }
 
-// ─── Urdu canal name — single connected label in Jameel Noori Nastaleeq ─────
+// ─── Urdu canal name — repeating connected labels in Jameel Noori Nastaleeq ─
 // Urdu is a connected RTL script: char-by-char on-path rendering breaks the
-// joins. So the Urdu name is drawn as one whole rotated string at the canal
-// midpoint, kept upright, in Jameel Noori Nastaleeq.
+// joins. So the Urdu name is drawn as whole rotated strings placed along the
+// canal centerline at regular intervals (every ~5 acres), kept upright, in
+// Jameel Noori Nastaleeq — repeating the same way the English name does.
 function drawCanalNameUrduEditor(ctx, points, text, zoom) {
   const cfWorld = canalNameFont();
   const cf = screenClampedFont(cfWorld, zoom, 12, 32);
-  const mid = Math.floor(points.length / 2);
-  const a = points[Math.max(0, mid - 1)];
-  const b = points[Math.min(points.length - 1, mid)];
-  let angle = Math.atan2(b.y - a.y, b.x - a.x);
-  if (angle > Math.PI / 2 || angle < -Math.PI / 2) angle += Math.PI;
-  const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(angle);
+  const segLens = [];
+  let totalLen = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    const d = Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
+    segLens.push(d); totalLen += d;
+  }
+  if (totalLen < 1) return;
   ctx.font = `bold ${cf}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  try { ctx.direction = "rtl"; } catch {}
-  ctx.strokeStyle = "rgba(0,0,0,0.85)";
-  ctx.lineWidth = Math.max(2, cf * 0.18);
-  ctx.lineJoin = "round";
-  ctx.strokeText(text, 0, 0);
-  ctx.fillStyle = "#fef08a";
-  ctx.fillText(text, 0, 0);
-  ctx.restore();
+  const labelW = ctx.measureText(text).width || (text.length * cf * 0.5);
+  const repeatSpacing = 1100; // ~5 acres of frontage — matches English repeating
+  for (let dist = labelW / 2; dist + labelW / 2 < totalLen; dist += repeatSpacing) {
+    let acc = 0, px = 0, py = 0, ang = 0, placed = false;
+    for (let i = 0; i < segLens.length; i++) {
+      if (acc + segLens[i] >= dist) {
+        const t = segLens[i] > 0 ? (dist - acc) / segLens[i] : 0;
+        const a = points[i], b = points[i + 1];
+        px = a.x + (b.x - a.x) * t;
+        py = a.y + (b.y - a.y) * t;
+        ang = Math.atan2(b.y - a.y, b.x - a.x);
+        placed = true; break;
+      }
+      acc += segLens[i];
+    }
+    if (!placed) break;
+    if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI; // keep upright
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(ang);
+    try { ctx.direction = "rtl"; } catch {}
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.lineWidth = Math.max(2, cf * 0.18);
+    ctx.lineJoin = "round";
+    ctx.strokeText(text, 0, 0);
+    ctx.fillStyle = "#fef08a";
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
 }
 
 // ─── Text-on-canal-path ──────────────────────────────────────────────────────
@@ -848,9 +856,19 @@ export function drawCanalDraft(ctx, canalDraft, snapPos, zoom, C) {
     for (const p of side) ctx.lineTo(p.x, p.y); ctx.stroke();
   }
   ctx.setLineDash([]);
-  for (const pt of canalDraft) {
+  // Point markers — square anchor at start & end (matching shape), circles between.
+  // Draw-only handles; never rendered in print/preview.
+  for (let i = 0; i < canalDraft.length; i++) {
+    const pt = canalDraft[i];
     ctx.fillStyle = C.canalStroke || "#3b82f6";
-    ctx.beginPath(); ctx.arc(pt.x, pt.y, 4/zoom, 0, Math.PI*2); ctx.fill();
+    if (i === 0 || i === canalDraft.length - 1) {
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.5 / zoom;
+      const s = 10 / zoom;
+      ctx.beginPath(); ctx.rect(pt.x - s / 2, pt.y - s / 2, s, s); ctx.fill(); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, 4 / zoom, 0, Math.PI * 2); ctx.fill();
+    }
   }
 }
 
