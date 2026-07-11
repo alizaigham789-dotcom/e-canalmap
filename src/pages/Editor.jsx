@@ -406,7 +406,7 @@ export default function Editor() {
 
   const scheduleAutoSave = () => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => saveRef.current(), 200);
+    autoSaveTimer.current = setTimeout(() => { saveRef.current(); trySnapshot(); }, 200);
   };
 
   // Track current mapId for unmount save (cleanup has [] deps, can't read fresh mapId)
@@ -995,7 +995,10 @@ export default function Editor() {
       viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
       editor_settings: settingsRef.current(),
     }).then(() => {
-      loadedNonParcelCountRef.current = nonParcels;
+      // Never lower the safeguard baseline — if non-parcels dropped below the loaded
+      // peak (e.g. after a workspace move / HMR remount with stale data), keep the
+      // higher baseline so future auto-saves stay protected.
+      loadedNonParcelCountRef.current = Math.max(loadedNonParcelCountRef.current, nonParcels);
       queryClient.invalidateQueries({ queryKey: ["maps"] });
       trySnapshot();
       toast.success(`Permanent Save complete — ${allObjs.length} objects (${parcels} parcels, ${nonParcels} lines/features)`, { duration: 3000 });

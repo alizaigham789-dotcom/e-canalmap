@@ -326,14 +326,25 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#2B7AB8");
 
   if (obj.canalStyle === "flat") {
-    // Flat style — rounded ribbon: thin darker outline + single semi-transparent blue water body
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    // Flat style — squared ends, two parallel blue boundary lines, blue water center
+    const halfW = w / 2;
+    const left = getParallelPolyline(obj.points, -halfW);
+    const right = getParallelPolyline(obj.points, halfW);
+    ctx.fillStyle = fillC;
+    ctx.beginPath();
+    drawSmoothPath(ctx, left);
+    ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
+    drawSmoothPath(ctx, [...right].reverse());
+    ctx.closePath();
+    ctx.fill();
     ctx.strokeStyle = strokeC;
-    ctx.lineWidth = w + 2;
-    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
-    ctx.strokeStyle = fillC;
-    ctx.lineWidth = w;
-    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+    ctx.lineWidth = Math.max(2, 3 / zoom);
+    ctx.lineCap = "butt"; ctx.lineJoin = "round";
+    for (const side of [left, right]) {
+      ctx.beginPath();
+      drawSmoothPath(ctx, side);
+      ctx.stroke();
+    }
   } else {
     // 3D ribbon — soft glow halo + darker outline + body + inner highlight
     ctx.lineCap = "round"; ctx.lineJoin = "round";

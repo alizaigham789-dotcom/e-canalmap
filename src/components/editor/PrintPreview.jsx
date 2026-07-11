@@ -250,10 +250,15 @@ function svgCanal(obj, C, idx) {
   const cf = canalNameFont();
   const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf) : "";
   if (obj.canalStyle === "flat") {
+    const halfW = w / 2;
+    const fillPath = parallelSmoothClosedPath(obj.points, halfW);
+    const left = getParallelPolyline(obj.points, -halfW);
+    const right = getParallelPolyline(obj.points, halfW);
     return `
 <g key="canal_${idx}">
-  <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 2}" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${fillPath}" fill="${fillColor}" />
+  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
+  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
   ${nameSvg}
 </g>`;
   }
