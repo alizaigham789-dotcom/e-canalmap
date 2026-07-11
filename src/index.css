@@ -120,6 +120,30 @@
   cursor: cell;
 }
 
+/* GeoMap — transparent killa label tooltip (no white background) */
+.leaflet-tooltip.killa-label {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.leaflet-tooltip-top.killa-label::before,
+.leaflet-tooltip-bottom.killa-label::before,
+.leaflet-tooltip-left.killa-label::before,
+.leaflet-tooltip-right.killa-label::before,
+.leaflet-tooltip-center.killa-label::before {
+  display: none !important;
+}
+
+/* GeoMap — placement coordinates tooltip */
+.leaflet-tooltip.placement-coords-tooltip {
+  background: rgba(255,255,255,0.97) !important;
+  border: 2px solid #ef4444 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25) !important;
+  padding: 6px 10px !important;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

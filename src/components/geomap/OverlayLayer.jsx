@@ -26,7 +26,7 @@ function KillaGridLines({ obj, transform, zoom }) {
     lines.push([[hL.lat, hL.lng], [hR.lat, hR.lng]]);
   }
   return lines.map((pts, i) => (
-    <Polyline key={i} positions={pts} pathOptions={{ color: "#ef4444", weight: 0.8, opacity: 0.3 }} />
+    <Polyline key={i} positions={pts} pathOptions={{ color: "#dc2626", weight: 1.5, opacity: 0.6 }} />
   ));
 }
 
@@ -50,7 +50,7 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
   const acres = useMemo(() => sqMetersToUnits(polygonAreaSqMeters(latlngs)).acres, [latlngs]);
   const fontSize = labelFontSize(zoom);
   const boundaryThickness = obj.boundaryThickness || 5;
-  const lineWeight = Math.max(1, boundaryThickness * 0.4);
+  const lineWeight = Math.max(2.5, boundaryThickness * 0.8);
 
   return (
     <>
@@ -299,7 +299,7 @@ function ChakbandiLine({ obj, latlngs, zoom, transform }) {
   const crossPattern = obj.crossPattern !== false;
   const crossSize = obj.crossSize || 6;
   const crossSpacing = obj.crossSpacing || 8;
-  const lineWeight = Math.max(1.5, lineThickness * 0.5);
+  const lineWeight = Math.max(3, lineThickness * 0.9);
 
   // Generate cross marks along the path in canvas space
   const crossMarks = useMemo(() => {
@@ -347,7 +347,7 @@ function ChakbandiLine({ obj, latlngs, zoom, transform }) {
       />
       {/* Cross pattern marks */}
       {crossMarks.map((pts, i) => (
-        <Polyline key={i} positions={pts} pathOptions={{ color: "#22c55e", weight: Math.max(1, lineWeight * 0.7), opacity: 0.8 }} />
+        <Polyline key={i} positions={pts} pathOptions={{ color: "#22c55e", weight: Math.max(2, lineWeight * 0.8), opacity: 0.85 }} />
       ))}
       {obj.name && (
         <Tooltip permanent direction="top" className="chakbandi-label" opacity={0.9}>

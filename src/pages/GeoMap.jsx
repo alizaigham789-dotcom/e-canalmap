@@ -56,6 +56,19 @@ const GPS_ICON = L.divIcon({
   iconAnchor: [10, 10],
 });
 
+// Corner placement marker — red square with corner brackets, shows where the map's
+// upper-left corner will be placed. Coordinates are shown in a permanent tooltip.
+function cornerPlaceIcon() {
+  return L.divIcon({
+    html: `<div style="width:34px;height:34px;background:#ef4444;border:3px solid white;border-radius:8px;box-shadow:0 2px 12px rgba(239,68,68,0.7);display:flex;align-items:center;justify-content:center;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M4 4 L10 4 M4 4 L4 10"/><path d="M20 4 L14 4 M20 4 L20 10"/><path d="M4 20 L10 20 M4 20 L4 14"/><path d="M20 20 L14 20 M20 20 L20 14"/></svg>
+    </div>`,
+    className: "",
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+  });
+}
+
 function MapController({ onMapClick, onMapInstance, onZoomChange }) {
   const map = useMapEvents({
     click: (e) => onMapClick && onMapClick(e.latlng),
@@ -409,9 +422,19 @@ export default function GeoMap() {
           />
         )}
 
-        {/* Overlay anchor — single marker at the placed upper-left corner */}
+        {/* Corner placement marker — shows where the map corner is placed + coordinates */}
         {placementPoint && (
-          <Marker position={[placementPoint.lat, placementPoint.lng]} icon={controlIcon(1)} />
+          <Marker position={[placementPoint.lat, placementPoint.lng]} icon={cornerPlaceIcon()}>
+            <Tooltip permanent direction="right" className="placement-coords-tooltip">
+              <div className="text-[10px] font-mono leading-tight">
+                <div className="font-bold text-red-600 flex items-center gap-1">
+                  <span>📍</span> کونہ پوائنٹ (Corner)
+                </div>
+                <div className="text-slate-700">Lat: {placementPoint.lat.toFixed(6)}</div>
+                <div className="text-slate-700">Lng: {placementPoint.lng.toFixed(6)}</div>
+              </div>
+            </Tooltip>
+          </Marker>
         )}
 
         {/* Completed measurements — click to delete */}
@@ -516,11 +539,18 @@ export default function GeoMap() {
       {/* Live measurement info */}
       <MeasurementInfo measurement={liveMeasurement} draft={draft} zoom={zoom} />
 
-      {/* Placement hint — single-click mode */}
+      {/* Placement hint — single-click mode with live coordinates */}
       {placing && selectedMapId && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 z-[1001] bg-blue-600 text-white text-xs font-bold px-4 h-9 rounded-full shadow-2xl flex items-center gap-2 animate-pulse">
-          <MapPin className="w-4 h-4" />
-          نقشہ پر کلک کریں — اوپری بائیں کونے میں لگے گا
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 z-[1001] bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl flex flex-col items-center gap-0.5 animate-pulse">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            نقشہ پر کلک کریں — کونہ پوائنٹ یہیں لگے گا
+          </div>
+          {mouseLatLng && (
+            <div className="text-[10px] font-mono text-blue-100">
+              Lat: {mouseLatLng.lat.toFixed(6)} · Lng: {mouseLatLng.lng.toFixed(6)}
+            </div>
+          )}
         </div>
       )}
 
