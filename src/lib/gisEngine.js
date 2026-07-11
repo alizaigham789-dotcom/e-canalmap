@@ -446,7 +446,7 @@ export function createCanal(points, name = "") {
     id: `canal_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "canal", points: points.map(p => ({ ...p })), name,
     width: DIMENSIONS.CANAL_WIDTH,
-    canalStyle: "3d", // "3d" (ribbon + glow + highlight) or "flat" (solid light-blue stroke)
+    canalStyle: "flat", // "flat" (squared banks + blue water center, default) or "3d" (ribbon + glow + highlight)
   };
 }
 

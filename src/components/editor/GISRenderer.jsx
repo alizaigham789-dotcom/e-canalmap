@@ -325,14 +325,29 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   const fillC = C.canalFill || "rgba(163,218,244,0.70)";
   const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#2B7AB8");
 
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
   if (obj.canalStyle === "flat") {
-    // Flat style — single solid light-blue stroke, rounded blunt caps, semi-transparent
-    ctx.strokeStyle = fillC;
-    ctx.lineWidth = w;
-    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+    // Flat style — bilateral buffer: squared ends, two water-colored bank lines, blue water center
+    const halfW = w / 2;
+    const left = getParallelPolyline(obj.points, -halfW);
+    const right = getParallelPolyline(obj.points, halfW);
+    ctx.fillStyle = fillC;
+    ctx.beginPath();
+    drawSmoothPath(ctx, left);
+    ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
+    drawSmoothPath(ctx, [...right].reverse());
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = strokeC;
+    ctx.lineWidth = Math.max(2, 3 / zoom);
+    ctx.lineCap = "butt"; ctx.lineJoin = "round";
+    for (const side of [left, right]) {
+      ctx.beginPath();
+      drawSmoothPath(ctx, side);
+      ctx.stroke();
+    }
   } else {
     // 3D ribbon — soft glow halo + darker outline + body + inner highlight
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
     ctx.strokeStyle = strokeC;
     ctx.globalAlpha = 0.18;
     ctx.lineWidth = w + 8;

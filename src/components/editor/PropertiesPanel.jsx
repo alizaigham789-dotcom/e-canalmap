@@ -168,8 +168,8 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Canal Style</label>
                 <div className="flex gap-1">
-                  <button onClick={() => commit("canalStyle", "3d")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${(local.canalStyle || "3d") === "3d" ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>3D Ribbon</button>
-                  <button onClick={() => commit("canalStyle", "flat")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${local.canalStyle === "flat" ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>Flat</button>
+                  <button onClick={() => commit("canalStyle", "flat")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${(local.canalStyle || "flat") !== "3d" ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>Flat</button>
+                  <button onClick={() => commit("canalStyle", "3d")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${local.canalStyle === "3d" ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>3D Ribbon</button>
                 </div>
               </div>
               <SpacingControl label="Line Spacing" value={local.width || 14} min={2} max={150} step={2} onChange={v => commit("width", v)} unit="ft" />
