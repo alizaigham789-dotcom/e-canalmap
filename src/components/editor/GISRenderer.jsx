@@ -415,7 +415,7 @@ function drawCanalNameUrduEditor(ctx, points, text, zoom) {
     ctx.lineWidth = Math.max(2, cf * 0.18);
     ctx.lineJoin = "round";
     ctx.strokeText(text, 0, 0);
-    ctx.fillStyle = "#fef08a";
+    ctx.fillStyle = "#FFD700";
     ctx.fillText(text, 0, 0);
     ctx.restore();
   }
@@ -505,7 +505,7 @@ function drawTextAlongPath(ctx, points, segLens, text, startDist, fontSize, char
     ctx.lineJoin = "round";
     ctx.strokeText(ch, 0, 0);
     // Fill — bright white/yellow for high visibility
-    ctx.fillStyle = "#fef08a";
+    ctx.fillStyle = "#FFD700";
     ctx.fillText(ch, 0, 0);
     ctx.restore();
 
@@ -857,6 +857,20 @@ export function drawCanalDraft(ctx, canalDraft, snapPos, zoom, C) {
   const halfW = DIMENSIONS.CANAL_WIDTH / 2;
   const left = getParallelPolyline(draftPts, -halfW);
   const right = getParallelPolyline(draftPts, halfW);
+  // Live ghost preview — semi-transparent (35%) fill showing the exact final canal shape.
+  // Same flat-style rendering: squared caps, water fill centered between boundaries.
+  if (draftPts.length >= 2) {
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = C.canalFill || "rgba(163,218,244,0.70)";
+    ctx.beginPath();
+    drawSmoothPath(ctx, left);
+    ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
+    drawSmoothPath(ctx, [...right].reverse());
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
   ctx.strokeStyle = C.canalStroke || "#0284c7";
   ctx.lineWidth = 2 / zoom;
   ctx.setLineDash([6/zoom, 4/zoom]);

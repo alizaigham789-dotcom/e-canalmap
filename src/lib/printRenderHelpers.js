@@ -39,7 +39,7 @@ function drawCanalNameUrduOnCanvas(ctx, points, text, fontSize) {
     ctx.lineWidth = Math.max(2, fontSize * 0.18);
     ctx.lineJoin = "round";
     ctx.strokeText(text, 0, 0);
-    ctx.fillStyle = "#fef08a";
+    ctx.fillStyle = "#FFD700";
     ctx.fillText(text, 0, 0);
     ctx.restore();
   }
@@ -61,7 +61,7 @@ function svgCanalNameUrdu(points, text, fontSize) {
     let ang = pos.angle;
     if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
     const deg = (ang * 180) / Math.PI;
-    svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="#fef08a" stroke="rgba(0,0,0,0.85)" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" direction="rtl" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${text}</text>`;
+    svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="#FFD700" stroke="rgba(0,0,0,0.85)" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" direction="rtl" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${text}</text>`;
   }
   return svg;
 }
@@ -157,7 +157,7 @@ export function drawCanalNameOnCanvas(ctx, points, text, fontSize) {
       ctx.lineJoin = "round";
       ctx.strokeText(text[ci], 0, 0);
       // Bright yellow fill
-      ctx.fillStyle = "#fef08a";
+      ctx.fillStyle = "#FFD700";
       ctx.fillText(text[ci], 0, 0);
       ctx.restore();
 
@@ -203,7 +203,7 @@ export function svgCanalNameOnPath(points, text, fontSize) {
 
       const deg = (pos.angle * 180) / Math.PI;
       // paint-order: stroke fill — draws stroke first so fill is on top (outline effect)
-      svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="#fef08a" stroke="rgba(0,0,0,0.85)" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${text[ci]}</text>`;
+      svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="#FFD700" stroke="rgba(0,0,0,0.85)" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${text[ci]}</text>`;
 
       const half2 = advanceAlongPath(segLens, segIdx, segRem, charW * 0.5);
       if (!half2) break;

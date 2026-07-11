@@ -430,6 +430,22 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (orthoMode && isLineTool(activeTool)) {
       const anchor = getDraftAnchor();
       if (anchor) result = applyOrthoConstraint(anchor, result, 90);
+    } else if (activeTool === "canal" || activeTool === "khal" || activeTool === "road") {
+      // Gentle orthogonal snap assist — if the current segment angle is within 5° of
+      // horizontal or vertical, gently snap to exact H/V. Still allows free-angle drawing.
+      const anchor = getDraftAnchor();
+      if (anchor) {
+        const dx = result.x - anchor.x, dy = result.y - anchor.y;
+        const ang = Math.atan2(dy, dx);
+        const tol = 5 * Math.PI / 180; // 5° tolerance
+        const snapToAxis = (axisAng) => {
+          const dist = Math.hypot(dx, dy);
+          if (axisAng === 0 || axisAng === Math.PI) return { x: anchor.x + (dx >= 0 ? dist : -dist), y: anchor.y };
+          return { x: anchor.x, y: anchor.y + (dy >= 0 ? dist : -dist) };
+        };
+        if (Math.abs(ang) < tol || Math.abs(Math.abs(ang) - Math.PI) < tol) result = snapToAxis(0);
+        else if (Math.abs(ang - Math.PI / 2) < tol || Math.abs(ang + Math.PI / 2) < tol) result = snapToAxis(Math.PI / 2);
+      }
     }
     // Endpoint-snap highlight for continuous drawing
     setEndpointSnap(findNearbyEndpoint(world.x, world.y, objectsRef.current, 10, zoom));
