@@ -185,10 +185,14 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const strokeC = C.canalStroke || "#2B7AB8";
       const drawCenter = () => { ctx.beginPath(); ctx.moveTo(o.points[0].x, o.points[0].y); for (const p of o.points) ctx.lineTo(p.x, p.y); };
       ctx.lineCap = "round"; ctx.lineJoin = "round";
-      ctx.strokeStyle = strokeC; ctx.globalAlpha = 0.18; ctx.lineWidth = w + 8; drawCenter(); ctx.stroke(); ctx.globalAlpha = 1;
-      ctx.strokeStyle = strokeC; ctx.lineWidth = w + 3; drawCenter(); ctx.stroke();
-      ctx.strokeStyle = fillC; ctx.lineWidth = w; drawCenter(); ctx.stroke();
-      ctx.strokeStyle = "rgba(255,255,255,0.30)"; ctx.lineWidth = Math.max(1, w * 0.12); drawCenter(); ctx.stroke();
+      if (o.canalStyle === "flat") {
+        ctx.strokeStyle = fillC; ctx.lineWidth = w; drawCenter(); ctx.stroke();
+      } else {
+        ctx.strokeStyle = strokeC; ctx.globalAlpha = 0.18; ctx.lineWidth = w + 8; drawCenter(); ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.strokeStyle = strokeC; ctx.lineWidth = w + 3; drawCenter(); ctx.stroke();
+        ctx.strokeStyle = fillC; ctx.lineWidth = w; drawCenter(); ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.30)"; ctx.lineWidth = Math.max(1, w * 0.12); drawCenter(); ctx.stroke();
+      }
       if (o.name) {
         const cf = canalNameFont();
         drawCanalNameOnCanvas(ctx, o.points, o.name, cf);
@@ -464,6 +468,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       if (o.name) {
         const cf = canalNameFont();
         nameSvg = svgCanalNameOnPath(o.points, o.name, cf);
+      }
+      if (o.canalStyle === "flat") {
+        return `<g><polyline points="${centerPts}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
       }
       return `<g><polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 8}" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"/><polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="${Math.max(1, w * 0.12).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
     }

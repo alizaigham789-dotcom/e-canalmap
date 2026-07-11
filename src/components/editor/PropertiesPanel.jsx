@@ -165,6 +165,13 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Canal Name <span className="text-blue-400 normal-case font-normal" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>اردو سپورٹ</span></label>
                 <Input value={local.name || ""} onChange={e => commit("name", e.target.value)} dir="auto" placeholder="e.g. Nurpur Distry / نور پور" className="h-7 text-xs bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500" />
               </div>
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Canal Style</label>
+                <div className="flex gap-1">
+                  <button onClick={() => commit("canalStyle", "3d")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${(local.canalStyle || "3d") === "3d" ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>3D Ribbon</button>
+                  <button onClick={() => commit("canalStyle", "flat")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${local.canalStyle === "flat" ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>Flat</button>
+                </div>
+              </div>
               <SpacingControl label="Line Spacing" value={local.width || 14} min={2} max={150} step={2} onChange={v => commit("width", v)} unit="ft" />
               <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
               <p className="text-[9px] text-slate-400">Double-click any anchor point to delete it (remove extra points)</p>

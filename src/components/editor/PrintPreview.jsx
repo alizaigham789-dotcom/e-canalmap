@@ -249,6 +249,13 @@ function svgCanal(obj, C, idx) {
   const strokeColor = C.canalStroke || "#2B7AB8";
   const cf = canalNameFont();
   const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf) : "";
+  if (obj.canalStyle === "flat") {
+    return `
+<g key="canal_${idx}">
+  <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
+  ${nameSvg}
+</g>`;
+  }
   return `
 <g key="canal_${idx}">
   <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 8}" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"/>

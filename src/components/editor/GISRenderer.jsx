@@ -325,28 +325,29 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   const fillC = C.canalFill || "rgba(163,218,244,0.70)";
   const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#2B7AB8");
 
-  // Soft 3D glow halo — wide, faint, rounded (ribbon "pipe" look)
-  ctx.strokeStyle = strokeC;
-  ctx.globalAlpha = 0.18;
-  ctx.lineWidth = w + 8;
   ctx.lineCap = "round"; ctx.lineJoin = "round";
-  ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // Darker outline (slightly wider than the body)
-  ctx.strokeStyle = strokeC;
-  ctx.lineWidth = w + 3;
-  ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
-
-  // Ribbon body — light blue semi-transparent, rounded ends
-  ctx.strokeStyle = fillC;
-  ctx.lineWidth = w;
-  ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
-
-  // Subtle inner white highlight for depth / 3D
-  ctx.strokeStyle = "rgba(255,255,255,0.30)";
-  ctx.lineWidth = Math.max(1, w * 0.12);
-  ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+  if (obj.canalStyle === "flat") {
+    // Flat style — single solid light-blue stroke, rounded blunt caps, semi-transparent
+    ctx.strokeStyle = fillC;
+    ctx.lineWidth = w;
+    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+  } else {
+    // 3D ribbon — soft glow halo + darker outline + body + inner highlight
+    ctx.strokeStyle = strokeC;
+    ctx.globalAlpha = 0.18;
+    ctx.lineWidth = w + 8;
+    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = strokeC;
+    ctx.lineWidth = w + 3;
+    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+    ctx.strokeStyle = fillC;
+    ctx.lineWidth = w;
+    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.30)";
+    ctx.lineWidth = Math.max(1, w * 0.12);
+    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+  }
 
   // Layer 5: Canal name INSIDE the blue canal — repeats every ~5 acres along the path,
   // follows canal geometry (straight or curved), highly visible colour, 5× font size.
