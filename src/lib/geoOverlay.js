@@ -243,8 +243,25 @@ export function getBoundingBox(objects) {
   return { minX, minY, maxX, maxY };
 }
 
+// Bounding box computed from PARCELS ONLY (acre/mustateel/muraba).
+// Canals, khals, roads, outlets etc. may extend beyond parcels and would
+// shift the anchor point away from the topmost-leftmost mustateel corner.
+export function getParcelBoundingBox(objects) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const o of objects) {
+    if (["acre", "mustateel", "muraba"].includes(o.type)) {
+      minX = Math.min(minX, o.x); minY = Math.min(minY, o.y);
+      maxX = Math.max(maxX, o.x + o.w); maxY = Math.max(maxY, o.y + o.h);
+    }
+  }
+  if (minX === Infinity) return null;
+  return { minX, minY, maxX, maxY };
+}
+
 export function computeOneClickTransform(geoPt, objects, rotationDeg = 0) {
-  const bbox = getBoundingBox(objects);
+  // Use parcels-only bounding box so the anchor is the top-left corner of the
+  // topmost-leftmost mustateel — exactly where the corner place marker shows.
+  const bbox = getParcelBoundingBox(objects) || getBoundingBox(objects);
   if (!bbox) return null;
   const { minX, minY } = bbox;
   const refLat = geoPt.lat, refLng = geoPt.lng;
