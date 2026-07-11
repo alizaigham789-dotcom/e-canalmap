@@ -491,7 +491,7 @@ export function createChakbandi(points, name = "") {
     id: `chakbandi_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "chakbandi", points: points.map(p => ({ ...p })), name,
     width: DIMENSIONS.CANAL_WIDTH, crossPattern: true,
-    crossSize: 3, crossSpacing: 2, lineThickness: 6, // 1-10 levels
+    crossSize: 6, crossSpacing: 8, lineThickness: 6, // 1-10 levels
   };
 }
 

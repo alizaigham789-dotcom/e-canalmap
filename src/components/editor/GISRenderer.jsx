@@ -321,39 +321,32 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
 // ============================================================
 export function drawCanal(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
-  const halfW = obj.width / 2;
-  const left = getParallelPolyline(obj.points, -halfW);
-  const right = getParallelPolyline(obj.points, halfW);
+  const w = Math.max(2, obj.width);
+  const fillC = C.canalFill || "rgba(163,218,244,0.70)";
+  const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#2B7AB8");
 
-  // Water fill — smooth closed polygon
-  ctx.fillStyle = C.canalFill || "rgba(30,144,255,0.25)";
-  ctx.beginPath();
-  drawSmoothPath(ctx, left);
-  ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
-  const rightRev = [...right].reverse();
-  drawSmoothPath(ctx, rightRev);
-  ctx.closePath();
-  ctx.fill();
+  // Soft 3D glow halo — wide, faint, rounded (ribbon "pipe" look)
+  ctx.strokeStyle = strokeC;
+  ctx.globalAlpha = 0.18;
+  ctx.lineWidth = w + 8;
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+  ctx.globalAlpha = 1;
 
-  // Bank lines — smooth curves
-  const bankColor = isSelected ? "#93c5fd" : (C.canalStroke || "#0284c7");
-  ctx.strokeStyle = bankColor;
-  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  for (const side of [left, right]) {
-    ctx.beginPath();
-    drawSmoothPath(ctx, side);
-    ctx.stroke();
-  }
-  // End caps
-  ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
-  ctx.lineCap = "butt";
-  ctx.beginPath();
-  ctx.moveTo(left[0].x, left[0].y); ctx.lineTo(right[0].x, right[0].y);
-  ctx.moveTo(left[left.length-1].x, left[left.length-1].y);
-  ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
-  ctx.stroke();
+  // Darker outline (slightly wider than the body)
+  ctx.strokeStyle = strokeC;
+  ctx.lineWidth = w + 3;
+  ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+
+  // Ribbon body — light blue semi-transparent, rounded ends
+  ctx.strokeStyle = fillC;
+  ctx.lineWidth = w;
+  ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+
+  // Subtle inner white highlight for depth / 3D
+  ctx.strokeStyle = "rgba(255,255,255,0.30)";
+  ctx.lineWidth = Math.max(1, w * 0.12);
+  ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
 
   // Layer 5: Canal name INSIDE the blue canal — repeats every ~5 acres along the path,
   // follows canal geometry (straight or curved), highly visible colour, 5× font size.

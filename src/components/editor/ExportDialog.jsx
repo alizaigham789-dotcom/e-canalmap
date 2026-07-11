@@ -179,28 +179,17 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       if (o.excluded) drawExclusionHatchOnCanvas(ctx, o, zoom);
       ctx.strokeStyle = C.acreStroke || "#eab308"; ctx.lineWidth = 1.5/zoom; ctx.strokeRect(o.x,o.y,o.w,o.h);
     } else if (o.type === "canal" && o.points?.length >= 2) {
-      const halfW = (o.width || DIMENSIONS.CANAL_WIDTH)/2;
-      const left = getParallelPolyline(o.points, -halfW);
-      const right = getParallelPolyline(o.points, halfW);
-      ctx.fillStyle = C.canalFill || "rgba(30,144,255,0.25)";
-      ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
-      for (const p of left) ctx.lineTo(p.x,p.y);
-      ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
-      for (let i=right.length-1;i>=0;i--) ctx.lineTo(right[i].x,right[i].y);
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle=C.canalStroke || "#0284c7"; ctx.lineWidth=2.5/zoom;
-      ctx.lineCap="round"; ctx.lineJoin="round";
-      for (const side of [left,right]){ctx.beginPath();ctx.moveTo(side[0].x,side[0].y);for(const p of side)ctx.lineTo(p.x,p.y);ctx.stroke();}
-      // End caps
-      ctx.lineWidth = 2/zoom; ctx.lineCap = "butt";
-      ctx.beginPath();
-      ctx.moveTo(left[0].x,left[0].y); ctx.lineTo(right[0].x,right[0].y);
-      ctx.moveTo(left[left.length-1].x,left[left.length-1].y);
-      ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
-      ctx.stroke();
+      // Canal — 3D ribbon: rounded thick stroke + darker outline + soft halo
+      const w = Math.max(2, o.width || DIMENSIONS.CANAL_WIDTH);
+      const fillC = C.canalFill || "rgba(163,218,244,0.70)";
+      const strokeC = C.canalStroke || "#2B7AB8";
+      const drawCenter = () => { ctx.beginPath(); ctx.moveTo(o.points[0].x, o.points[0].y); for (const p of o.points) ctx.lineTo(p.x, p.y); };
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.strokeStyle = strokeC; ctx.globalAlpha = 0.18; ctx.lineWidth = w + 8; drawCenter(); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = strokeC; ctx.lineWidth = w + 3; drawCenter(); ctx.stroke();
+      ctx.strokeStyle = fillC; ctx.lineWidth = w; drawCenter(); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.30)"; ctx.lineWidth = Math.max(1, w * 0.12); drawCenter(); ctx.stroke();
       if (o.name) {
-        // Canal name INSIDE the canal — text on path, bright yellow + dark outline
-        // Font = mustateel label font + 2 points
         const cf = canalNameFont();
         drawCanalNameOnCanvas(ctx, o.points, o.name, cf);
       }
@@ -466,22 +455,17 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${C.acreStroke || "#555"}" stroke-width="1"/>${hatch}`;
     }
     if (o.type === "canal" && o.points?.length >= 2) {
-      // Canal — bilateral buffer with water fill + two bank lines (matches editor/print)
-      const halfW = (o.width || DIMENSIONS.CANAL_WIDTH) / 2;
-      const left = getParallelPolyline(o.points, -halfW);
-      const right = getParallelPolyline(o.points, halfW);
-      const fillColor = C.canalFill || "rgba(30,144,255,0.25)";
-      const strokeColor = C.canalStroke || "#0284c7";
-      const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-      const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-      const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      // Canal — smooth 3D ribbon: rounded thick stroke + darker outline + soft halo
+      const w = Math.max(2, o.width || DIMENSIONS.CANAL_WIDTH);
+      const fillColor = C.canalFill || "rgba(163,218,244,0.70)";
+      const strokeColor = C.canalStroke || "#2B7AB8";
+      const centerPts = o.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
       let nameSvg = "";
       if (o.name) {
-        // Canal name INSIDE the canal — text on path, bright yellow + dark outline
         const cf = canalNameFont();
         nameSvg = svgCanalNameOnPath(o.points, o.name, cf);
       }
-      return `<g><polygon points="${fillPts}" fill="${fillColor}"/><polyline points="${leftPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
+      return `<g><polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 8}" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"/><polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="${Math.max(1, w * 0.12).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
     }
     if (o.type === "khal" && o.points?.length >= 2) {
       // Khal — bilateral buffer + flow arrow at end
