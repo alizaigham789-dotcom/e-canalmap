@@ -15,6 +15,7 @@ import OverlayPanel from "@/components/geomap/OverlayPanel";
 import OverlayLayer from "@/components/geomap/OverlayLayer";
 import MeasurementInfo from "@/components/geomap/MeasurementInfo";
 import MarkerPopup from "@/components/geomap/MarkerPopup";
+import CoordinateDialog from "@/components/geomap/CoordinateDialog";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import {
   computeOneClickTransform, polygonAreaSqMeters, sqMetersToUnits,
@@ -111,6 +112,9 @@ export default function GeoMap() {
   const [gpsActive, setGpsActive] = useState(false);
   const [gpsPosition, setGpsPosition] = useState(null);
   const [gpsAccuracy, setGpsAccuracy] = useState(null);
+
+  // Coordinate input dialog for placement
+  const [showCoordDialog, setShowCoordDialog] = useState(false);
 
   // Overlay / georeferencing
   const [showOverlayPanel, setShowOverlayPanel] = useState(true);
@@ -305,6 +309,14 @@ export default function GeoMap() {
     setGpsActive(true);
   };
 
+  // Open coordinate dialog — lets user type lat/lng to place the map corner
+  const handlePlaceByCoords = (coords) => {
+    if (!selectedMapId) return;
+    setPlacementPoint(coords);
+    setPlacing(false);
+    setOverlay(null);
+  };
+
   const handleSelectMap = (id) => {
     setSelectedMapId(id);
     setSelectedMoga("");
@@ -486,7 +498,7 @@ export default function GeoMap() {
         onMenu={() => navigate("/")}
       />
 
-      <ZoomControls onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onGPS={handleGPS} gpsActive={gpsActive} />
+      <ZoomControls onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onGPS={handleGPS} gpsActive={gpsActive} onPlaceByCoords={() => setShowCoordDialog(true)} />
       <Compass />
 
       {/* Overlay toggle */}
@@ -572,6 +584,14 @@ export default function GeoMap() {
           Click any measurement to delete · {measurements.length} active
         </div>
       )}
+
+      {/* Coordinate input dialog — type lat/lng to place map */}
+      <CoordinateDialog
+        open={showCoordDialog}
+        onClose={() => setShowCoordDialog(false)}
+        onPlace={handlePlaceByCoords}
+        mouseLatLng={mouseLatLng}
+      />
 
       {/* Hybrid / Satellite toggle */}
       <button
