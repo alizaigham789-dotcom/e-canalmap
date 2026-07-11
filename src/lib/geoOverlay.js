@@ -244,10 +244,47 @@ export function getBoundingBox(objects) {
 }
 
 // Bounding box computed from PARCELS ONLY (acre/mustateel/muraba).
-// Canals, khals, roads, outlets etc. may extend beyond parcels and would
-// shift the anchor point away from the topmost-leftmost mustateel corner.
+// The anchor point (minX, minY) is the actual top-left corner of the
+// topmost-leftmost MUSTATEEL — not a synthetic bounding-box corner that
+// could mix X from one parcel and Y from another. This ensures the place
+// marker lands exactly on the 1st acre's upper corner of that mustateel.
 export function getParcelBoundingBox(objects) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+  // First priority: find the topmost-leftmost mustateel and use its real corner
+  let anchorMustateel = null;
+  for (const o of objects) {
+    if (o.type !== "mustateel") continue;
+    if (!anchorMustateel) {
+      anchorMustateel = o;
+    } else {
+      // Topmost = smallest y; among same y, leftmost = smallest x
+      if (o.y < anchorMustateel.y || (o.y === anchorMustateel.y && o.x < anchorMustateel.x)) {
+        anchorMustateel = o;
+      }
+    }
+  }
+
+  if (anchorMustateel) {
+    // Use the mustateel's actual corner as the anchor
+    minX = anchorMustateel.x;
+    minY = anchorMustateel.y;
+    // Still compute full bounding box for max extents (from all parcels)
+    for (const o of objects) {
+      if (["acre", "mustateel", "muraba"].includes(o.type)) {
+        maxX = Math.max(maxX, o.x + o.w);
+        maxY = Math.max(maxY, o.y + o.h);
+        minX = Math.min(minX, o.x);
+        minY = Math.min(minY, o.y);
+      }
+    }
+    // Override anchor with mustateel corner (not bounding box corner)
+    minX = anchorMustateel.x;
+    minY = anchorMustateel.y;
+    return { minX, minY, maxX, maxY };
+  }
+
+  // Fallback: no mustateels — use all parcel types
   for (const o of objects) {
     if (["acre", "mustateel", "muraba"].includes(o.type)) {
       minX = Math.min(minX, o.x); minY = Math.min(minY, o.y);
