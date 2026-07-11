@@ -83,19 +83,27 @@ export function rectMeasurements(corner1, corner2) {
 }
 
 // ─── FORMAT HELPERS ─────────────────────────────────────────────
+// Distance: always show feet (primary), with meters as secondary
 export function fmtDist(m) {
-  if (m >= 1000) return `${(m / 1000).toFixed(2)} km`;
-  if (m >= 1) return `${m.toFixed(1)} m`;
-  return `${(m * 3.281).toFixed(1)} ft`;
+  const ft = m * 3.28084;
+  if (m >= 1000) return `${(m / 1000).toFixed(2)} km · ${ft.toFixed(0)} ft`;
+  return `${ft.toFixed(1)} ft`;
 }
 
+// Distance: feet only (for compact tooltip labels)
+export function fmtDistFeet(m) {
+  return `${(m * 3.28084).toFixed(1)} ft`;
+}
+
+// Area: always show acres and kanal (primary units for land)
 export function fmtArea(sqM) {
   const u = sqMetersToUnits(sqM);
-  if (u.acres >= 1) return `${u.acres.toFixed(2)} ac · ${u.kanal.toFixed(1)} kanal`;
-  if (u.kanal >= 1) return `${u.kanal.toFixed(2)} kanal · ${u.marla.toFixed(0)} marla`;
-  if (u.marla >= 1) return `${u.marla.toFixed(1)} marla`;
-  if (sqM >= 100) return `${sqM.toFixed(0)} m²`;
-  return `${u.sqFeet.toFixed(0)} ft²`;
+  return `${u.acres.toFixed(3)} ac · ${u.kanal.toFixed(2)} kanal`;
+}
+
+// Area: acres only (compact)
+export function fmtAreaAcres(sqM) {
+  return `${sqMetersToUnits(sqM).acres.toFixed(3)} ac`;
 }
 
 export function fmtAreaFull(sqM) {

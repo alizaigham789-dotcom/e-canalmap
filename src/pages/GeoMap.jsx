@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2 } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -19,7 +19,7 @@ import { DrawingStateManager } from "@/lib/gisEngine";
 import {
   computeOneClickTransform, polygonAreaSqMeters, sqMetersToUnits,
   parcelExpectedAcres, haversine, polylineLength, rectMeasurements, circleMeasurements,
-  fmtDist, fmtArea,
+  fmtArea, fmtDistFeet,
 } from "@/lib/geoOverlay";
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -324,6 +324,7 @@ export default function GeoMap() {
   };
 
   const handleClearMeasurements = () => { setMeasurements([]); setDraft(null); setLiveMeasurement(null); };
+  const handleDeleteMeasurement = (id) => { setMeasurements(prev => prev.filter(m => m.id !== id)); };
 
   const handleMarkerUpdate = (id, changes) => { setMarkers(prev => prev.map(m => m.id === id ? { ...m, ...changes } : m)); };
   const handleMarkerDelete = (id) => { setMarkers(prev => prev.filter(m => m.id !== id)); };
@@ -413,26 +414,27 @@ export default function GeoMap() {
           <Marker position={[placementPoint.lat, placementPoint.lng]} icon={controlIcon(1)} />
         )}
 
-        {/* Completed measurements */}
+        {/* Completed measurements — click to delete */}
         {measurements.map(m => {
+          const delOpts = { color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.15, weight: 3 };
           if (m.type === "line") return (
-            <Polyline key={m.id} positions={m.points.map(p => [p.lat, p.lng])} pathOptions={{ color: "#ef4444", weight: 3 }}>
-              <Tooltip permanent direction="top"><span className="text-xs font-bold">{fmtDist(m.measurement.length)}</span></Tooltip>
+            <Polyline key={m.id} positions={m.points.map(p => [p.lat, p.lng])} pathOptions={delOpts} eventHandlers={{ click: () => handleDeleteMeasurement(m.id) }}>
+              <Tooltip permanent direction="top"><span className="text-xs font-bold text-red-600">{fmtDistFeet(m.measurement.length)}</span></Tooltip>
             </Polyline>
           );
           if (m.type === "polygon") return (
-            <Polygon key={m.id} positions={m.points.map(p => [p.lat, p.lng])} pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.2, weight: 2 }}>
-              <Tooltip permanent direction="top"><span className="text-xs font-bold">{fmtArea(m.measurement.area)}</span></Tooltip>
+            <Polygon key={m.id} positions={m.points.map(p => [p.lat, p.lng])} pathOptions={delOpts} eventHandlers={{ click: () => handleDeleteMeasurement(m.id) }}>
+              <Tooltip permanent direction="top"><span className="text-xs font-bold text-red-600">{fmtArea(m.measurement.area)}</span></Tooltip>
             </Polygon>
           );
           if (m.type === "rectangle") return (
-            <Polygon key={m.id} positions={[[m.points[0].lat, m.points[0].lng], [m.points[0].lat, m.points[1].lng], [m.points[1].lat, m.points[1].lng], [m.points[1].lat, m.points[0].lng]]} pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.2, weight: 2 }}>
-              <Tooltip permanent direction="top"><span className="text-xs font-bold">{fmtArea(m.measurement.area)}</span></Tooltip>
+            <Polygon key={m.id} positions={[[m.points[0].lat, m.points[0].lng], [m.points[0].lat, m.points[1].lng], [m.points[1].lat, m.points[1].lng], [m.points[1].lat, m.points[0].lng]]} pathOptions={delOpts} eventHandlers={{ click: () => handleDeleteMeasurement(m.id) }}>
+              <Tooltip permanent direction="top"><span className="text-xs font-bold text-red-600">{fmtArea(m.measurement.area)}</span></Tooltip>
             </Polygon>
           );
           if (m.type === "circle") return (
-            <Circle key={m.id} center={[m.center.lat, m.center.lng]} radius={m.radius} pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.15, weight: 2 }}>
-              <Tooltip permanent direction="top"><span className="text-xs font-bold">{fmtArea(m.measurement.area)}</span></Tooltip>
+            <Circle key={m.id} center={[m.center.lat, m.center.lng]} radius={m.radius} pathOptions={delOpts} eventHandlers={{ click: () => handleDeleteMeasurement(m.id) }}>
+              <Tooltip permanent direction="top"><span className="text-xs font-bold text-red-600">{fmtArea(m.measurement.area)}</span></Tooltip>
             </Circle>
           );
           return null;
@@ -525,11 +527,19 @@ export default function GeoMap() {
       {/* Active tool hint */}
       {activeTool && !liveMeasurement && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-black/80 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center">
-          {activeTool === "line" && "Click points to measure distance · Double-click to finish"}
-          {activeTool === "polygon" && "Click to add polygon vertices · Double-click to finish"}
-          {activeTool === "rectangle" && "Click two opposite corners"}
-          {activeTool === "circle" && "Click center, then click edge"}
+          {activeTool === "line" && "Click points to measure distance (ft) · Double-click to finish"}
+          {activeTool === "polygon" && "Click to add vertices · Double-click to finish (shows acres/kanal)"}
+          {activeTool === "rectangle" && "Click two opposite corners (shows acres/kanal)"}
+          {activeTool === "circle" && "Click center, then click edge (shows acres/kanal)"}
           {activeTool === "marker" && "Click to place a marker"}
+        </div>
+      )}
+
+      {/* Delete hint — always visible when measurements exist */}
+      {measurements.length > 0 && !activeTool && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-red-600/90 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center gap-1.5">
+          <Trash2 className="w-3 h-3" />
+          Click any measurement to delete · {measurements.length} active
         </div>
       )}
 

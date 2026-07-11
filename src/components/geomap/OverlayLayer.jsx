@@ -1,10 +1,33 @@
 import React, { useMemo, memo } from "react";
-import { Polygon, Polyline, Tooltip, CircleMarker } from "react-leaflet";
-import { getMustateeelKillaGrid } from "@/lib/gisEngine";
+import { Polygon, Polyline, Tooltip, CircleMarker, Marker } from "react-leaflet";
+import L from "leaflet";
+import { getMustateeelKillaGrid, DIMENSIONS } from "@/lib/gisEngine";
 import { canvasRectToLatLngs, canvasPolylineToLatLngs, polygonAreaSqMeters, sqMetersToUnits } from "@/lib/geoOverlay";
 
 function labelFontSize(zoom) {
   return Math.max(8, Math.min(16, 9 + (zoom - 14) * 1.2));
+}
+
+// ─── KILLA GRID LINES for mustateel ──────────────────────────────
+// Draws the internal subdivision lines (2 cols × 5 rows) like the editor.
+function KillaGridLines({ obj, transform, zoom }) {
+  if (zoom < 16) return null;
+  const lines = [];
+  const { x, y, w, h } = obj;
+  const cellW = w / 2, cellH = h / 5;
+  // Vertical line down the middle
+  const vTop = transform.transform(x + cellW, y);
+  const vBot = transform.transform(x + cellW, y + h);
+  lines.push([[vTop.lat, vTop.lng], [vBot.lat, vBot.lng]]);
+  // 4 horizontal lines (between 5 rows)
+  for (let r = 1; r < 5; r++) {
+    const hL = transform.transform(x, y + r * cellH);
+    const hR = transform.transform(x + w, y + r * cellH);
+    lines.push([[hL.lat, hL.lng], [hR.lat, hR.lng]]);
+  }
+  return lines.map((pts, i) => (
+    <Polyline key={i} positions={pts} pathOptions={{ color: "#ef4444", weight: 0.8, opacity: 0.3 }} />
+  ));
 }
 
 // Killa label as a CircleMarker with permanent tooltip
@@ -16,22 +39,24 @@ function KillaLabel({ num, latlng, zoom }) {
       radius={0}
       pathOptions={{ opacity: 0, fillOpacity: 0 }}
     >
-      <Tooltip permanent direction="center" opacity={0.65} className="killa-label">
+      <Tooltip permanent direction="center" opacity={0.7} className="killa-label">
         <span style={{ fontSize: `${Math.max(7, labelFontSize(zoom) * 0.55)}px`, fontWeight: 600, color: "#991b1b" }}>{num}</span>
       </Tooltip>
     </CircleMarker>
   );
 }
 
-function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs }) {
+function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform }) {
   const acres = useMemo(() => sqMetersToUnits(polygonAreaSqMeters(latlngs)).acres, [latlngs]);
   const fontSize = labelFontSize(zoom);
+  const boundaryThickness = obj.boundaryThickness || 5;
+  const lineWeight = Math.max(1, boundaryThickness * 0.4);
 
   return (
     <>
       <Polygon
         positions={latlngs.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.12, weight: 2 }}
+        pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.10, weight: lineWeight }}
       >
         <Tooltip permanent direction="center" className="mustateel-label" opacity={1}>
           <div style={{ fontSize: `${fontSize}px`, fontWeight: 700, color: "#dc2626", textAlign: "center", lineHeight: 1.15, whiteSpace: "nowrap" }}>
@@ -45,6 +70,8 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs }) {
           </div>
         </Tooltip>
       </Polygon>
+      {/* Killa grid lines — same as map editor */}
+      {showKilla && <KillaGridLines obj={obj} transform={transform} zoom={zoom} />}
       {showKilla && killaLatLngs && zoom >= 17 && killaLatLngs.map((k, i) => (
         <KillaLabel key={i} num={k.num} latlng={k.latlng} zoom={zoom} />
       ))}
@@ -86,89 +113,272 @@ function AcreLabel({ obj, latlngs, zoom }) {
   );
 }
 
-function CanalLine({ obj, latlngs, zoom }) {
+// ─── CANAL: flat style with parallel boundaries + water fill ─────
+// Same as map editor: two parallel blue boundary lines, blue water fill between.
+function CanalLine({ obj, latlngs, zoom, transform }) {
   const fontSize = labelFontSize(zoom);
+  const halfW = (obj.width || DIMENSIONS.CANAL_WIDTH || 14) / 2;
+
+  // Compute parallel offset in canvas space, then transform to lat/lng
+  const { leftLine, rightLine, fillLatLngs } = useMemo(() => {
+    if (!obj.points || obj.points.length < 2 || !transform) return { leftLine: [], rightLine: [], fillLatLngs: [] };
+    const pts = obj.points;
+    const left = [], right = [];
+    for (let i = 0; i < pts.length; i++) {
+      let nx, ny;
+      if (pts.length === 2) {
+        const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+        const len = Math.hypot(dx, dy) || 1;
+        nx = -dy / len; ny = dx / len;
+      } else if (i === 0) {
+        const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+        const len = Math.hypot(dx, dy) || 1;
+        nx = -dy / len; ny = dx / len;
+      } else if (i === pts.length - 1) {
+        const dx = pts[i].x - pts[i-1].x, dy = pts[i].y - pts[i-1].y;
+        const len = Math.hypot(dx, dy) || 1;
+        nx = -dy / len; ny = dx / len;
+      } else {
+        const dx1 = pts[i].x - pts[i-1].x, dy1 = pts[i].y - pts[i-1].y;
+        const dx2 = pts[i+1].x - pts[i].x, dy2 = pts[i+1].y - pts[i].y;
+        const len1 = Math.hypot(dx1, dy1) || 1, len2 = Math.hypot(dx2, dy2) || 1;
+        nx = (-dy1/len1 + -dy2/len2) / 2;
+        ny = (dx1/len1 + dx2/len2) / 2;
+        const nl = Math.hypot(nx, ny) || 1;
+        nx /= nl; ny /= nl;
+      }
+      left.push(transform.transform(pts[i].x + nx * halfW, pts[i].y + ny * halfW));
+      right.push(transform.transform(pts[i].x - nx * halfW, pts[i].y - ny * halfW));
+    }
+    // Fill polygon: left points + reversed right points
+    const fill = [...left, ...[...right].reverse()];
+    return { leftLine: left, rightLine: right, fillLatLngs: fill };
+  }, [obj.points, transform, halfW]);
+
+  if (fillLatLngs.length === 0) {
+    return (
+      <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#0284c7", weight: 3, opacity: 0.9 }} />
+    );
+  }
+
+  const boundaryWeight = Math.max(1.5, 3 - (18 - zoom) * 0.2);
+
   return (
-    <Polyline
-      positions={latlngs.map(p => [p.lat, p.lng])}
-      pathOptions={{ color: "#0284c7", weight: Math.max(2, 4 - (18 - zoom) * 0.3), opacity: 0.9 }}
-    >
+    <>
+      {/* Water fill polygon */}
+      <Polygon
+        positions={fillLatLngs.map(p => [p.lat, p.lng])}
+        pathOptions={{ color: "#2B7AB8", fillColor: "#A3DAF4", fillOpacity: 0.70, weight: 0, opacity: 0 }}
+      />
+      {/* Left boundary */}
+      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#2B7AB8", weight: boundaryWeight, opacity: 0.9 }} />
+      {/* Right boundary */}
+      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#2B7AB8", weight: boundaryWeight, opacity: 0.9 }} />
       {obj.name && (
         <Tooltip permanent direction="center" className="canal-label" opacity={0.95}>
-          <span style={{ fontSize: `${fontSize * 0.68}px`, fontWeight: 600, color: "#0369a1", backgroundColor: "rgba(255,255,255,0.85)", padding: "0 3px", borderRadius: 2 }}>
+          <span style={{ fontSize: `${fontSize * 0.68}px`, fontWeight: 700, color: "#FFD700", backgroundColor: "rgba(0,0,0,0.5)", padding: "1px 4px", borderRadius: 2 }}>
             {obj.name}
           </span>
         </Tooltip>
       )}
-    </Polyline>
+    </>
   );
 }
 
-function KhalLine({ obj, latlngs, zoom }) {
+// ─── KHAL: parallel blue boundary lines ──────────────────────────
+function KhalLine({ obj, latlngs, zoom, transform }) {
   const fontSize = labelFontSize(zoom);
+  const halfW = (obj.width || 8) / 2;
+
+  const { leftLine, rightLine } = useMemo(() => {
+    if (!obj.points || obj.points.length < 2 || !transform) return { leftLine: [], rightLine: [] };
+    const pts = obj.points;
+    const left = [], right = [];
+    for (let i = 0; i < pts.length; i++) {
+      let nx, ny;
+      if (pts.length === 2) {
+        const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+        const len = Math.hypot(dx, dy) || 1; nx = -dy/len; ny = dx/len;
+      } else if (i === 0) {
+        const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+        const len = Math.hypot(dx, dy) || 1; nx = -dy/len; ny = dx/len;
+      } else if (i === pts.length - 1) {
+        const dx = pts[i].x - pts[i-1].x, dy = pts[i].y - pts[i-1].y;
+        const len = Math.hypot(dx, dy) || 1; nx = -dy/len; ny = dx/len;
+      } else {
+        const dx1 = pts[i].x - pts[i-1].x, dy1 = pts[i].y - pts[i-1].y;
+        const dx2 = pts[i+1].x - pts[i].x, dy2 = pts[i+1].y - pts[i].y;
+        const len1 = Math.hypot(dx1, dy1) || 1, len2 = Math.hypot(dx2, dy2) || 1;
+        nx = (-dy1/len1 + -dy2/len2) / 2; ny = (dx1/len1 + dx2/len2) / 2;
+        const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl;
+      }
+      left.push(transform.transform(pts[i].x + nx * halfW, pts[i].y + ny * halfW));
+      right.push(transform.transform(pts[i].x - nx * halfW, pts[i].y - ny * halfW));
+    }
+    return { leftLine: left, rightLine: right };
+  }, [obj.points, transform, halfW]);
+
+  if (leftLine.length === 0) {
+    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#2563eb", weight: 2, opacity: 0.85 }} />;
+  }
+
+  const w = Math.max(1, 2 - (18 - zoom) * 0.15);
   return (
-    <Polyline
-      positions={latlngs.map(p => [p.lat, p.lng])}
-      pathOptions={{ color: "#2563eb", weight: Math.max(1, 3 - (18 - zoom) * 0.2), opacity: 0.85 }}
-    >
+    <>
+      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#2563eb", weight: w, opacity: 0.85 }} />
+      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#2563eb", weight: w, opacity: 0.85 }} />
       {obj.name && (
         <Tooltip permanent direction="center" className="khal-label" opacity={0.9}>
-          <span style={{ fontSize: `${fontSize * 0.58}px`, color: "#1d4ed8", backgroundColor: "rgba(255,255,255,0.7)", padding: "0 2px" }}>
+          <span style={{ fontSize: `${fontSize * 0.58}px`, color: "#1d4ed8", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 2px" }}>
             {obj.name}
           </span>
         </Tooltip>
       )}
-    </Polyline>
+    </>
   );
 }
 
-function RoadLine({ obj, latlngs, zoom }) {
+// ─── ROAD: parallel amber boundary lines ──────────────────────────
+function RoadLine({ obj, latlngs, zoom, transform }) {
   const fontSize = labelFontSize(zoom);
+  const halfW = (obj.width || 28) / 2;
+
+  const { leftLine, rightLine } = useMemo(() => {
+    if (!obj.points || obj.points.length < 2 || !transform) return { leftLine: [], rightLine: [] };
+    const pts = obj.points;
+    const left = [], right = [];
+    for (let i = 0; i < pts.length; i++) {
+      let nx, ny;
+      if (pts.length === 2) {
+        const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+        const len = Math.hypot(dx, dy) || 1; nx = -dy/len; ny = dx/len;
+      } else if (i === 0) {
+        const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+        const len = Math.hypot(dx, dy) || 1; nx = -dy/len; ny = dx/len;
+      } else if (i === pts.length - 1) {
+        const dx = pts[i].x - pts[i-1].x, dy = pts[i].y - pts[i-1].y;
+        const len = Math.hypot(dx, dy) || 1; nx = -dy/len; ny = dx/len;
+      } else {
+        const dx1 = pts[i].x - pts[i-1].x, dy1 = pts[i].y - pts[i-1].y;
+        const dx2 = pts[i+1].x - pts[i].x, dy2 = pts[i+1].y - pts[i].y;
+        const len1 = Math.hypot(dx1, dy1) || 1, len2 = Math.hypot(dx2, dy2) || 1;
+        nx = (-dy1/len1 + -dy2/len2) / 2; ny = (dx1/len1 + dx2/len2) / 2;
+        const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl;
+      }
+      left.push(transform.transform(pts[i].x + nx * halfW, pts[i].y + ny * halfW));
+      right.push(transform.transform(pts[i].x - nx * halfW, pts[i].y - ny * halfW));
+    }
+    return { leftLine: left, rightLine: right };
+  }, [obj.points, transform, halfW]);
+
+  if (leftLine.length === 0) {
+    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: 3, dashArray: "10,6", opacity: 0.8 }} />;
+  }
+
+  const w = Math.max(1.5, 3 - (18 - zoom) * 0.2);
   return (
-    <Polyline
-      positions={latlngs.map(p => [p.lat, p.lng])}
-      pathOptions={{ color: "#b45309", weight: Math.max(2, 4 - (18 - zoom) * 0.3), dashArray: "10,6", opacity: 0.8 }}
-    >
+    <>
+      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: w, opacity: 0.8 }} />
+      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: w, opacity: 0.8 }} />
       {obj.name && (
         <Tooltip permanent direction="center" className="road-label" opacity={0.9}>
-          <span style={{ fontSize: `${fontSize * 0.58}px`, color: "#92400e", backgroundColor: "rgba(255,255,255,0.7)", padding: "0 2px" }}>
+          <span style={{ fontSize: `${fontSize * 0.58}px`, color: "#92400e", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 2px" }}>
             {obj.name}
           </span>
         </Tooltip>
       )}
-    </Polyline>
+    </>
   );
 }
 
-function ChakbandiLine({ obj, latlngs, zoom }) {
+// ─── CHAKBANDI: green line + cross pattern marks ─────────────────
+// Same as map editor: green boundary with × marks at regular intervals.
+function ChakbandiLine({ obj, latlngs, zoom, transform }) {
   const fontSize = labelFontSize(zoom);
+  const lineThickness = obj.lineThickness || 6;
+  const crossPattern = obj.crossPattern !== false;
+  const crossSize = obj.crossSize || 6;
+  const crossSpacing = obj.crossSpacing || 8;
+  const lineWeight = Math.max(1.5, lineThickness * 0.5);
+
+  // Generate cross marks along the path in canvas space
+  const crossMarks = useMemo(() => {
+    if (!crossPattern || !obj.points || obj.points.length < 2 || !transform) return [];
+    const pts = obj.points;
+    // Calculate cumulative distances
+    const segLens = [], cumDists = [0];
+    let total = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const d = Math.hypot(pts[i+1].x - pts[i].x, pts[i+1].y - pts[i].y);
+      segLens.push(d); total += d; cumDists.push(total);
+    }
+    if (total < 1) return [];
+    const marks = [];
+    const spacingFt = crossSpacing * 50; // scale cross spacing to canvas units
+    for (let dist = spacingFt / 2; dist < total; dist += spacingFt) {
+      // Find position at this distance
+      let segIdx = 0, rem = dist;
+      while (segIdx < segLens.length && rem > segLens[segIdx]) { rem -= segLens[segIdx]; segIdx++; }
+      if (segIdx >= segLens.length) break;
+      const t = segLens[segIdx] > 0 ? rem / segLens[segIdx] : 0;
+      const p1 = pts[segIdx], p2 = pts[segIdx + 1];
+      const cx = p1.x + (p2.x - p1.x) * t;
+      const cy = p1.y + (p2.y - p1.y) * t;
+      // Tangent angle
+      const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+      const cosA = Math.cos(ang), sinA = Math.sin(ang);
+      const s = crossSize * 3; // scale cross size
+      // X mark: 4 points (two diagonal lines)
+      const p1a = transform.transform(cx + (-cosA - sinA) * s, cy + (-sinA + cosA) * s);
+      const p1b = transform.transform(cx + (cosA + sinA) * s, cy + (sinA - cosA) * s);
+      const p2a = transform.transform(cx + (cosA - sinA) * s, cy + (sinA + cosA) * s);
+      const p2b = transform.transform(cx + (-cosA + sinA) * s, cy + (-sinA - cosA) * s);
+      marks.push([[p1a.lat, p1a.lng], [p1b.lat, p1b.lng]]);
+      marks.push([[p2a.lat, p2a.lng], [p2b.lat, p2b.lng]]);
+    }
+    return marks;
+  }, [obj.points, transform, crossPattern, crossSize, crossSpacing]);
+
   return (
-    <Polyline
-      positions={latlngs.map(p => [p.lat, p.lng])}
-      pathOptions={{ color: "#22c55e", weight: 2, dashArray: "8,4", opacity: 0.85 }}
-    >
+    <>
+      <Polyline
+        positions={latlngs.map(p => [p.lat, p.lng])}
+        pathOptions={{ color: "#22c55e", weight: lineWeight, opacity: 0.85 }}
+      />
+      {/* Cross pattern marks */}
+      {crossMarks.map((pts, i) => (
+        <Polyline key={i} positions={pts} pathOptions={{ color: "#22c55e", weight: Math.max(1, lineWeight * 0.7), opacity: 0.8 }} />
+      ))}
       {obj.name && (
         <Tooltip permanent direction="top" className="chakbandi-label" opacity={0.9}>
-          <span style={{ fontSize: `${fontSize * 0.6}px`, fontWeight: 600, color: "#15803d" }}>{obj.name}</span>
+          <span style={{ fontSize: `${fontSize * 0.6}px`, fontWeight: 600, color: "#15803d", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 3px" }}>{obj.name}</span>
         </Tooltip>
       )}
-    </Polyline>
+      {/* CCA/GCA center label */}
+      {obj.centerLabel && (
+        <Tooltip permanent direction="center" className="chakbandi-center" opacity={0.95}>
+          <span style={{ fontSize: `${fontSize * 0.55}px`, fontWeight: 700, color: "#15803d", backgroundColor: "rgba(255,255,255,0.9)", padding: "1px 4px", borderRadius: 2 }}>{obj.centerLabel}</span>
+        </Tooltip>
+      )}
+    </>
   );
 }
 
 function OutletMarker({ obj, latlngs, zoom }) {
   const fontSize = labelFontSize(zoom);
   if (!latlngs || latlngs.length < 2) return null;
+  const blockSize = Math.max(3, (obj.blockSize || 20) / 6 - (18 - zoom) * 0.3);
   return (
     <>
       <Polyline
         positions={latlngs.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: "#06b6d4", weight: Math.max(2, 4 - (18 - zoom) * 0.25), opacity: 0.9 }}
+        pathOptions={{ color: obj.outletColor || "#06b6d4", weight: Math.max(2, 4 - (18 - zoom) * 0.25), opacity: 0.9 }}
       />
+      {/* Block at start */}
       <CircleMarker
         center={[latlngs[0].lat, latlngs[0].lng]}
-        radius={Math.max(3, 5 - (18 - zoom) * 0.3)}
-        pathOptions={{ color: "#0e7490", fillColor: "#06b6d4", fillOpacity: 0.9, weight: 2 }}
+        radius={blockSize}
+        pathOptions={{ color: "#0e7490", fillColor: obj.outletColor || "#06b6d4", fillOpacity: 0.9, weight: 2 }}
       >
         <Tooltip permanent direction="top" className="moga-label" opacity={0.95}>
           <span style={{ fontSize: `${fontSize * 0.62}px`, fontWeight: 700, color: "#0e7490", backgroundColor: "rgba(255,255,255,0.92)", padding: "1px 4px", borderRadius: 2, fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
@@ -176,6 +386,18 @@ function OutletMarker({ obj, latlngs, zoom }) {
           </span>
         </Tooltip>
       </CircleMarker>
+      {/* Arrow at end — using a marker with rotation */}
+      {(() => {
+        const p1 = latlngs[latlngs.length - 2], p2 = latlngs[latlngs.length - 1];
+        const angle = Math.atan2(p2.lng - p1.lng, p2.lat - p1.lat) * 180 / Math.PI;
+        const arrowIcon = L.divIcon({
+          html: `<div style="transform: rotate(${angle}deg); font-size: 18px; color: ${obj.outletColor || "#06b6d4"}; line-height: 1;">➤</div>`,
+          className: "",
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+        });
+        return <Marker position={[p2.lat, p2.lng]} icon={arrowIcon} />;
+      })()}
     </>
   );
 }
@@ -256,13 +478,13 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
     <>
       {geoObjects.map(({ obj, latlngs, killaLatLngs }) => {
         switch (obj.type) {
-          case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} />;
+          case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} />;
           case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "acre": return <MemoAcre key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
-          case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
-          case "khal": return <MemoKhal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
-          case "road": return <MemoRoad key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
-          case "chakbandi": return <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
+          case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
+          case "khal": return <MemoKhal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
+          case "road": return <MemoRoad key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
+          case "chakbandi": return <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
           case "mouza": return <MemoMouza key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "outlet": return <MemoOutlet key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           default: return null;
