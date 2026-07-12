@@ -9,21 +9,31 @@ export default function PrintHeaderBox({ mapData }) {
   const [fontSize, setFontSize] = useState(28);
   const headerText = buildMapHeaderText(mapData);
 
-  useEffect(() => {
+  const fitHeader = () => {
     const wrap = wrapRef.current;
     const text = textRef.current;
     if (!wrap || !text) return;
+    const maxW = wrap.clientWidth - 4;
+    if (maxW <= 0) return;
 
-    const MAX_SIZE = 28;
-    const MIN_SIZE = 8;
-    let size = MAX_SIZE;
+    let size = 80;
     text.style.fontSize = `${size}px`;
-
-    while (text.scrollWidth > wrap.clientWidth - 4 && size > MIN_SIZE) {
+    while (text.scrollWidth > maxW && size > 6) {
       size -= 1;
       text.style.fontSize = `${size}px`;
     }
     setFontSize(size);
+  };
+
+  useEffect(() => {
+    fitHeader();
+    // Re-measure after Urdu web font finishes loading
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(fitHeader);
+    }
+    const t1 = setTimeout(fitHeader, 300);
+    const t2 = setTimeout(fitHeader, 800);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [headerText]);
 
   return (

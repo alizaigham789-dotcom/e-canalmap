@@ -1053,7 +1053,7 @@ export function buildPrintHeaderHTML(mapData) {
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
   return `<div style="width:100%;box-sizing:border-box;padding:4px 10px;">
     <div id="print-header-box" style="border-bottom:2px solid #000; padding:6px 14px 8px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box;">
-      <span id="print-header-text" style="white-space:nowrap; font-family:${uf}; font-weight:bold; font-size:28px; direction:rtl;">${text}</span>
+      <span id="print-header-text" style="white-space:nowrap; font-family:${uf}; font-weight:bold; font-size:48px; direction:rtl;">${text}</span>
     </div>
   </div>
   <script>
@@ -1061,12 +1061,23 @@ export function buildPrintHeaderHTML(mapData) {
       var box = document.getElementById('print-header-box');
       var txt = document.getElementById('print-header-text');
       if (!box || !txt) return;
-      var size = 28;
-      txt.style.fontSize = size + 'px';
-      while (txt.scrollWidth > box.clientWidth - 4 && size > 8) {
-        size -= 1;
+      function fitHeader() {
+        var maxW = box.clientWidth - 4;
+        if (maxW <= 0) { setTimeout(fitHeader, 100); return; }
+        var size = 80;
         txt.style.fontSize = size + 'px';
+        while (txt.scrollWidth > maxW && size > 6) {
+          size -= 1;
+          txt.style.fontSize = size + 'px';
+        }
       }
+      fitHeader();
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(fitHeader);
+      }
+      window.addEventListener('load', fitHeader);
+      setTimeout(fitHeader, 300);
+      setTimeout(fitHeader, 800);
     })();
   </script>`;
 }
