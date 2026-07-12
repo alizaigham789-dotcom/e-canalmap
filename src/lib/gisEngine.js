@@ -1075,9 +1075,15 @@ export function buildPrintHeaderHTML(mapData) {
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(fitHeader);
       }
+      if (document.fonts && document.fonts.load) {
+        document.fonts.load('bold 48px "Jameel Noori Nastaleeq"').then(fitHeader).catch(function(){});
+      }
       window.addEventListener('load', fitHeader);
+      window.addEventListener('resize', fitHeader);
+      window.addEventListener('beforeprint', fitHeader);
       setTimeout(fitHeader, 300);
       setTimeout(fitHeader, 800);
+      setTimeout(fitHeader, 1500);
     })();
   </script>`;
 }

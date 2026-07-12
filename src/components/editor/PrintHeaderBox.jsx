@@ -36,6 +36,15 @@ export default function PrintHeaderBox({ mapData }) {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [headerText]);
 
+  // Re-fit whenever the container resizes (orientation / scale / page-size changes)
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const ro = new ResizeObserver(() => fitHeader());
+    ro.observe(wrap);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div ref={wrapRef} className="w-full px-3 py-1.5 mb-2 border-b-2 border-black flex items-center justify-center overflow-hidden bg-white shrink-0">
       <span
