@@ -781,6 +781,9 @@ const GISCanvas = forwardRef(function GISCanvas(
       const hit = hitTest(worldRaw.x, worldRaw.y, objectsRef.current);
       if (hit?.type === "damageMarker" && onDamageMarkerClick) {
         onDamageMarkerClick(hit);
+      } else if (hit && ["canal", "khal", "chakbandi", "road"].includes(hit.type)) {
+        // Select the line object so the next double-click can add anchor points
+        onSelect(hit.id);
       } else if (hit && ["mustateel", "muraba", "acre"].includes(hit.type)) {
         onSelect(hit.id);
         setEditingLabel({ id: hit.id, value: hit.label || "" });

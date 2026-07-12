@@ -1132,8 +1132,10 @@ export function hitTest(wx, wy, objects, eraser = false) {
     } else if (["canal", "chakbandi", "khal", "road"].includes(o.type)) {
       // Eraser: wider threshold + account for line width so overlapping lines
       // can each be erased one at a time (top first, then bottom on next click).
-      const lineWidth = o.width || 14;
-      const thresh = eraser ? Math.max(25, lineWidth / 2 + 15) : 15;
+      // Non-eraser: threshold scales with actual line width so clicking on the
+      // canal body always hits the canal, not the parcel underneath.
+      const lineWidth = o.width || (o.type === "canal" ? 14 : o.type === "khal" ? 8 : o.type === "road" ? 28 : 14);
+      const thresh = eraser ? Math.max(25, lineWidth / 2 + 15) : Math.max(15, lineWidth / 2 + 8);
       for (let j = 0; j < o.points.length - 1; j++) {
         if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < thresh) return o;
       }
