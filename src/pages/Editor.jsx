@@ -1110,7 +1110,7 @@ export default function Editor() {
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Tool Panel */}
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20">
+        <div className="absolute left-1.5 sm:left-3 top-1/2 -translate-y-1/2 z-20 max-h-[calc(100%-100px)]">
           <ToolPanel
             activeTool={activeTool}
             onToolChange={handleToolChange}
@@ -1181,7 +1181,7 @@ export default function Editor() {
           />
 
           {/* Top-right toolbar buttons */}
-          <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
+          <div className="absolute top-3 right-1.5 sm:right-3 flex flex-col gap-1.5 z-20 max-h-[calc(100%-100px)] overflow-y-auto no-scrollbar">
             <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${showLegend ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
               onClick={() => { setShowLegend(v => !v); setShowLayers(false); setShowColors(false); setShowSnap(false); }}
@@ -1386,7 +1386,8 @@ export default function Editor() {
           <div className="absolute z-30
             right-3 top-1/2 -translate-y-1/2
             sm:right-3 sm:top-1/2 sm:-translate-y-1/2
-            max-sm:right-auto max-sm:left-2 max-sm:top-auto max-sm:bottom-16 max-sm:translate-y-0 max-sm:translate-x-0">
+            max-sm:right-auto max-sm:left-1.5 max-sm:top-auto max-sm:bottom-2 max-sm:translate-y-0 max-sm:translate-x-0
+            max-sm:max-w-[calc(100vw-70px)]">
             <PropertiesPanel
               selectedObj={selectedObj}
               allObjects={objects}

@@ -144,6 +144,15 @@
   padding: 6px 10px !important;
 }
 
+/* Hide scrollbar but allow scrolling — used for mobile toolbars */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

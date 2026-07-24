@@ -149,7 +149,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-100 text-slate-800 pb-20 antialiased">
       {/* Header */}
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm">
-        <div className="max-w-md mx-auto px-5 py-3 flex items-center justify-between">
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/30 ring-1 ring-white/30">
               <Globe className="w-5 h-5 text-white" strokeWidth={2.2} />
@@ -159,7 +159,7 @@ export default function Dashboard() {
               <p className="text-[9px] text-slate-400 font-mono uppercase tracking-widest">Irrigation & Canal System</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setShowRecovery(true)}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-slate-100 transition-colors"
@@ -192,8 +192,8 @@ export default function Dashboard() {
           <p className="text-xs text-slate-500 mt-0.5">Select a module to continue</p>
         </div>
 
-        {/* Module Cards — 2-column grid */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Module Cards — 2-column grid, responsive on all screens */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {MODULES.map((mod) => {
             const isLocked = !isAdmin && mod.locked;
             return (
@@ -201,7 +201,7 @@ export default function Dashboard() {
                 key={mod.id}
                 onClick={() => !isLocked && navigate(mod.path)}
                 disabled={isLocked}
-                className={`group relative rounded-[28px] bg-gradient-to-br ${mod.bg} p-4 shadow-lg ${mod.shadow} transition-all duration-200 text-center min-h-[155px] flex flex-col items-center justify-center overflow-hidden
+                className={`group relative rounded-[20px] sm:rounded-[28px] bg-gradient-to-br ${mod.bg} p-3 sm:p-4 shadow-lg ${mod.shadow} transition-all duration-200 text-center min-h-[130px] sm:min-h-[155px] flex flex-col items-center justify-center overflow-hidden
                   ${isLocked ? "opacity-60 cursor-not-allowed" : "hover:shadow-xl hover:scale-[1.04] active:scale-[0.97] cursor-pointer"}`}
               >
                 {/* Glossy top sheen */}
@@ -214,18 +214,18 @@ export default function Dashboard() {
                 )}
 
                 {/* Icon — no white box, just the icon with drop-shadow */}
-                <div className="mb-3 w-[72px] h-[72px] flex items-center justify-center transition-all duration-200 group-hover:-translate-y-1.5 group-hover:scale-110">
+                <div className="mb-2 sm:mb-3 w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] flex items-center justify-center transition-all duration-200 group-hover:-translate-y-1.5 group-hover:scale-110">
                   <img
                     src={mod.icon}
                     alt={mod.label}
-                    className="w-[68px] h-[68px] object-contain"
+                    className="w-[48px] h-[48px] sm:w-[68px] sm:h-[68px] object-contain"
                     style={{ filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.45)) brightness(1.05) contrast(1.05)" }}
                   />
                 </div>
 
                 <div className="relative z-10">
-                  <p className="text-[11px] font-bold text-white tracking-wide leading-tight drop-shadow-sm">{mod.label}</p>
-                  <p className="text-[9px] text-white/80 mt-0.5 drop-shadow-sm" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{mod.labelUrdu}</p>
+                  <p className="text-[10px] sm:text-[11px] font-bold text-white tracking-wide leading-tight drop-shadow-sm">{mod.label}</p>
+                  <p className="text-[8px] sm:text-[9px] text-white/80 mt-0.5 drop-shadow-sm" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{mod.labelUrdu}</p>
                 </div>
               </button>
             );

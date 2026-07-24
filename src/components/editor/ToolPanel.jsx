@@ -78,7 +78,7 @@ const TOOLS = [
 export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, onZoomIn, onZoomOut, onFitView, canUndo, canRedo }) {
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col gap-1 bg-white border border-slate-200 rounded-xl p-2 shadow-lg">
+      <div className="flex flex-col gap-0.5 sm:gap-1 bg-white border border-slate-200 rounded-xl p-1.5 sm:p-2 shadow-lg max-h-[calc(100vh-180px)] sm:max-h-none overflow-y-auto no-scrollbar">
         {TOOLS.map((tool, i) => {
           if (tool === null) return <Separator key={`sep-${i}`} className="bg-slate-200 my-0.5" />;
           const Icon = tool.icon;
@@ -92,21 +92,20 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
                   <button
                     onClick={() => onToolChange(tool.id)}
                     className={`
-                      relative w-[72px] h-[72px] rounded-2xl transition-all duration-200 flex flex-col items-center justify-center gap-1.5
-                      border-2 shadow-xl overflow-hidden group
+                      relative w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] rounded-xl sm:rounded-2xl transition-all duration-200 flex flex-col items-center justify-center gap-1 sm:gap-1.5
+                      border-2 shadow-xl overflow-hidden group shrink-0
                       ${isActive
                         ? "bg-gradient-to-br from-green-500 to-emerald-700 border-green-400 text-white shadow-green-500/40"
                         : "bg-gradient-to-br from-green-50 to-emerald-100 border-green-300 text-green-700 hover:from-green-500 hover:to-emerald-700 hover:text-white hover:border-green-400 hover:shadow-green-500/40"
                       }
                     `}
-                    style={{ minWidth: 72, minHeight: 72 }}
                   >
                     {/* Animated background ring on active */}
                     {isActive && (
-                      <span className="absolute inset-0 rounded-2xl bg-white/10 animate-pulse pointer-events-none" />
+                      <span className="absolute inset-0 rounded-xl sm:rounded-2xl bg-white/10 animate-pulse pointer-events-none" />
                     )}
-                    <Icon className="w-8 h-8 drop-shadow-sm" />
-                    <span className={`text-[9px] font-bold leading-none tracking-wide uppercase ${isActive ? "text-green-100" : "text-green-600 group-hover:text-green-100"}`}>
+                    <Icon className="w-5 h-5 sm:w-8 sm:h-8 drop-shadow-sm" />
+                    <span className={`text-[7px] sm:text-[9px] font-bold leading-none tracking-wide uppercase ${isActive ? "text-green-100" : "text-green-600 group-hover:text-green-100"}`}>
                       Chakbandi
                     </span>
                   </button>
@@ -125,7 +124,7 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={`w-9 h-9 rounded-lg transition-all ${
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg transition-all shrink-0 ${
                     isActive
                       ? activeClass
                       : `text-slate-500 hover:text-slate-800 hover:bg-slate-100 ${tool.color || ""}`
@@ -146,7 +145,7 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30"
+            <Button variant="ghost" size="icon" className="w-8 h-8 sm:w-9 sm:h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0"
               onClick={onUndo} disabled={!canUndo}>
               <RotateCcw className="w-4 h-4" />
             </Button>
@@ -156,7 +155,7 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30"
+            <Button variant="ghost" size="icon" className="w-8 h-8 sm:w-9 sm:h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0"
               onClick={onRedo} disabled={!canRedo}>
               <RotateCw className="w-4 h-4" />
             </Button>
@@ -168,7 +167,7 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={onZoomIn}>
+            <Button variant="ghost" size="icon" className="w-8 h-8 sm:w-9 sm:h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0" onClick={onZoomIn}>
               <ZoomIn className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
@@ -177,7 +176,7 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={onZoomOut}>
+            <Button variant="ghost" size="icon" className="w-8 h-8 sm:w-9 sm:h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0" onClick={onZoomOut}>
               <ZoomOut className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
@@ -186,7 +185,7 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-9 h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={onFitView}>
+            <Button variant="ghost" size="icon" className="w-8 h-8 sm:w-9 sm:h-9 text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0" onClick={onFitView}>
               <Maximize2 className="w-4 h-4" />
             </Button>
           </TooltipTrigger>

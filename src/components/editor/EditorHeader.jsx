@@ -36,24 +36,24 @@ export default function EditorHeader({
   const isDrawing = drawingTools.includes(activeTool);
 
   return (
-    <header className="flex items-center gap-3 px-4 py-2.5 bg-white border-b border-slate-200 shrink-0 shadow-sm">
-      <Link to="/">
+    <header className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border-b border-slate-200 shrink-0 shadow-sm overflow-x-auto no-scrollbar">
+      <Link to="/" className="shrink-0">
         <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100">
           <ArrowLeft className="w-4 h-4" />
         </Button>
       </Link>
 
-      <div className="w-px h-6 bg-slate-200" />
+      <div className="hidden sm:block w-px h-6 bg-slate-200 shrink-0" />
 
       {/* Title */}
-      <div className="flex items-center gap-1.5 min-w-0">
+      <div className="flex items-center gap-1.5 min-w-0 shrink-0">
         {editingTitle ? (
           <div className="flex items-center gap-1">
             <Input
               value={titleDraft}
               onChange={e => setTitleDraft(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") setEditingTitle(false); }}
-              className="h-7 text-sm bg-slate-50 border-slate-300 text-slate-800 w-48 focus:border-blue-500"
+              className="h-7 text-sm bg-slate-50 border-slate-300 text-slate-800 w-32 sm:w-48 focus:border-blue-500"
               autoFocus
             />
             <Button size="icon" variant="ghost" className="w-6 h-6 text-emerald-400 hover:bg-emerald-500/10" onClick={commitTitle}>
@@ -65,7 +65,7 @@ export default function EditorHeader({
           </div>
         ) : (
           <button onClick={startEdit} className="flex items-center gap-1.5 group">
-            <span className="text-sm font-semibold text-slate-800 font-heading truncate max-w-[180px]">
+            <span className="text-xs sm:text-sm font-semibold text-slate-800 font-heading truncate max-w-[100px] sm:max-w-[180px]">
               {mapData?.title || "Untitled Map"}
             </span>
             <Pencil className="w-3 h-3 text-slate-400 group-hover:text-slate-600 transition-colors" />
@@ -75,7 +75,7 @@ export default function EditorHeader({
 
       {/* Status badge */}
       <Select value={mapData?.status || "draft"} onValueChange={onStatusChange}>
-        <SelectTrigger className={`h-6 w-28 text-[10px] border rounded-full px-2 font-medium ${STATUS_COLORS[mapData?.status || "draft"]} bg-transparent`}>
+        <SelectTrigger className={`h-6 w-20 sm:w-28 text-[10px] border rounded-full px-2 font-medium shrink-0 ${STATUS_COLORS[mapData?.status || "draft"]} bg-transparent`}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent className="bg-white border-slate-200 text-xs">
@@ -98,30 +98,30 @@ export default function EditorHeader({
       </div>
 
       {/* Edit details button */}
-      <Button variant="ghost" size="icon" className="w-7 h-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={onEditDetails} title="Edit Map Details">
+      <Button variant="ghost" size="icon" className="w-7 h-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50 shrink-0" onClick={onEditDetails} title="Edit Map Details">
         <Settings2 className="w-3.5 h-3.5" />
       </Button>
 
-      <div className="flex-1" />
+      <div className="flex-1 min-w-0" />
 
       {/* Stop drawing */}
       {(isDrawing || canalDraftActive) && (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <Button
             size="sm"
             variant="outline"
             onClick={onUndoPoint}
-            className="h-7 text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 gap-1.5"
+            className="h-7 text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 gap-1 sm:gap-1.5 px-2"
           >
-            <Undo2 className="w-3.5 h-3.5" /> Back
+            <Undo2 className="w-3.5 h-3.5" /><span className="hidden sm:inline">Back</span>
           </Button>
           <Button
             size="sm"
             variant="outline"
             onClick={onStopDrawing}
-            className="h-7 text-xs border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-1.5"
+            className="h-7 text-xs border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-1 sm:gap-1.5 px-2"
           >
-            <StopCircle className="w-3.5 h-3.5" /> Stop Drawing
+            <StopCircle className="w-3.5 h-3.5" /><span className="hidden sm:inline">Stop</span>
           </Button>
         </div>
       )}
@@ -130,7 +130,7 @@ export default function EditorHeader({
       <Button
         variant="ghost" size="sm"
         onClick={onExport}
-        className="h-7 text-xs text-slate-500 hover:text-slate-800 gap-1.5 hidden sm:flex"
+        className="h-7 text-xs text-slate-500 hover:text-slate-800 gap-1.5 hidden md:flex shrink-0"
       >
         <Download className="w-3.5 h-3.5" /> Export
       </Button>
@@ -140,10 +140,10 @@ export default function EditorHeader({
         size="sm"
         onClick={() => onSave()}
         disabled={isSaving}
-        className="h-7 text-xs bg-blue-600 hover:bg-blue-500 text-white gap-1.5"
+        className="h-7 text-xs bg-blue-600 hover:bg-blue-500 text-white gap-1.5 shrink-0 px-2 sm:px-3"
       >
         {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-        Save
+        <span className="hidden sm:inline">Save</span>
       </Button>
 
       {/* Permanent Save — force-saves ALL layers, bypasses data-loss safeguard */}
@@ -151,19 +151,18 @@ export default function EditorHeader({
         size="sm"
         onClick={onPermanentSave}
         disabled={permSaving}
-        className="h-7 text-xs bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5"
+        className="h-7 text-xs bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5 shrink-0 px-2 sm:px-3"
         title="تمام کو محفوظ کریں — تمام پرتیں مستقل طور پر محفوظ ہو جائیں گی"
       >
         {permSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
         <span className="hidden sm:inline">Permanent Save</span>
-        <span className="sm:hidden">Lock</span>
       </Button>
 
       {/* Backup Recovery */}
       <Button
         variant="ghost"
         size="icon"
-        className="w-7 h-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+        className="w-7 h-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 shrink-0"
         onClick={onRecovery}
         title="Backup Recovery — بیک اپ سے ری سٹور"
       >
