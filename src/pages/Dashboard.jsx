@@ -155,7 +155,7 @@ export default function Dashboard() {
               <Globe className="w-5 h-5 text-white" strokeWidth={2.2} />
             </div>
             <div>
-              <h1 className="text-sm font-bold font-heading tracking-wide text-slate-800">CHAKBANDI GIS</h1>
+              <h1 className="text-sm font-bold font-heading tracking-wide text-slate-800">E Canal Patwari</h1>
               <p className="text-[9px] text-slate-400 font-mono uppercase tracking-widest">Irrigation & Canal System</p>
             </div>
           </div>
@@ -189,7 +189,7 @@ export default function Dashboard() {
           <h2 className="text-lg font-bold font-heading text-slate-800">
             Welcome, {currentUser?.full_name?.split(" ")[0] || "User"}
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">Select a module to continue</p>
+          <p className="text-xs text-slate-500 mt-0.5" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>ایک ماڈیول منتخب کریں</p>
         </div>
 
         {/* Module Cards — 2-column grid, responsive on all screens */}
