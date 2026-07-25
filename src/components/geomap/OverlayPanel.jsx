@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle, Save, Loader2 } from "lucide-react";
 
 export default function OverlayPanel({
   maps,
@@ -14,6 +14,9 @@ export default function OverlayPanel({
   onRotationChange,
   onRePlace,
   onClear,
+  onSave,
+  saving,
+  saved,
   mustateelAreas,
   onClose,
 }) {
@@ -158,6 +161,14 @@ export default function OverlayPanel({
               </div>
             )}
 
+            <button
+              onClick={onSave}
+              disabled={saving}
+              className={`w-full h-8 rounded-md text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${saved ? "bg-green-600/20 text-green-300" : "bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600/40"} ${saving ? "opacity-60 cursor-wait" : ""}`}
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+              {saving ? "Saving…" : saved ? "Saved" : "Save Placement"}
+            </button>
             <button
               onClick={onRePlace}
               className="w-full h-8 rounded-md text-xs font-bold bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 flex items-center justify-center gap-1.5 transition-all"

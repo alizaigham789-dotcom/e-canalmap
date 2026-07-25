@@ -135,6 +135,35 @@
   display: none !important;
 }
 
+/* GeoMap — transparent label tooltips (no white background) */
+.leaflet-tooltip.mustateel-label,
+.leaflet-tooltip.muraba-label,
+.leaflet-tooltip.acre-label,
+.leaflet-tooltip.canal-label,
+.leaflet-tooltip.khal-label,
+.leaflet-tooltip.road-label,
+.leaflet-tooltip.chakbandi-label,
+.leaflet-tooltip.chakbandi-center,
+.leaflet-tooltip.mouza-label,
+.leaflet-tooltip.moga-label {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.leaflet-tooltip.mustateel-label::before,
+.leaflet-tooltip.muraba-label::before,
+.leaflet-tooltip.acre-label::before,
+.leaflet-tooltip.canal-label::before,
+.leaflet-tooltip.khal-label::before,
+.leaflet-tooltip.road-label::before,
+.leaflet-tooltip.chakbandi-label::before,
+.leaflet-tooltip.chakbandi-center::before,
+.leaflet-tooltip.mouza-label::before,
+.leaflet-tooltip.moga-label::before {
+  display: none !important;
+}
+
 /* GeoMap — placement coordinates tooltip */
 .leaflet-tooltip.placement-coords-tooltip {
   background: rgba(255,255,255,0.97) !important;

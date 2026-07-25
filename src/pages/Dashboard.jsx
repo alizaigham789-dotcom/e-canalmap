@@ -15,7 +15,7 @@ const MODULES = [
     path: "/map-list",
     bg: "from-[#1a8fe3] to-[#0ecad4]",
     shadow: "shadow-blue-400/40",
-    locked: true,
+    locked: false,
   },
   {
     id: "geo-map",
@@ -25,7 +25,7 @@ const MODULES = [
     path: "/geo-map",
     bg: "from-[#06b6d4] to-[#3b82f6]",
     shadow: "shadow-cyan-400/40",
-    locked: true,
+    locked: false,
   },
   {
     id: "khal-mismari",
@@ -35,7 +35,7 @@ const MODULES = [
     path: "/khal-mismari",
     bg: "from-[#f97316] to-[#f59e0b]",
     shadow: "shadow-orange-400/40",
-    locked: true,
+    locked: false,
   },
   {
     id: "warashikni",
@@ -45,7 +45,7 @@ const MODULES = [
     path: "/warashikni",
     bg: "from-[#38b6f8] to-[#0ea5e9]",
     shadow: "shadow-sky-400/40",
-    locked: true,
+    locked: false,
   },
   {
     id: "tawan-case",
@@ -55,7 +55,7 @@ const MODULES = [
     path: "/tawan-case",
     bg: "from-[#a855f7] to-[#d946ef]",
     shadow: "shadow-purple-400/40",
-    locked: true,
+    locked: false,
   },
   {
     id: "ta-form",
@@ -65,7 +65,7 @@ const MODULES = [
     path: "/ta-form",
     bg: "from-[#f43f5e] to-[#fb7185]",
     shadow: "shadow-rose-400/40",
-    locked: true,
+    locked: false,
   },
   {
     id: "warabandi",
@@ -115,7 +115,7 @@ const MODULES = [
     path: "/zilladar",
     bg: "from-[#f59e0b] to-[#d97706]",
     shadow: "shadow-amber-400/40",
-    locked: true,
+    locked: false,
   },
   {
     id: "group-chat",
@@ -125,7 +125,7 @@ const MODULES = [
     path: "/group-chat",
     bg: "from-[#8b5cf6] to-[#6d28d9]",
     shadow: "shadow-violet-400/40",
-    locked: true,
+    locked: false,
   },
 ];
 

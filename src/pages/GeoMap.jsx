@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2 } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -125,6 +125,9 @@ export default function GeoMap() {
   const [overlay, setOverlay] = useState(null); // { transform, rotation, placementPoint }
   const [killaVisible, setKillaVisible] = useState(true);
   const [layerVisible, setLayerVisible] = useState(true);
+  const [activeMustateelId, setActiveMustateelId] = useState(null);
+  const [savingOverlay, setSavingOverlay] = useState(false);
+  const [overlaySaved, setOverlaySaved] = useState(false);
 
   // Measurement tools state
   const [markers, setMarkers] = useState([]); // user markers
@@ -161,6 +164,29 @@ export default function GeoMap() {
     }
     return [...s].sort((a, b) => parseInt(a) - parseInt(b));
   }, [mapObjects]);
+
+  // ─── AUTO-LOAD SAVED PLACEMENT ─────────────────────────────────
+  // If the selected map has a saved geo placement, apply it automatically
+  // instead of asking the user to click again.
+  useEffect(() => {
+    if (!selectedMap || !selectedMapId) return;
+    if (selectedMap.geo_placement_lat != null && selectedMap.geo_placement_lng != null) {
+      const savedPoint = { lat: selectedMap.geo_placement_lat, lng: selectedMap.geo_placement_lng };
+      const savedRotation = selectedMap.geo_rotation || 0;
+      const savedMoga = selectedMap.geo_moga_filter || "";
+      setSelectedMoga(savedMoga);
+      setPlacementPoint(savedPoint);
+      setPlacing(false);
+      // Apply rotation if non-zero — computeOneClickTransform handles it
+      if (savedRotation !== 0 && mapObjects.length > 0) {
+        const transform = computeOneClickTransform(savedPoint, mapObjects, savedRotation);
+        if (transform) {
+          setOverlay({ transform, rotation: savedRotation, placementPoint: savedPoint });
+        }
+      }
+      setOverlaySaved(true);
+    }
+  }, [selectedMap, selectedMapId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── OVERLAY COMPUTATION ──────────────────────────────────────
   // One-click placement: the clicked point becomes the upper-left corner
@@ -322,6 +348,8 @@ export default function GeoMap() {
     setSelectedMoga("");
     setPlacementPoint(null);
     setOverlay(null);
+    setActiveMustateelId(null);
+    setOverlaySaved(false);
     setPlacing(!!id); // enter single-click placement mode when a map is chosen
   };
 
@@ -340,13 +368,41 @@ export default function GeoMap() {
     setPlacing(false);
     setSelectedMapId("");
     setSelectedMoga("");
+    setActiveMustateelId(null);
+    setOverlaySaved(false);
   };
 
   const handleRePlace = () => {
     setOverlay(null);
     setPlacementPoint(null);
     setPlacing(true);
+    setActiveMustateelId(null);
+    setOverlaySaved(false);
   };
+
+  // Save overlay placement to server so it persists across sessions
+  const handleSaveOverlay = async () => {
+    if (!selectedMapId || !placementPoint) return;
+    setSavingOverlay(true);
+    try {
+      await base44.entities.LandMap.update(selectedMapId, {
+        geo_placement_lat: placementPoint.lat,
+        geo_placement_lng: placementPoint.lng,
+        geo_rotation: overlay?.rotation || 0,
+        geo_moga_filter: selectedMoga || "",
+      });
+      setOverlaySaved(true);
+    } catch (err) {
+      alert("Save failed: " + (err.message || "unknown error"));
+    } finally {
+      setSavingOverlay(false);
+    }
+  };
+
+  // Click on mustateel → toggle killa display for that parcel
+  const handleMustateelClick = useCallback((id) => {
+    setActiveMustateelId(prev => prev === id ? null : id);
+  }, []);
 
   const handleClearMeasurements = () => { setMeasurements([]); setDraft(null); setLiveMeasurement(null); };
   const handleDeleteMeasurement = (id) => { setMeasurements(prev => prev.filter(m => m.id !== id)); };
@@ -431,6 +487,8 @@ export default function GeoMap() {
             zoom={zoom}
             killaVisible={killaVisible}
             mogaFilter={selectedMoga}
+            activeMustateelId={activeMustateelId}
+            onMustateelClick={handleMustateelClick}
           />
         )}
 
@@ -524,6 +582,9 @@ export default function GeoMap() {
           onRotationChange={handleRotationChange}
           onRePlace={handleRePlace}
           onClear={handleClearOverlay}
+          onSave={handleSaveOverlay}
+          saving={savingOverlay}
+          saved={overlaySaved}
           mustateelAreas={mustateelAreas}
           onClose={() => setShowOverlayPanel(false)}
         />
@@ -537,6 +598,14 @@ export default function GeoMap() {
         >
           Killa #{killaVisible ? "On" : "Off"}
         </button>
+      )}
+
+      {/* Click mustateel hint */}
+      {overlay && killaVisible && !activeMustateelId && (
+        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1000] bg-black/80 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center gap-1.5">
+          <MapPin className="w-3 h-3" />
+          کسی مستطیل پر کلک کریں — کلا نمبر اور گرڈ لائنز دکھائی دیں گے
+        </div>
       )}
 
       <DrawingToolbar

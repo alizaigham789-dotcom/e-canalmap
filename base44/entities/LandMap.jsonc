@@ -73,6 +73,23 @@
     },
     "notes": {
       "type": "string"
+    },
+    "geo_placement_lat": {
+      "type": "number",
+      "description": "Saved GeoMap overlay placement latitude (upper-left corner anchor)"
+    },
+    "geo_placement_lng": {
+      "type": "number",
+      "description": "Saved GeoMap overlay placement longitude (upper-left corner anchor)"
+    },
+    "geo_rotation": {
+      "type": "number",
+      "default": 0,
+      "description": "Saved GeoMap overlay rotation in degrees"
+    },
+    "geo_moga_filter": {
+      "type": "string",
+      "description": "Saved GeoMap moga filter for overlay display"
     }
   },
   "required": [

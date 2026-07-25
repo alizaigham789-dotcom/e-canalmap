@@ -9,9 +9,9 @@ function labelFontSize(zoom) {
 }
 
 // ─── KILLA GRID LINES for mustateel ──────────────────────────────
-// Draws the internal subdivision lines (2 cols × 5 rows) like the editor.
+// Draws the internal subdivision lines (2 cols × 5 rows) — RED, enhanced visibility.
 function KillaGridLines({ obj, transform, zoom }) {
-  if (zoom < 16) return null;
+  if (zoom < 15) return null;
   const lines = [];
   const { x, y, w, h } = obj;
   const cellW = w / 2, cellH = h / 5;
@@ -26,37 +26,44 @@ function KillaGridLines({ obj, transform, zoom }) {
     lines.push([[hL.lat, hL.lng], [hR.lat, hR.lng]]);
   }
   return lines.map((pts, i) => (
-    <Polyline key={i} positions={pts} pathOptions={{ color: "#dc2626", weight: 1.5, opacity: 0.6 }} />
+    <Polyline key={i} positions={pts} pathOptions={{ color: "#ff0000", weight: 2.5, opacity: 0.9 }} />
   ));
 }
 
 // Killa label as a CircleMarker with permanent tooltip
 function KillaLabel({ num, latlng, zoom }) {
-  if (zoom < 17) return null;
+  if (zoom < 16) return null;
   return (
     <CircleMarker
       center={latlng}
       radius={0}
       pathOptions={{ opacity: 0, fillOpacity: 0 }}
     >
-      <Tooltip permanent direction="center" opacity={0.7} className="killa-label">
-        <span style={{ fontSize: `${Math.max(7, labelFontSize(zoom) * 0.55)}px`, fontWeight: 600, color: "#991b1b" }}>{num}</span>
+      <Tooltip permanent direction="center" opacity={1} className="killa-label">
+        <span style={{ fontSize: `${Math.max(8, labelFontSize(zoom) * 0.6)}px`, fontWeight: 700, color: "#dc2626", textShadow: "1px 1px 2px rgba(255,255,255,0.9), -1px -1px 2px rgba(255,255,255,0.9)" }}>{num}</span>
       </Tooltip>
     </CircleMarker>
   );
 }
 
-function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform }) {
+function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, onClick }) {
   const acres = useMemo(() => sqMetersToUnits(polygonAreaSqMeters(latlngs)).acres, [latlngs]);
   const fontSize = labelFontSize(zoom);
   const boundaryThickness = obj.boundaryThickness || 5;
-  const lineWeight = Math.max(2.5, boundaryThickness * 0.8);
+  const lineWeight = Math.max(3, boundaryThickness * 1.2);
 
   return (
     <>
       <Polygon
         positions={latlngs.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.10, weight: lineWeight }}
+        pathOptions={{
+          color: isActive ? "#ff0000" : "#dc2626",
+          fillColor: isActive ? "#ef4444" : "#dc2626",
+          fillOpacity: isActive ? 0.18 : 0.08,
+          weight: isActive ? lineWeight + 1.5 : lineWeight,
+          opacity: 1,
+        }}
+        eventHandlers={{ click: (e) => { L.DomEvent.stopPropagation(e); onClick && onClick(obj.id); } }}
       >
         <Tooltip permanent direction="center" className="mustateel-label" opacity={1}>
           <div style={{ fontSize: `${fontSize}px`, fontWeight: 700, color: "#dc2626", textAlign: "center", lineHeight: 1.15, whiteSpace: "nowrap" }}>
@@ -70,9 +77,9 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
           </div>
         </Tooltip>
       </Polygon>
-      {/* Killa grid lines — same as map editor */}
-      {showKilla && <KillaGridLines obj={obj} transform={transform} zoom={zoom} />}
-      {showKilla && killaLatLngs && zoom >= 17 && killaLatLngs.map((k, i) => (
+      {/* Killa grid lines — only for the clicked/active mustateel */}
+      {showKilla && isActive && <KillaGridLines obj={obj} transform={transform} zoom={zoom} />}
+      {showKilla && isActive && killaLatLngs && zoom >= 16 && killaLatLngs.map((k, i) => (
         <KillaLabel key={i} num={k.num} latlng={k.latlng} zoom={zoom} />
       ))}
     </>
@@ -102,11 +109,11 @@ function AcreLabel({ obj, latlngs, zoom }) {
   return (
     <Polygon
       positions={latlngs.map(p => [p.lat, p.lng])}
-      pathOptions={{ color: "#eab308", fillColor: "#eab308", fillOpacity: 0.06, weight: 1 }}
+      pathOptions={{ color: "#facc15", fillColor: "#facc15", fillOpacity: 0.08, weight: 2, opacity: 0.9 }}
     >
       {obj.label && (
-        <Tooltip permanent direction="center" className="acre-label" opacity={0.85}>
-          <span style={{ fontSize: `${fontSize * 0.65}px`, fontWeight: 600, color: "#854d0e" }}>{obj.label}</span>
+        <Tooltip permanent direction="center" className="acre-label" opacity={1}>
+          <span style={{ fontSize: `${fontSize * 0.65}px`, fontWeight: 700, color: "#a16207", textShadow: "1px 1px 2px rgba(255,255,255,0.9), -1px -1px 2px rgba(255,255,255,0.9)" }}>{obj.label}</span>
         </Tooltip>
       )}
     </Polygon>
@@ -343,11 +350,11 @@ function ChakbandiLine({ obj, latlngs, zoom, transform }) {
     <>
       <Polyline
         positions={latlngs.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: "#22c55e", weight: lineWeight, opacity: 0.85 }}
+        pathOptions={{ color: "#00cc00", weight: lineWeight + 1, opacity: 1 }}
       />
       {/* Cross pattern marks */}
       {crossMarks.map((pts, i) => (
-        <Polyline key={i} positions={pts} pathOptions={{ color: "#22c55e", weight: Math.max(2, lineWeight * 0.8), opacity: 0.85 }} />
+        <Polyline key={i} positions={pts} pathOptions={{ color: "#00cc00", weight: Math.max(2.5, lineWeight * 0.9), opacity: 1 }} />
       ))}
       {obj.name && (
         <Tooltip permanent direction="top" className="chakbandi-label" opacity={0.9}>
@@ -447,15 +454,15 @@ function computeKillaLatLngs(obj, transform) {
   return result;
 }
 
-export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter }) {
+export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelId, onMustateelClick }) {
   const geoObjects = useMemo(() => {
     if (!transform || !objects.length) return [];
     const filtered = mogaFilter
       ? objects.filter(o => {
-          if (o.type === "chakbandi") return o.mogaNumber === mogaFilter;
-          if (o.type === "mustateel") return o.mogaNumber === mogaFilter || !o.mogaNumber;
-          return true;
-        })
+           if (o.type === "chakbandi") return o.mogaNumber === mogaFilter;
+           if (o.type === "mustateel") return o.mogaNumber === mogaFilter || !o.mogaNumber;
+           return true;
+         })
       : objects;
     const sorted = [...filtered].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
     return sorted.map(obj => {
@@ -478,7 +485,7 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
     <>
       {geoObjects.map(({ obj, latlngs, killaLatLngs }) => {
         switch (obj.type) {
-          case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} />;
+          case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelId === obj.id} onClick={onMustateelClick} />;
           case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "acre": return <MemoAcre key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
