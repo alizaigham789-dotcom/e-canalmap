@@ -26,7 +26,7 @@ function KillaGridLines({ obj, transform, zoom }) {
     lines.push([[hL.lat, hL.lng], [hR.lat, hR.lng]]);
   }
   return lines.map((pts, i) => (
-    <Polyline key={i} positions={pts} pathOptions={{ color: "#ff0000", weight: 2.5, opacity: 0.9 }} />
+    <Polyline key={i} positions={pts} pathOptions={{ color: "#facc15", weight: 2.5, opacity: 0.9 }} />
   ));
 }
 
@@ -40,7 +40,7 @@ function KillaLabel({ num, latlng, zoom }) {
       pathOptions={{ opacity: 0, fillOpacity: 0 }}
     >
       <Tooltip permanent direction="center" opacity={1} className="killa-label">
-        <span style={{ fontSize: `${Math.max(8, labelFontSize(zoom) * 0.6)}px`, fontWeight: 700, color: "#dc2626", textShadow: "1px 1px 2px rgba(255,255,255,0.9), -1px -1px 2px rgba(255,255,255,0.9)" }}>{num}</span>
+        <span style={{ fontSize: `${Math.max(8, labelFontSize(zoom) * 0.6)}px`, fontWeight: 700, color: "#facc15", textShadow: "1px 1px 2px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9)" }}>{num}</span>
       </Tooltip>
     </CircleMarker>
   );
@@ -66,7 +66,7 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
         eventHandlers={{ click: (e) => { L.DomEvent.stopPropagation(e); onClick && onClick(obj.id); } }}
       >
         <Tooltip permanent direction="center" className="mustateel-label" opacity={1}>
-          <div style={{ fontSize: `${fontSize}px`, fontWeight: 700, color: "#dc2626", textAlign: "center", lineHeight: 1.15, whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: `${fontSize * 5}px`, fontWeight: 700, color: "#000000", textAlign: "center", lineHeight: 1.15, whiteSpace: "nowrap" }}>
             {obj.label && <div>{obj.label}</div>}
             <div style={{ fontSize: `${fontSize * 0.78}px`, color: "#7f1d1d" }}>{acres.toFixed(2)} ac</div>
             {obj.mogaNumber && (
@@ -113,7 +113,7 @@ function AcreLabel({ obj, latlngs, zoom }) {
     >
       {obj.label && (
         <Tooltip permanent direction="center" className="acre-label" opacity={1}>
-          <span style={{ fontSize: `${fontSize * 0.65}px`, fontWeight: 700, color: "#a16207", textShadow: "1px 1px 2px rgba(255,255,255,0.9), -1px -1px 2px rgba(255,255,255,0.9)" }}>{obj.label}</span>
+          <span style={{ fontSize: `${fontSize * 0.65 * 2}px`, fontWeight: 700, color: "#a16207", textShadow: "1px 1px 2px rgba(255,255,255,0.9), -1px -1px 2px rgba(255,255,255,0.9)" }}>{obj.label}</span>
         </Tooltip>
       )}
     </Polygon>
