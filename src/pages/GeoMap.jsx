@@ -182,28 +182,9 @@ export default function GeoMap() {
     return [...s].sort((a, b) => parseInt(a) - parseInt(b));
   }, [mapObjects]);
 
-  // ─── AUTO-LOAD SAVED PLACEMENT ─────────────────────────────────
-  // If the selected map has a saved geo placement, apply it automatically
-  // instead of asking the user to click again.
-  useEffect(() => {
-    if (!selectedMap || !selectedMapId) return;
-    if (selectedMap.geo_placement_lat != null && selectedMap.geo_placement_lng != null) {
-      const savedPoint = { lat: selectedMap.geo_placement_lat, lng: selectedMap.geo_placement_lng };
-      const savedRotation = selectedMap.geo_rotation || 0;
-      const savedMoga = selectedMap.geo_moga_filter || "";
-      setSelectedMoga(savedMoga);
-      setPlacementPoint(savedPoint);
-      setPlacing(false);
-      // Apply rotation if non-zero — computeOneClickTransform handles it
-      if (savedRotation !== 0 && mapObjects.length > 0) {
-        const transform = computeOneClickTransform(savedPoint, mapObjects, savedRotation);
-        if (transform) {
-          setOverlay({ transform, rotation: savedRotation, placementPoint: savedPoint });
-        }
-      }
-      setOverlaySaved(true);
-    }
-  }, [selectedMap, selectedMapId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // NOTE: Saved placements are NOT auto-loaded — the user always clicks to
+  // place the map fresh. Saved data (geo_placement_lat/lng/rotation/moga)
+  // is preserved on the entity for reference but does not auto-place.
 
   // ─── OVERLAY COMPUTATION ──────────────────────────────────────
   // One-click placement: the clicked point becomes the upper-left corner
