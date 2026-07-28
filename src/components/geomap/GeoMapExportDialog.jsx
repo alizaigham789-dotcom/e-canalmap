@@ -39,9 +39,12 @@ export default function GeoMapExportDialog({
   colorSettings,
   selectedMoga,
   killaVisibility,
+  overlayReady,
+  onCaptureSatellite,
 }) {
   const [format, setFormat] = useState("png");
   const [bwMode, setBwMode] = useState(false);
+  const [satellite, setSatellite] = useState(false);
   const [showKilla, setShowKilla] = useState(true);
   const [mogaFilter, setMogaFilter] = useState(selectedMoga || "");
   const [pageSize, setPageSize] = useState("a4");
@@ -108,18 +111,23 @@ export default function GeoMapExportDialog({
   };
 
   const handleDownloadPNG = async () => {
-    if (!svgData) return;
     setExporting(true);
     try {
-      const targetW = 2400;
-      const scale = targetW / svgData.viewW;
-      const w = Math.round(svgData.viewW * scale);
-      const h = Math.round(svgData.viewH * scale);
-      const canvas = await renderSVGtoCanvas(svgString, w, h);
+      let canvas;
+      if (satellite && overlayReady && onCaptureSatellite) {
+        canvas = await onCaptureSatellite({ bw: bwMode });
+      } else {
+        if (!svgData) { setExporting(false); return; }
+        const targetW = 2400;
+        const scale = targetW / svgData.viewW;
+        const w = Math.round(svgData.viewW * scale);
+        const h = Math.round(svgData.viewH * scale);
+        canvas = await renderSVGtoCanvas(svgString, w, h);
+      }
       const url = canvas.toDataURL("image/png");
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${baseName}${mogaFilter ? `_moga_${mogaFilter}` : ""}.png`;
+      a.download = `${baseName}${mogaFilter ? `_moga_${mogaFilter}` : ""}${satellite ? "_satellite" : ""}.png`;
       a.click();
     } catch (e) {
       alert("PNG export failed: " + (e.message || "unknown error"));
@@ -129,7 +137,6 @@ export default function GeoMapExportDialog({
   };
 
   const handleDownloadPDF = async () => {
-    if (!svgData) return;
     setExporting(true);
     try {
       const { jsPDF } = await import("jspdf");
@@ -141,13 +148,22 @@ export default function GeoMapExportDialog({
       const availW = pageW - margin * 2;
       const availH = pageH - margin * 2 - 40; // space for title
 
-      // Fit SVG into available area preserving aspect ratio
-      const aspect = svgData.viewW / svgData.viewH;
-      let drawW = availW, drawH = availW / aspect;
-      if (drawH > availH) { drawH = availH; drawW = availH * aspect; }
-      const renderW = Math.round(drawW * 3);
-      const renderH = Math.round(drawH * 3);
-      const canvas = await renderSVGtoCanvas(svgString, renderW, renderH);
+      let canvas;
+      let drawW, drawH;
+      if (satellite && overlayReady && onCaptureSatellite) {
+        canvas = await onCaptureSatellite({ bw: bwMode });
+        const aspect = canvas.width / canvas.height;
+        drawW = availW; drawH = availW / aspect;
+        if (drawH > availH) { drawH = availH; drawW = availH * aspect; }
+      } else {
+        if (!svgData) { setExporting(false); return; }
+        const aspect = svgData.viewW / svgData.viewH;
+        drawW = availW; drawH = availW / aspect;
+        if (drawH > availH) { drawH = availH; drawW = availH * aspect; }
+        const renderW = Math.round(drawW * 3);
+        const renderH = Math.round(drawH * 3);
+        canvas = await renderSVGtoCanvas(svgString, renderW, renderH);
+      }
       const imgData = canvas.toDataURL("image/png");
 
       const doc = new jsPDF({ orientation, unit: "pt", format: pageSize });
@@ -165,7 +181,7 @@ export default function GeoMapExportDialog({
         doc.text(info, pageW / 2, 28, { align: "center" });
       }
       doc.addImage(imgData, "PNG", x, y, drawW, drawH);
-      doc.save(`${baseName}${mogaFilter ? `_moga_${mogaFilter}` : ""}.pdf`);
+      doc.save(`${baseName}${mogaFilter ? `_moga_${mogaFilter}` : ""}${satellite ? "_satellite" : ""}.pdf`);
     } catch (e) {
       alert("PDF export failed: " + (e.message || "unknown error"));
     } finally {
@@ -250,10 +266,19 @@ export default function GeoMapExportDialog({
                 <input type="checkbox" checked={showKilla} onChange={(e) => setShowKilla(e.target.checked)} className="w-4 h-4 accent-blue-500" />
                 <span className="text-xs text-slate-600 font-medium">Killa Numbers & Grid</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={bwMode} onChange={(e) => setBwMode(e.target.checked)} className="w-4 h-4 accent-blue-500" />
-                <span className="text-xs text-slate-600 font-medium">Black & White</span>
-              </label>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Colour Mode</label>
+                <div className="flex gap-1.5">
+                  <button onClick={() => setBwMode(false)} className={`flex-1 h-8 text-xs rounded-lg border ${!bwMode ? "border-blue-500 bg-blue-50 text-blue-600 font-bold" : "border-slate-200 text-slate-500"}`}>Colour</button>
+                  <button onClick={() => setBwMode(true)} className={`flex-1 h-8 text-xs rounded-lg border ${bwMode ? "border-slate-500 bg-slate-100 text-slate-700 font-bold" : "border-slate-200 text-slate-500"}`}>Black & White</button>
+                </div>
+              </div>
+              {overlayReady && onCaptureSatellite && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={satellite} onChange={(e) => setSatellite(e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+                  <span className="text-xs text-slate-600 font-medium">Satellite / Earth background</span>
+                </label>
+              )}
             </div>
 
             {/* Moga filter */}
