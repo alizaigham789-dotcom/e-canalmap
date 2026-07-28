@@ -16,6 +16,7 @@ import OverlayLayer from "@/components/geomap/OverlayLayer";
 import MeasurementInfo from "@/components/geomap/MeasurementInfo";
 import MarkerPopup from "@/components/geomap/MarkerPopup";
 import CoordinateDialog from "@/components/geomap/CoordinateDialog";
+import GeoMapExportDialog from "@/components/geomap/GeoMapExportDialog";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
@@ -132,15 +133,16 @@ export default function GeoMap() {
   // Coordinate input dialog for placement
   const [showCoordDialog, setShowCoordDialog] = useState(false);
   const [showLowerLeftDialog, setShowLowerLeftDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   // Overlay / georeferencing
   const [showOverlayPanel, setShowOverlayPanel] = useState(true);
   const [selectedMapId, setSelectedMapId] = useState("");
   const [selectedMoga, setSelectedMoga] = useState("");
-  const [placementPoint, setPlacementPoint] = useState(null); // single geo point = overlay upper-left corner
-  const [placing, setPlacing] = useState(false); // single-click placement mode
+  const [placementPoint, setPlacementPoint] = useState(null); // marker 1 — overlay upper-left corner
+  const [lowerLeftPoint, setLowerLeftPoint] = useState(null); // marker 2 — lower-left corner for rotation/scale
+  const [placingStep, setPlacingStep] = useState(0); // 0=none, 1=placing marker 1, 2=placing marker 2
   const [overlay, setOverlay] = useState(null); // { transform, rotation, placementPoint }
-  const [lowerLeftPoint, setLowerLeftPoint] = useState(null); // second anchor (lower-left of mustateel) — draggable for fine adjustment
   const [killaVisible, setKillaVisible] = useState(true);
   const [layerVisible, setLayerVisible] = useState(true);
   const [activeMustateelId, setActiveMustateelId] = useState(null);
@@ -171,6 +173,12 @@ export default function GeoMap() {
     return DrawingStateManager.deserialize(selectedMap.drawing_data);
   }, [selectedMap]);
 
+  // Parse editor settings for export (colors, killa visibility)
+  const editorSettings = useMemo(() => {
+    if (!selectedMap?.editor_settings) return {};
+    try { return JSON.parse(selectedMap.editor_settings); } catch { return {}; }
+  }, [selectedMap]);
+
   const districts = useMemo(() => [...new Set((maps || []).map(m => m.district).filter(Boolean))].sort(), [maps]);
   const tehsils = useMemo(() => [...new Set((maps || []).filter(m => !filters.district || m.district === filters.district).map(m => m.tehsil).filter(Boolean))].sort(), [maps, filters.district]);
   const villages = useMemo(() => [...new Set((maps || []).filter(m => (!filters.district || m.district === filters.district) && (!filters.tehsil || m.tehsil === filters.tehsil)).map(m => m.village).filter(Boolean))].sort(), [maps, filters.district, filters.tehsil]);
@@ -183,45 +191,10 @@ export default function GeoMap() {
     return [...s].sort((a, b) => parseInt(a) - parseInt(b));
   }, [mapObjects]);
 
-  // NOTE: Saved placements are NOT auto-loaded — the user always clicks to
-  // place the map fresh. Saved data (geo_placement_lat/lng/rotation/moga)
-  // is preserved on the entity for reference but does not auto-place.
-
-  // ─── OVERLAY COMPUTATION ──────────────────────────────────────
-  // One-click placement: the clicked point becomes the upper-left corner
-  // of the cadastral map, scaled so one mustateel = exactly 10 acres.
-  useEffect(() => {
-    if (!placementPoint || !selectedMapId || mapObjects.length === 0) return;
-    const transform = computeOneClickTransform(placementPoint, mapObjects, 0);
-    if (!transform) return;
-    setOverlay({ transform, rotation: 0, placementPoint });
-    // Derive default lower-left anchor = bottom-most mustateel's actual lower
-    // corner, so the second placement marker lands on a real mustateel corner
-    // (mirrors the top corner marker) and helps place the map exactly.
-    const bottomCorner = getBottomMustateelCorner(mapObjects);
-    if (bottomCorner) {
-      const ll = transform.transform(bottomCorner.x, bottomCorner.y);
-      if (ll && Number.isFinite(ll.lat) && Number.isFinite(ll.lng)) setLowerLeftPoint(ll);
-    }
-    // Fit map to overlay bounds
-    const allLatLngs = [];
-    for (const o of mapObjects) {
-      if (["mustateel", "muraba", "acre"].includes(o.type)) {
-        const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
-        for (const [cx, cy] of corners) allLatLngs.push(transform.transform(cx, cy));
-      } else if (o.points?.length) {
-        for (const p of o.points) allLatLngs.push(transform.transform(p.x, p.y));
-      } else if (o.start && o.end) {
-        allLatLngs.push(transform.transform(o.start.x, o.start.y));
-        allLatLngs.push(transform.transform(o.end.x, o.end.y));
-      }
-    }
-    const validLatLngs = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
-    if (validLatLngs.length > 0 && mapRef.current) {
-      const bounds = L.latLngBounds(validLatLngs.map(p => [p.lat, p.lng]));
-      mapRef.current.flyToBounds(bounds, { padding: [80, 80], duration: 1 });
-    }
-  }, [placementPoint, selectedMapId, mapObjects]);
+  // NOTE: Overlay is computed in handleMapClick when the second marker is placed,
+  // or in handlePlaceByCoords / handleLowerLeftDrag / handleUpperLeftDrag when
+  // coordinates are adjusted. Saved placements are preserved on the entity for
+  // reference but do not auto-place.
 
   // Mustateel area verification
   const mustateelAreas = useMemo(() => {
@@ -237,10 +210,40 @@ export default function GeoMap() {
 
   // ─── MAP CLICK HANDLER ───────────────────────────────────────
   const handleMapClick = useCallback((latlng) => {
-    // 1. Single-click placement — clicked point becomes the overlay's upper-left corner
-    if (placing && selectedMapId) {
+    // 1. Two-click placement — marker 1 (upper-left), then marker 2 (lower-left)
+    if (placingStep === 1 && selectedMapId) {
       setPlacementPoint(latlng);
-      setPlacing(false);
+      setPlacingStep(2);
+      return;
+    }
+    if (placingStep === 2 && selectedMapId) {
+      setLowerLeftPoint(latlng);
+      // Compute overlay via two-point transform
+      if (placementPoint && mapObjects.length > 0) {
+        const transform = computeTwoPointTransform(placementPoint, latlng, mapObjects);
+        if (transform) {
+          setOverlay({ transform, rotation: transform.rotationDeg || 0, placementPoint });
+          // Fit map to overlay bounds
+          const allLatLngs = [];
+          for (const o of mapObjects) {
+            if (["mustateel", "muraba", "acre"].includes(o.type)) {
+              const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
+              for (const [cx, cy] of corners) allLatLngs.push(transform.transform(cx, cy));
+            } else if (o.points?.length) {
+              for (const p of o.points) allLatLngs.push(transform.transform(p.x, p.y));
+            } else if (o.start && o.end) {
+              allLatLngs.push(transform.transform(o.start.x, o.start.y));
+              allLatLngs.push(transform.transform(o.end.x, o.end.y));
+            }
+          }
+          const validLatLngs = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+          if (validLatLngs.length > 0 && mapRef.current) {
+            const bounds = L.latLngBounds(validLatLngs.map(p => [p.lat, p.lng]));
+            mapRef.current.flyToBounds(bounds, { padding: [80, 80], duration: 1 });
+          }
+        }
+      }
+      setPlacingStep(0);
       return;
     }
 
@@ -279,7 +282,7 @@ export default function GeoMap() {
         return null;
       });
     }
-  }, [placing, selectedMapId, activeTool]);
+  }, [placingStep, selectedMapId, activeTool, placementPoint, mapObjects]);
 
   // ─── LIVE MEASUREMENT (mouse move) ─────────────────────────────
   const handleMouseMove = useCallback((latlng) => {
@@ -343,12 +346,34 @@ export default function GeoMap() {
     setGpsActive(true);
   };
 
-  // Open coordinate dialog — lets user type lat/lng to place the map corner
+  // Manual coordinate input for the upper-left (red) corner marker (marker 1)
   const handlePlaceByCoords = (coords) => {
     if (!selectedMapId) return;
     setPlacementPoint(coords);
-    setPlacing(false);
-    setOverlay(null);
+    // If marker 2 already placed, recompute two-point transform; else go to step 2
+    if (lowerLeftPoint && mapObjects.length > 0) {
+      const transform = computeTwoPointTransform(coords, lowerLeftPoint, mapObjects);
+      if (transform) setOverlay({ transform, rotation: transform.rotationDeg || 0, placementPoint: coords });
+      setPlacingStep(0);
+    } else {
+      setPlacingStep(2);
+    }
+  };
+
+  // Dragging marker 1 (upper-left) — translate both markers, recompute overlay
+  const handleUpperLeftDrag = (newLatLng) => {
+    if (!placementPoint) return;
+    const dx = newLatLng.lat - placementPoint.lat;
+    const dy = newLatLng.lng - placementPoint.lng;
+    setPlacementPoint(newLatLng);
+    if (lowerLeftPoint) {
+      const newLL = { lat: lowerLeftPoint.lat + dx, lng: lowerLeftPoint.lng + dy };
+      setLowerLeftPoint(newLL);
+      if (mapObjects.length > 0) {
+        const transform = computeTwoPointTransform(newLatLng, newLL, mapObjects);
+        if (transform) setOverlay({ transform, rotation: transform.rotationDeg || 0, placementPoint: newLatLng });
+      }
+    }
   };
 
   // Manual coordinate input for the lower-left (green) corner marker
@@ -364,7 +389,7 @@ export default function GeoMap() {
     setLowerLeftPoint(null);
     setActiveMustateelId(null);
     setOverlaySaved(false);
-    setPlacing(!!id); // enter single-click placement mode when a map is chosen
+    setPlacingStep(id ? 1 : 0); // enter two-click placement mode
   };
 
   const handleFilterSelect = (field, value) => {
@@ -380,7 +405,7 @@ export default function GeoMap() {
     setOverlay(null);
     setPlacementPoint(null);
     setLowerLeftPoint(null);
-    setPlacing(false);
+    setPlacingStep(0);
     setSelectedMapId("");
     setSelectedMoga("");
     setActiveMustateelId(null);
@@ -391,7 +416,7 @@ export default function GeoMap() {
     setOverlay(null);
     setPlacementPoint(null);
     setLowerLeftPoint(null);
-    setPlacing(true);
+    setPlacingStep(1);
     setActiveMustateelId(null);
     setOverlaySaved(false);
   };
@@ -426,37 +451,28 @@ export default function GeoMap() {
   const handleMarkerUpdate = (id, changes) => { setMarkers(prev => prev.map(m => m.id === id ? { ...m, ...changes } : m)); };
   const handleMarkerDelete = (id) => { setMarkers(prev => prev.filter(m => m.id !== id)); };
 
-  const handleExport = async () => {
-    if (!mapRef.current) return;
-    const container = mapRef.current.getContainer();
-    try {
-      const canvas = await html2canvas(container, { useCORS: true, allowTaint: true, scale: 2, backgroundColor: "#0f1923" });
-      const url = canvas.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `geomap_${new Date().toISOString().slice(0, 10)}.png`;
-      a.click();
-      toast.success("Map exported as PNG");
-    } catch (e) {
-      toast.info("Print dialog opening — choose 'Save as PDF' to download the map", { duration: 4000 });
-      setTimeout(() => window.print(), 600);
-    }
+  const handleExport = () => {
+    if (!selectedMapId || !mapObjects.length) { alert("Select a map first"); return; }
+    setShowExportDialog(true);
   };
 
   const handleRotationChange = (deg) => {
-    setOverlay(prev => {
-      if (!prev?.placementPoint || mapObjects.length === 0) return prev;
-      const transform = computeOneClickTransform(prev.placementPoint, mapObjects, deg);
-      if (transform) {
-        const bc = getBottomMustateelCorner(mapObjects);
-        if (bc) {
-          const ll = transform.transform(bc.x, bc.y);
-          if (ll && Number.isFinite(ll.lat) && Number.isFinite(ll.lng)) setLowerLeftPoint(ll);
-        }
-        return { transform, rotation: deg, placementPoint: prev.placementPoint };
-      }
-      return prev;
-    });
+    if (!placementPoint || !lowerLeftPoint || mapObjects.length === 0) return;
+    // Rotate marker 2 around marker 1, then recompute two-point transform
+    const dLat = lowerLeftPoint.lat - placementPoint.lat;
+    const dLng = lowerLeftPoint.lng - placementPoint.lng;
+    const dist = Math.hypot(dLat, dLng);
+    if (dist < 0.000001) return;
+    const currentAngle = Math.atan2(dLat, dLng);
+    const deltaRad = ((deg - (overlay?.rotation || 0)) * Math.PI) / 180;
+    const newAngle = currentAngle + deltaRad;
+    const newLL = {
+      lat: placementPoint.lat + dist * Math.sin(newAngle),
+      lng: placementPoint.lng + dist * Math.cos(newAngle),
+    };
+    setLowerLeftPoint(newLL);
+    const transform = computeTwoPointTransform(placementPoint, newLL, mapObjects);
+    if (transform) setOverlay({ transform, rotation: deg, placementPoint });
   };
 
   // Two-point fine adjustment — user drags the lower-left (green) marker to
@@ -667,7 +683,7 @@ export default function GeoMap() {
           availableMogas={availableMogas}
           selectedMoga={selectedMoga}
           onSelectMoga={setSelectedMoga}
-          placing={placing}
+          placingStep={placingStep}
           overlayReady={!!overlay}
           overlay={overlay}
           onRotationChange={handleRotationChange}
@@ -677,7 +693,9 @@ export default function GeoMap() {
           saving={savingOverlay}
           saved={overlaySaved}
           mustateelAreas={mustateelAreas}
+          onEditUpperCorner={() => setShowCoordDialog(true)}
           onEditLowerCorner={() => setShowLowerLeftDialog(true)}
+          onExport={() => setShowExportDialog(true)}
           onClose={() => setShowOverlayPanel(false)}
         />
       )}
@@ -712,15 +730,18 @@ export default function GeoMap() {
       {/* Live measurement info */}
       <MeasurementInfo measurement={liveMeasurement} draft={draft} zoom={zoom} />
 
-      {/* Placement hint — single-click mode with live coordinates */}
-      {placing && selectedMapId && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 z-[1001] bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl flex flex-col items-center gap-0.5 animate-pulse">
+      {/* Placement hint — two-click mode with live coordinates */}
+      {placingStep > 0 && selectedMapId && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 z-[1001] text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl flex flex-col items-center gap-0.5 animate-pulse"
+          style={{ background: placingStep === 1 ? "#dc2626" : "#16a34a" }}>
           <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4" />
-            نقشہ پر کلک کریں — کونہ پوائنٹ یہیں لگے گا
+            {placingStep === 1
+              ? "پہلا مارکر لگائیں — نقشہ کا اوپری کونا"
+              : "دوسرا مارکر لگائیں — نقشہ کا نیچا کونا"}
           </div>
           {mouseLatLng && (
-            <div className="text-[10px] font-mono text-blue-100">
+            <div className="text-[10px] font-mono opacity-90">
               Lat: {mouseLatLng.lat.toFixed(6)} · Lng: {mouseLatLng.lng.toFixed(6)}
             </div>
           )}
