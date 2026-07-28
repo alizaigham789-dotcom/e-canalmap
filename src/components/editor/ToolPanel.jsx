@@ -66,7 +66,7 @@ const TOOLS = [
   { id: "canal", label: "Canal Tool (C)", icon: CanalIcon, group: "draw", color: "text-blue-400" },
   { id: "chakbandi", label: "Chakbandi Line (K)", icon: ChakbandiIcon, group: "draw", color: "text-green-400" },
   { id: "outlet", label: "Outlet / Moga (O)", icon: MogaIcon, group: "draw", color: "text-cyan-400" },
-  { id: "khal", label: "Khal / Watercourse (W)", icon: Waves, group: "draw", color: "text-blue-500" },
+  { id: "khal", label: "Watercourse (W)", icon: Waves, group: "draw", color: "text-blue-500" },
   { id: "road", label: "Road (R)", icon: RoadIcon, group: "draw", color: "text-amber-400" },
   { id: "mouza", label: "Mouza Boundary (U)", icon: MouzaIcon, group: "draw", color: "text-slate-700" },
   { id: "damageMarker", label: "Canal Damage Marker (G)", icon: AlertTriangle, group: "draw", color: "text-red-500" },

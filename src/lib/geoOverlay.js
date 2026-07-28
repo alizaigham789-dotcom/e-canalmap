@@ -366,7 +366,7 @@ export function computeTwoPointTransform(upperLeftGeo, lowerLeftGeo, objects) {
   const northRaw = (lowerLeftGeo.lat - refLat) * M_PER_DEG_LAT;
   const geoMagM = Math.hypot(eastRaw, northRaw);
   if (geoMagM < 0.01) return null;
-  const S = geoMagM / canvasMagM; // scale factor (1 = true scale)
+  const S = 1; // FIXED true scale — mustateel always 10 acres; lower marker controls rotation only
 
   // Canvas vector in meters (east, north) — canvas y grows downward = south
   const canvasEast = dxFt * FT_TO_M;

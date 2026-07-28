@@ -39,7 +39,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
   const typeLabel = {
     acre: "Acre Block", mustateel: "Mustateel Parcel", muraba: "Muraba Block",
     canal: "Canal", chakbandi: "Chakbandi Line", outlet: "Outlet / Moga",
-    khal: "Khal / Watercourse", road: "Road", mouza: "Mouza Boundary",
+    khal: "Watercourse", road: "Road", mouza: "Mouza Boundary",
     damageMarker: "Canal Damage Marker",
   }[selectedObj.type] || selectedObj.type;
 
@@ -174,7 +174,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                   <button onClick={() => commit("canalStyle", "3d")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${local.canalStyle === "3d" ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>3D Ribbon</button>
                 </div>
               </div>
-              <SpacingControl label="Line Spacing" value={local.width || 14} min={2} max={150} step={2} onChange={v => commit("width", v)} unit="ft" />
+              <CanalWidthControl name={local.name || ""} value={local.width || 10} onChange={v => commit("width", v)} />
               <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
               <p className="text-[9px] text-slate-400">Double-click any anchor point to delete it (remove extra points)</p>
             </>
@@ -183,8 +183,8 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
           {selectedObj.type === "khal" && (
             <>
               <Separator className="bg-slate-100" />
-              <Field label="Khal Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Khal 1" />
-              <SpacingControl label="Line Spacing" value={local.width || 8} min={2} max={60} step={1} onChange={v => commit("width", v)} unit="ft" />
+              <Field label="Watercourse Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Watercourse 1" />
+              <KhalWidthControl value={local.width ?? 2} onChange={v => commit("width", v)} />
               <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
             </>
           )}
@@ -408,6 +408,54 @@ function SpacingControl({ label, value, min, max, step, onChange, unit }) {
           onClick={() => onChange(Math.min(max, value + step))}>+</Button>
         <span className="text-xs text-slate-600 font-mono w-10 text-center">{value}{unit}</span>
       </div>
+    </div>
+  );
+}
+
+// Watercourse (khal) width — discrete preset sizes 1–3 ft
+function KhalWidthControl({ value, onChange }) {
+  const OPTIONS = [1, 1.5, 2, 2.5, 3];
+  return (
+    <div>
+      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Width (ft)</label>
+      <div className="flex gap-1">
+        {OPTIONS.map(opt => (
+          <button key={opt} onClick={() => onChange(opt)}
+            className={`flex-1 h-7 text-[10px] rounded border font-medium transition-colors ${value === opt ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+            {opt}
+          </button>
+        ))}
+      </div>
+      <p className="text-[9px] text-slate-400 mt-0.5">Watercourse width preset</p>
+    </div>
+  );
+}
+
+// Canal width classified by name: minor 3–10 ft, major disty 10–40 ft
+function CanalWidthControl({ name, value, onChange }) {
+  const lower = (name || "").toLowerCase();
+  let typeLabel, min, max;
+  if (lower.includes("minor")) { typeLabel = "Minor · 3–10 ft"; min = 3; max = 10; }
+  else if (lower.includes("disty") || lower.includes("distributary") || lower.includes("major")) { typeLabel = "Major Distry · 10–40 ft"; min = 10; max = 40; }
+  else { typeLabel = "Canal · 3–40 ft"; min = 3; max = 40; }
+  const clamped = Math.min(max, Math.max(min, value));
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-[10px] text-slate-400 uppercase tracking-wider">Width (ft)</label>
+        <span className="text-[9px] text-blue-500 font-medium">{typeLabel}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+          onClick={() => onChange(Math.max(min, clamped - 1))}>−</Button>
+        <input type="range" min={min} max={max} step={1} value={clamped}
+          onChange={e => onChange(parseInt(e.target.value, 10))}
+          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+        <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+          onClick={() => onChange(Math.min(max, clamped + 1))}>+</Button>
+        <span className="text-xs text-slate-600 font-mono w-10 text-center">{clamped}ft</span>
+      </div>
+      <p className="text-[9px] text-slate-400 mt-0.5">Type detected from canal name</p>
     </div>
   );
 }

@@ -66,6 +66,7 @@ export default function GeoMapExportDialog({
       acreStroke: "#555555", acreFill: "none",
       canalStroke: "#333333", canalFill: "rgba(0,0,0,0.08)",
       khalStroke: "#444444",
+      watercourseStroke: "#444444",
       roadStroke: "#222222",
       chakbandiStroke: "#000000",
       mouzaStroke: "#000000",
@@ -298,7 +299,7 @@ export default function GeoMapExportDialog({
 
             {/* Info */}
             <div className="text-[10px] text-slate-400 leading-relaxed pt-1 border-t border-slate-100">
-              Includes: mustateel/muraba boundaries, killa grid & numbers, canals, khal, moga outlets, chakbandi lines, mouza boundaries, roads.
+              Includes: mustateel/muraba boundaries, killa grid & numbers, canals, watercourse, moga outlets, chakbandi lines, mouza boundaries, roads.
             </div>
 
             {/* Download button */}

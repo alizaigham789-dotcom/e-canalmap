@@ -567,8 +567,8 @@ export default function GeoMap() {
           </Marker>
         )}
 
-        {/* Lower-left anchor marker — draggable for fine rotation/scale adjustment */}
-        {lowerLeftPoint && overlay && (
+        {/* Lower-left anchor marker — shown only while placing (rotation set via slider / coordinate button after placement) */}
+        {lowerLeftPoint && !overlay && (
           <Marker
             position={[lowerLeftPoint.lat, lowerLeftPoint.lng]}
             icon={lowerLeftIcon()}
@@ -781,6 +781,16 @@ export default function GeoMap() {
         onClose={() => setShowLowerLeftDialog(false)}
         onPlace={handleLowerLeftByCoords}
         mouseLatLng={lowerLeftPoint || mouseLatLng}
+      />
+
+      {/* Export dialog — PNG / PDF / SVG with moga filter */}
+      <GeoMapExportDialog
+        open={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        mapData={selectedMap}
+        objects={mapObjects}
+        colorSettings={editorSettings?.colors || {}}
+        selectedMoga={selectedMoga}
       />
 
       {/* Hybrid / Satellite toggle */}
