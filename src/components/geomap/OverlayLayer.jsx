@@ -63,8 +63,8 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
     const minDim = Math.min(w, h);
     // Only show the label once the polygon is at least ~34px on screen
     if (minDim < 34) return { numSize: 0, showLabel: false };
-    // Fit number to ~30% of the smaller dimension, capped 8–30px
-    return { numSize: Math.max(8, Math.min(30, minDim * 0.3)), showLabel: true };
+    // Fit number to ~60% of the smaller dimension, capped 16–60px (2x original)
+    return { numSize: Math.max(16, Math.min(60, minDim * 0.6)), showLabel: true };
   }, [latlngs, map, zoom]);
 
   return (
