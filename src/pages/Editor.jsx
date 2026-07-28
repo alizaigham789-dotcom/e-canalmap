@@ -160,8 +160,14 @@ export default function Editor() {
     // overwriting good server data with partial state. User can use "Permanent Save"
     // to force-save if the deletion was intentional.
     const currentNonParcel = countNonParcels(dsmRef.current.objects);
-    if (!forceSaveRef.current && loadedNonParcelCountRef.current > 0 && currentNonParcel < loadedNonParcelCountRef.current) {
-      console.warn(`[SAVE BLOCKED] Non-parcel objects dropped from ${loadedNonParcelCountRef.current} to ${currentNonParcel} — use Permanent Save to override`);
+    // DATA-LOSS SAFEGUARD: only block on a catastrophic wipe (ALL non-parcel objects
+    // vanished at once — e.g. an HMR/serialization glitch). Partial decreases are
+    // allowed through; the server peak snapshot + auto-heal on next load recover
+    // any lost lines/features. This prevents a single small decrease from
+    // permanently blocking ALL future saves (which was causing edits not to persist).
+    if (!forceSaveRef.current && loadedNonParcelCountRef.current > 0 && currentNonParcel === 0) {
+      console.warn(`[SAVE BLOCKED] Non-parcel objects wiped from ${loadedNonParcelCountRef.current} to 0 — use Permanent Save to override`);
+      toast.error("Save blocked — all canals/features vanished. Use Permanent Save if intentional.", { duration: 4000 });
       return;
     }
     forceSaveRef.current = false; // reset force flag after one save
@@ -477,7 +483,7 @@ export default function Editor() {
       // highest-count version is always recoverable on next load.
       const currentNonParcelUnmount = countNonParcels(objs);
       const saveBlocked = loadedNonParcelCountRef.current > 0 &&
-        currentNonParcelUnmount < loadedNonParcelCountRef.current;
+        currentNonParcelUnmount === 0;
       if (saveBlocked) {
         console.warn(`[UNMOUNT SAVE BLOCKED] Non-parcel objects dropped from ${loadedNonParcelCountRef.current} to ${currentNonParcelUnmount} — server data preserved, local backups written`);
         // Still write synchronous local backups so data is recoverable from the
