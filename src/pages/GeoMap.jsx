@@ -18,7 +18,7 @@ import MarkerPopup from "@/components/geomap/MarkerPopup";
 import CoordinateDialog from "@/components/geomap/CoordinateDialog";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import {
-  computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox,
+  computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
   polygonAreaSqMeters, sqMetersToUnits,
   parcelExpectedAcres, haversine, polylineLength, rectMeasurements, circleMeasurements,
   fmtArea, fmtDistFeet,
@@ -213,12 +213,13 @@ export default function GeoMap() {
     const transform = computeOneClickTransform(placementPoint, mapObjects, 0);
     if (!transform) return;
     setOverlay({ transform, rotation: 0, placementPoint });
-    // Derive default lower-left anchor (bottom-left of mustateel bbox) so the
-    // user has a second draggable marker for fine rotation/scale adjustment.
-    const bbox = getParcelBoundingBox(mapObjects);
-    if (bbox) {
-      const ll = transform.transform(bbox.minX, bbox.maxY);
-      setLowerLeftPoint(ll);
+    // Derive default lower-left anchor = bottom-most mustateel's actual lower
+    // corner, so the second placement marker lands on a real mustateel corner
+    // (mirrors the top corner marker) and helps place the map exactly.
+    const bottomCorner = getBottomMustateelCorner(mapObjects);
+    if (bottomCorner) {
+      const ll = transform.transform(bottomCorner.x, bottomCorner.y);
+      if (ll && Number.isFinite(ll.lat) && Number.isFinite(ll.lng)) setLowerLeftPoint(ll);
     }
     // Fit map to overlay bounds
     const allLatLngs = [];
@@ -460,8 +461,11 @@ export default function GeoMap() {
       if (!prev?.placementPoint || mapObjects.length === 0) return prev;
       const transform = computeOneClickTransform(prev.placementPoint, mapObjects, deg);
       if (transform) {
-        const bbox = getParcelBoundingBox(mapObjects);
-        if (bbox) setLowerLeftPoint(transform.transform(bbox.minX, bbox.maxY));
+        const bc = getBottomMustateelCorner(mapObjects);
+        if (bc) {
+          const ll = transform.transform(bc.x, bc.y);
+          if (ll && Number.isFinite(ll.lat) && Number.isFinite(ll.lng)) setLowerLeftPoint(ll);
+        }
         return { transform, rotation: deg, placementPoint: prev.placementPoint };
       }
       return prev;
@@ -571,7 +575,7 @@ export default function GeoMap() {
             <Tooltip permanent direction="right" className="placement-coords-tooltip">
               <div className="text-[10px] font-mono leading-tight">
                 <div className="font-bold text-green-600 flex items-center gap-1">
-                  <span>🔧</span> نیچا کونا (Adjust)
+                  <span>📍</span> نیچا کونا پلیس مارکر
                 </div>
                 <div className="text-slate-700">Lat: {lowerLeftPoint.lat.toFixed(6)}</div>
                 <div className="text-slate-700">Lng: {lowerLeftPoint.lng.toFixed(6)}</div>

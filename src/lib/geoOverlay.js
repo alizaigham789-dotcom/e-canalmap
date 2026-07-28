@@ -295,6 +295,23 @@ export function getParcelBoundingBox(objects) {
   return { minX, minY, maxX, maxY };
 }
 
+// Find the bottom-most mustateel's actual bottom-left corner.
+// "Bottom" = largest (y + h); among ties, leftmost (smallest x).
+// Returns { x, y } in canvas coords — the real corner of a real mustateel,
+// not a synthetic bounding-box corner. Mirrors the top placement marker.
+export function getBottomMustateelCorner(objects) {
+  let bottom = null;
+  for (const o of objects) {
+    if (o.type !== "mustateel") continue;
+    const bottomY = o.y + (o.h || 0);
+    if (!bottom || bottomY > bottom.bottomY || (bottomY === bottom.bottomY && o.x < bottom.x)) {
+      bottom = { x: o.x, bottomY, cornerX: o.x, cornerY: bottomY };
+    }
+  }
+  if (!bottom) return null;
+  return { x: bottom.cornerX, y: bottom.cornerY };
+}
+
 export function computeOneClickTransform(geoPt, objects, rotationDeg = 0) {
   // Use parcels-only bounding box so the anchor is the top-left corner of the
   // topmost-leftmost mustateel — exactly where the corner place marker shows.
@@ -332,9 +349,13 @@ export function computeOneClickTransform(geoPt, objects, rotationDeg = 0) {
 export function computeTwoPointTransform(upperLeftGeo, lowerLeftGeo, objects) {
   const bbox = getParcelBoundingBox(objects) || getBoundingBox(objects);
   if (!bbox) return null;
-  const { minX, minY, maxY } = bbox;
-  const heightFt = maxY - minY; // canvas height in feet (upper→lower)
-  if (heightFt <= 0) return null;
+  const { minX, minY } = bbox;
+  const bottomCorner = getBottomMustateelCorner(objects) || { x: minX, y: bbox.maxY };
+  // Canvas vector from upper-left corner → bottom mustateel's lower corner (feet)
+  const dxFt = bottomCorner.x - minX;
+  const dyFt = bottomCorner.y - minY;
+  const canvasMagM = Math.hypot(dxFt, dyFt) * FT_TO_M;
+  if (canvasMagM < 0.01) return null;
 
   const refLat = upperLeftGeo.lat, refLng = upperLeftGeo.lng;
   const cosLat = Math.cos((refLat * Math.PI) / 180);
@@ -343,17 +364,16 @@ export function computeTwoPointTransform(upperLeftGeo, lowerLeftGeo, objects) {
   // Geo vector from upper-left → lower-left, in meters (east, north)
   const eastRaw = (lowerLeftGeo.lng - refLng) * mPerDegLng;
   const northRaw = (lowerLeftGeo.lat - refLat) * M_PER_DEG_LAT;
-
-  // Canvas vector upper→lower is (0, +height) ft = (0 east, -height*FT_TO_M north)
-  const canvasMagM = heightFt * FT_TO_M;
   const geoMagM = Math.hypot(eastRaw, northRaw);
   if (geoMagM < 0.01) return null;
   const S = geoMagM / canvasMagM; // scale factor (1 = true scale)
 
-  // Rotation: canvas south direction (0, -1) maps to geo (eastRaw, northRaw)/geoMag
-  // sin = eastRaw / geoMagM, cos = -northRaw / geoMagM
-  const sin = eastRaw / geoMagM;
-  const cos = -northRaw / geoMagM;
+  // Canvas vector in meters (east, north) — canvas y grows downward = south
+  const canvasEast = dxFt * FT_TO_M;
+  const canvasNorth = -dyFt * FT_TO_M;
+  // Rotation: angle from canvas vector → geo vector
+  const rotation = Math.atan2(northRaw, eastRaw) - Math.atan2(canvasNorth, canvasEast);
+  const cos = Math.cos(rotation), sin = Math.sin(rotation);
 
   return {
     transform: (cx, cy) => {
@@ -368,7 +388,7 @@ export function computeTwoPointTransform(upperLeftGeo, lowerLeftGeo, objects) {
         lng: refLng + east / mPerDegLng,
       };
     },
-    refLat, refLng, minX, minY, scale: S, rotationDeg: Math.atan2(sin, cos) * 180 / Math.PI,
+    refLat, refLng, minX, minY, scale: S, rotationDeg: rotation * 180 / Math.PI,
   };
 }
 
