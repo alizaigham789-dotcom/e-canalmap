@@ -558,8 +558,8 @@ export default function GeoMap() {
                 <div className="font-bold text-green-600 flex items-center gap-1">
                   <span>📍</span> نیچا کونا پلیس مارکر
                 </div>
-                <div className="text-slate-700">Lat: {lowerLeftPoint.lat.toFixed(6)}</div>
-                <div className="text-slate-700">Lng: {lowerLeftPoint.lng.toFixed(6)}</div>
+                <div className="text-red-600 font-semibold">Lat: {lowerLeftPoint.lat.toFixed(6)}</div>
+                <div className="text-red-600 font-semibold">Lng: {lowerLeftPoint.lng.toFixed(6)}</div>
               </div>
             </Tooltip>
           </Marker>

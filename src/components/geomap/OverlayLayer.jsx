@@ -82,7 +82,7 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
       >
         {showLabel && (
           <Tooltip permanent direction="center" className="mustateel-label" opacity={1}>
-            <div style={{ fontSize: `${numSize}px`, fontWeight: 800, color: "#000000", textAlign: "center", lineHeight: 1.1, whiteSpace: "nowrap", textShadow: "0 0 3px #fff, 0 0 3px #fff" }}>
+            <div style={{ fontSize: `${numSize}px`, fontWeight: 800, color: "#dc2626", textAlign: "center", lineHeight: 1.1, whiteSpace: "nowrap", textShadow: "0 0 3px #fff, 0 0 3px #fff" }}>
               {obj.label && <div>{obj.label}</div>}
               <div style={{ fontSize: `${Math.max(7, numSize * 0.5)}px`, fontWeight: 600, color: "#7f1d1d" }}>{acres.toFixed(2)} ac</div>
               {obj.mogaNumber && (
