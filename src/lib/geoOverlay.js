@@ -324,6 +324,54 @@ export function computeOneClickTransform(geoPt, objects, rotationDeg = 0) {
   };
 }
 
+// ─── TWO-POINT PLACEMENT TRANSFORM ───────────────────────────────
+// Uses TWO geo anchor points: the upper-left corner (already placed) and the
+// lower-left corner of the mustateel bounding box (draggable second marker).
+// Derives scale + rotation from the vector between the two points so the user
+// can fine-tune the overlay orientation by dragging the lower-left marker.
+export function computeTwoPointTransform(upperLeftGeo, lowerLeftGeo, objects) {
+  const bbox = getParcelBoundingBox(objects) || getBoundingBox(objects);
+  if (!bbox) return null;
+  const { minX, minY, maxY } = bbox;
+  const heightFt = maxY - minY; // canvas height in feet (upper→lower)
+  if (heightFt <= 0) return null;
+
+  const refLat = upperLeftGeo.lat, refLng = upperLeftGeo.lng;
+  const cosLat = Math.cos((refLat * Math.PI) / 180);
+  const mPerDegLng = M_PER_DEG_LAT * cosLat;
+
+  // Geo vector from upper-left → lower-left, in meters (east, north)
+  const eastRaw = (lowerLeftGeo.lng - refLng) * mPerDegLng;
+  const northRaw = (lowerLeftGeo.lat - refLat) * M_PER_DEG_LAT;
+
+  // Canvas vector upper→lower is (0, +height) ft = (0 east, -height*FT_TO_M north)
+  const canvasMagM = heightFt * FT_TO_M;
+  const geoMagM = Math.hypot(eastRaw, northRaw);
+  if (geoMagM < 0.01) return null;
+  const S = geoMagM / canvasMagM; // scale factor (1 = true scale)
+
+  // Rotation: canvas south direction (0, -1) maps to geo (eastRaw, northRaw)/geoMag
+  // sin = eastRaw / geoMagM, cos = -northRaw / geoMagM
+  const sin = eastRaw / geoMagM;
+  const cos = -northRaw / geoMagM;
+
+  return {
+    transform: (cx, cy) => {
+      const dx = cx - minX;        // feet east of upper-left
+      const dy = cy - minY;        // feet south of upper-left
+      const east0 = dx * FT_TO_M * S;
+      const north0 = -dy * FT_TO_M * S;
+      const east = cos * east0 - sin * north0;
+      const north = sin * east0 + cos * north0;
+      return {
+        lat: refLat + north / M_PER_DEG_LAT,
+        lng: refLng + east / mPerDegLng,
+      };
+    },
+    refLat, refLng, minX, minY, scale: S, rotationDeg: Math.atan2(sin, cos) * 180 / Math.PI,
+  };
+}
+
 // Convert canvas objects to geo lat/lng using the affine transform
 export function canvasRectToLatLngs(obj, transform) {
   const corners = [

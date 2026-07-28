@@ -18,10 +18,13 @@ import MarkerPopup from "@/components/geomap/MarkerPopup";
 import CoordinateDialog from "@/components/geomap/CoordinateDialog";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import {
-  computeOneClickTransform, polygonAreaSqMeters, sqMetersToUnits,
+  computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox,
+  polygonAreaSqMeters, sqMetersToUnits,
   parcelExpectedAcres, haversine, polylineLength, rectMeasurements, circleMeasurements,
   fmtArea, fmtDistFeet,
 } from "@/lib/geoOverlay";
+import html2canvas from "html2canvas";
+import { toast } from "sonner";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -63,6 +66,19 @@ function cornerPlaceIcon() {
   return L.divIcon({
     html: `<div style="width:34px;height:34px;background:#ef4444;border:3px solid white;border-radius:8px;box-shadow:0 2px 12px rgba(239,68,68,0.7);display:flex;align-items:center;justify-content:center;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M4 4 L10 4 M4 4 L4 10"/><path d="M20 4 L14 4 M20 4 L20 10"/><path d="M4 20 L10 20 M4 20 L4 14"/><path d="M20 20 L14 20 M20 20 L20 14"/></svg>
+    </div>`,
+    className: "",
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+  });
+}
+
+// Lower-left anchor marker — green, draggable. Lets the user fine-tune the
+// overlay's rotation/scale by dragging this second point (bottom-left of mustateel).
+function lowerLeftIcon() {
+  return L.divIcon({
+    html: `<div style="width:34px;height:34px;background:#16a34a;border:3px solid white;border-radius:8px;box-shadow:0 2px 12px rgba(22,163,74,0.7);display:flex;align-items:center;justify-content:center;cursor:grab;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M4 20 L10 20 M4 20 L4 14"/></svg>
     </div>`,
     className: "",
     iconSize: [34, 34],
@@ -123,6 +139,7 @@ export default function GeoMap() {
   const [placementPoint, setPlacementPoint] = useState(null); // single geo point = overlay upper-left corner
   const [placing, setPlacing] = useState(false); // single-click placement mode
   const [overlay, setOverlay] = useState(null); // { transform, rotation, placementPoint }
+  const [lowerLeftPoint, setLowerLeftPoint] = useState(null); // second anchor (lower-left of mustateel) — draggable for fine adjustment
   const [killaVisible, setKillaVisible] = useState(true);
   const [layerVisible, setLayerVisible] = useState(true);
   const [activeMustateelId, setActiveMustateelId] = useState(null);
@@ -196,6 +213,13 @@ export default function GeoMap() {
     const transform = computeOneClickTransform(placementPoint, mapObjects, 0);
     if (!transform) return;
     setOverlay({ transform, rotation: 0, placementPoint });
+    // Derive default lower-left anchor (bottom-left of mustateel bbox) so the
+    // user has a second draggable marker for fine rotation/scale adjustment.
+    const bbox = getParcelBoundingBox(mapObjects);
+    if (bbox) {
+      const ll = transform.transform(bbox.minX, bbox.maxY);
+      setLowerLeftPoint(ll);
+    }
     // Fit map to overlay bounds
     const allLatLngs = [];
     for (const o of mapObjects) {
@@ -348,6 +372,7 @@ export default function GeoMap() {
     setSelectedMoga("");
     setPlacementPoint(null);
     setOverlay(null);
+    setLowerLeftPoint(null);
     setActiveMustateelId(null);
     setOverlaySaved(false);
     setPlacing(!!id); // enter single-click placement mode when a map is chosen
@@ -365,6 +390,7 @@ export default function GeoMap() {
   const handleClearOverlay = () => {
     setOverlay(null);
     setPlacementPoint(null);
+    setLowerLeftPoint(null);
     setPlacing(false);
     setSelectedMapId("");
     setSelectedMoga("");
@@ -375,6 +401,7 @@ export default function GeoMap() {
   const handleRePlace = () => {
     setOverlay(null);
     setPlacementPoint(null);
+    setLowerLeftPoint(null);
     setPlacing(true);
     setActiveMustateelId(null);
     setOverlaySaved(false);
@@ -410,18 +437,43 @@ export default function GeoMap() {
   const handleMarkerUpdate = (id, changes) => { setMarkers(prev => prev.map(m => m.id === id ? { ...m, ...changes } : m)); };
   const handleMarkerDelete = (id) => { setMarkers(prev => prev.filter(m => m.id !== id)); };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!mapRef.current) return;
-    // Simple screenshot via leaflet-image would need a package; for now alert
-    alert("Export: Use your browser's screenshot tool (Ctrl+Shift+S) or print to PDF via browser.");
+    const container = mapRef.current.getContainer();
+    try {
+      const canvas = await html2canvas(container, { useCORS: true, allowTaint: true, scale: 2, backgroundColor: "#0f1923" });
+      const url = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `geomap_${new Date().toISOString().slice(0, 10)}.png`;
+      a.click();
+      toast.success("Map exported as PNG");
+    } catch (e) {
+      toast.info("Print dialog opening — choose 'Save as PDF' to download the map", { duration: 4000 });
+      setTimeout(() => window.print(), 600);
+    }
   };
 
   const handleRotationChange = (deg) => {
     setOverlay(prev => {
       if (!prev?.placementPoint || mapObjects.length === 0) return prev;
       const transform = computeOneClickTransform(prev.placementPoint, mapObjects, deg);
-      return transform ? { transform, rotation: deg, placementPoint: prev.placementPoint } : prev;
+      if (transform) {
+        const bbox = getParcelBoundingBox(mapObjects);
+        if (bbox) setLowerLeftPoint(transform.transform(bbox.minX, bbox.maxY));
+        return { transform, rotation: deg, placementPoint: prev.placementPoint };
+      }
+      return prev;
     });
+  };
+
+  // Two-point fine adjustment — user drags the lower-left (green) marker to
+  // re-orient the overlay. Scale + rotation derived from the two anchor points.
+  const handleLowerLeftDrag = (latlng) => {
+    setLowerLeftPoint(latlng);
+    if (!placementPoint || mapObjects.length === 0) return;
+    const transform = computeTwoPointTransform(placementPoint, latlng, mapObjects);
+    if (transform) setOverlay({ transform, rotation: transform.rotationDeg || 0, placementPoint });
   };
 
   const tileUrl = hybrid ? HYBRID_URL : SAT_URL;
@@ -507,27 +559,74 @@ export default function GeoMap() {
           </Marker>
         )}
 
-        {/* Completed measurements — click to delete */}
+        {/* Lower-left anchor marker — draggable for fine rotation/scale adjustment */}
+        {lowerLeftPoint && overlay && (
+          <Marker
+            position={[lowerLeftPoint.lat, lowerLeftPoint.lng]}
+            icon={lowerLeftIcon()}
+            draggable
+            eventHandlers={{ dragend: (e) => handleLowerLeftDrag(e.target.getLatLng()) }}
+          >
+            <Tooltip permanent direction="right" className="placement-coords-tooltip">
+              <div className="text-[10px] font-mono leading-tight">
+                <div className="font-bold text-green-600 flex items-center gap-1">
+                  <span>🔧</span> نیچا کونا (Adjust)
+                </div>
+                <div className="text-slate-700">Lat: {lowerLeftPoint.lat.toFixed(6)}</div>
+                <div className="text-slate-700">Lng: {lowerLeftPoint.lng.toFixed(6)}</div>
+              </div>
+            </Tooltip>
+          </Marker>
+        )}
+
+        {/* Completed measurements — click to delete · coordinates shown */}
         {measurements.map(m => {
           const delOpts = { color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.15, weight: 3 };
+          let coord;
+          if (m.type === "circle") coord = m.center;
+          else if (m.type === "polygon") {
+            const c = m.points.reduce((a, p) => ({ lat: a.lat + p.lat, lng: a.lng + p.lng }), { lat: 0, lng: 0 });
+            coord = { lat: c.lat / m.points.length, lng: c.lng / m.points.length };
+          } else if (m.points) coord = m.points[0];
+          const coordStr = coord ? `${coord.lat.toFixed(5)}, ${coord.lng.toFixed(5)}` : "";
           if (m.type === "line") return (
             <Polyline key={m.id} positions={m.points.map(p => [p.lat, p.lng])} pathOptions={delOpts} eventHandlers={{ click: () => handleDeleteMeasurement(m.id) }}>
-              <Tooltip permanent direction="top"><span className="text-xs font-bold text-red-600">{fmtDistFeet(m.measurement.length)}</span></Tooltip>
+              <Tooltip permanent direction="top">
+                <div className="text-xs font-bold text-red-600 leading-tight">
+                  <div>{fmtDistFeet(m.measurement.length)}</div>
+                  <div className="text-[8px] font-mono text-slate-600">{coordStr}</div>
+                </div>
+              </Tooltip>
             </Polyline>
           );
           if (m.type === "polygon") return (
             <Polygon key={m.id} positions={m.points.map(p => [p.lat, p.lng])} pathOptions={delOpts} eventHandlers={{ click: () => handleDeleteMeasurement(m.id) }}>
-              <Tooltip permanent direction="top"><span className="text-xs font-bold text-red-600">{fmtArea(m.measurement.area)}</span></Tooltip>
+              <Tooltip permanent direction="top">
+                <div className="text-xs font-bold text-red-600 leading-tight">
+                  <div>{fmtArea(m.measurement.area)}</div>
+                  <div className="text-[8px] font-mono text-slate-600">{coordStr}</div>
+                </div>
+              </Tooltip>
             </Polygon>
           );
           if (m.type === "rectangle") return (
             <Polygon key={m.id} positions={[[m.points[0].lat, m.points[0].lng], [m.points[0].lat, m.points[1].lng], [m.points[1].lat, m.points[1].lng], [m.points[1].lat, m.points[0].lng]]} pathOptions={delOpts} eventHandlers={{ click: () => handleDeleteMeasurement(m.id) }}>
-              <Tooltip permanent direction="top"><span className="text-xs font-bold text-red-600">{fmtArea(m.measurement.area)}</span></Tooltip>
+              <Tooltip permanent direction="top">
+                <div className="text-xs font-bold text-red-600 leading-tight">
+                  <div>{fmtArea(m.measurement.area)}</div>
+                  <div className="text-[8px] font-mono text-slate-600">{coordStr}</div>
+                </div>
+              </Tooltip>
             </Polygon>
           );
           if (m.type === "circle") return (
             <Circle key={m.id} center={[m.center.lat, m.center.lng]} radius={m.radius} pathOptions={delOpts} eventHandlers={{ click: () => handleDeleteMeasurement(m.id) }}>
-              <Tooltip permanent direction="top"><span className="text-xs font-bold text-red-600">{fmtArea(m.measurement.area)}</span></Tooltip>
+              <Tooltip permanent direction="top">
+                <div className="text-xs font-bold text-red-600 leading-tight">
+                  <div>{fmtArea(m.measurement.area)}</div>
+                  <div className="text-[8px] font-mono text-slate-600">{coordStr}</div>
+                </div>
+              </Tooltip>
             </Circle>
           );
           return null;

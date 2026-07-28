@@ -1,5 +1,5 @@
 import React, { useMemo, memo } from "react";
-import { Polygon, Polyline, Tooltip, CircleMarker, Marker } from "react-leaflet";
+import { Polygon, Polyline, Tooltip, CircleMarker, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import { getMustateeelKillaGrid, DIMENSIONS } from "@/lib/gisEngine";
 import { canvasRectToLatLngs, canvasPolylineToLatLngs, polygonAreaSqMeters, sqMetersToUnits } from "@/lib/geoOverlay";
@@ -47,10 +47,25 @@ function KillaLabel({ num, latlng, zoom }) {
 }
 
 function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, onClick }) {
+  const map = useMap();
   const acres = useMemo(() => sqMetersToUnits(polygonAreaSqMeters(latlngs)).acres, [latlngs]);
-  const fontSize = labelFontSize(zoom);
   const boundaryThickness = obj.boundaryThickness || 5;
   const lineWeight = Math.max(3, boundaryThickness * 1.2);
+
+  // Auto-fit font size to the mustateel's rendered pixel dimensions so the
+  // number always stays INSIDE the boundary and shrinks naturally on zoom out
+  // (never oversized). Progressively shows as the polygon becomes big enough.
+  const { numSize, showLabel } = useMemo(() => {
+    const px = latlngs.map(p => map.latLngToLayerPoint([p.lat, p.lng]));
+    const xs = px.map(p => p.x), ys = px.map(p => p.y);
+    const w = Math.max(...xs) - Math.min(...xs);
+    const h = Math.max(...ys) - Math.min(...ys);
+    const minDim = Math.min(w, h);
+    // Only show the label once the polygon is at least ~34px on screen
+    if (minDim < 34) return { numSize: 0, showLabel: false };
+    // Fit number to ~30% of the smaller dimension, capped 8–30px
+    return { numSize: Math.max(8, Math.min(30, minDim * 0.3)), showLabel: true };
+  }, [latlngs, map, zoom]);
 
   return (
     <>
@@ -65,17 +80,19 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
         }}
         eventHandlers={{ click: (e) => { L.DomEvent.stopPropagation(e); onClick && onClick(obj.id); } }}
       >
-        <Tooltip permanent direction="center" className="mustateel-label" opacity={1}>
-          <div style={{ fontSize: `${fontSize * 5}px`, fontWeight: 700, color: "#000000", textAlign: "center", lineHeight: 1.15, whiteSpace: "nowrap" }}>
-            {obj.label && <div>{obj.label}</div>}
-            <div style={{ fontSize: `${fontSize * 0.78}px`, color: "#7f1d1d" }}>{acres.toFixed(2)} ac</div>
-            {obj.mogaNumber && (
-              <div style={{ fontSize: `${fontSize * 0.68}px`, color: "#2563eb", fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
-                موگہ {obj.mogaNumber}{obj.mogha_side ? `/${obj.mogha_side}` : ""}
-              </div>
-            )}
-          </div>
-        </Tooltip>
+        {showLabel && (
+          <Tooltip permanent direction="center" className="mustateel-label" opacity={1}>
+            <div style={{ fontSize: `${numSize}px`, fontWeight: 800, color: "#000000", textAlign: "center", lineHeight: 1.1, whiteSpace: "nowrap", textShadow: "0 0 3px #fff, 0 0 3px #fff" }}>
+              {obj.label && <div>{obj.label}</div>}
+              <div style={{ fontSize: `${Math.max(7, numSize * 0.5)}px`, fontWeight: 600, color: "#7f1d1d" }}>{acres.toFixed(2)} ac</div>
+              {obj.mogaNumber && (
+                <div style={{ fontSize: `${Math.max(7, numSize * 0.45)}px`, color: "#2563eb", fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
+                  موگہ {obj.mogaNumber}{obj.mogha_side ? `/${obj.mogha_side}` : ""}
+                </div>
+              )}
+            </div>
+          </Tooltip>
+        )}
       </Polygon>
       {/* Killa grid lines — only for the clicked/active mustateel */}
       {showKilla && isActive && <KillaGridLines obj={obj} transform={transform} zoom={zoom} />}

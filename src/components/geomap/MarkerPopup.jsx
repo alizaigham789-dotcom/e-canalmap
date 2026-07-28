@@ -21,6 +21,10 @@ export default function MarkerPopup({ marker, onUpdate, onDelete }) {
   return (
     <Popup>
       <div className="w-44 space-y-2">
+        <div className="text-[9px] font-mono text-slate-500 bg-slate-50 rounded px-1.5 py-1 leading-tight">
+          <div>Lat: {marker.latlng.lat.toFixed(6)}</div>
+          <div>Lng: {marker.latlng.lng.toFixed(6)}</div>
+        </div>
         <input
           type="text"
           value={title}
