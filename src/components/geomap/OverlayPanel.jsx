@@ -18,6 +18,7 @@ export default function OverlayPanel({
   saving,
   saved,
   mustateelAreas,
+  onEditLowerCorner,
   onClose,
 }) {
   const mustateels = mustateelAreas || [];
@@ -168,6 +169,13 @@ export default function OverlayPanel({
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
               {saving ? "Saving…" : saved ? "Saved" : "Save Placement"}
+            </button>
+            <button
+              onClick={onEditLowerCorner}
+              className="w-full h-8 rounded-md text-xs font-bold bg-green-600/20 text-green-300 hover:bg-green-600/30 flex items-center justify-center gap-1.5 transition-all"
+            >
+              <Crosshair className="w-3.5 h-3.5" />
+              Edit Lower Corner (Manual)
             </button>
             <button
               onClick={onRePlace}

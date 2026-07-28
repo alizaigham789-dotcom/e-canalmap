@@ -63,8 +63,8 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
     const minDim = Math.min(w, h);
     // Only show the label once the polygon is at least ~34px on screen
     if (minDim < 34) return { numSize: 0, showLabel: false };
-    // Fit number to ~60% of the smaller dimension, capped 16–60px (2x original)
-    return { numSize: Math.max(16, Math.min(60, minDim * 0.6)), showLabel: true };
+    // Mustateel number: ~30% of smaller dimension, capped 8–30px (halved)
+    return { numSize: Math.max(8, Math.min(30, minDim * 0.3)), showLabel: true };
   }, [latlngs, map, zoom]);
 
   return (
@@ -84,7 +84,7 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
           <Tooltip permanent direction="center" className="mustateel-label" opacity={1}>
             <div style={{ fontSize: `${numSize}px`, fontWeight: 800, color: "#dc2626", textAlign: "center", lineHeight: 1.1, whiteSpace: "nowrap", textShadow: "0 0 3px #fff, 0 0 3px #fff" }}>
               {obj.label && <div>{obj.label}</div>}
-              <div style={{ fontSize: `${Math.max(7, numSize * 0.5)}px`, fontWeight: 600, color: "#7f1d1d" }}>{acres.toFixed(2)} ac</div>
+              <div style={{ fontSize: `${Math.max(7, numSize * 1.0)}px`, fontWeight: 600, color: "#7f1d1d" }}>{acres.toFixed(2)} ac</div>
               {obj.mogaNumber && (
                 <div style={{ fontSize: `${Math.max(7, numSize * 0.45)}px`, color: "#2563eb", fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
                   موگہ {obj.mogaNumber}{obj.mogha_side ? `/${obj.mogha_side}` : ""}

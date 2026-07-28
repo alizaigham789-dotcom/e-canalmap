@@ -131,6 +131,7 @@ export default function GeoMap() {
 
   // Coordinate input dialog for placement
   const [showCoordDialog, setShowCoordDialog] = useState(false);
+  const [showLowerLeftDialog, setShowLowerLeftDialog] = useState(false);
 
   // Overlay / georeferencing
   const [showOverlayPanel, setShowOverlayPanel] = useState(true);
@@ -250,17 +251,17 @@ export default function GeoMap() {
       setMarkers(prev => [...prev, { id: Date.now(), latlng, title: "", color: "#ef4444" }]);
     } else if (activeTool === "line") {
       setDraft(prev => {
-        if (!prev || !Array.isArray(prev.points)) return { type: "line", points: [latlng] };
+        if (!prev || prev.type !== "line" || !Array.isArray(prev.points)) return { type: "line", points: [latlng] };
         return { ...prev, points: [...prev.points, latlng] };
       });
     } else if (activeTool === "polygon") {
       setDraft(prev => {
-        if (!prev || !Array.isArray(prev.points)) return { type: "polygon", points: [latlng] };
+        if (!prev || prev.type !== "polygon" || !Array.isArray(prev.points)) return { type: "polygon", points: [latlng] };
         return { ...prev, points: [...prev.points, latlng] };
       });
     } else if (activeTool === "rectangle") {
       setDraft(prev => {
-        if (!prev || prev.points.length === 0) return { type: "rectangle", points: [latlng] };
+        if (!prev || prev.type !== "rectangle" || !prev.points || prev.points.length === 0) return { type: "rectangle", points: [latlng] };
         const c1 = prev.points[0];
         const c2 = latlng;
         const rect = { type: "rectangle", points: [c1, c2] };
@@ -270,7 +271,7 @@ export default function GeoMap() {
       });
     } else if (activeTool === "circle") {
       setDraft(prev => {
-        if (!prev) return { type: "circle", center: latlng, radius: 0 };
+        if (!prev || prev.type !== "circle") return { type: "circle", center: latlng, radius: 0 };
         // Second click finalizes with current radius
         const r = haversine(prev.center.lat, prev.center.lng, latlng.lat, latlng.lng);
         const m = circleMeasurements(prev.center.lat, prev.center.lng, r);
@@ -348,6 +349,11 @@ export default function GeoMap() {
     setPlacementPoint(coords);
     setPlacing(false);
     setOverlay(null);
+  };
+
+  // Manual coordinate input for the lower-left (green) corner marker
+  const handleLowerLeftByCoords = (coords) => {
+    handleLowerLeftDrag(coords);
   };
 
   const handleSelectMap = (id) => {
@@ -671,6 +677,7 @@ export default function GeoMap() {
           saving={savingOverlay}
           saved={overlaySaved}
           mustateelAreas={mustateelAreas}
+          onEditLowerCorner={() => setShowLowerLeftDialog(true)}
           onClose={() => setShowOverlayPanel(false)}
         />
       )}
@@ -745,6 +752,14 @@ export default function GeoMap() {
         onClose={() => setShowCoordDialog(false)}
         onPlace={handlePlaceByCoords}
         mouseLatLng={mouseLatLng}
+      />
+
+      {/* Manual coordinate input for lower-left (green) corner */}
+      <CoordinateDialog
+        open={showLowerLeftDialog}
+        onClose={() => setShowLowerLeftDialog(false)}
+        onPlace={handleLowerLeftByCoords}
+        mouseLatLng={lowerLeftPoint || mouseLatLng}
       />
 
       {/* Hybrid / Satellite toggle */}
