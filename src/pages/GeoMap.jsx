@@ -268,12 +268,12 @@ export default function GeoMap() {
       setMarkers(prev => [...prev, { id: Date.now(), latlng, title: "", color: "#ef4444" }]);
     } else if (activeTool === "line") {
       setDraft(prev => {
-        if (!prev) return { type: "line", points: [latlng] };
+        if (!prev || !Array.isArray(prev.points)) return { type: "line", points: [latlng] };
         return { ...prev, points: [...prev.points, latlng] };
       });
     } else if (activeTool === "polygon") {
       setDraft(prev => {
-        if (!prev) return { type: "polygon", points: [latlng] };
+        if (!prev || !Array.isArray(prev.points)) return { type: "polygon", points: [latlng] };
         return { ...prev, points: [...prev.points, latlng] };
       });
     } else if (activeTool === "rectangle") {
