@@ -78,7 +78,7 @@ function cornerPlaceIcon() {
 // overlay's rotation/scale by dragging this second point (bottom-left of mustateel).
 function lowerLeftIcon() {
   return L.divIcon({
-    html: `<div style="width:34px;height:34px;background:#16a34a;border:3px solid white;border-radius:8px;box-shadow:0 2px 12px rgba(22,163,74,0.7);display:flex;align-items:center;justify-content:center;cursor:grab;">
+    html: `<div style="width:34px;height:34px;background:#eab308;border:3px solid white;border-radius:8px;box-shadow:0 2px 12px rgba(234,179,8,0.7);display:flex;align-items:center;justify-content:center;cursor:grab;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M4 20 L10 20 M4 20 L4 14"/></svg>
     </div>`,
     className: "",
@@ -577,7 +577,7 @@ export default function GeoMap() {
           >
             <Tooltip permanent direction="right" className="placement-coords-tooltip">
               <div className="text-[10px] font-mono leading-tight">
-                <div className="font-bold text-green-600 flex items-center gap-1">
+                <div className="font-bold text-yellow-600 flex items-center gap-1">
                   <span>📍</span> نیچا کونا پلیس مارکر
                 </div>
                 <div className="text-red-600 font-semibold">Lat: {lowerLeftPoint.lat.toFixed(6)}</div>
@@ -663,7 +663,7 @@ export default function GeoMap() {
         onMenu={() => navigate("/")}
       />
 
-      <ZoomControls onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onGPS={handleGPS} gpsActive={gpsActive} onPlaceByCoords={() => setShowCoordDialog(true)} />
+      <ZoomControls onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onGPS={handleGPS} gpsActive={gpsActive} onPlaceByCoords={() => setShowCoordDialog(true)} onPlaceByCoordsLower={() => setShowLowerLeftDialog(true)} />
       <Compass />
 
       {/* Overlay toggle */}
@@ -733,7 +733,7 @@ export default function GeoMap() {
       {/* Placement hint — two-click mode with live coordinates */}
       {placingStep > 0 && selectedMapId && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 z-[1001] text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl flex flex-col items-center gap-0.5 animate-pulse"
-          style={{ background: placingStep === 1 ? "#dc2626" : "#16a34a" }}>
+          style={{ background: placingStep === 1 ? "#dc2626" : "#eab308" }}>
           <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4" />
             {placingStep === 1
