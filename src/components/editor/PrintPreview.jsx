@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
 import { Move } from "lucide-react";
@@ -116,7 +116,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
 </g>`;
 }
 
-function svgMuraba(obj, C, idx, showKilla = true) {
+function svgMuraba(obj, C, idx, showKilla = true, mouzaSplit = null) {
   const cellW = obj.w / 5, cellH = obj.h / 5;
   const strokeColor = C.murabaStroke || "#000000";
   const fontSize = Math.min(obj.w * 0.22, obj.h * 0.22);
@@ -141,14 +141,31 @@ function svgMuraba(obj, C, idx, showKilla = true) {
   }
 
   const label = obj.label || "";
+  const label2 = obj.label2 || "";
+  let labelSvg;
+  if (mouzaSplit && label2) {
+    const fitFont = (text, halfW) => {
+      let fpx = Math.min(obj.w, obj.h) * 0.20;
+      const estW = text.length * fpx * 0.6;
+      const maxW = (halfW || obj.w * 0.5) * 0.80;
+      if (estW > maxW) fpx = Math.max(8, maxW / (text.length * 0.6));
+      return fpx;
+    };
+    const f1 = fitFont(label, mouzaSplit.widthA);
+    const f2 = fitFont(label2, mouzaSplit.widthB);
+    labelSvg = `${label ? `<text x="${mouzaSplit.centerA.x}" y="${mouzaSplit.centerA.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${f1}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}${label2 ? `<text x="${mouzaSplit.centerB.x}" y="${mouzaSplit.centerB.y}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${f2}" fill="${C.labelColor||'#1e293b'}">${label2}</text>` : ""}`;
+  } else {
+    labelSvg = `${label ? `<text x="${obj.x + obj.w/2}" y="${obj.y + obj.h/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}`;
+  }
+
   return `
 <g key="murb_${idx}">
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
   ${killaLabels}
   ${obj.excluded ? svgExclusionHatch(obj, `murb_${idx}`) : ""}
-  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="6.5" stroke-linejoin="miter"/>
-  ${label ? `<text x="${obj.x + obj.w/2}" y="${obj.y + obj.h/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="900" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${label}</text>` : ""}
+  <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness)}" stroke-linejoin="miter"/>
+  ${labelSvg}
 </g>`;
 }
 
@@ -158,12 +175,16 @@ function svgExclusionHatch(obj, idx) {
   // Print: line width = 25% less than the parcel's own boundary width
   let width;
   if (obj.type === "mustateel") width = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness) * 0.75;
-  else if (obj.type === "muraba") width = 6.5 * 0.75;
+  else if (obj.type === "muraba") width = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness) * 0.75;
   else width = 1 * 0.75;
 
   let rects;
   if (obj.excludedAcres && obj.type === "mustateel") {
     rects = getMustateelKillaCells(obj)
+      .filter(cell => obj.excludedAcres[cell.killa - 1])
+      .map(cell => ({ x: cell.x, y: cell.y, w: cell.w, h: cell.h }));
+  } else if (obj.excludedAcres && obj.type === "muraba") {
+    rects = getMurabaKillaCells(obj)
       .filter(cell => obj.excludedAcres[cell.killa - 1])
       .map(cell => ({ x: cell.x, y: cell.y, w: cell.w, h: cell.h }));
   } else {
@@ -386,7 +407,7 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
   sorted.forEach((obj, idx) => {
     switch (obj.type) {
       case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null))); break;
-      case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba)); break;
+      case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null))); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
       case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW)); break;
       case "canal":     svgParts.push(svgCanal(obj, C, idx)); break;
@@ -629,17 +650,22 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl flex flex-col w-full max-w-5xl max-h-[95vh]">
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-0 sm:p-4">
+      <div className="bg-white border border-slate-200 rounded-none sm:rounded-2xl shadow-2xl flex flex-col w-full h-full sm:h-auto sm:max-w-5xl sm:max-h-[95vh]">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-slate-50 rounded-t-2xl">
-          <div className="flex items-center gap-3">
-            <Printer className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-bold text-slate-800 font-heading tracking-wider">PRINT PREVIEW</span>
-            <span className="text-xs text-slate-500">{mapData?.title}</span>
+        <div className="flex flex-col gap-2 px-3 sm:px-5 py-2 sm:py-3 border-b border-slate-200 bg-slate-50 rounded-none sm:rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <Printer className="w-4 h-4 text-blue-600 shrink-0" />
+              <span className="text-sm font-bold text-slate-800 font-heading tracking-wider shrink-0">PRINT PREVIEW</span>
+              <span className="text-xs text-slate-500 truncate hidden sm:inline">{mapData?.title}</span>
+            </div>
+            <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-400 hover:text-slate-700 shrink-0" onClick={onClose}>
+              <X className="w-4 h-4" />
+            </Button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             {/* Zoom */}
             <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 py-1">
               <Button variant="ghost" size="icon" className="w-6 h-6 text-slate-500 hover:text-slate-800"
@@ -690,14 +716,11 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-500 text-white text-xs gap-1" onClick={handlePrint}>
               <Printer className="w-3.5 h-3.5" /> Print / PDF
             </Button>
-            <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-400 hover:text-slate-700" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
           </div>
         </div>
 
         {/* Moga filter bar */}
-        <div className="flex items-center gap-3 px-5 py-2 bg-slate-50 border-b border-slate-200 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 bg-slate-50 border-b border-slate-200 flex-wrap">
           <span className="text-[10px] text-slate-500 uppercase tracking-widest font-mono shrink-0">Print Mode</span>
           <button
             onClick={() => setMogaFilter("")}
@@ -754,11 +777,11 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         </div>
 
         {/* Preview Area */}
-        <div className="flex-1 overflow-auto bg-slate-100 p-6 flex items-start justify-center">
+        <div className="flex-1 overflow-auto bg-slate-100 p-2 sm:p-6 flex items-start justify-center">
           <div
             ref={svgWrapRef}
             className={`bg-white shadow-2xl relative ${legendMoveMode ? "cursor-crosshair ring-4 ring-green-400/50" : ""}`}
-            style={{ width: `${scale}%`, minWidth: 500, border: showPageBorder ? `2px solid #3b82f6` : "none" }}
+            style={{ width: `${scale}%`, minWidth: 280, border: showPageBorder ? `2px solid #3b82f6` : "none" }}
             onClick={handlePreviewClick}
           >
             <PrintHeaderBox mapData={mapData} />

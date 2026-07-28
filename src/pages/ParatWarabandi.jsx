@@ -195,37 +195,37 @@ export default function ParatWarabandi() {
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
-        <div className="max-w-md mx-auto px-5 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800" onClick={handleBack}>
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <div>
-              <h1 className="text-sm font-bold font-heading text-slate-800">
-                {currentId ? "Edit" : "New"} Parat Warabandi
-              </h1>
-              <p className="text-[10px] text-slate-400">
-                {formData.village_name || "Untitled"} {moghaDisplay ? `— Mogha ${moghaDisplay}` : ""}
-              </p>
+        <div className="max-w-md mx-auto px-4 sm:px-5 py-3 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 shrink-0" onClick={handleBack}>
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <div className="min-w-0">
+                <h1 className="text-sm font-bold font-heading text-slate-800 truncate">
+                  {currentId ? "Edit" : "New"} Parat Warabandi
+                </h1>
+                <p className="text-[10px] text-slate-400 truncate">
+                  {formData.village_name || "Untitled"} {moghaDisplay ? `— Mogha ${moghaDisplay}` : ""}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-1.5 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => handleSave("draft")}
+                disabled={saveMutation.isPending}
+                className="h-8 text-xs gap-1 border-slate-200 text-slate-600 hover:bg-slate-100">
+                <Save className="w-3 h-3" /> Draft
+              </Button>
+              <Button size="sm" onClick={() => handleSave("completed")}
+                disabled={saveMutation.isPending}
+                className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Save className="w-3 h-3" /> Complete
+              </Button>
+              <Button size="sm" onClick={() => setShowPrint(true)}
+                className="h-8 text-xs gap-1 bg-blue-600 hover:bg-blue-700 text-white">
+                <Printer className="w-3 h-3" /> Print
+              </Button>
             </div>
           </div>
-          <div className="flex gap-1.5">
-            <Button size="sm" variant="outline" onClick={() => handleSave("draft")}
-              disabled={saveMutation.isPending}
-              className="h-8 text-xs gap-1 border-slate-200 text-slate-600 hover:bg-slate-100">
-              <Save className="w-3 h-3" /> Draft
-            </Button>
-            <Button size="sm" onClick={() => handleSave("completed")}
-              disabled={saveMutation.isPending}
-              className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white">
-              <Save className="w-3 h-3" /> Complete
-            </Button>
-            <Button size="sm" onClick={() => setShowPrint(true)}
-              className="h-8 text-xs gap-1 bg-blue-600 hover:bg-blue-700 text-white">
-              <Printer className="w-3 h-3" /> Print
-            </Button>
-          </div>
-        </div>
       </header>
 
       <main className="max-w-md mx-auto px-5 py-5 space-y-4">

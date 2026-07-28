@@ -70,6 +70,8 @@ const GISCanvas = forwardRef(function GISCanvas(
   // Box-select state
   const boxSelectStart = useRef(null);
   const [boxSelectDraft, setBoxSelectDraft] = useState(null);
+  // Pinch-to-zoom state (mobile) — tracks initial finger distance + zoom
+  const pinchRef = useRef(null);
   // 1 world unit = 1 foot (DIMENSIONS.ACRE.width = 220ft, etc.)
   const FT_PER_UNIT = 1;
 
@@ -120,7 +122,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       const kv = killaVisibility || { mustateel: true, muraba: true };
       if (obj.type === "acre") drawAcre(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "mustateel") drawMustateel(ctx, obj, isSelected, zoom, C, obj.excluded || (obj.showKillaNumbers !== false && kv.mustateel !== false), getMustateelMouzaSplit(obj, mouzaObjects));
-      else if (obj.type === "muraba") drawMuraba(ctx, obj, isSelected, zoom, C, obj.showKillaNumbers !== false && kv.muraba !== false);
+      else if (obj.type === "muraba") drawMuraba(ctx, obj, isSelected, zoom, C, obj.showKillaNumbers !== false && kv.muraba !== false, getMustateelMouzaSplit(obj, mouzaObjects));
       else if (obj.type === "canal") drawCanal(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "khal") drawKhal(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "road") drawRoad(ctx, obj, isSelected, zoom, C);
@@ -806,6 +808,20 @@ const GISCanvas = forwardRef(function GISCanvas(
   };
 
   const handleTouchStart = useCallback((e) => {
+    // Pinch-to-zoom: two fingers → start pinch
+    if (e.touches.length === 2) {
+      clearLongPress();
+      isPanning.current = false;
+      isMoving.current = false;
+      const [t1, t2] = e.touches;
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const cx = (t1.clientX + t2.clientX) / 2 - rect.left;
+      const cy = (t1.clientY + t2.clientY) / 2 - rect.top;
+      pinchRef.current = { initialDist: dist, initialZoom: zoom, centerSX: cx, centerSY: cy, initialPan: { ...pan } };
+      return;
+    }
     const touch = getTouchPoint(e);
     if (!touch) return;
     touchMoved.current = false;
@@ -830,6 +846,20 @@ const GISCanvas = forwardRef(function GISCanvas(
   }, [activeTool, pan, zoom, handleMouseDown, onSelect]);
 
   const handleTouchMove = useCallback((e) => {
+    // Pinch-to-zoom: two fingers → zoom toward pinch center
+    if (e.touches.length === 2 && pinchRef.current) {
+      e.preventDefault();
+      const [t1, t2] = e.touches;
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const { initialDist, initialZoom, centerSX, centerSY, initialPan } = pinchRef.current;
+      if (initialDist < 5) return;
+      const factor = dist / initialDist;
+      const newZoom = Math.max(0.05, Math.min(20, initialZoom * factor));
+      const newPanX = centerSX - (centerSX - initialPan.x) * (newZoom / initialZoom);
+      const newPanY = centerSY - (centerSY - initialPan.y) * (newZoom / initialZoom);
+      onZoomChange(newZoom, { x: newPanX, y: newPanY });
+      return;
+    }
     e.preventDefault();
     const touch = getTouchPoint(e);
     if (!touch) return;
@@ -837,9 +867,15 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (!isMoving.current) clearLongPress();
     lastMouse.current = { x: touch.clientX, y: touch.clientY };
     handleMouseMove(touch);
-  }, [handleMouseMove]);
+  }, [handleMouseMove, onZoomChange]);
 
   const handleTouchEnd = useCallback((e) => {
+    // Still pinching or a finger remains → just reset pinch, don't end interaction
+    if (e.touches.length >= 1) {
+      pinchRef.current = null;
+      return;
+    }
+    pinchRef.current = null;
     clearLongPress();
     const touch = getTouchPoint(e) || lastMouse.current;
     handleMouseUp(touch);

@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont } from "@/lib/gisEngine";
 import { drawMogaFractionBoxOnCanvas, getOutletLabelPos, isUrduText } from "@/lib/printRenderHelpers";
 
 // ---- Anti-aliased zoom-clamped font size ----
@@ -230,7 +230,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
   }
 }
 
-export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = true) {
+export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = true, mouzaSplit = null) {
   // Exclusion hatch — drawn first, above fill, below boundary
   if (obj.excluded) drawExclusionHatchOnCanvas(ctx, obj, zoom);
   const ks = obj.killaStyle || {};
@@ -251,9 +251,9 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
     }
   }
 
-  // Layer 2: Outer boundary — RED, thicker
+  // Layer 2: Outer boundary — RED, thick (world-unit thickness, matches print/export)
   ctx.strokeStyle = isSelected ? "#60a5fa" : (C.murabaStroke || "#ef4444");
-  ctx.lineWidth = ((isSelected ? 4 : 3) * 0.2 + (isSelected ? 2 : 0)) / zoom;
+  ctx.lineWidth = (MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness) * 0.2 + (isSelected ? 2 : 0)) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
   // Layer 2: Killa grid — always visible, subtle ink
@@ -291,8 +291,29 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
     }
   }
 
-  // Layer 5: Center label — uniform world-unit size, boundary-clipped
-  {
+  // Layer 5: Center label(s) — if mouza split + label2, draw two labels (one per side)
+  if (mouzaSplit && obj.label2) {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
+    ctx.fillStyle = C.labelColor || "#1e293b";
+    const drawSplitLabel = (text, center, halfW) => {
+      if (!text) return;
+      let maxFontPx = Math.min(obj.w, obj.h) * 0.22;
+      ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
+      const measured = ctx.measureText(text);
+      const maxW = (halfW || obj.w * 0.5) * 0.80;
+      if (measured.width > maxW) {
+        maxFontPx = Math.max(8, maxFontPx * (maxW / measured.width));
+        ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
+      }
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(text, center.x, center.y);
+    };
+    drawSplitLabel(obj.label || "", mouzaSplit.centerA, mouzaSplit.widthA);
+    drawSplitLabel(obj.label2, mouzaSplit.centerB, mouzaSplit.widthB);
+    ctx.restore();
+  } else {
+    // No mouza line crossing — show only label1 (single label centered)
     const centerX = obj.x + obj.w / 2, centerY = obj.y + obj.h / 2;
     ctx.save();
     ctx.beginPath(); ctx.rect(obj.x + 2/zoom, obj.y + 2/zoom, obj.w - 4/zoom, obj.h - 4/zoom); ctx.clip();
@@ -1017,6 +1038,10 @@ export function drawExclusionHatchOnCanvas(ctx, obj, zoom) {
   let rects;
   if (obj.excludedAcres && obj.type === "mustateel") {
     rects = getMustateelKillaCells(obj)
+      .filter(cell => obj.excludedAcres[cell.killa - 1])
+      .map(cell => ({ x: cell.x, y: cell.y, w: cell.w, h: cell.h }));
+  } else if (obj.excludedAcres && obj.type === "muraba") {
+    rects = getMurabaKillaCells(obj)
       .filter(cell => obj.excludedAcres[cell.killa - 1])
       .map(cell => ({ x: cell.x, y: cell.y, w: cell.w, h: cell.h }));
   } else {

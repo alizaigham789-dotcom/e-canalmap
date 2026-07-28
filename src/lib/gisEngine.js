@@ -310,6 +310,18 @@ export function getMustateelKillaCells(obj) {
   return cells;
 }
 
+export function getMurabaKillaCells(obj) {
+  const cellW = obj.w / 5, cellH = obj.h / 5;
+  const grid = getMurabaKillaGrid();
+  const cells = [];
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 5; c++) {
+      cells.push({ killa: grid[r][c], x: obj.x + c * cellW, y: obj.y + r * cellH, w: cellW, h: cellH });
+    }
+  }
+  return cells;
+}
+
 export function getMurabaKillaGrid() {
   return [
     [1, 2, 3, 4, 5],
@@ -438,6 +450,7 @@ export function createMuraba(wx, wy, ownerName = "") {
     fillStyle: "solid", fillColor: "rgba(249,115,22,0.08)", fillOpacity: 0.08, fillSpacing: 8,
     killaStyle: { strokeColor: "#ef4444", strokeWidth: 1, strokeOpacity: 0.10, strokeStyle: "solid", labelColor: "rgba(220,38,38,0.85)" },
     lockSizeShape: true,
+    boundaryThickness: 5,
   };
 }
 

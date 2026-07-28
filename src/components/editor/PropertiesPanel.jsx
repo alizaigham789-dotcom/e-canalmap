@@ -138,6 +138,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
             <>
               <Separator className="bg-slate-100" />
               <Field label="Muraba No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 1" hint="Double-click plot on map to edit label at centroid" />
+              <Field label="Label 2 (below Mouza line)" value={local.label2 || ""} onChange={v => commit("label2", v)} placeholder="e.g. 1-A" hint="Shown only when a Mouza boundary splits this parcel into 2 mouzas" />
               <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
               <div className="flex items-center justify-between">
                 <label className="text-xs text-slate-600">Show Owner</label>
@@ -152,6 +153,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
               </div>
               <ExclusionToggle local={local} commit={commit} />
+              <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 5} min={1} max={10} step={1} onChange={v => commit("boundaryThickness", v)} />
               <FillStyleControl local={local} commit={commit} />
               <KillaStyleControl local={local} commit={commit} />
               <div className="text-[10px] text-slate-400 font-mono">1100 ft × 990 ft • 25 Killas</div>
@@ -411,7 +413,7 @@ function SpacingControl({ label, value, min, max, step, onChange, unit }) {
 }
 
 function ExclusionToggle({ local, commit }) {
-  const isMustateel = local.type === "mustateel";
+  const isParcel = local.type === "mustateel" || local.type === "muraba";
   const exclusionColor = local.exclusionColor || "#000000";
   const exclusionSpacing = local.exclusionSpacing || 60;
   return (
@@ -435,14 +437,16 @@ function ExclusionToggle({ local, commit }) {
           <span className="text-[9px] font-mono text-slate-500 w-6">{exclusionSpacing}</span>
         </div>
       )}
-      {isMustateel && local.excluded && <MustateelAcreCheckboxes local={local} commit={commit} />}
+      {isParcel && local.excluded && <KillaExclusionCheckboxes local={local} commit={commit} />}
     </div>
   );
 }
 
-function MustateelAcreCheckboxes({ local, commit }) {
-  // Default: all 10 acres ticked (chakbandi ikhraj = all included)
-  const acres = local.excludedAcres || Array(10).fill(true);
+function KillaExclusionCheckboxes({ local, commit }) {
+  // Default: all killas ticked (chakbandi ikhraj = all included)
+  const isMustateel = local.type === "mustateel";
+  const totalKillas = isMustateel ? 10 : 25;
+  const acres = local.excludedAcres || Array(totalKillas).fill(true);
   const toggle = (idx) => {
     const next = Array.from(acres);
     next[idx] = !next[idx];
@@ -450,9 +454,9 @@ function MustateelAcreCheckboxes({ local, commit }) {
   };
   return (
     <div className="border-t border-slate-200 pt-2 mt-1">
-      <label className="text-[9px] text-slate-400 uppercase tracking-wider block mb-1">Acre Ikhraj (1–10)</label>
+      <label className="text-[9px] text-slate-400 uppercase tracking-wider block mb-1">Killa Ikhraj (1–{totalKillas})</label>
       <div className="grid grid-cols-5 gap-1">
-        {Array.from({ length: 10 }, (_, i) => (
+        {Array.from({ length: totalKillas }, (_, i) => (
           <label key={i} className="flex items-center gap-1 text-[9px] text-slate-600 cursor-pointer select-none">
             <input type="checkbox" checked={!!acres[i]} onChange={() => toggle(i)} className="w-2.5 h-2.5 accent-blue-600 cursor-pointer" />
             <span>{i + 1}</span>

@@ -81,6 +81,7 @@ export default function Editor() {
   const [killaVisibility, setKillaVisibility] = useState({ mustateel: true, muraba: true });
   const [killaNumbersGlobal, setKillaNumbersGlobal] = useState(true);
   const [mustateelStartNum, setMustateelStartNum] = useState("");
+  const [murabaStartNum, setMurabaStartNum] = useState("");
   const [showScan, setShowScan] = useState(false);
   const [showAICommand, setShowAICommand] = useState(false);
   const [showColors, setShowColors] = useState(false);
@@ -123,6 +124,7 @@ export default function Editor() {
   const zoomRef = useRef(zoom);
   const panRef = useRef(pan);
   const mustateelStartNumRef = useRef(mustateelStartNum);
+  const murabaStartNumRef = useRef(murabaStartNum);
   // Draft refs — allow finish handlers to read current draft without side-effects in state updaters
   const canalDraftRef = useRef(null);
   const chakbandiDraftRef = useRef(null);
@@ -139,6 +141,7 @@ export default function Editor() {
   zoomRef.current = zoom;
   panRef.current = pan;
   mustateelStartNumRef.current = mustateelStartNum;
+  murabaStartNumRef.current = murabaStartNum;
 
   // Build a JSON string of all editor settings to persist across sessions
   const settingsRef = useRef(null);
@@ -626,7 +629,9 @@ export default function Editor() {
         .some(o => rectsOverlap({ x: snap.x, y: snap.y, w: proto.w, h: proto.h }, o));
       if (wouldOverlap) { toast.warning("Cannot place here — overlaps another parcel"); return; }
       obj = createMuraba(snap.x, snap.y);
-      obj.label = autoAssignLabel("muraba", dsmRef.current.objects);
+      const startN = murabaStartNumRef.current !== "" ? parseInt(murabaStartNumRef.current, 10) : null;
+      obj.label = autoAssignLabel("muraba", dsmRef.current.objects, startN);
+      setMurabaStartNum(String(parseInt(obj.label, 10) + 1));
     }
 
     if (obj) {
@@ -744,6 +749,7 @@ export default function Editor() {
 
   const handleToolChange = (tool) => {
     if (tool !== "mustateel") setMustateelStartNum("");
+    if (tool !== "muraba") setMurabaStartNum("");
     if (activeTool === "canal" && canalDraft && canalDraft.length >= 2) handleCanalFinish();
     else if (activeTool === "canal") setCanalDraft(null);
     if (activeTool === "chakbandi" && chakbandiDraft && chakbandiDraft.length >= 2) handleChakbandiFinish();
@@ -828,6 +834,11 @@ export default function Editor() {
     if (obj && obj.type === "mustateel" && changes.label !== undefined) {
       const m = String(changes.label).match(/(\d+)/);
       if (m) setMustateelStartNum(String(parseInt(m[1], 10) + 1));
+    }
+    // Same for muraba — continue numbering from the manually entered number
+    if (obj && obj.type === "muraba" && changes.label !== undefined) {
+      const m = String(changes.label).match(/(\d+)/);
+      if (m) setMurabaStartNum(String(parseInt(m[1], 10) + 1));
     }
   };
 
@@ -1187,7 +1198,7 @@ export default function Editor() {
           />
 
           {/* Top-right toolbar buttons */}
-          <div className="absolute top-3 right-1.5 sm:right-3 flex flex-col gap-1.5 z-20 max-h-[calc(100%-100px)] overflow-y-auto no-scrollbar">
+          <div className="absolute top-3 right-1.5 sm:right-3 flex flex-col gap-1.5 z-20 max-h-[calc(100%-100px)] overflow-y-auto">
             <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${showLegend ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
               onClick={() => { setShowLegend(v => !v); setShowLayers(false); setShowColors(false); setShowSnap(false); }}
@@ -1312,14 +1323,14 @@ export default function Editor() {
               title={killaNumbersGlobal ? "Hide All Killa Numbers" : "Show All Killa Numbers"}>
               {killaNumbersGlobal ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             </Button>
-            {/* Mustateel start number input */}
-            {activeTool === "mustateel" && (
-              <div className="flex flex-col items-center gap-0.5" title="Mustateel numbering start">
+            {/* Mustateel / Muraba start number input */}
+            {(activeTool === "mustateel" || activeTool === "muraba") && (
+              <div className="flex flex-col items-center gap-0.5" title={`${activeTool === "mustateel" ? "Mustateel" : "Muraba"} numbering start`}>
                 <span className="text-[8px] text-slate-400 font-mono leading-none">Start#</span>
                 <input
                   type="number"
-                  value={mustateelStartNum}
-                  onChange={e => setMustateelStartNum(e.target.value)}
+                  value={activeTool === "mustateel" ? mustateelStartNum : murabaStartNum}
+                  onChange={e => activeTool === "mustateel" ? setMustateelStartNum(e.target.value) : setMurabaStartNum(e.target.value)}
                   placeholder="auto"
                   className="w-9 h-7 text-[10px] text-center border border-slate-300 rounded bg-white text-slate-700 font-mono focus:outline-none focus:border-blue-400"
                 />
@@ -1330,7 +1341,7 @@ export default function Editor() {
           {/* Panels */}
           {showLegend && (
             <div
-              className="absolute z-20"
+              className="absolute z-30 max-sm:left-1.5 max-sm:right-auto max-sm:max-w-[calc(100vw-70px)]"
               style={legendPos
                 ? { left: legendPos.x, top: legendPos.y, right: "auto" }
                 : { top: "200px", right: "12px" }}
@@ -1347,7 +1358,7 @@ export default function Editor() {
             </div>
           )}
           {showLayers && (
-            <div className="absolute top-[200px] right-3 z-20">
+            <div className="absolute top-[200px] right-3 z-30 max-sm:left-1.5 max-sm:right-auto max-sm:max-w-[calc(100vw-70px)]">
               <MogaFilterPanel
                 objects={objects}
                 layers={layers}
@@ -1370,7 +1381,7 @@ export default function Editor() {
             </div>
           )}
           {showColors && (
-            <div className="absolute top-[200px] right-3 z-20">
+            <div className="absolute top-[200px] right-3 z-30 max-sm:left-1.5 max-sm:right-auto max-sm:max-w-[calc(100vw-70px)]">
               <ColorSettingsPanel
                 colorSettings={colorSettings}
                 onColorChange={handleColorChange}
@@ -1381,7 +1392,7 @@ export default function Editor() {
             </div>
           )}
           {showSnap && (
-            <div className="absolute top-[260px] right-3 z-20">
+            <div className="absolute top-[260px] right-3 z-30 max-sm:left-1.5 max-sm:right-auto max-sm:max-w-[calc(100vw-70px)]">
               <SnapSettingsPanel snapSettings={snapSettings} onSnapChange={handleSnapChange} />
             </div>
           )}
