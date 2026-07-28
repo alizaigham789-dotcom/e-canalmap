@@ -233,8 +233,9 @@ export default function GeoMap() {
         allLatLngs.push(transform.transform(o.end.x, o.end.y));
       }
     }
-    if (allLatLngs.length > 0 && mapRef.current) {
-      const bounds = L.latLngBounds(allLatLngs.map(p => [p.lat, p.lng]));
+    const validLatLngs = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+    if (validLatLngs.length > 0 && mapRef.current) {
+      const bounds = L.latLngBounds(validLatLngs.map(p => [p.lat, p.lng]));
       mapRef.current.flyToBounds(bounds, { padding: [80, 80], duration: 1 });
     }
   }, [placementPoint, selectedMapId, mapObjects]);
