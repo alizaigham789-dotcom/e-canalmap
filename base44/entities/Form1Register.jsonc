@@ -1,0 +1,72 @@
+{
+  "name": "Form1Register",
+  "type": "object",
+  "properties": {
+    "map_id": {
+      "type": "string",
+      "description": "Reference to the LandMap id this register belongs to"
+    },
+    "map_title": {
+      "type": "string",
+      "description": "Denormalized map title for display"
+    },
+    "moga_number": {
+      "type": "string",
+      "description": "Moga (outlet) number this register covers"
+    },
+    "village": {
+      "type": "string"
+    },
+    "tehsil": {
+      "type": "string"
+    },
+    "district": {
+      "type": "string"
+    },
+    "mouza": {
+      "type": "string",
+      "description": "Mouza / village name"
+    },
+    "channel_name": {
+      "type": "string",
+      "description": "Canal / Rajbah name"
+    },
+    "outlet_rd": {
+      "type": "string"
+    },
+    "outlet_side": {
+      "type": "string",
+      "enum": [
+        "L",
+        "R",
+        ""
+      ]
+    },
+    "rows_json": {
+      "type": "string",
+      "description": "JSON string of register rows (farmer patches)"
+    },
+    "total_acres": {
+      "type": "number",
+      "default": 0
+    },
+    "total_kanal": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "completed"
+      ],
+      "default": "draft"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "map_id"
+  ]
+}

@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, FileText } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -17,6 +17,7 @@ import MeasurementInfo from "@/components/geomap/MeasurementInfo";
 import MarkerPopup from "@/components/geomap/MarkerPopup";
 import CoordinateDialog from "@/components/geomap/CoordinateDialog";
 import GeoMapExportDialog from "@/components/geomap/GeoMapExportDialog";
+import Form1RegisterPanel from "@/components/geomap/Form1RegisterPanel";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
@@ -149,6 +150,7 @@ export default function GeoMap() {
   const [savingOverlay, setSavingOverlay] = useState(false);
   const [overlaySaved, setOverlaySaved] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [showForm1, setShowForm1] = useState(false);
 
   // Measurement tools state
   const [markers, setMarkers] = useState([]); // user markers
@@ -750,6 +752,16 @@ export default function GeoMap() {
         </button>
       )}
 
+      {overlay && (
+        <button
+          onClick={() => setShowForm1(true)}
+          className="absolute top-14 right-[27rem] z-[1000] px-3 h-8 rounded-full shadow-xl text-[10px] font-bold bg-amber-600 text-white hover:bg-amber-700 transition-all flex items-center gap-1"
+        >
+          <FileText className="w-3 h-3" />
+          Form 1 Register
+        </button>
+      )}
+
       {/* Click mustateel hint */}
       {overlay && killaVisible && !activeMustateelId && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1000] bg-black/80 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center gap-1.5">
@@ -831,6 +843,16 @@ export default function GeoMap() {
         selectedMoga={selectedMoga}
         overlayReady={!!overlay}
         onCaptureSatellite={handleCaptureSatellite}
+      />
+
+      {/* Form 1 Register */}
+      <Form1RegisterPanel
+        open={showForm1}
+        onClose={() => setShowForm1(false)}
+        mapData={selectedMap}
+        objects={mapObjects}
+        overlay={overlay}
+        selectedMoga={selectedMoga}
       />
 
       {/* Hybrid / Satellite toggle */}
