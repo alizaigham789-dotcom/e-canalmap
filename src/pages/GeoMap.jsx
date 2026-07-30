@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save, FileText, MousePointerClick } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, FileText, MousePointerClick, PenTool, Pencil } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -20,7 +20,10 @@ import GeoMapExportDialog from "@/components/geomap/GeoMapExportDialog";
 import Form1RegisterPanel from "@/components/geomap/Form1RegisterPanel";
 import AllocationLayer from "@/components/geomap/AllocationLayer";
 import AllocationDialog from "@/components/geomap/AllocationDialog";
+import PatchDrawLayer from "@/components/geomap/PatchDrawLayer";
+import PatchDialog from "@/components/geomap/PatchDialog";
 import { remainingKanal, acreAllocations } from "@/lib/allocationEngine";
+import { patchArea, coveredAcres, khasraListFromCovered } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
@@ -154,9 +157,11 @@ export default function GeoMap() {
   const [overlaySaved, setOverlaySaved] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [showForm1, setShowForm1] = useState(false);
-  const [allocationMode, setAllocationMode] = useState(false);
+  const [allocTool, setAllocTool] = useState(null); // null | "cell" | "draw" | "edit"
   const [allocations, setAllocations] = useState([]);
   const [allocCell, setAllocCell] = useState(null);
+  const [patchDialog, setPatchDialog] = useState(null);
+  const [activePatchId, setActivePatchId] = useState(null);
   const [registerInfo, setRegisterInfo] = useState({ village: "", tehsil: "", district: "", mouza: "", channel: "", outlet_rd: "", side: "", sub_division: "", division: "", circle: "", zone: "" });
   const [savingRegister, setSavingRegister] = useState(false);
   const [existingRegId, setExistingRegId] = useState(null);
@@ -264,6 +269,29 @@ export default function GeoMap() {
 
   const handleRemoveAllocation = (id) => setAllocations((prev) => prev.filter((a) => a.id !== id));
 
+  const handleDrawComplete = useCallback((latlngs, area, khasra) => {
+    setPatchDialog({ latlngs, area, khasra });
+  }, []);
+
+  const handleAddPatch = (row) => {
+    setAllocations((prev) => [...prev, row]);
+    setPatchDialog(null);
+  };
+
+  const handleSelectPatch = useCallback((id) => setActivePatchId(id), []);
+
+  const handleUpdatePatchGeometry = useCallback((id, latlngs) => {
+    setAllocations((prev) =>
+      prev.map((a) => {
+        if (a.id !== id) return a;
+        const area = patchArea(latlngs);
+        const covered = coveredAcres(latlngs, mapObjects, overlay?.transform, selectedMoga);
+        const khasra = khasraListFromCovered(covered);
+        return { ...a, geometry: latlngs, kanal: area.kanal, acres: area.acres, khasra: khasra.join("; ") };
+      })
+    );
+  }, [mapObjects, overlay, selectedMoga]);
+
   const registerTotals = useMemo(() => {
     const kanal = allocations.reduce((s, a) => s + (a.kanal || 0), 0);
     return { kanal, acres: kanal / 8 };
@@ -325,6 +353,7 @@ export default function GeoMap() {
 
   // ─── MAP CLICK HANDLER ───────────────────────────────────────
   const handleMapClick = useCallback((latlng) => {
+    if (allocTool) return; // allocation tools handle their own clicks
     // 1. One-click placement — anchor upper-left corner, rotation 0° (straight), fixed scale (10-acre mustateel)
     if (placingStep === 1 && selectedMapId) {
       setPlacementPoint(latlng);
@@ -391,7 +420,7 @@ export default function GeoMap() {
         return null;
       });
     }
-  }, [placingStep, selectedMapId, activeTool, placementPoint, mapObjects]);
+  }, [placingStep, selectedMapId, activeTool, placementPoint, mapObjects, allocTool]);
 
   // ─── LIVE MEASUREMENT (mouse move) ─────────────────────────────
   const handleMouseMove = useCallback((latlng) => {
@@ -713,8 +742,24 @@ export default function GeoMap() {
             overlay={overlay}
             selectedMoga={selectedMoga}
             allocations={allocations}
-            mode={allocationMode}
+            mode={allocTool === "cell"}
             onCellClick={handleCellClick}
+          />
+        )}
+
+        {/* Patch draw/edit layer — freehand closed polygons for farmer patches */}
+        {overlay?.transform && !capturing && (
+          <PatchDrawLayer
+            drawMode={allocTool === "draw"}
+            editMode={allocTool === "edit"}
+            objects={mapObjects}
+            overlay={overlay}
+            selectedMoga={selectedMoga}
+            patches={allocations.filter((a) => a.geometry)}
+            activePatchId={activePatchId}
+            onDrawComplete={handleDrawComplete}
+            onSelectPatch={handleSelectPatch}
+            onUpdatePatchGeometry={handleUpdatePatchGeometry}
           />
         )}
 
@@ -888,17 +933,49 @@ export default function GeoMap() {
 
       {overlay && (
         <button
-          onClick={() => setAllocationMode((v) => !v)}
-          className={`absolute top-14 right-[34rem] z-[1000] px-3 h-8 rounded-full shadow-xl text-[10px] font-bold transition-all flex items-center gap-1 ${allocationMode ? "bg-green-600 text-white" : "bg-white text-slate-600"}`}
+          onClick={() => setAllocTool((v) => (v === "cell" ? null : "cell"))}
+          className={`absolute top-14 right-[34rem] z-[1000] px-3 h-8 rounded-full shadow-xl text-[10px] font-bold transition-all flex items-center gap-1 ${allocTool === "cell" ? "bg-green-600 text-white" : "bg-white text-slate-600"}`}
         >
           <MousePointerClick className="w-3 h-3" />
-          {allocationMode ? "Allocating ON" : "Allocate Patches"}
+          Cell Allocate
         </button>
       )}
 
-      {allocationMode && overlay && (
+      {overlay && (
+        <button
+          onClick={() => setAllocTool((v) => (v === "draw" ? null : "draw"))}
+          className={`absolute top-14 right-[41rem] z-[1000] px-3 h-8 rounded-full shadow-xl text-[10px] font-bold transition-all flex items-center gap-1 ${allocTool === "draw" ? "bg-indigo-600 text-white" : "bg-white text-slate-600"}`}
+        >
+          <PenTool className="w-3 h-3" />
+          Draw Patch
+        </button>
+      )}
+
+      {overlay && (
+        <button
+          onClick={() => setAllocTool((v) => (v === "edit" ? null : "edit"))}
+          className={`absolute top-14 right-[48rem] z-[1000] px-3 h-8 rounded-full shadow-xl text-[10px] font-bold transition-all flex items-center gap-1 ${allocTool === "edit" ? "bg-orange-600 text-white" : "bg-white text-slate-600"}`}
+        >
+          <Pencil className="w-3 h-3" />
+          Edit Patch
+        </button>
+      )}
+
+      {allocTool === "cell" && overlay && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-green-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <MapPin className="w-3 h-3" /> مستطیل کے کسی ایکڑ سیل پر کلک کریں — زمیندار کا حصہ الاٹ کریں
+        </div>
+      )}
+
+      {allocTool === "draw" && overlay && (
+        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-indigo-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
+          <PenTool className="w-3 h-3" /> نقشے پر کلک کر کے کلوزد پیچ بنائیں — ڈبل کلک سے مکمل کریں
+        </div>
+      )}
+
+      {allocTool === "edit" && overlay && (
+        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-orange-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
+          <Pencil className="w-3 h-3" /> کسی الوٹ شدہ پیچ پر کلک کریں — نوڈس کو کھینچ کر ایڈجسٹ کریں
         </div>
       )}
 
@@ -985,7 +1062,7 @@ export default function GeoMap() {
         onCaptureSatellite={handleCaptureSatellite}
       />
 
-      {/* Farmer patch allocation dialog */}
+      {/* Farmer patch allocation dialog (cell-based) */}
       <AllocationDialog
         open={!!allocCell}
         data={allocCell}
@@ -994,6 +1071,15 @@ export default function GeoMap() {
         info={registerInfo}
         onAllocate={handleAllocate}
         onClose={() => setAllocCell(null)}
+      />
+
+      {/* Drawn patch farmer details dialog */}
+      <PatchDialog
+        open={!!patchDialog}
+        data={patchDialog}
+        info={registerInfo}
+        onSave={handleAddPatch}
+        onClose={() => setPatchDialog(null)}
       />
 
       {/* Form 1 Register */}

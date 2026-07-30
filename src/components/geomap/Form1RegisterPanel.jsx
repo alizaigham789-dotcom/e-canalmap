@@ -2,9 +2,9 @@ import React from "react";
 import { X, Trash2, Download, Save, Loader2, FileText } from "lucide-react";
 import { toast } from "sonner";
 
-// Presentational register compiled from map allocations. Each row = a farmer's
-// portion within one acre (khasra like 840/3_1). Header info auto-filled from
-// the map editor header line and editable here.
+// Register compiled from both cell allocations and drawn patches. Each row has a
+// unified `khasra` string, `kanal`, `acres`, `tenure` (Owner/Tenant). Header info
+// auto-filled from the map editor header line and editable here.
 export default function Form1RegisterPanel({
   open,
   onClose,
@@ -26,10 +26,9 @@ export default function Form1RegisterPanel({
       return;
     }
     const cols = [
-      ["Sr", (r, i) => i + 1],
-      ["Khasra No", (r) => esc(r.khasra_full)],
+      ["Sr", (_r, i) => i + 1],
+      ["Khasra No", (r) => esc(r.khasra)],
       ["Mustateel", (r) => esc(r.mustateel_no)],
-      ["Acre", (r) => r.acre_no],
       ["Farmer Name", (r) => esc(r.farmer_name)],
       ["Father", (r) => esc(r.father)],
       ["Phone", (r) => esc(r.phone)],
@@ -37,12 +36,12 @@ export default function Form1RegisterPanel({
       ["Khata", (r) => esc(r.khata_no)],
       ["Crop", (r) => esc(r.crop_name)],
       ["Land Type", (r) => esc(r.land_type)],
+      ["Owner/Tenant", (r) => esc(r.tenure)],
       ["Kanal", (r) => r.kanal],
       ["Acres", (r) => (r.acres || 0).toFixed(3)],
       ["Channel", (r) => esc(r.channel_nme)],
       ["Outlet RD", (r) => esc(r.outlet_rd)],
       ["Side", (r) => esc(r.side)],
-      ["Rate", (r) => esc(r.rate1)],
       ["Village", (r) => esc(r.village)],
       ["Mouza", (r) => esc(r.mouza)],
       ["Tehsil", (r) => esc(r.tehsil)],
@@ -51,9 +50,7 @@ export default function Form1RegisterPanel({
       ["Division", (r) => esc(r.division)],
     ];
     const head = cols.map((c) => `<th>${c[0]}</th>`).join("");
-    const body = allocations
-      .map((r, i) => `<tr>${cols.map((c) => `<td>${c[1](r, i)}</td>`).join("")}</tr>`)
-      .join("");
+    const body = allocations.map((r, i) => `<tr>${cols.map((c) => `<td>${c[1](r, i)}</td>`).join("")}</tr>`).join("");
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Form 1 Register</title>
     <style>
       @page { size: A4 landscape; margin: 10mm; }
@@ -102,7 +99,6 @@ export default function Form1RegisterPanel({
           </button>
         </div>
 
-        {/* Header info (from map header line) */}
         <div className="px-4 py-2 border-b border-slate-200 bg-slate-50 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 shrink-0">
           {[
             ["Village", "village"],
@@ -115,16 +111,11 @@ export default function Form1RegisterPanel({
           ].map(([label, key]) => (
             <div key={key}>
               <label className="text-[9px] font-bold text-slate-500 uppercase block">{label}</label>
-              <input
-                value={info[key] || ""}
-                onChange={(e) => setInfo((prev) => ({ ...prev, [key]: e.target.value }))}
-                className="w-full h-7 text-xs px-1.5 border border-slate-200 rounded"
-              />
+              <input value={info[key] || ""} onChange={(e) => setInfo((prev) => ({ ...prev, [key]: e.target.value }))} className="w-full h-7 text-xs px-1.5 border border-slate-200 rounded" />
             </div>
           ))}
         </div>
 
-        {/* Totals */}
         <div className="px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0">
           <div className="bg-amber-50 border-2 border-amber-300 rounded-lg px-4 py-1.5">
             <div className="text-[9px] font-bold text-amber-700 uppercase">Total Acres</div>
@@ -134,22 +125,21 @@ export default function Form1RegisterPanel({
             <div className="text-[9px] font-bold text-blue-700 uppercase">Total Kanal</div>
             <div className="text-lg font-bold text-blue-800">{totals.kanal.toFixed(2)}</div>
           </div>
-          <div className="text-xs text-slate-500">{allocations.length} farmer portion{allocations.length !== 1 ? "s" : ""}</div>
-          <div className="ml-auto text-[10px] text-slate-400">Use “Allocate Patches” on the map to add farmers</div>
+          <div className="text-xs text-slate-500">{allocations.length} portion{allocations.length !== 1 ? "s" : ""}</div>
+          <div className="ml-auto text-[10px] text-slate-400">Use “Draw Patch” on the map to add a farmer's land quickly</div>
         </div>
 
-        {/* Table */}
         <div className="flex-1 overflow-auto">
           {allocations.length === 0 ? (
             <div className="h-full flex items-center justify-center text-slate-400 text-sm px-4 text-center">
-              ابھی کوئی پیچ الوٹ نہیں۔ میپ پر “Allocate Patches” آن کریں اور مستطیل کے کسی ایکڑ سیل پر کلک کر کے زمیندار الوٹ کریں۔
+              ابھی کوئی پیچ الوٹ نہیں۔ میپ پر “Draw Patch” آن کریں، فارمر کی زمین پر کلوزد پیچ بنائیں اور تفصیلات درج کریں۔
             </div>
           ) : (
             <table className="w-full text-[10px] border-collapse">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-slate-800 text-white">
                   <th className="px-1 py-1 border border-slate-300 sticky left-0 bg-slate-800">#</th>
-                  {["Khasra", "Must", "Ac", "Farmer", "Father", "Phone", "CNIC", "K", "Acres", "Crop", "Type", ""].map((h) => (
+                  {["Khasra", "Must", "Farmer", "Father", "Phone", "CNIC", "K", "Acres", "Crop", "Type", "Own/Tnt", ""].map((h) => (
                     <th key={h} className="px-1 py-1 border border-slate-300 whitespace-nowrap min-w-[55px]">{h}</th>
                   ))}
                 </tr>
@@ -158,17 +148,17 @@ export default function Form1RegisterPanel({
                 {allocations.map((r, i) => (
                   <tr key={r.id} className="even:bg-slate-50">
                     <td className="px-1 py-0.5 border border-slate-200 text-center font-bold sticky left-0 bg-inherit">{i + 1}</td>
-                    <td className="px-1 py-0.5 border border-slate-200 text-center font-mono font-bold text-green-700">{r.khasra_full}</td>
+                    <td className="px-1 py-0.5 border border-slate-200 text-center font-mono font-bold text-indigo-700">{r.khasra}</td>
                     <td className="px-1 py-0.5 border border-slate-200 text-center font-mono">{r.mustateel_no}</td>
-                    <td className="px-1 py-0.5 border border-slate-200 text-center font-mono">{r.acre_no}</td>
                     <td className="px-1 py-0.5 border border-slate-200 font-medium">{r.farmer_name}</td>
                     <td className="px-1 py-0.5 border border-slate-200">{r.father}</td>
                     <td className="px-1 py-0.5 border border-slate-200 font-mono">{r.phone}</td>
                     <td className="px-1 py-0.5 border border-slate-200 font-mono">{r.cnic}</td>
                     <td className="px-1 py-0.5 border border-slate-200 text-center font-mono font-bold">{r.kanal}</td>
-                    <td className="px-1 py-0.5 border border-slate-200 text-center font-mono font-bold text-amber-700">{r.acres.toFixed(3)}</td>
+                    <td className="px-1 py-0.5 border border-slate-200 text-center font-mono font-bold text-amber-700">{(r.acres || 0).toFixed(3)}</td>
                     <td className="px-1 py-0.5 border border-slate-200 text-center">{r.crop_name}</td>
                     <td className="px-1 py-0.5 border border-slate-200 text-center">{r.land_type}</td>
+                    <td className="px-1 py-0.5 border border-slate-200 text-center">{r.tenure}</td>
                     <td className="px-1 py-0.5 border border-slate-200 text-center">
                       <button onClick={() => onRemove(r.id)} className="text-red-500 hover:text-red-700">
                         <Trash2 className="w-3 h-3" />
@@ -181,7 +171,6 @@ export default function Form1RegisterPanel({
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-4 h-12 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2 shrink-0">
           <button onClick={handlePrintPDF} className="h-8 px-4 rounded-lg bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-red-700">
             <Download className="w-3.5 h-3.5" /> Download PDF
@@ -196,8 +185,5 @@ export default function Form1RegisterPanel({
 }
 
 function esc(s) {
-  return String(s ?? "").replace(
-    /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])
-  );
+  return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
