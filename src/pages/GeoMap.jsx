@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save, FileText } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, FileText, MousePointerClick } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -18,6 +18,9 @@ import MarkerPopup from "@/components/geomap/MarkerPopup";
 import CoordinateDialog from "@/components/geomap/CoordinateDialog";
 import GeoMapExportDialog from "@/components/geomap/GeoMapExportDialog";
 import Form1RegisterPanel from "@/components/geomap/Form1RegisterPanel";
+import AllocationLayer from "@/components/geomap/AllocationLayer";
+import AllocationDialog from "@/components/geomap/AllocationDialog";
+import { remainingKanal, acreAllocations } from "@/lib/allocationEngine";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
@@ -151,6 +154,12 @@ export default function GeoMap() {
   const [overlaySaved, setOverlaySaved] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [showForm1, setShowForm1] = useState(false);
+  const [allocationMode, setAllocationMode] = useState(false);
+  const [allocations, setAllocations] = useState([]);
+  const [allocCell, setAllocCell] = useState(null);
+  const [registerInfo, setRegisterInfo] = useState({ village: "", tehsil: "", district: "", mouza: "", channel: "", outlet_rd: "", side: "", sub_division: "", division: "", circle: "", zone: "" });
+  const [savingRegister, setSavingRegister] = useState(false);
+  const [existingRegId, setExistingRegId] = useState(null);
 
   // Measurement tools state
   const [markers, setMarkers] = useState([]); // user markers
@@ -193,6 +202,109 @@ export default function GeoMap() {
     }
     return [...s].sort((a, b) => parseInt(a) - parseInt(b));
   }, [mapObjects]);
+
+  // ─── FORM 1 ALLOCATION (Farmer Patch Selection) ───────────────
+  const outletForMoga = useMemo(
+    () => mapObjects.find((o) => o.type === "outlet" && String(o.mogha_number) === String(selectedMoga)),
+    [mapObjects, selectedMoga]
+  );
+
+  const { data: form1Existing } = useQuery({
+    queryKey: ["form1-register", selectedMapId, selectedMoga],
+    queryFn: () => base44.entities.Form1Register.filter({ map_id: selectedMapId }),
+    enabled: !!selectedMapId,
+  });
+
+  const matchingRegister = useMemo(
+    () => (form1Existing || []).find((r) => String(r.moga_number) === String(selectedMoga)),
+    [form1Existing, selectedMoga]
+  );
+
+  // Pre-fill register header info from the map editor header line
+  useEffect(() => {
+    if (!selectedMap) return;
+    setRegisterInfo({
+      village: selectedMap.village || "",
+      tehsil: selectedMap.tehsil || "",
+      district: selectedMap.district || "",
+      mouza: selectedMap.village || "",
+      channel: selectedMap.rajbah || "",
+      outlet_rd: outletForMoga?.mogha_number ? String(outletForMoga.mogha_number) : (selectedMap.moga_number || ""),
+      side: outletForMoga?.mogha_side || selectedMap.mogha_side || "",
+      sub_division: selectedMap.zilladar_section || selectedMap.section || "",
+      division: selectedMap.district || "",
+      circle: "",
+      zone: "",
+    });
+  }, [selectedMap, outletForMoga]);
+
+  // Load saved allocations when a register exists for this moga
+  useEffect(() => {
+    if (matchingRegister) {
+      setExistingRegId(matchingRegister.id);
+      try {
+        setAllocations(JSON.parse(matchingRegister.rows_json || "[]"));
+      } catch {
+        setAllocations([]);
+      }
+    } else {
+      setExistingRegId(null);
+      setAllocations([]);
+    }
+  }, [matchingRegister]);
+
+  const handleCellClick = useCallback((obj, mustNo, acre) => {
+    setAllocCell({ obj, mustNo, acre });
+  }, []);
+
+  const handleAllocate = (row) => {
+    setAllocations((prev) => [...prev, row]);
+    setAllocCell(null);
+  };
+
+  const handleRemoveAllocation = (id) => setAllocations((prev) => prev.filter((a) => a.id !== id));
+
+  const registerTotals = useMemo(() => {
+    const kanal = allocations.reduce((s, a) => s + (a.kanal || 0), 0);
+    return { kanal, acres: kanal / 8 };
+  }, [allocations]);
+
+  const handleSaveRegister = async () => {
+    if (!selectedMapId) {
+      toast.error("No map selected");
+      return;
+    }
+    setSavingRegister(true);
+    const payload = {
+      map_id: selectedMapId,
+      map_title: selectedMap?.title || "",
+      moga_number: selectedMoga || "",
+      village: registerInfo.village,
+      tehsil: registerInfo.tehsil,
+      district: registerInfo.district,
+      mouza: registerInfo.mouza,
+      channel_name: registerInfo.channel,
+      outlet_rd: registerInfo.outlet_rd,
+      outlet_side: registerInfo.side,
+      rows_json: JSON.stringify(allocations),
+      total_acres: +registerTotals.acres.toFixed(3),
+      total_kanal: +registerTotals.kanal.toFixed(2),
+      status: "draft",
+    };
+    try {
+      if (existingRegId) {
+        await base44.entities.Form1Register.update(existingRegId, payload);
+      } else {
+        const r = await base44.entities.Form1Register.create(payload);
+        if (r?.id) setExistingRegId(r.id);
+      }
+      toast.success("Form 1 register saved");
+    } catch (e) {
+      toast.error("Save failed");
+    } finally {
+      setSavingRegister(false);
+    }
+  };
 
   // NOTE: Overlay is computed in handleMapClick when the second marker is placed,
   // or in handlePlaceByCoords / handleLowerLeftDrag / handleUpperLeftDrag when
@@ -594,6 +706,18 @@ export default function GeoMap() {
           />
         )}
 
+        {/* Allocation layer — clickable killa (acre) cells + allocated highlights */}
+        {overlay?.transform && !capturing && (
+          <AllocationLayer
+            objects={mapObjects}
+            overlay={overlay}
+            selectedMoga={selectedMoga}
+            allocations={allocations}
+            mode={allocationMode}
+            onCellClick={handleCellClick}
+          />
+        )}
+
         {/* Corner placement marker — shows where the map corner is placed + coordinates */}
         {placementPoint && !capturing && (
           <Marker position={[placementPoint.lat, placementPoint.lng]} icon={cornerPlaceIcon()}>
@@ -762,6 +886,22 @@ export default function GeoMap() {
         </button>
       )}
 
+      {overlay && (
+        <button
+          onClick={() => setAllocationMode((v) => !v)}
+          className={`absolute top-14 right-[34rem] z-[1000] px-3 h-8 rounded-full shadow-xl text-[10px] font-bold transition-all flex items-center gap-1 ${allocationMode ? "bg-green-600 text-white" : "bg-white text-slate-600"}`}
+        >
+          <MousePointerClick className="w-3 h-3" />
+          {allocationMode ? "Allocating ON" : "Allocate Patches"}
+        </button>
+      )}
+
+      {allocationMode && overlay && (
+        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-green-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
+          <MapPin className="w-3 h-3" /> مستطیل کے کسی ایکڑ سیل پر کلک کریں — زمیندار کا حصہ الاٹ کریں
+        </div>
+      )}
+
       {/* Click mustateel hint */}
       {overlay && killaVisible && !activeMustateelId && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1000] bg-black/80 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center gap-1.5">
@@ -845,14 +985,30 @@ export default function GeoMap() {
         onCaptureSatellite={handleCaptureSatellite}
       />
 
+      {/* Farmer patch allocation dialog */}
+      <AllocationDialog
+        open={!!allocCell}
+        data={allocCell}
+        remaining={allocCell ? remainingKanal(allocations, allocCell.mustNo, allocCell.acre) : 0}
+        existing={allocCell ? acreAllocations(allocations, allocCell.mustNo, allocCell.acre) : []}
+        info={registerInfo}
+        onAllocate={handleAllocate}
+        onClose={() => setAllocCell(null)}
+      />
+
       {/* Form 1 Register */}
       <Form1RegisterPanel
         open={showForm1}
         onClose={() => setShowForm1(false)}
         mapData={selectedMap}
-        objects={mapObjects}
-        overlay={overlay}
         selectedMoga={selectedMoga}
+        info={registerInfo}
+        setInfo={setRegisterInfo}
+        allocations={allocations}
+        onRemove={handleRemoveAllocation}
+        totals={registerTotals}
+        onSave={handleSaveRegister}
+        saving={savingRegister}
       />
 
       {/* Hybrid / Satellite toggle */}
