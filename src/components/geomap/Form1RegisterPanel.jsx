@@ -132,9 +132,7 @@ export default function Form1RegisterPanel({
       .totals { margin-top:8px; font-size:${isMobile ? 9 : 11}px; font-weight:bold; text-align:right; }
       .foot { margin-top:16px; display:flex; justify-content:space-between; font-size:${isMobile ? 8 : 10}px; }
     </style></head><body>
-    <h1>FORM 1 REGISTER (Girdawari)</h1>
-    <h2>${esc(mapData?.title || "")}${selectedMoga ? ` — Moga ${esc(selectedMoga)}` : ""}</h2>
-    <div class="meta">Village: ${esc(info.village)} | Mouza: ${esc(info.mouza)} | Tehsil: ${esc(info.tehsil)} | District: ${esc(info.district)} | Division: ${esc(info.division)} | Circle: ${esc(info.circle)} | Sub Div: ${esc(info.sub_division)} | Channel: ${esc(info.channel)} | Side: ${esc(info.side)} | Outlet RD: ${esc(info.outlet_rd)}</div>
+    <h1>Form 1 Register</h1>
     <table><thead><tr>
       <th>Sr</th><th>Occupier Name</th><th>CNIC</th><th>Khasra / Kanal / Crop</th><th>Tot K</th><th>Tot Ac</th><th>Khata</th><th>Own/Tnt</th>
     </tr></thead><tbody>${rows}</tbody></table>
@@ -163,34 +161,15 @@ export default function Form1RegisterPanel({
         <div className="flex items-center justify-between px-4 h-12 bg-gradient-to-r from-amber-600 to-amber-700 text-white shrink-0">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            <span className="text-sm font-bold tracking-wide">Form 1 Register — Girdawari</span>
-            <span className="text-[11px] bg-white/20 px-2 py-0.5 rounded-full">Moga {selectedMoga || "—"}</span>
+            <span className="text-sm font-bold tracking-wide">Form 1 Register</span>
           </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded hover:bg-white/20">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-4 py-2 border-b border-slate-200 bg-slate-50 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-10 gap-2 shrink-0">
-          {[
-            ["Village", "village"],
-            ["Mouza", "mouza"],
-            ["Tehsil", "tehsil"],
-            ["District", "district"],
-            ["Division", "division"],
-            ["Circle", "circle"],
-            ["Sub Div", "sub_division"],
-            ["Channel", "channel"],
-            ["Outlet RD", "outlet_rd"],
-            ["Side", "side"],
-          ].map(([label, key]) => (
-            <div key={key}>
-              <label className="text-[9px] font-bold text-slate-500 uppercase block">{label}</label>
-              <input value={info[key] || ""} onChange={(e) => setInfo((prev) => ({ ...prev, [key]: e.target.value }))} className="w-full h-7 text-xs px-1.5 border border-slate-200 rounded" />
-            </div>
-          ))}
-        </div>
-
+        {/* Metadata (village, mouza, tehsil, district, moga, side, channel) is auto-collected
+            from the map editor header line — no header info row is shown here. */}
         <div className="px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0">
           <div className="bg-amber-50 border-2 border-amber-300 rounded-lg px-4 py-1.5">
             <div className="text-[9px] font-bold text-amber-700 uppercase">Total Acres</div>
