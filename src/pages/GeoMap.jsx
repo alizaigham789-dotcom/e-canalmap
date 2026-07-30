@@ -22,7 +22,7 @@ import AllocationLayer from "@/components/geomap/AllocationLayer";
 import AllocationDialog from "@/components/geomap/AllocationDialog";
 import PatchDrawLayer from "@/components/geomap/PatchDrawLayer";
 import PatchDialog from "@/components/geomap/PatchDialog";
-import { remainingKanal, acreAllocations, kanalUsedInAcre } from "@/lib/allocationEngine";
+import { remainingKanal, acreAllocations, kanalUsedInAcre, parcelKillaCells } from "@/lib/allocationEngine";
 import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import {
@@ -208,6 +208,13 @@ export default function GeoMap() {
     return [...s].sort((a, b) => parseInt(a) - parseInt(b));
   }, [mapObjects]);
 
+  const mogaMustateels = useMemo(() => mapObjects
+    .filter(o => (o.type === "mustateel" || o.type === "muraba") && (!selectedMoga || String(o.mogaNumber) === String(selectedMoga)) && o.label)
+    .map(o => ({ mustNo: o.label, acreCount: parcelKillaCells(o).length }))
+    .sort((a, b) => +a.mustNo - +b.mustNo), [mapObjects, selectedMoga]);
+
+  const patchesWithGeometry = useMemo(() => allocations.filter((a) => a.geometry), [allocations]);
+
   // ─── FORM 1 ALLOCATION (Farmer Patch Selection) ───────────────
   const outletForMoga = useMemo(
     () => mapObjects.find((o) => o.type === "outlet" && String(o.mogha_number) === String(selectedMoga)),
@@ -266,8 +273,8 @@ export default function GeoMap() {
     setAllocCell({ obj, mustNo, acre });
   }, [allocations]);
 
-  const handleAllocate = (row) => {
-    setAllocations((prev) => [...prev, row]);
+  const handleAllocate = (rows) => {
+    setAllocations((prev) => [...prev, ...rows]);
     setAllocCell(null);
   };
 
@@ -433,7 +440,7 @@ export default function GeoMap() {
 
   // ─── LIVE MEASUREMENT (mouse move) ─────────────────────────────
   const handleMouseMove = useCallback((latlng) => {
-    setMouseLatLng(latlng);
+    if (draft || placingStep > 0) setMouseLatLng(latlng);
     if (!draft) { setLiveMeasurement(null); return; }
 
     if (draft.type === "line" && draft.points.length >= 1) {
@@ -455,7 +462,7 @@ export default function GeoMap() {
     } else {
       setLiveMeasurement(null);
     }
-  }, [draft]);
+  }, [draft, placingStep]);
 
   // ─── FINISH DRAWING (double-click) ───────────────────────────
   const handleDoubleClick = useCallback(() => {
@@ -764,7 +771,7 @@ export default function GeoMap() {
             objects={mapObjects}
             overlay={overlay}
             selectedMoga={selectedMoga}
-            patches={allocations.filter((a) => a.geometry)}
+            patches={patchesWithGeometry}
             activePatchId={activePatchId}
             onDrawComplete={handleDrawComplete}
             onSelectPatch={handleSelectPatch}
@@ -1075,8 +1082,8 @@ export default function GeoMap() {
       <AllocationDialog
         open={!!allocCell}
         data={allocCell}
-        remaining={allocCell ? remainingKanal(allocations, allocCell.mustNo, allocCell.acre) : 0}
-        existing={allocCell ? acreAllocations(allocations, allocCell.mustNo, allocCell.acre) : []}
+        mustateels={mogaMustateels}
+        allocations={allocations}
         info={registerInfo}
         onAllocate={handleAllocate}
         onClose={() => setAllocCell(null)}

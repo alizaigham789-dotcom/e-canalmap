@@ -1,145 +1,215 @@
 import React, { useState, useEffect } from "react";
-import { X, Save, AlertTriangle } from "lucide-react";
-import { nextSubIndex, acresFromKanal } from "@/lib/allocationEngine";
+import { X, Save, AlertTriangle, Plus, Trash2, Lock } from "lucide-react";
+import { remainingKanal, acreAllocations, acresFromKanal } from "@/lib/allocationEngine";
 
 const CROPS = ["Wheat", "Gram", "Fodder", "Mustard", "Rice", "Sugarcane", "Cotton", "Maize", "Orchard", "Abadi", "Khali", "Other"];
 const LAND_TYPES = ["CCA", "Fish Farm", "Forest", "Garden"];
 const TENURE = ["Owner", "Tenant"];
 
-// Cell-based allocation: assign a farmer's portion inside one acre (killa) of a mustateel.
-// Khasra auto = mustateelNo/acre_subIndex. Kanal capped by remaining (≤ 8 per acre).
-export default function AllocationDialog({ open, data, remaining, existing, info, onAllocate, onClose }) {
+// Cell-based allocation: pick a whole mustateel, toggle its acre subdivisions,
+// set kanal per acre, and add more mustateels in the same dialog. Acres already
+// fully allotted (8 kanal) are locked. Tenant fields appear when tenure=Tenant.
+export default function AllocationDialog({ open, data, mustateels, allocations, info, onAllocate, onClose }) {
+  const [groups, setGroups] = useState([]); // [{ mustNo, acres: { acre: kanal } }]
   const [farmer_name, setFarmer] = useState("");
   const [father, setFather] = useState("");
   const [phone, setPhone] = useState("");
   const [cnic, setCnic] = useState("");
-  const [kanal, setKanal] = useState(8);
   const [crop, setCrop] = useState("");
   const [land_type, setLandType] = useState("CCA");
   const [tenure, setTenure] = useState("Owner");
+  const [tenant_name, setTenantName] = useState("");
+  const [tenant_phone, setTenantPhone] = useState("");
+  const [tenant_cnic, setTenantCnic] = useState("");
   const [khata, setKhata] = useState("");
 
   useEffect(() => {
-    if (open) {
+    if (open && data) {
+      const rem = remainingKanal(allocations, data.mustNo, data.acre);
+      setGroups([{ mustNo: data.mustNo, acres: { [data.acre]: Math.min(8, rem || 8) } }]);
       setFarmer("");
       setFather("");
       setPhone("");
       setCnic("");
-      setKanal(Math.min(8, remaining || 8));
       setCrop("");
       setLandType("CCA");
       setTenure("Owner");
+      setTenantName("");
+      setTenantPhone("");
+      setTenantCnic("");
       setKhata("");
     }
-  }, [open, data, remaining]);
+  }, [open, data, allocations]);
 
   if (!open || !data) return null;
 
-  const sub = nextSubIndex(existing, data.mustNo, data.acre);
-  const khasra_full = `${data.mustNo}/${data.acre}_${sub}`;
-  const maxK = Math.min(8, remaining);
+  const acreCountFor = (mustNo) => (mustateels.find((m) => m.mustNo === mustNo) || {}).acreCount || 10;
+
+  const toggleAcre = (gi, acre) => {
+    setGroups((prev) =>
+      prev.map((g, i) => {
+        if (i !== gi) return g;
+        const next = { ...g, acres: { ...g.acres } };
+        if (next.acres[acre]) delete next.acres[acre];
+        else next.acres[acre] = Math.min(8, remainingKanal(allocations, g.mustNo, acre) || 8);
+        return next;
+      })
+    );
+  };
+
+  const setAcreKanal = (gi, acre, k) => {
+    setGroups((prev) => prev.map((g, i) => (i === gi ? { ...g, acres: { ...g.acres, [acre]: k } } : g)));
+  };
+
+  const changeMustateel = (gi, mustNo) => {
+    setGroups((prev) => prev.map((g, i) => (i === gi ? { mustNo, acres: {} } : g)));
+  };
+
+  const addGroup = () => {
+    const used = new Set(groups.map((g) => g.mustNo));
+    const next = mustateels.find((m) => !used.has(m.mustNo));
+    if (next) setGroups((prev) => [...prev, { mustNo: next.mustNo, acres: {} }]);
+  };
+
+  const removeGroup = (gi) => setGroups((prev) => prev.filter((_, i) => i !== gi));
 
   const handleSave = () => {
     if (!farmer_name.trim()) {
       alert("زمیندار کا نام درج کریں");
       return;
     }
-    const k = Math.max(1, Math.min(maxK, parseInt(kanal, 10) || 0));
-    if (k <= 0 || k > maxK) {
-      alert(`کنال 1 سے ${maxK} کے درمیان ہو (بقیہ: ${remaining} کنال)`);
+    const rows = [];
+    for (const g of groups) {
+      for (const [acre, kanal] of Object.entries(g.acres)) {
+        const k = Math.max(1, Math.min(8, parseInt(kanal, 10) || 0));
+        const rem = remainingKanal(allocations, g.mustNo, +acre);
+        if (k > rem) {
+          alert(`کلا ${g.mustNo}/${acre} میں صرف ${rem} کنال بقیہ ہیں`);
+          return;
+        }
+        const sub = acreAllocations(allocations, g.mustNo, +acre).length + 1;
+        rows.push({
+          id: `alloc_${Date.now()}_${Math.random().toString(36).slice(2)}_${rows.length}`,
+          source: "cell",
+          mustateel_no: g.mustNo,
+          acre_no: +acre,
+          khasra: `${g.mustNo}/${acre}_${sub}`,
+          farmer_name: farmer_name.trim(),
+          father: father.trim(),
+          phone: phone.trim(),
+          cnic: cnic.trim(),
+          kanal: k,
+          acres: acresFromKanal(k),
+          crop_name: crop,
+          land_type,
+          tenure,
+          tenant_name: tenure === "Tenant" ? tenant_name.trim() : "",
+          tenant_phone: tenure === "Tenant" ? tenant_phone.trim() : "",
+          tenant_cnic: tenure === "Tenant" ? tenant_cnic.trim() : "",
+          khata_no: khata,
+          channel_nme: info.channel,
+          outlet_rd: info.outlet_rd,
+          side: info.side,
+          village: info.village,
+          mouza: info.mouza,
+          tehsil: info.tehsil,
+          district: info.district,
+          sub_division: info.sub_division,
+          division: info.division,
+          circle: info.circle,
+          zone: info.zone,
+        });
+      }
+    }
+    if (rows.length === 0) {
+      alert("کم از کم ایک ایکڑ منتخب کریں");
       return;
     }
-    onAllocate({
-      id: `alloc_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-      source: "cell",
-      mustateel_no: data.mustNo,
-      acre_no: data.acre,
-      khasra: khasra_full,
-      farmer_name: farmer_name.trim(),
-      father: father.trim(),
-      phone: phone.trim(),
-      cnic: cnic.trim(),
-      kanal: k,
-      acres: acresFromKanal(k),
-      crop_name: crop,
-      land_type,
-      tenure,
-      khata_no: khata,
-      channel_nme: info.channel,
-      outlet_rd: info.outlet_rd,
-      side: info.side,
-      village: info.village,
-      mouza: info.mouza,
-      tehsil: info.tehsil,
-      district: info.district,
-      sub_division: info.sub_division,
-      division: info.division,
-      circle: info.circle,
-      zone: info.zone,
-    });
+    onAllocate(rows);
   };
 
   return (
     <div className="fixed inset-0 z-[1150] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 h-11 bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 h-11 bg-gradient-to-r from-green-600 to-emerald-600 text-white shrink-0">
           <span className="text-sm font-bold">Farmer Patch Allocation</span>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded hover:bg-white/20">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-4 space-y-3">
-          <div className="flex items-center justify-between bg-slate-100 rounded-lg px-3 py-2">
-            <div>
-              <div className="text-[9px] font-bold text-slate-500 uppercase">Khasra No (auto)</div>
-              <div className="text-lg font-bold text-slate-800 font-mono">{khasra_full}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-[9px] font-bold text-slate-500 uppercase">Remaining in acre</div>
-              <div className={`text-lg font-bold ${remaining < 8 ? "text-amber-600" : "text-green-600"}`}>{remaining} kanal</div>
-            </div>
+        <div className="p-4 space-y-3 overflow-y-auto">
+          {/* Mustateel + acre groups */}
+          <div className="space-y-2">
+            {groups.map((g, gi) => (
+              <div key={gi} className="border border-slate-200 rounded-lg p-2">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase">Mustateel</span>
+                  <select value={g.mustNo} onChange={(e) => changeMustateel(gi, e.target.value)} className="h-7 text-xs px-1.5 border border-slate-200 rounded bg-white font-mono font-bold">
+                    {mustateels.map((m) => (
+                      <option key={m.mustNo} value={m.mustNo}>{m.mustNo} ({m.acreCount} ac)</option>
+                    ))}
+                  </select>
+                  {groups.length > 1 && (
+                    <button onClick={() => removeGroup(gi)} className="ml-auto text-red-500 hover:text-red-700">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {Array.from({ length: acreCountFor(g.mustNo) }, (_, k) => k + 1).map((acre) => {
+                    const rem = remainingKanal(allocations, g.mustNo, acre);
+                    const selected = !!g.acres[acre];
+                    const locked = rem <= 0 && !selected;
+                    return (
+                      <button
+                        key={acre}
+                        disabled={locked}
+                        onClick={() => toggleAcre(gi, acre)}
+                        title={locked ? "مکمل الوٹ" : `بقیہ ${rem} کنال`}
+                        className={`w-7 h-7 text-[10px] rounded font-bold border ${
+                          selected
+                            ? "bg-green-600 text-white border-green-600"
+                            : locked
+                            ? "bg-slate-200 text-slate-400 border-slate-200 cursor-not-allowed"
+                            : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                        }`}
+                      >
+                        {locked ? <Lock className="w-2.5 h-2.5 mx-auto" /> : acre}
+                      </button>
+                    );
+                  })}
+                </div>
+                {Object.entries(g.acres).length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    {Object.entries(g.acres).map(([acre, k]) => {
+                      const rem = remainingKanal(allocations, g.mustNo, +acre);
+                      const maxK = Math.min(8, rem);
+                      return (
+                        <div key={acre} className="flex items-center gap-2 bg-slate-50 rounded px-2 py-1">
+                          <span className="font-mono text-[10px] font-bold text-slate-700 w-16">{g.mustNo}/{acre}</span>
+                          <input type="range" min={1} max={maxK} value={Math.min(k, maxK)} onChange={(e) => setAcreKanal(gi, +acre, +e.target.value)} className="flex-1 accent-green-600" />
+                          <span className="text-[10px] font-mono font-bold text-green-700 w-10 text-right">{Math.min(k, maxK)} K</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+            {groups.length < mustateels.length && (
+              <button onClick={addGroup} className="w-full h-8 rounded-lg border-2 border-dashed border-slate-300 text-slate-500 text-xs font-bold flex items-center justify-center gap-1.5 hover:border-green-400 hover:text-green-600">
+                <Plus className="w-3.5 h-3.5" /> اور مستطیل شامل کریں
+              </button>
+            )}
           </div>
 
-          {existing.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-              <div className="text-[9px] font-bold text-amber-700 uppercase mb-0.5">Already allotted in this acre</div>
-              {existing.map((a) => (
-                <div key={a.id} className="text-[10px] text-amber-800 flex justify-between">
-                  <span>{a.khasra}: {a.farmer_name}</span>
-                  <span className="font-mono">{a.kanal} K</span>
-                </div>
-              ))}
-            </div>
-          )}
-
+          {/* Farmer details */}
           <div className="grid grid-cols-2 gap-2">
             <Field label="زمیندار کا نام (Name)" value={farmer_name} onChange={setFarmer} full />
             <Field label="ولدیت (Father)" value={father} onChange={setFather} full />
             <Field label="فون نمبر (Phone)" value={phone} onChange={setPhone} placeholder="03xx-xxxxxxx" />
             <Field label="شناختی کارڈ (CNIC)" value={cnic} onChange={setCnic} placeholder="xxxxx-xxxxxxx-x" />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-[10px] font-bold text-slate-600">حصہ (Kanal) — 1 acre = 8 kanal</label>
-              <span className="text-[10px] font-mono text-green-700 font-bold">
-                {kanal} K = {acresFromKanal(parseInt(kanal) || 0).toFixed(3)} ac
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="range" min={1} max={maxK} value={Math.min(kanal, maxK)} onChange={(e) => setKanal(parseInt(e.target.value, 10))} className="flex-1 accent-green-600" />
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5, 6, 7, 8].filter((n) => n <= maxK).map((n) => (
-                  <button key={n} onClick={() => setKanal(n)} className={`w-7 h-7 text-[10px] rounded font-bold ${kanal === n ? "bg-green-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>{n}</button>
-                ))}
-              </div>
-            </div>
-            {remaining === 0 && (
-              <div className="flex items-center gap-1 text-[10px] text-red-600 font-bold mt-1">
-                <AlertTriangle className="w-3 h-3" /> یہ ایکڑ مکمل الوٹ ہو چکا ہے
-              </div>
-            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -149,7 +219,18 @@ export default function AllocationDialog({ open, data, remaining, existing, info
             <Field label="Khata No" value={khata} onChange={setKhata} />
           </div>
 
-          <button onClick={handleSave} disabled={remaining === 0} className="w-full h-9 rounded-lg bg-green-600 text-white text-sm font-bold flex items-center justify-center gap-1.5 hover:bg-green-700 disabled:opacity-50">
+          {tenure === "Tenant" && (
+            <div className="grid grid-cols-2 gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2">
+              <div className="col-span-2 text-[9px] font-bold text-amber-700 uppercase flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" /> Tenant Details
+              </div>
+              <Field label="Tenant Name" value={tenant_name} onChange={setTenantName} full />
+              <Field label="Tenant Phone" value={tenant_phone} onChange={setTenantPhone} placeholder="03xx-xxxxxxx" />
+              <Field label="Tenant CNIC" value={tenant_cnic} onChange={setTenantCnic} placeholder="xxxxx-xxxxxxx-x" />
+            </div>
+          )}
+
+          <button onClick={handleSave} className="w-full h-9 rounded-lg bg-green-600 text-white text-sm font-bold flex items-center justify-center gap-1.5 hover:bg-green-700">
             <Save className="w-4 h-4" /> Allocate Patch
           </button>
         </div>

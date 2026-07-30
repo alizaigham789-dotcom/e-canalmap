@@ -13,17 +13,17 @@ const COLORS = ["#6366f1", "#0ea5e9", "#14b8a6", "#f97316", "#ec4899", "#84cc16"
 
 function nodeIcon(color) {
   return L.divIcon({
-    html: `<div style="width:14px;height:14px;background:${color};border:2px solid #fff;border-radius:50%;box-shadow:0 0 6px #000;cursor:grab;"></div>`,
+    html: `<div style="width:18px;height:18px;background:${color};border:2px solid #fff;border-radius:50%;box-shadow:0 0 6px #000;cursor:grab;"></div>`,
     className: "",
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
   });
 }
 
 // Draw mode: click to add grid-snapped vertices, double-click to close → onDrawComplete.
 // Edit mode: click a patch to select; drag its nodes to adjust geometry.
 // Saved patches render as filled polygons with a permanent farmer + area label.
-export default function PatchDrawLayer({
+function PatchDrawLayer({
   drawMode,
   editMode,
   objects,
@@ -163,3 +163,5 @@ export default function PatchDrawLayer({
     </>
   );
 }
+
+export default React.memo(PatchDrawLayer);

@@ -15,6 +15,9 @@ export default function PatchDialog({ open, data, info, onSave, onClose }) {
   const [crop, setCrop] = useState("");
   const [land_type, setLandType] = useState("CCA");
   const [tenure, setTenure] = useState("Owner");
+  const [tenant_name, setTenantName] = useState("");
+  const [tenant_phone, setTenantPhone] = useState("");
+  const [tenant_cnic, setTenantCnic] = useState("");
   const [khata, setKhata] = useState("");
 
   useEffect(() => {
@@ -26,6 +29,9 @@ export default function PatchDialog({ open, data, info, onSave, onClose }) {
       setCrop("");
       setLandType("CCA");
       setTenure("Owner");
+      setTenantName("");
+      setTenantPhone("");
+      setTenantCnic("");
       setKhata("");
     }
   }, [open, data]);
@@ -55,6 +61,9 @@ export default function PatchDialog({ open, data, info, onSave, onClose }) {
       crop_name: crop,
       land_type,
       tenure,
+      tenant_name: tenure === "Tenant" ? tenant_name.trim() : "",
+      tenant_phone: tenure === "Tenant" ? tenant_phone.trim() : "",
+      tenant_cnic: tenure === "Tenant" ? tenant_cnic.trim() : "",
       khata_no: khata,
       channel_nme: info.channel,
       outlet_rd: info.outlet_rd,
@@ -107,6 +116,15 @@ export default function PatchDialog({ open, data, info, onSave, onClose }) {
             <Select label="Owner / Tenant" value={tenure} onChange={setTenure} options={TENURE} />
             <Field label="Khata No" value={khata} onChange={setKhata} />
           </div>
+
+          {tenure === "Tenant" && (
+            <div className="grid grid-cols-2 gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2">
+              <div className="col-span-2 text-[9px] font-bold text-amber-700 uppercase">Tenant Details</div>
+              <Field label="Tenant Name" value={tenant_name} onChange={setTenantName} full />
+              <Field label="Tenant Phone" value={tenant_phone} onChange={setTenantPhone} placeholder="03xx-xxxxxxx" />
+              <Field label="Tenant CNIC" value={tenant_cnic} onChange={setTenantCnic} placeholder="xxxxx-xxxxxxx-x" />
+            </div>
+          )}
 
           <button
             onClick={handleSave}

@@ -2,13 +2,12 @@ import React, { useMemo } from "react";
 import { X, Trash2, Download, Save, Loader2, FileText } from "lucide-react";
 import { toast } from "sonner";
 
-// Excel-style Form 1 register. Each occupier = 4 rows sharing one serial number:
-//   Row A — farmer details (name, CNIC, totals, khata, tenure …)
-//   Row B — "Khasra_No"  : each killa (acre) listed horizontally (one column per acre)
-//   Row C — "Kanal"      : each acre's kanal aligned beneath its khasra
-//   Row D — "Crop"       : crop name beneath; one name spans consecutive same-crop acres
-// Farmers with the same CNIC are merged into one entry. An acre fully allotted to
-// one farmer cannot be allotted to another (enforced at allocation time).
+// Excel-style Form 1 register. Each occupier = 3 rows sharing one serial number:
+//   Row A — farmer details (name, CNIC, totals, khata, tenure, tenant …)
+//   Row B — "Khasra/Kanal" : one box per acre (khasra on top, kanal below it)
+//   Row C — "Crop"         : crop name beneath; one name spans consecutive same-crop acres
+// Farmers with the same CNIC are merged. An acre fully allotted to one farmer
+// cannot be allotted to another (enforced at allocation time).
 export default function Form1RegisterPanel({
   open,
   onClose,
@@ -25,7 +24,6 @@ export default function Form1RegisterPanel({
   const groups = useMemo(() => {
     const map = new Map();
     for (const a of allocations) {
-      // Merge by CNIC when present (same CNIC = same person); else by name+father.
       const key = a.cnic ? `cnic:${a.cnic}` : `name:${a.farmer_name || ""}||${a.father || ""}`;
       if (!map.has(key)) {
         map.set(key, {
@@ -38,6 +36,9 @@ export default function Form1RegisterPanel({
           crop_name: "",
           land_type: "",
           tenure: "",
+          tenant_name: "",
+          tenant_phone: "",
+          tenant_cnic: "",
           channel_nme: "",
           outlet_rd: "",
           side: "",
@@ -50,11 +51,11 @@ export default function Form1RegisterPanel({
       }
       const g = map.get(key);
       g.items.push(a);
-      // take first non-empty for display fields
       const pick = (k) => { if (!g[k] && a[k]) g[k] = a[k]; };
       if (!g.farmer_name && a.farmer_name) g.farmer_name = a.farmer_name;
       pick("father"); pick("phone"); pick("cnic"); pick("khata_no");
       pick("crop_name"); pick("land_type"); pick("tenure");
+      pick("tenant_name"); pick("tenant_phone"); pick("tenant_cnic");
       pick("channel_nme"); pick("outlet_rd"); pick("side");
       pick("village"); pick("mouza"); pick("tehsil"); pick("district");
     }
@@ -79,15 +80,20 @@ export default function Form1RegisterPanel({
         const t = farmerTotals(g);
         const acres = farmerAcres(g.items);
         const runs = cropRuns(acres);
-        const khasraCells = acres.map((a) => `<span class="cell">${esc(a.khasra)}</span>`).join("");
-        const kanalCells = acres.map((a) => `<span class="cell">${esc(a.kanal)}</span>`).join("");
+        const boxes = acres
+          .map((a) => `<span class="box"><span class="kh">${esc(a.khasra)}</span><span class="kn">${esc(a.kanal)}</span></span>`)
+          .join("");
         const cropCells = runs
           .map((r) => `<span class="cell crop" style="min-width:${r.count * 50}px;">${esc(r.crop || "—")}</span>`)
           .join("");
+        const tenantLine =
+          g.tenure === "Tenant" && g.tenant_name
+            ? `<div class="sub">Tenant: ${esc(g.tenant_name)} · ${esc(g.tenant_phone)} · ${esc(g.tenant_cnic)}</div>`
+            : "";
         return `
         <tr>
-          <td class="sr" rowspan="4">${i + 1}</td>
-          <td><b>${esc(g.farmer_name)}</b><br/><span class="sub">S/o ${esc(g.father)}</span></td>
+          <td class="sr" rowspan="3">${i + 1}</td>
+          <td><b>${esc(g.farmer_name)}</b><br/><span class="sub">S/o ${esc(g.father)}</span>${tenantLine}</td>
           <td class="mono">${esc(g.cnic)}</td>
           <td class="blk"></td>
           <td class="num">${t.kanal}</td>
@@ -95,8 +101,7 @@ export default function Form1RegisterPanel({
           <td>${esc(g.khata_no)}</td>
           <td>${esc(g.tenure)}</td>
         </tr>
-        <tr class="detail"><td class="lbl">Khasra_No</td><td></td><td colspan="5" class="strip">${khasraCells}</td></tr>
-        <tr class="detail"><td class="lbl">Kanal</td><td></td><td colspan="5" class="strip">${kanalCells}</td></tr>
+        <tr class="detail"><td class="lbl">Khasra/Kanal</td><td></td><td colspan="5" class="strip">${boxes}</td></tr>
         <tr class="detail"><td class="lbl">Crop</td><td></td><td colspan="5" class="strip">${cropCells}</td></tr>`;
       })
       .join("");
@@ -110,7 +115,7 @@ export default function Form1RegisterPanel({
       table { width:100%; border-collapse:collapse; font-size:8px; }
       th, td { border:1px solid #94a3b8; padding:2px 3px; vertical-align:top; }
       th { background:#1e3a5f; color:#fff; font-weight:700; }
-      tr:nth-child(4n+1) td { background:#f8fafc; }
+      tr:nth-child(3n+1) td { background:#f8fafc; }
       .sr { text-align:center; font-weight:700; font-size:11px; background:#e2e8f0 !important; }
       .sub { font-size:7px; color:#475569; }
       .mono { font-family: monospace; font-size:8px; }
@@ -119,8 +124,10 @@ export default function Form1RegisterPanel({
       .detail td { background:#fff; }
       .lbl { font-weight:700; background:#eef2ff !important; color:#3730a3; text-align:center; }
       .strip { line-height:1.6; }
-      .cell { display:inline-block; min-width:48px; text-align:center; margin:0 1px; border:1px solid #cbd5e1; border-radius:2px; padding:0 2px; }
-      .cell.crop { color:#047857; font-weight:700; border-color:#a7f3d0; background:#ecfdf5; }
+      .box { display:inline-block; min-width:48px; text-align:center; margin:0 1px; border:1px solid #6366f1; border-radius:2px; overflow:hidden; }
+      .box .kh { display:block; font-weight:700; color:#3730a3; border-bottom:1px solid #c7d2fe; padding:0 2px; }
+      .box .kn { display:block; color:#1d4ed8; padding:0 2px; }
+      .cell.crop { display:inline-block; text-align:center; margin:0 1px; border:1px solid #a7f3d0; border-radius:2px; padding:0 2px; color:#047857; font-weight:700; background:#ecfdf5; }
       .totals { margin-top:8px; font-size:11px; font-weight:bold; text-align:right; }
       .foot { margin-top:16px; display:flex; justify-content:space-between; font-size:10px; }
     </style></head><body>
@@ -128,7 +135,7 @@ export default function Form1RegisterPanel({
     <h2>${esc(mapData?.title || "")}${selectedMoga ? ` — Moga ${esc(selectedMoga)}` : ""}</h2>
     <div class="meta">Village: ${esc(info.village)} | Mouza: ${esc(info.mouza)} | Tehsil: ${esc(info.tehsil)} | District: ${esc(info.district)} | Channel: ${esc(info.channel)} | Side: ${esc(info.side)} | Outlet RD: ${esc(info.outlet_rd)}</div>
     <table><thead><tr>
-      <th>Sr</th><th>Occupier Name</th><th>CNIC</th><th>Khasra No. / Kanal / Crop</th><th>Tot K</th><th>Tot Ac</th><th>Khata</th><th>Own/Tnt</th>
+      <th>Sr</th><th>Occupier Name</th><th>CNIC</th><th>Khasra / Kanal / Crop</th><th>Tot K</th><th>Tot Ac</th><th>Khata</th><th>Own/Tnt</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <div class="totals">Total Area: ${totals.acres.toFixed(3)} Acres &nbsp;|&nbsp; ${totals.kanal.toFixed(2)} Kanal</div>
     <div class="foot"><span>Girdawar _______________</span><span>Patwari _______________</span><span>Zilladar _______________</span></div>
@@ -146,8 +153,8 @@ export default function Form1RegisterPanel({
     }, 600);
   };
 
-  const COLS = ["Sr", "Occupier Name", "CNIC", "Khasra No. / Kanal / Crop", "Tot K", "Tot Ac", "Khata", "Own/Tnt", ""];
-  const GRID_W = 46;
+  const COLS = ["Sr", "Occupier Name", "CNIC", "Khasra / Kanal / Crop", "Tot K", "Tot Ac", "Khata", "Own/Tnt", ""];
+  const GRID_W = 50;
 
   return (
     <div className="fixed inset-0 z-[1100] bg-black/60 flex items-center justify-center p-2 sm:p-4">
@@ -217,11 +224,14 @@ export default function Form1RegisterPanel({
                     <React.Fragment key={g.key}>
                       {/* Row A — farmer */}
                       <tr className="bg-slate-50/60 align-top">
-                        <td className="px-1 py-1 border border-slate-200 text-center font-bold text-slate-700" rowSpan={4}>{i + 1}</td>
+                        <td className="px-1 py-1 border border-slate-200 text-center font-bold text-slate-700" rowSpan={3}>{i + 1}</td>
                         <td className="px-1 py-1 border border-slate-200">
                           <div className="font-medium">{g.farmer_name}</div>
                           <div className="text-[8px] text-slate-500">S/o {g.father}</div>
                           <div className="text-[8px] font-mono text-slate-500">{g.phone}</div>
+                          {g.tenure === "Tenant" && g.tenant_name && (
+                            <div className="text-[8px] text-amber-700 font-medium mt-0.5">Tenant: {g.tenant_name} · {g.tenant_phone} · {g.tenant_cnic}</div>
+                          )}
                         </td>
                         <td className="px-1 py-1 border border-slate-200 font-mono text-[9px] text-slate-700">{g.cnic}</td>
                         <td className="px-1 py-1 border border-slate-200 bg-slate-100"></td>
@@ -235,31 +245,22 @@ export default function Form1RegisterPanel({
                           </button>
                         </td>
                       </tr>
-                      {/* Row B — Khasra_No */}
+                      {/* Row B — Khasra/Kanal combined boxes (khasra top, kanal bottom) */}
                       <tr className="align-top">
-                        <td className="px-1 py-1 border border-slate-200 text-center font-bold text-indigo-700 bg-indigo-50">Khasra_No</td>
+                        <td className="px-1 py-1 border border-slate-200 text-center font-bold text-indigo-700 bg-indigo-50">Khasra/Kanal</td>
                         <td className="px-1 py-1 border border-slate-200"></td>
                         <td className="px-1 py-1 border border-slate-200" colSpan={6}>
                           <div style={{ display: "grid", gridTemplateColumns: tpl }}>
                             {acres.length === 0 ? <span className="text-slate-300">—</span> : acres.map((a, j) => (
-                              <div key={j} className="border border-slate-300 rounded px-1 text-center bg-white font-mono font-bold text-[9px] text-indigo-700 leading-tight mx-0.5">{a.khasra}</div>
+                              <div key={j} className="border border-indigo-300 rounded bg-white text-center mx-0.5 overflow-hidden">
+                                <div className="font-mono font-bold text-[9px] text-indigo-700 leading-tight border-b border-indigo-100">{a.khasra}</div>
+                                <div className="font-mono text-[9px] text-blue-700 leading-tight">{a.kanal}</div>
+                              </div>
                             ))}
                           </div>
                         </td>
                       </tr>
-                      {/* Row C — Kanal (aligned under khasra) */}
-                      <tr className="align-top">
-                        <td className="px-1 py-1 border border-slate-200 text-center font-bold text-blue-700 bg-blue-50">Kanal</td>
-                        <td className="px-1 py-1 border border-slate-200"></td>
-                        <td className="px-1 py-1 border border-slate-200" colSpan={6}>
-                          <div style={{ display: "grid", gridTemplateColumns: tpl }}>
-                            {acres.length === 0 ? <span className="text-slate-300">—</span> : acres.map((a, j) => (
-                              <div key={j} className="border border-slate-300 rounded px-1 text-center bg-white font-mono text-[9px] text-blue-700 leading-tight mx-0.5">{a.kanal}</div>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                      {/* Row D — Crop (one name spans consecutive same-crop acres) */}
+                      {/* Row C — Crop (one name spans consecutive same-crop acres) */}
                       <tr className="align-top">
                         <td className="px-1 py-1 border border-slate-200 text-center font-bold text-emerald-700 bg-emerald-50">Crop</td>
                         <td className="px-1 py-1 border border-slate-200"></td>
