@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Eye } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -19,6 +19,7 @@ import CoordinateDialog from "@/components/geomap/CoordinateDialog";
 import GeoMapExportDialog from "@/components/geomap/GeoMapExportDialog";
 import Form1RegisterPanel from "@/components/geomap/Form1RegisterPanel";
 import AllocationToolbar from "@/components/geomap/AllocationToolbar";
+import AllOverlaysLayer from "@/components/geomap/AllOverlaysLayer";
 import AllocationLayer from "@/components/geomap/AllocationLayer";
 import AllocationDialog from "@/components/geomap/AllocationDialog";
 import PatchDrawLayer from "@/components/geomap/PatchDrawLayer";
@@ -153,7 +154,9 @@ export default function GeoMap() {
   const [overlay, setOverlay] = useState(null); // { transform, rotation, placementPoint }
   const [killaVisible, setKillaVisible] = useState(true);
   const [layerVisible, setLayerVisible] = useState(true);
-  const [activeMustateelId, setActiveMustateelId] = useState(null);
+  const [activeMustateelIds, setActiveMustateelIds] = useState(() => new Set());
+  const [showAll, setShowAll] = useState(false);
+  const autoPlacedRef = useRef(null);
   const [savingOverlay, setSavingOverlay] = useState(false);
   const [overlaySaved, setOverlaySaved] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -244,9 +247,9 @@ export default function GeoMap() {
       channel: selectedMap.rajbah || "",
       outlet_rd: outletForMoga?.mogha_number ? String(outletForMoga.mogha_number) : (selectedMap.moga_number || ""),
       side: outletForMoga?.mogha_side || selectedMap.mogha_side || "",
-      sub_division: selectedMap.zilladar_section || selectedMap.section || "",
-      division: selectedMap.district || "",
-      circle: "",
+      sub_division: selectedMap.zilladar_section || selectedMap.section || localStorage.getItem("gis_sub_division") || "",
+      division: localStorage.getItem("gis_division") || selectedMap.district || "",
+      circle: localStorage.getItem("gis_circle") || "",
       zone: "",
     });
   }, [selectedMap, outletForMoga]);
@@ -351,10 +354,51 @@ export default function GeoMap() {
     }
   };
 
-  // NOTE: Overlay is computed in handleMapClick when the second marker is placed,
-  // or in handlePlaceByCoords / handleLowerLeftDrag / handleUpperLeftDrag when
-  // coordinates are adjusted. Saved placements are preserved on the entity for
-  // reference but do not auto-place.
+  // Auto-place the overlay from saved placement coordinates when a map is selected.
+  // If the map has saved geo_placement, restore it at that exact location; otherwise
+  // enter one-click placement mode so the user can place it fresh.
+  useEffect(() => {
+    if (!selectedMap || !mapObjects.length) return;
+    if (autoPlacedRef.current === selectedMap.id) return;
+    autoPlacedRef.current = selectedMap.id;
+    if (selectedMap.geo_placement_lat != null && selectedMap.geo_placement_lng != null) {
+      const latlng = { lat: selectedMap.geo_placement_lat, lng: selectedMap.geo_placement_lng };
+      const rot = selectedMap.geo_rotation || 0;
+      const transform = computeOneClickTransform(latlng, mapObjects, rot);
+      if (transform) {
+        setOverlay({ transform, rotation: rot, placementPoint: latlng });
+        setPlacementPoint(latlng);
+        setOverlaySaved(true);
+        if (selectedMap.geo_moga_filter) setSelectedMoga(selectedMap.geo_moga_filter);
+        const bc = getBottomMustateelCorner(mapObjects);
+        if (bc) setLowerLeftPoint(transform.transform(bc.x, bc.y));
+        setPlacingStep(0);
+        const allLatLngs = [];
+        for (const o of mapObjects) {
+          if (["mustateel", "muraba", "acre"].includes(o.type)) {
+            const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
+            for (const [cx, cy] of corners) allLatLngs.push(transform.transform(cx, cy));
+          } else if (o.points?.length) {
+            for (const p of o.points) allLatLngs.push(transform.transform(p.x, p.y));
+          } else if (o.start && o.end) {
+            allLatLngs.push(transform.transform(o.start.x, o.start.y));
+            allLatLngs.push(transform.transform(o.end.x, o.end.y));
+          }
+        }
+        const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+        if (valid.length && mapRef.current) {
+          const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
+          mapRef.current.flyToBounds(bounds, { padding: [80, 80], duration: 0.8 });
+        }
+      }
+    } else {
+      setPlacingStep(1);
+    }
+  }, [selectedMap, mapObjects]);
+
+  // NOTE: Overlay is computed in handleMapClick when placing manually, or in
+  // handlePlaceByCoords / handleLowerLeftDrag / handleUpperLeftDrag when coordinates
+  // are adjusted. Saved placements are auto-restored on map selection (above).
 
   // Mustateel area verification
   const mustateelAreas = useMemo(() => {
@@ -543,9 +587,10 @@ export default function GeoMap() {
     setPlacementPoint(null);
     setOverlay(null);
     setLowerLeftPoint(null);
-    setActiveMustateelId(null);
+    setActiveMustateelIds(new Set());
     setOverlaySaved(false);
-    setPlacingStep(id ? 1 : 0); // enter two-click placement mode
+    setPlacingStep(0); // auto-place effect decides: restore saved placement or enter placement mode
+    autoPlacedRef.current = null;
   };
 
   const handleFilterSelect = (field, value) => {
@@ -564,7 +609,7 @@ export default function GeoMap() {
     setPlacingStep(0);
     setSelectedMapId("");
     setSelectedMoga("");
-    setActiveMustateelId(null);
+    setActiveMustateelIds(new Set());
     setOverlaySaved(false);
   };
 
@@ -573,7 +618,7 @@ export default function GeoMap() {
     setPlacementPoint(null);
     setLowerLeftPoint(null);
     setPlacingStep(1);
-    setActiveMustateelId(null);
+    setActiveMustateelIds(new Set());
     setOverlaySaved(false);
   };
 
@@ -658,7 +703,11 @@ export default function GeoMap() {
 
   // Click on mustateel → toggle killa display for that parcel
   const handleMustateelClick = useCallback((id) => {
-    setActiveMustateelId(prev => prev === id ? null : id);
+    setActiveMustateelIds(prev => {
+      const n = new Set(prev);
+      n.add(id);
+      return n;
+    });
   }, []);
 
   const handleClearMeasurements = () => { setMeasurements([]); setDraft(null); setLiveMeasurement(null); };
@@ -742,6 +791,11 @@ export default function GeoMap() {
         {gpsAccuracyCircle}
         {gpsPosition && <Marker position={[gpsPosition.lat, gpsPosition.lng]} icon={GPS_ICON} />}
 
+        {/* Show all saved maps together */}
+        {showAll && (
+          <AllOverlaysLayer maps={maps || []} excludeId={selectedMapId} zoom={zoom} />
+        )}
+
         {/* Overlay layer — all map details */}
         {layerVisible && overlay?.transform && (
           <OverlayLayer
@@ -750,7 +804,7 @@ export default function GeoMap() {
             zoom={zoom}
             killaVisible={killaVisible}
             mogaFilter={selectedMoga}
-            activeMustateelId={activeMustateelId}
+            activeMustateelIds={activeMustateelIds}
             onMustateelClick={handleMustateelClick}
           />
         )}
@@ -906,14 +960,24 @@ export default function GeoMap() {
       />
       <Compass />
 
-      {/* Overlay toggle */}
-      <button
-        onClick={() => setShowOverlayPanel(v => !v)}
-        className={`absolute top-14 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
-      >
-        <Layers className="w-3.5 h-3.5" />
-        GIS Overlay
-      </button>
+      {/* Overlay toggle + Show All */}
+      <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-1.5">
+        <button
+          onClick={() => setShowOverlayPanel(v => !v)}
+          className={`flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          GIS Overlay
+        </button>
+        <button
+          onClick={() => setShowAll(v => !v)}
+          className={`flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showAll ? "bg-purple-600 text-white" : "bg-white text-slate-600"}`}
+          title="Show all saved maps together"
+        >
+          <Eye className="w-3.5 h-3.5" />
+          Show All
+        </button>
+      </div>
 
       {showOverlayPanel && (
         <OverlayPanel
@@ -969,7 +1033,7 @@ export default function GeoMap() {
       )}
 
       {/* Click mustateel hint */}
-      {overlay && killaVisible && !activeMustateelId && (
+      {overlay && killaVisible && activeMustateelIds.size === 0 && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1000] bg-black/80 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <MapPin className="w-3 h-3" />
           کسی مستطیل پر کلک کریں — کلا نمبر اور گرڈ لائنز دکھائی دیں گے

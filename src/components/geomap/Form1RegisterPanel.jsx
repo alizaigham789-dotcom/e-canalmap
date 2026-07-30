@@ -134,7 +134,7 @@ export default function Form1RegisterPanel({
     </style></head><body>
     <h1>FORM 1 REGISTER (Girdawari)</h1>
     <h2>${esc(mapData?.title || "")}${selectedMoga ? ` — Moga ${esc(selectedMoga)}` : ""}</h2>
-    <div class="meta">Village: ${esc(info.village)} | Mouza: ${esc(info.mouza)} | Tehsil: ${esc(info.tehsil)} | District: ${esc(info.district)} | Channel: ${esc(info.channel)} | Side: ${esc(info.side)} | Outlet RD: ${esc(info.outlet_rd)}</div>
+    <div class="meta">Village: ${esc(info.village)} | Mouza: ${esc(info.mouza)} | Tehsil: ${esc(info.tehsil)} | District: ${esc(info.district)} | Division: ${esc(info.division)} | Circle: ${esc(info.circle)} | Sub Div: ${esc(info.sub_division)} | Channel: ${esc(info.channel)} | Side: ${esc(info.side)} | Outlet RD: ${esc(info.outlet_rd)}</div>
     <table><thead><tr>
       <th>Sr</th><th>Occupier Name</th><th>CNIC</th><th>Khasra / Kanal / Crop</th><th>Tot K</th><th>Tot Ac</th><th>Khata</th><th>Own/Tnt</th>
     </tr></thead><tbody>${rows}</tbody></table>
@@ -171,12 +171,15 @@ export default function Form1RegisterPanel({
           </button>
         </div>
 
-        <div className="px-4 py-2 border-b border-slate-200 bg-slate-50 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 shrink-0">
+        <div className="px-4 py-2 border-b border-slate-200 bg-slate-50 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-10 gap-2 shrink-0">
           {[
             ["Village", "village"],
             ["Mouza", "mouza"],
             ["Tehsil", "tehsil"],
             ["District", "district"],
+            ["Division", "division"],
+            ["Circle", "circle"],
+            ["Sub Div", "sub_division"],
             ["Channel", "channel"],
             ["Outlet RD", "outlet_rd"],
             ["Side", "side"],

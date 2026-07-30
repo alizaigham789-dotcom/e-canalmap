@@ -13,11 +13,17 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [division, setDivision] = useState(() => localStorage.getItem("gis_division") || "");
+  const [circle, setCircle] = useState(() => localStorage.getItem("gis_circle") || "");
+  const [subDivision, setSubDivision] = useState(() => localStorage.getItem("gis_sub_division") || "");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+    localStorage.setItem("gis_division", division);
+    localStorage.setItem("gis_circle", circle);
+    localStorage.setItem("gis_sub_division", subDivision);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
       window.location.href = "/";
@@ -106,6 +112,29 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               className="pl-10 h-12"
               required
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Division / Circle (Scope)</Label>
+          <div className="grid grid-cols-3 gap-2">
+            <Input
+              placeholder="Division"
+              value={division}
+              onChange={(e) => { setDivision(e.target.value); localStorage.setItem("gis_division", e.target.value); }}
+              className="h-12"
+            />
+            <Input
+              placeholder="Circle"
+              value={circle}
+              onChange={(e) => { setCircle(e.target.value); localStorage.setItem("gis_circle", e.target.value); }}
+              className="h-12"
+            />
+            <Input
+              placeholder="Sub Division"
+              value={subDivision}
+              onChange={(e) => { setSubDivision(e.target.value); localStorage.setItem("gis_sub_division", e.target.value); }}
+              className="h-12"
             />
           </div>
         </div>

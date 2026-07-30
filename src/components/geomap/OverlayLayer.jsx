@@ -471,7 +471,7 @@ function computeKillaLatLngs(obj, transform) {
   return result;
 }
 
-export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelId, onMustateelClick }) {
+export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, onMustateelClick }) {
   const geoObjects = useMemo(() => {
     if (!transform || !objects.length) return [];
     const filtered = mogaFilter
@@ -502,7 +502,7 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
     <>
       {geoObjects.map(({ obj, latlngs, killaLatLngs }) => {
         switch (obj.type) {
-          case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelId === obj.id} onClick={onMustateelClick} />;
+          case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} onClick={onMustateelClick} />;
           case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "acre": return <MemoAcre key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
