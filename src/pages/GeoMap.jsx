@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save, FileText, MousePointerClick, PenTool, Pencil } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -18,6 +18,7 @@ import MarkerPopup from "@/components/geomap/MarkerPopup";
 import CoordinateDialog from "@/components/geomap/CoordinateDialog";
 import GeoMapExportDialog from "@/components/geomap/GeoMapExportDialog";
 import Form1RegisterPanel from "@/components/geomap/Form1RegisterPanel";
+import AllocationToolbar from "@/components/geomap/AllocationToolbar";
 import AllocationLayer from "@/components/geomap/AllocationLayer";
 import AllocationDialog from "@/components/geomap/AllocationDialog";
 import PatchDrawLayer from "@/components/geomap/PatchDrawLayer";
@@ -893,7 +894,16 @@ export default function GeoMap() {
         onMenu={() => navigate("/")}
       />
 
-      <ZoomControls onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onGPS={handleGPS} gpsActive={gpsActive} onPlaceByCoords={() => setShowCoordDialog(true)} onPlaceByCoordsLower={() => setShowLowerLeftDialog(true)} />
+      <ZoomControls
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onGPS={handleGPS}
+        gpsActive={gpsActive}
+        onPlaceByCoords={() => setShowCoordDialog(true)}
+        onPlaceByCoordsLower={() => setShowLowerLeftDialog(true)}
+        onEditPatch={() => setAllocTool((v) => (v === "edit" ? null : "edit"))}
+        editActive={allocTool === "edit"}
+      />
       <Compass />
 
       {/* Overlay toggle */}
@@ -930,54 +940,14 @@ export default function GeoMap() {
         />
       )}
 
-      {/* Killa visibility toggle */}
       {overlay && (
-        <button
-          onClick={() => setKillaVisible(v => !v)}
-          className={`absolute top-14 right-[20rem] z-[1000] px-2 h-8 rounded-full shadow-xl text-[10px] font-bold transition-all ${killaVisible ? "bg-emerald-500 text-white" : "bg-white text-slate-400"}`}
-        >
-          Killa #{killaVisible ? "On" : "Off"}
-        </button>
-      )}
-
-      {overlay && (
-        <button
-          onClick={() => setShowForm1(true)}
-          className="absolute top-14 right-[27rem] z-[1000] px-3 h-8 rounded-full shadow-xl text-[10px] font-bold bg-amber-600 text-white hover:bg-amber-700 transition-all flex items-center gap-1"
-        >
-          <FileText className="w-3 h-3" />
-          Form 1 Register
-        </button>
-      )}
-
-      {overlay && (
-        <button
-          onClick={() => setAllocTool((v) => (v === "cell" ? null : "cell"))}
-          className={`absolute top-14 right-[34rem] z-[1000] px-3 h-8 rounded-full shadow-xl text-[10px] font-bold transition-all flex items-center gap-1 ${allocTool === "cell" ? "bg-green-600 text-white" : "bg-white text-slate-600"}`}
-        >
-          <MousePointerClick className="w-3 h-3" />
-          Cell Allocate
-        </button>
-      )}
-
-      {overlay && (
-        <button
-          onClick={() => setAllocTool((v) => (v === "draw" ? null : "draw"))}
-          className={`absolute top-14 right-[41rem] z-[1000] px-3 h-8 rounded-full shadow-xl text-[10px] font-bold transition-all flex items-center gap-1 ${allocTool === "draw" ? "bg-indigo-600 text-white" : "bg-white text-slate-600"}`}
-        >
-          <PenTool className="w-3 h-3" />
-          Draw Patch
-        </button>
-      )}
-
-      {overlay && (
-        <button
-          onClick={() => setAllocTool((v) => (v === "edit" ? null : "edit"))}
-          className={`absolute top-14 right-[48rem] z-[1000] px-3 h-8 rounded-full shadow-xl text-[10px] font-bold transition-all flex items-center gap-1 ${allocTool === "edit" ? "bg-orange-600 text-white" : "bg-white text-slate-600"}`}
-        >
-          <Pencil className="w-3 h-3" />
-          Edit Patch
-        </button>
+        <AllocationToolbar
+          killaVisible={killaVisible}
+          onToggleKilla={() => setKillaVisible(v => !v)}
+          onForm1={() => setShowForm1(true)}
+          allocTool={allocTool}
+          onSetAllocTool={setAllocTool}
+        />
       )}
 
       {allocTool === "cell" && overlay && (

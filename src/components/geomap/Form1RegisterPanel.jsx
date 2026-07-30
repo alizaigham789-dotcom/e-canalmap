@@ -105,31 +105,32 @@ export default function Form1RegisterPanel({
         <tr class="detail"><td class="lbl">Crop</td><td></td><td colspan="5" class="strip">${cropCells}</td></tr>`;
       })
       .join("");
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Form 1 Register</title>
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Form 1 Register</title>
     <style>
-      @page { size: A4 landscape; margin: 8mm; }
-      body { font-family: 'Inter', Arial, sans-serif; color:#1e293b; }
-      h1 { font-size:15px; text-align:center; margin:0 0 2px; }
-      h2 { font-size:11px; text-align:center; margin:0 0 5px; font-weight:600; }
-      .meta { font-size:9px; text-align:center; margin-bottom:6px; color:#475569; }
-      table { width:100%; border-collapse:collapse; font-size:8px; }
-      th, td { border:1px solid #94a3b8; padding:2px 3px; vertical-align:top; }
+      @page { size: A4 ${isMobile ? "portrait" : "landscape"}; margin: ${isMobile ? "5mm" : "8mm"}; }
+      body { font-family: 'Inter', Arial, sans-serif; color:#1e293b; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      h1 { font-size:${isMobile ? 12 : 15}px; text-align:center; margin:0 0 2px; }
+      h2 { font-size:${isMobile ? 9 : 11}px; text-align:center; margin:0 0 5px; font-weight:600; }
+      .meta { font-size:${isMobile ? 7 : 9}px; text-align:center; margin-bottom:6px; color:#475569; }
+      table { width:100%; border-collapse:collapse; font-size:${isMobile ? 6 : 8}px; table-layout:fixed; }
+      th, td { border:1px solid #94a3b8; padding:${isMobile ? "1px 2px" : "2px 3px"}; vertical-align:top; word-break:break-word; }
       th { background:#1e3a5f; color:#fff; font-weight:700; }
       tr:nth-child(3n+1) td { background:#f8fafc; }
-      .sr { text-align:center; font-weight:700; font-size:11px; background:#e2e8f0 !important; }
-      .sub { font-size:7px; color:#475569; }
-      .mono { font-family: monospace; font-size:8px; }
+      .sr { text-align:center; font-weight:700; font-size:${isMobile ? 8 : 11}px; background:#e2e8f0 !important; }
+      .sub { font-size:${isMobile ? 6 : 7}px; color:#475569; }
+      .mono { font-family: monospace; font-size:${isMobile ? 6 : 8}px; }
       .num { text-align:center; font-weight:700; }
       .blk { background:#f1f5f9; }
       .detail td { background:#fff; }
       .lbl { font-weight:700; background:#eef2ff !important; color:#3730a3; text-align:center; }
       .strip { line-height:1.6; }
-      .box { display:inline-block; min-width:48px; text-align:center; margin:0 1px; border:1px solid #6366f1; border-radius:2px; overflow:hidden; }
+      .box { display:inline-block; min-width:${isMobile ? 34 : 48}px; text-align:center; margin:0 1px; border:1px solid #6366f1; border-radius:2px; overflow:hidden; }
       .box .kh { display:block; font-weight:700; color:#3730a3; border-bottom:1px solid #c7d2fe; padding:0 2px; }
       .box .kn { display:block; color:#1d4ed8; padding:0 2px; }
       .cell.crop { display:inline-block; text-align:center; margin:0 1px; border:1px solid #a7f3d0; border-radius:2px; padding:0 2px; color:#047857; font-weight:700; background:#ecfdf5; }
-      .totals { margin-top:8px; font-size:11px; font-weight:bold; text-align:right; }
-      .foot { margin-top:16px; display:flex; justify-content:space-between; font-size:10px; }
+      .totals { margin-top:8px; font-size:${isMobile ? 9 : 11}px; font-weight:bold; text-align:right; }
+      .foot { margin-top:16px; display:flex; justify-content:space-between; font-size:${isMobile ? 8 : 10}px; }
     </style></head><body>
     <h1>FORM 1 REGISTER (Girdawari)</h1>
     <h2>${esc(mapData?.title || "")}${selectedMoga ? ` — Moga ${esc(selectedMoga)}` : ""}</h2>

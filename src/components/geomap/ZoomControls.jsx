@@ -1,7 +1,7 @@
 import React from "react";
-import { Plus, Minus, Crosshair, MapPin } from "lucide-react";
+import { Plus, Minus, Crosshair, MapPin, Pencil } from "lucide-react";
 
-export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, onPlaceByCoords, onPlaceByCoordsLower }) {
+export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, onPlaceByCoords, onPlaceByCoordsLower, onEditPatch, editActive }) {
   return (
     <div className="absolute top-16 left-3 z-[1000] flex flex-col items-center gap-1.5">
       <div className="bg-white rounded-xl shadow-xl border border-slate-200 flex flex-col overflow-hidden">
@@ -40,6 +40,19 @@ export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, on
           title="Edit Lower-Left Corner Coordinates"
         >
           <MapPin className="w-4 h-4" />
+        </button>
+      )}
+      {onEditPatch && (
+        <button
+          onClick={onEditPatch}
+          className={`w-9 h-9 rounded-xl shadow-xl border flex items-center justify-center transition-all ${
+            editActive
+              ? "bg-orange-600 text-white border-orange-600"
+              : "bg-white text-orange-600 border-slate-200 hover:bg-orange-50"
+          }`}
+          title="Edit Patch"
+        >
+          <Pencil className="w-4 h-4" />
         </button>
       )}
     </div>

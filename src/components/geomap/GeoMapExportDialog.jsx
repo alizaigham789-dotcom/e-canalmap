@@ -48,7 +48,7 @@ export default function GeoMapExportDialog({
   const [showKilla, setShowKilla] = useState(true);
   const [mogaFilter, setMogaFilter] = useState(selectedMoga || "");
   const [pageSize, setPageSize] = useState("a4");
-  const [orientation, setOrientation] = useState("landscape");
+  const [orientation, setOrientation] = useState(typeof window !== "undefined" && window.innerWidth < 768 ? "portrait" : "landscape");
   const [exporting, setExporting] = useState(false);
 
   // Available mogas from objects
