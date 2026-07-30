@@ -1,13 +1,28 @@
 import React from "react";
 import { Menu, ChevronDown, Bell } from "lucide-react";
 
-export default function MapHeader({ districts, tehsils, villages, district, tehsil, village, onSelect, onMenu }) {
-  const Select = ({ placeholder, value, options, field }) => (
-    <div className="relative">
+export default function MapHeader({
+  districts,
+  tehsils,
+  villages,
+  district,
+  tehsil,
+  village,
+  onSelect,
+  onMenu,
+  mogas,
+  selectedMoga,
+  onSelectMoga,
+  murabas,
+  selectedMuraba,
+  onSelectMuraba,
+}) {
+  const Select = ({ placeholder, value, options, field, onChange }) => (
+    <div className="relative shrink-0">
       <select
-        value={value}
-        onChange={(e) => onSelect(field, e.target.value)}
-        className="appearance-none bg-white/10 text-white text-xs font-medium pl-2.5 pr-7 h-8 rounded-md border border-white/15 cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30 max-w-[120px] truncate"
+        value={value || ""}
+        onChange={(e) => (onChange ? onChange(e.target.value) : onSelect(field, e.target.value))}
+        className="appearance-none bg-white/10 text-white text-xs font-medium pl-2.5 pr-7 h-8 rounded-md border border-white/15 cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30 max-w-[110px] truncate"
       >
         <option value="" className="text-slate-700">{placeholder}</option>
         {options.map((o) => (
@@ -20,13 +35,17 @@ export default function MapHeader({ districts, tehsils, villages, district, tehs
 
   return (
     <div className="absolute top-0 left-0 right-0 z-[1000] bg-[#1B2A3A] px-3 h-12 flex items-center gap-2 shadow-lg">
-      <button onClick={onMenu} className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/10 rounded-md transition-colors">
+      <button onClick={onMenu} className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/10 rounded-md transition-colors shrink-0">
         <Menu className="w-5 h-5" />
       </button>
-      <Select placeholder="District" value={district} options={districts} field="district" />
-      <Select placeholder="Tehsil" value={tehsil} options={tehsils} field="tehsil" />
-      <Select placeholder="Select Mura…" value={village} options={villages} field="village" />
-      <div className="ml-auto relative">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1">
+        <Select placeholder="District" value={district} options={districts} field="district" />
+        <Select placeholder="Tehsil" value={tehsil} options={tehsils} field="tehsil" />
+        <Select placeholder="Mouza" value={village} options={villages} field="village" />
+        <Select placeholder="Moga" value={selectedMoga} options={mogas || []} onChange={onSelectMoga} />
+        <Select placeholder="Select Muraba" value={selectedMuraba} options={murabas || []} onChange={onSelectMuraba} />
+      </div>
+      <div className="relative shrink-0">
         <button className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/10 rounded-md transition-colors">
           <Bell className="w-4 h-4" />
         </button>

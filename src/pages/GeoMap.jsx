@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
@@ -127,6 +127,7 @@ function GPSTracker({ active, onPosition }) {
 
 export default function GeoMap() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const mapRef = useRef(null);
   const [center] = useState([32.2889, 72.3525]);
   const [zoom, setZoom] = useState(13);
@@ -169,6 +170,7 @@ export default function GeoMap() {
   const [registerInfo, setRegisterInfo] = useState({ village: "", tehsil: "", district: "", mouza: "", channel: "", outlet_rd: "", side: "", sub_division: "", division: "", circle: "", zone: "" });
   const [savingRegister, setSavingRegister] = useState(false);
   const [existingRegId, setExistingRegId] = useState(null);
+  const [selectedMuraba, setSelectedMuraba] = useState("");
 
   // Measurement tools state
   const [markers, setMarkers] = useState([]); // user markers
@@ -203,6 +205,18 @@ export default function GeoMap() {
   const districts = useMemo(() => [...new Set((maps || []).map(m => m.district).filter(Boolean))].sort(), [maps]);
   const tehsils = useMemo(() => [...new Set((maps || []).filter(m => !filters.district || m.district === filters.district).map(m => m.tehsil).filter(Boolean))].sort(), [maps, filters.district]);
   const villages = useMemo(() => [...new Set((maps || []).filter(m => (!filters.district || m.district === filters.district) && (!filters.tehsil || m.tehsil === filters.tehsil)).map(m => m.village).filter(Boolean))].sort(), [maps, filters.district, filters.tehsil]);
+
+  // Moga numbers available across the filtered maps (for the top cascade).
+  const filterMogas = useMemo(() => {
+    const s = new Set();
+    for (const m of (maps || [])) {
+      if (filters.district && m.district !== filters.district) continue;
+      if (filters.tehsil && m.tehsil !== filters.tehsil) continue;
+      if (filters.village && m.village !== filters.village) continue;
+      if (m.moga_number) s.add(String(m.moga_number));
+    }
+    return [...s].sort((a, b) => +a - +b);
+  }, [maps, filters]);
 
   const availableMogas = useMemo(() => {
     const s = new Set();
@@ -584,9 +598,9 @@ export default function GeoMap() {
     handleLowerLeftDrag(coords);
   };
 
-  const handleSelectMap = (id) => {
+  const handleSelectMap = (id, keepMoga = false) => {
     setSelectedMapId(id);
-    setSelectedMoga("");
+    if (!keepMoga) setSelectedMoga("");
     setPlacementPoint(null);
     setOverlay(null);
     setLowerLeftPoint(null);
@@ -594,6 +608,29 @@ export default function GeoMap() {
     setOverlaySaved(false);
     setPlacingStep(0); // auto-place effect decides: restore saved placement or enter placement mode
     autoPlacedRef.current = null;
+  };
+
+  // Top cascade: pick a moga → auto-select its map; pick a muraba → focus it on the map
+  const handleSelectMogaTop = (moga) => {
+    setSelectedMoga(moga);
+    setSelectedMuraba("");
+    const match = (maps || []).find(m =>
+      (!filters.district || m.district === filters.district) &&
+      (!filters.tehsil || m.tehsil === filters.tehsil) &&
+      (!filters.village || m.village === filters.village) &&
+      String(m.moga_number) === String(moga)
+    );
+    if (match && match.id !== selectedMapId) handleSelectMap(match.id, true);
+  };
+
+  const handleSelectMuraba = (mustNo) => {
+    setSelectedMuraba(mustNo);
+    const obj = mapObjects.find(o =>
+      (o.type === "mustateel" || o.type === "muraba") &&
+      o.label === mustNo &&
+      (!selectedMoga || String(o.mogaNumber) === String(selectedMoga))
+    );
+    if (obj) handleMustateelClick(obj.id);
   };
 
   const handleFilterSelect = (field, value) => {
@@ -605,7 +642,22 @@ export default function GeoMap() {
     });
   };
 
-  const handleClearOverlay = () => {
+  const handleClearOverlay = async () => {
+    // Persistently remove the saved overlay placement so it doesn't auto-restore.
+    if (selectedMapId) {
+      try {
+        await base44.entities.LandMap.update(selectedMapId, {
+          geo_placement_lat: null,
+          geo_placement_lng: null,
+          geo_rotation: 0,
+          geo_moga_filter: "",
+        });
+        queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+        queryClient.invalidateQueries({ queryKey: ["geomap-map"] });
+      } catch (e) {
+        toast.error("Delete failed");
+      }
+    }
     setOverlay(null);
     setPlacementPoint(null);
     setLowerLeftPoint(null);
@@ -614,6 +666,7 @@ export default function GeoMap() {
     setSelectedMoga("");
     setActiveMustateelIds(new Set());
     setOverlaySaved(false);
+    setSelectedMuraba("");
   };
 
   const handleRePlace = () => {
@@ -962,6 +1015,12 @@ export default function GeoMap() {
         village={filters.village}
         onSelect={handleFilterSelect}
         onMenu={() => navigate("/")}
+        mogas={filterMogas}
+        selectedMoga={selectedMoga}
+        onSelectMoga={handleSelectMogaTop}
+        murabas={mogaMustateels.map(m => m.mustNo)}
+        selectedMuraba={selectedMuraba}
+        onSelectMuraba={handleSelectMuraba}
       />
 
       <ZoomControls
