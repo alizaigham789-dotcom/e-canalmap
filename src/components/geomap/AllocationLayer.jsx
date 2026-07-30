@@ -52,7 +52,7 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
           <Polygon
             key={key}
             positions={latlngs.map((p) => [p.lat, p.lng])}
-            pathOptions={pathOpts}
+            pathOptions={{ ...pathOpts, interactive: mode }}
             eventHandlers={
               mode
                 ? {

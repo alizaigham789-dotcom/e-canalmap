@@ -114,12 +114,13 @@ export default function PatchDrawLayer({
         <Polygon
           positions={latlngs.map((pt) => [pt.lat, pt.lng])}
           pathOptions={{
-            color,
+            color: isActive ? "#facc15" : color,
             fillColor: color,
-            fillOpacity: isActive ? 0.32 : 0.22,
-            weight: isActive ? 3 : 2,
+            fillOpacity: isActive ? 0.5 : 0.25,
+            weight: isActive ? 4 : 2,
+            interactive: editMode,
           }}
-          eventHandlers={editMode ? { click: () => onSelectPatch(p.id) } : {}}
+          eventHandlers={editMode ? { click: (e) => { L.DomEvent.stopPropagation(e); onSelectPatch(p.id); } } : {}}
         >
           <Tooltip permanent direction="center" className="killa-label" opacity={1}>
             <span
