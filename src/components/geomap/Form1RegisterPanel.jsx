@@ -2,11 +2,13 @@ import React, { useMemo } from "react";
 import { X, Trash2, Download, Save, Loader2, FileText } from "lucide-react";
 import { toast } from "sonner";
 
-// Excel-style Form 1 register: each occupier = 3 rows sharing one serial number.
-//   Row A — farmer details (name, father, owner, khata, crop, land type, totals, …)
-//   Row B — "Khasra_No" with each khasra listed horizontally
-//   Row C — "Kanal"     with each acre's kanal listed horizontally (aligned under B)
-// Khasra are grouped per mustateel (e.g. 840/1,2,3) with kanal per acre (8,8,8).
+// Excel-style Form 1 register. Each occupier = 4 rows sharing one serial number:
+//   Row A — farmer details (name, CNIC, totals, khata, tenure …)
+//   Row B — "Khasra_No"  : each killa (acre) listed horizontally (one column per acre)
+//   Row C — "Kanal"      : each acre's kanal aligned beneath its khasra
+//   Row D — "Crop"       : crop name beneath; one name spans consecutive same-crop acres
+// Farmers with the same CNIC are merged into one entry. An acre fully allotted to
+// one farmer cannot be allotted to another (enforced at allocation time).
 export default function Form1RegisterPanel({
   open,
   onClose,
@@ -23,29 +25,38 @@ export default function Form1RegisterPanel({
   const groups = useMemo(() => {
     const map = new Map();
     for (const a of allocations) {
-      const key = `${a.farmer_name || ""}||${a.father || ""}||${a.phone || ""}||${a.cnic || ""}`;
+      // Merge by CNIC when present (same CNIC = same person); else by name+father.
+      const key = a.cnic ? `cnic:${a.cnic}` : `name:${a.farmer_name || ""}||${a.father || ""}`;
       if (!map.has(key)) {
         map.set(key, {
           key,
-          farmer_name: a.farmer_name || "",
-          father: a.father || "",
-          phone: a.phone || "",
-          cnic: a.cnic || "",
-          khata_no: a.khata_no || "",
-          crop_name: a.crop_name || "",
-          land_type: a.land_type || "",
-          tenure: a.tenure || "",
-          channel_nme: a.channel_nme || "",
-          outlet_rd: a.outlet_rd || "",
-          side: a.side || "",
-          village: a.village || "",
-          mouza: a.mouza || "",
-          tehsil: a.tehsil || "",
-          district: a.district || "",
+          farmer_name: "",
+          father: "",
+          phone: "",
+          cnic: "",
+          khata_no: "",
+          crop_name: "",
+          land_type: "",
+          tenure: "",
+          channel_nme: "",
+          outlet_rd: "",
+          side: "",
+          village: "",
+          mouza: "",
+          tehsil: "",
+          district: "",
           items: [],
         });
       }
-      map.get(key).items.push(a);
+      const g = map.get(key);
+      g.items.push(a);
+      // take first non-empty for display fields
+      const pick = (k) => { if (!g[k] && a[k]) g[k] = a[k]; };
+      if (!g.farmer_name && a.farmer_name) g.farmer_name = a.farmer_name;
+      pick("father"); pick("phone"); pick("cnic"); pick("khata_no");
+      pick("crop_name"); pick("land_type"); pick("tenure");
+      pick("channel_nme"); pick("outlet_rd"); pick("side");
+      pick("village"); pick("mouza"); pick("tehsil"); pick("district");
     }
     return [...map.values()];
   }, [allocations]);
@@ -66,29 +77,27 @@ export default function Form1RegisterPanel({
     const rows = groups
       .map((g, i) => {
         const t = farmerTotals(g);
-        const entries = farmerEntries(g.items);
-        const khasraCells = entries
-          .map((e) => `<span class="cell">${esc(e.khasra)}</span>`)
+        const acres = farmerAcres(g.items);
+        const runs = cropRuns(acres);
+        const khasraCells = acres.map((a) => `<span class="cell">${esc(a.khasra)}</span>`).join("");
+        const kanalCells = acres.map((a) => `<span class="cell">${esc(a.kanal)}</span>`).join("");
+        const cropCells = runs
+          .map((r) => `<span class="cell crop" style="min-width:${r.count * 50}px;">${esc(r.crop || "—")}</span>`)
           .join("");
-        const kanalCells = entries.map((e) => `<span class="cell">${esc(e.kanal)}</span>`).join("");
         return `
         <tr>
-          <td class="sr" rowspan="3">${i + 1}</td>
+          <td class="sr" rowspan="4">${i + 1}</td>
           <td><b>${esc(g.farmer_name)}</b><br/><span class="sub">S/o ${esc(g.father)}</span></td>
+          <td class="mono">${esc(g.cnic)}</td>
           <td class="blk"></td>
           <td class="num">${t.kanal}</td>
           <td class="num">${t.acres.toFixed(3)}</td>
           <td>${esc(g.khata_no)}</td>
           <td>${esc(g.tenure)}</td>
-          <td>${esc(g.crop_name)}</td>
-          <td>${esc(g.land_type)}</td>
-          <td>${esc(g.channel_nme)}</td>
-          <td>${esc(g.outlet_rd)}</td>
-          <td>${esc(g.side)}</td>
-          <td>${esc(g.village)}</td>
         </tr>
-        <tr class="detail"><td class="lbl">Khasra_No</td><td colspan="12" class="strip">${khasraCells}</td></tr>
-        <tr class="detail"><td class="lbl">Kanal</td><td colspan="12" class="strip">${kanalCells}</td></tr>`;
+        <tr class="detail"><td class="lbl">Khasra_No</td><td></td><td colspan="5" class="strip">${khasraCells}</td></tr>
+        <tr class="detail"><td class="lbl">Kanal</td><td></td><td colspan="5" class="strip">${kanalCells}</td></tr>
+        <tr class="detail"><td class="lbl">Crop</td><td></td><td colspan="5" class="strip">${cropCells}</td></tr>`;
       })
       .join("");
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Form 1 Register</title>
@@ -101,15 +110,17 @@ export default function Form1RegisterPanel({
       table { width:100%; border-collapse:collapse; font-size:8px; }
       th, td { border:1px solid #94a3b8; padding:2px 3px; vertical-align:top; }
       th { background:#1e3a5f; color:#fff; font-weight:700; }
-      tr:nth-child(3n+1) td { background:#f8fafc; }
+      tr:nth-child(4n+1) td { background:#f8fafc; }
       .sr { text-align:center; font-weight:700; font-size:11px; background:#e2e8f0 !important; }
       .sub { font-size:7px; color:#475569; }
+      .mono { font-family: monospace; font-size:8px; }
       .num { text-align:center; font-weight:700; }
       .blk { background:#f1f5f9; }
       .detail td { background:#fff; }
       .lbl { font-weight:700; background:#eef2ff !important; color:#3730a3; text-align:center; }
       .strip { line-height:1.6; }
-      .cell { display:inline-block; min-width:46px; text-align:center; margin:0 1px; border:1px solid #cbd5e1; border-radius:2px; padding:0 2px; }
+      .cell { display:inline-block; min-width:48px; text-align:center; margin:0 1px; border:1px solid #cbd5e1; border-radius:2px; padding:0 2px; }
+      .cell.crop { color:#047857; font-weight:700; border-color:#a7f3d0; background:#ecfdf5; }
       .totals { margin-top:8px; font-size:11px; font-weight:bold; text-align:right; }
       .foot { margin-top:16px; display:flex; justify-content:space-between; font-size:10px; }
     </style></head><body>
@@ -117,7 +128,7 @@ export default function Form1RegisterPanel({
     <h2>${esc(mapData?.title || "")}${selectedMoga ? ` — Moga ${esc(selectedMoga)}` : ""}</h2>
     <div class="meta">Village: ${esc(info.village)} | Mouza: ${esc(info.mouza)} | Tehsil: ${esc(info.tehsil)} | District: ${esc(info.district)} | Channel: ${esc(info.channel)} | Side: ${esc(info.side)} | Outlet RD: ${esc(info.outlet_rd)}</div>
     <table><thead><tr>
-      <th>Sr</th><th>Occupier Name</th><th>Khasra No. / Kanal</th><th>Tot K</th><th>Tot Ac</th><th>Khata</th><th>Own/Tnt</th><th>Crop</th><th>Land</th><th>Channel</th><th>Outlet</th><th>Side</th><th>Village</th>
+      <th>Sr</th><th>Occupier Name</th><th>CNIC</th><th>Khasra No. / Kanal / Crop</th><th>Tot K</th><th>Tot Ac</th><th>Khata</th><th>Own/Tnt</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <div class="totals">Total Area: ${totals.acres.toFixed(3)} Acres &nbsp;|&nbsp; ${totals.kanal.toFixed(2)} Kanal</div>
     <div class="foot"><span>Girdawar _______________</span><span>Patwari _______________</span><span>Zilladar _______________</span></div>
@@ -135,7 +146,8 @@ export default function Form1RegisterPanel({
     }, 600);
   };
 
-  const COLS = ["Sr", "Occupier Name", "Khasra No. / Kanal", "Tot K", "Tot Ac", "Khata", "Own/Tnt", "Crop", "Land", "del"];
+  const COLS = ["Sr", "Occupier Name", "CNIC", "Khasra No. / Kanal / Crop", "Tot K", "Tot Ac", "Khata", "Own/Tnt", ""];
+  const GRID_W = 46;
 
   return (
     <div className="fixed inset-0 z-[1100] bg-black/60 flex items-center justify-center p-2 sm:p-4">
@@ -178,7 +190,7 @@ export default function Form1RegisterPanel({
             <div className="text-lg font-bold text-blue-800">{totals.kanal.toFixed(2)}</div>
           </div>
           <div className="text-xs text-slate-500">{groups.length} occupier{groups.length !== 1 ? "s" : ""}</div>
-          <div className="ml-auto text-[10px] text-slate-400">Use “Draw Patch” on the map to add a farmer's land quickly</div>
+          <div className="ml-auto text-[10px] text-slate-400">Same CNIC merged · full acre locked</div>
         </div>
 
         <div className="flex-1 overflow-auto">
@@ -190,33 +202,33 @@ export default function Form1RegisterPanel({
             <table className="w-full text-[10px] border-collapse">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-slate-800 text-white">
-                  {COLS.map((h) => (
-                    <th key={h} className="px-1 py-1 border border-slate-300 whitespace-nowrap min-w-[44px]">{h}</th>
+                  {COLS.map((h, i) => (
+                    <th key={i} className="px-1 py-1 border border-slate-300 whitespace-nowrap min-w-[44px]">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {groups.map((g, i) => {
                   const t = farmerTotals(g);
-                  const entries = farmerEntries(g.items);
+                  const acres = farmerAcres(g.items);
+                  const runs = cropRuns(acres);
+                  const tpl = `repeat(${Math.max(acres.length, 1)}, minmax(${GRID_W}px, 1fr))`;
                   return (
                     <React.Fragment key={g.key}>
-                      {/* Row A — farmer details */}
+                      {/* Row A — farmer */}
                       <tr className="bg-slate-50/60 align-top">
-                        <td className="px-1 py-1 border border-slate-200 text-center font-bold text-slate-700" rowSpan={3}>{i + 1}</td>
+                        <td className="px-1 py-1 border border-slate-200 text-center font-bold text-slate-700" rowSpan={4}>{i + 1}</td>
                         <td className="px-1 py-1 border border-slate-200">
                           <div className="font-medium">{g.farmer_name}</div>
                           <div className="text-[8px] text-slate-500">S/o {g.father}</div>
                           <div className="text-[8px] font-mono text-slate-500">{g.phone}</div>
-                          <div className="text-[8px] font-mono text-slate-500">{g.cnic}</div>
                         </td>
+                        <td className="px-1 py-1 border border-slate-200 font-mono text-[9px] text-slate-700">{g.cnic}</td>
                         <td className="px-1 py-1 border border-slate-200 bg-slate-100"></td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-blue-700">{t.kanal}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-amber-700">{t.acres.toFixed(3)}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center">{g.khata_no}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center">{g.tenure}</td>
-                        <td className="px-1 py-1 border border-slate-200 text-center">{g.crop_name}</td>
-                        <td className="px-1 py-1 border border-slate-200 text-center">{g.land_type}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center">
                           <button onClick={() => g.items.forEach((it) => onRemove(it.id))} className="text-red-500 hover:text-red-700" title="Remove occupier">
                             <Trash2 className="w-3 h-3" />
@@ -226,25 +238,35 @@ export default function Form1RegisterPanel({
                       {/* Row B — Khasra_No */}
                       <tr className="align-top">
                         <td className="px-1 py-1 border border-slate-200 text-center font-bold text-indigo-700 bg-indigo-50">Khasra_No</td>
-                        <td className="px-1 py-1 border border-slate-200" colSpan={7}>
-                          <div className="flex flex-wrap gap-1">
-                            {entries.length === 0 ? <span className="text-slate-300">—</span> : entries.map((e, j) => (
-                              <div key={j} className="border border-slate-300 rounded px-1 text-center min-w-[56px] bg-white">
-                                <div className="font-mono font-bold text-[9px] text-indigo-700 leading-tight">{e.khasra}</div>
-                              </div>
+                        <td className="px-1 py-1 border border-slate-200"></td>
+                        <td className="px-1 py-1 border border-slate-200" colSpan={6}>
+                          <div style={{ display: "grid", gridTemplateColumns: tpl }}>
+                            {acres.length === 0 ? <span className="text-slate-300">—</span> : acres.map((a, j) => (
+                              <div key={j} className="border border-slate-300 rounded px-1 text-center bg-white font-mono font-bold text-[9px] text-indigo-700 leading-tight mx-0.5">{a.khasra}</div>
                             ))}
                           </div>
                         </td>
                       </tr>
-                      {/* Row C — Kanal (aligned under B) */}
+                      {/* Row C — Kanal (aligned under khasra) */}
                       <tr className="align-top">
                         <td className="px-1 py-1 border border-slate-200 text-center font-bold text-blue-700 bg-blue-50">Kanal</td>
-                        <td className="px-1 py-1 border border-slate-200" colSpan={7}>
-                          <div className="flex flex-wrap gap-1">
-                            {entries.length === 0 ? <span className="text-slate-300">—</span> : entries.map((e, j) => (
-                              <div key={j} className="border border-slate-300 rounded px-1 text-center min-w-[56px] bg-white">
-                                <div className="font-mono text-[9px] text-blue-700 leading-tight">{e.kanal}</div>
-                              </div>
+                        <td className="px-1 py-1 border border-slate-200"></td>
+                        <td className="px-1 py-1 border border-slate-200" colSpan={6}>
+                          <div style={{ display: "grid", gridTemplateColumns: tpl }}>
+                            {acres.length === 0 ? <span className="text-slate-300">—</span> : acres.map((a, j) => (
+                              <div key={j} className="border border-slate-300 rounded px-1 text-center bg-white font-mono text-[9px] text-blue-700 leading-tight mx-0.5">{a.kanal}</div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                      {/* Row D — Crop (one name spans consecutive same-crop acres) */}
+                      <tr className="align-top">
+                        <td className="px-1 py-1 border border-slate-200 text-center font-bold text-emerald-700 bg-emerald-50">Crop</td>
+                        <td className="px-1 py-1 border border-slate-200"></td>
+                        <td className="px-1 py-1 border border-slate-200" colSpan={6}>
+                          <div style={{ display: "grid", gridTemplateColumns: tpl }}>
+                            {runs.length === 0 ? <span className="text-slate-300">—</span> : runs.map((r, j) => (
+                              <div key={j} style={{ gridColumn: `span ${r.count}` }} className="border border-emerald-300 rounded px-1 text-center bg-emerald-50 font-bold text-[9px] text-emerald-700 leading-tight mx-0.5">{r.crop || "—"}</div>
                             ))}
                           </div>
                         </td>
@@ -283,11 +305,11 @@ function parsePatchGroups(khasra) {
     .filter((g) => g.must && g.acres.length);
 }
 
-// Build horizontal khasra/kanal entries for one farmer.
-// Cell allocations → grouped by mustateel: "840/3,4" + "8,2".
+// Per-acre list for one farmer: each acre = { khasra, kanal, crop }.
+// Cell allocations → one entry per (mustateel, acre), ordered by mustateel then acre.
 // Patch allocations → distribute kanal as 8-per-acre then remainder.
-function farmerEntries(items) {
-  const entries = [];
+function farmerAcres(items) {
+  const acres = [];
   const cells = items.filter((it) => it.acre_no != null);
   const patches = items.filter((it) => it.geometry);
 
@@ -296,27 +318,34 @@ function farmerEntries(items) {
     const m = c.mustateel_no || "";
     (byMust[m] = byMust[m] || []).push(c);
   }
-  for (const m of Object.keys(byMust)) {
-    const arr = byMust[m].slice().sort((a, b) => (a.acre_no || 0) - (b.acre_no || 0));
-    entries.push({
-      khasra: `${m}/${arr.map((a) => a.acre_no).join(",")}`,
-      kanal: arr.map((a) => a.kanal).join(","),
-    });
+  for (const m of Object.keys(byMust).sort((a, b) => +a - +b)) {
+    const arr = byMust[m].slice().sort((a, b) => (+a.acre_no || 0) - (+b.acre_no || 0));
+    for (const a of arr) acres.push({ khasra: `${m}/${a.acre_no}`, kanal: a.kanal, crop: a.crop_name || "" });
   }
 
   for (const p of patches) {
     const groups = parsePatchGroups(p.khasra);
     let remaining = p.kanal || 0;
     for (const g of groups) {
-      const kanals = g.acres.map(() => {
+      for (const ac of g.acres) {
         const k = Math.min(8, remaining);
         remaining -= k;
-        return k;
-      });
-      entries.push({ khasra: `${g.must}/${g.acres.join(",")}`, kanal: kanals.join(",") });
+        acres.push({ khasra: `${g.must}/${ac}`, kanal: k, crop: p.crop_name || "" });
+      }
     }
   }
-  return entries;
+  return acres;
+}
+
+// Group consecutive acres of the same crop into runs (for the Crop row spans).
+function cropRuns(acres) {
+  const runs = [];
+  for (const a of acres) {
+    const last = runs[runs.length - 1];
+    if (last && last.crop === a.crop) last.count++;
+    else runs.push({ crop: a.crop, count: 1 });
+  }
+  return runs;
 }
 
 function esc(s) {

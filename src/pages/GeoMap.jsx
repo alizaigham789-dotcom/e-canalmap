@@ -22,8 +22,8 @@ import AllocationLayer from "@/components/geomap/AllocationLayer";
 import AllocationDialog from "@/components/geomap/AllocationDialog";
 import PatchDrawLayer from "@/components/geomap/PatchDrawLayer";
 import PatchDialog from "@/components/geomap/PatchDialog";
-import { remainingKanal, acreAllocations } from "@/lib/allocationEngine";
-import { patchArea, coveredAcres, khasraListFromCovered } from "@/lib/patchSnap";
+import { remainingKanal, acreAllocations, kanalUsedInAcre } from "@/lib/allocationEngine";
+import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
@@ -259,8 +259,12 @@ export default function GeoMap() {
   }, [matchingRegister]);
 
   const handleCellClick = useCallback((obj, mustNo, acre) => {
+    if (kanalUsedInAcre(allocations, mustNo, acre) >= 8) {
+      toast.error("یہ کلا مکمل الوٹ ہے — دوبارہ نہیں ہو سکتا");
+      return;
+    }
     setAllocCell({ obj, mustNo, acre });
-  }, []);
+  }, [allocations]);
 
   const handleAllocate = (row) => {
     setAllocations((prev) => [...prev, row]);
@@ -270,8 +274,13 @@ export default function GeoMap() {
   const handleRemoveAllocation = (id) => setAllocations((prev) => prev.filter((a) => a.id !== id));
 
   const handleDrawComplete = useCallback((latlngs, area, khasra) => {
+    const existing = allocations.filter((a) => a.geometry);
+    if (patchesOverlap(latlngs, existing)) {
+      toast.error("یہ پیچ پہلے سے موجود پیچ پر اوورلیپ کر رہا ہے — دوسری جگہ بنائیں");
+      return;
+    }
     setPatchDialog({ latlngs, area, khasra });
-  }, []);
+  }, [allocations]);
 
   const handleAddPatch = (row) => {
     setAllocations((prev) => [...prev, row]);

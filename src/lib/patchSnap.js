@@ -82,6 +82,19 @@ export function coveredAcres(latlngs, objects, transform, mogaFilter) {
   return out;
 }
 
+// Reject a newly-drawn patch if it overlaps any existing patch polygon
+// (a vertex of one falls inside the other).
+export function patchesOverlap(newPoly, existingPolys) {
+  if (!newPoly || newPoly.length < 3) return false;
+  for (const ex of existingPolys) {
+    const exPoly = ex.geometry || ex;
+    if (!exPoly || exPoly.length < 3) continue;
+    for (const p of newPoly) if (pointInLatLngPolygon(p, exPoly)) return true;
+    for (const p of exPoly) if (pointInLatLngPolygon(p, newPoly)) return true;
+  }
+  return false;
+}
+
 // Build khasra list strings from covered acres, e.g. ["840/3,4,5", "841/1"]
 export function khasraListFromCovered(covered) {
   const byMust = {};
