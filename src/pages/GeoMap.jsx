@@ -393,6 +393,9 @@ export default function GeoMap() {
       }
     } else {
       setPlacingStep(1);
+      // Enter placement mode at a high zoom so the map is placed accurately over
+      // high-resolution satellite tiles (clearer Earth image in the exported PDF).
+      if (mapRef.current) mapRef.current.flyTo(mapRef.current.getCenter(), 18, { duration: 0.6 });
     }
   }, [selectedMap, mapObjects]);
 
@@ -620,6 +623,7 @@ export default function GeoMap() {
     setPlacingStep(1);
     setActiveMustateelIds(new Set());
     setOverlaySaved(false);
+    if (mapRef.current) mapRef.current.flyTo(mapRef.current.getCenter(), 18, { duration: 0.6 });
   };
 
   // Save overlay placement to server so it persists across sessions
@@ -680,7 +684,7 @@ export default function GeoMap() {
       const canvas = await html2canvas(map.getContainer(), {
         useCORS: true,
         allowTaint: false,
-        scale: 2,
+        scale: 3,
         backgroundColor: "#0f1923",
       });
       if (bw) {
@@ -708,7 +712,18 @@ export default function GeoMap() {
       n.add(id);
       return n;
     });
-  }, []);
+    // Zoom in to the clicked mustateel — on mobile this focuses one mustateel
+    // while neighbours stay as clickable boundaries; clicking another pans to it.
+    const obj = mapObjects.find(o => o.id === id);
+    if (obj && overlay?.transform && mapRef.current) {
+      const corners = [[obj.x, obj.y], [obj.x + obj.w, obj.y], [obj.x + obj.w, obj.y + obj.h], [obj.x, obj.y + obj.h]];
+      const latlngs = corners.map(([cx, cy]) => overlay.transform.transform(cx, cy)).filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+      if (latlngs.length) {
+        const bounds = L.latLngBounds(latlngs.map(p => [p.lat, p.lng]));
+        mapRef.current.flyToBounds(bounds, { padding: [30, 30], maxZoom: 19, duration: 0.6 });
+      }
+    }
+  }, [mapObjects, overlay]);
 
   const handleClearMeasurements = () => { setMeasurements([]); setDraft(null); setLiveMeasurement(null); };
   const handleDeleteMeasurement = (id) => { setMeasurements(prev => prev.filter(m => m.id !== id)); };
