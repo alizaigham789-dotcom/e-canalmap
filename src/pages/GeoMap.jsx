@@ -791,13 +791,14 @@ export default function GeoMap() {
       <MapContainer
         center={center}
         zoom={zoom}
+        maxZoom={20}
         className="w-full h-full"
         style={{ background: "#0f1923" }}
         doubleClickZoom={false}
         zoomControl={false}
         attributionControl={false}
       >
-        {!capturing && <TileLayer url={tileUrl} />}
+        {!capturing && <TileLayer url={tileUrl} maxZoom={20} />}
         <MapController onMapClick={handleMapClick} onMapInstance={handleMapInstance} onZoomChange={setZoom} />
         <MouseTracker />
         <GPSTracker active={gpsActive} onPosition={(pos, acc) => { setGpsPosition(pos); setGpsAccuracy(acc); }} />

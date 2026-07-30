@@ -20,6 +20,20 @@ export function buildGridPoints(objects, transform, mogaFilter) {
       }
     }
   }
+  // Canal / watercourse / khal centerlines — lets the pencil follow canal boundaries too.
+  for (const o of objects) {
+    if (o.type !== "canal" && o.type !== "khal" && o.type !== "watercourse") continue;
+    if (!o.points || o.points.length < 2) continue;
+    for (let i = 0; i < o.points.length - 1; i++) {
+      const a = o.points[i], b = o.points[i + 1];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.max(2, Math.floor(dist / 10));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        pts.push(transform.transform(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t));
+      }
+    }
+  }
   return pts;
 }
 

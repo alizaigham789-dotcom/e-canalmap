@@ -11,7 +11,7 @@ const TOOLS = [
 
 export default function DrawingToolbar({ activeTool, onToolChange, onClear, onExport, onLayerToggle, layerVisible }) {
   return (
-    <div className="absolute bottom-5 left-3 z-[1000] flex flex-col items-center gap-1 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5">
+    <div className="absolute bottom-20 right-3 z-[1000] flex flex-col items-center gap-1 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5">
       {TOOLS.map(({ id, icon: Icon, label }) => (
         <button
           key={id}

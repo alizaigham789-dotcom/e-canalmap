@@ -9,6 +9,20 @@ import {
   khasraListFromCovered,
 } from "@/lib/patchSnap";
 
+// Distance (meters) from point p to segment a-b, using an equirectangular approx.
+function distToSegMeters(p, a, b) {
+  const k = Math.cos((p.lat * Math.PI) / 180);
+  const ax = a.lng * k, ay = a.lat;
+  const bx = b.lng * k, by = b.lat;
+  const px = p.lng * k, py = p.lat;
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy || 1;
+  let t = ((px - ax) * dx + (py - ay) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const fx = ax + t * dx, fy = ay + t * dy;
+  return Math.hypot((px - fx) * 111320, (py - fy) * 111320);
+}
+
 const COLORS = ["#6366f1", "#0ea5e9", "#14b8a6", "#f97316", "#ec4899", "#84cc16", "#a855f7", "#06b6d4"];
 
 function nodeIcon(color) {
@@ -103,6 +117,23 @@ function PatchDrawLayer({
     );
   }
 
+  // Edit mode: double-click on the active patch to insert a new anchor (node)
+  // on the nearest edge, snapped to the killa/mustateel/canal grid.
+  const insertAnchor = (patch, latlng) => {
+    if (!patch.geometry || patch.geometry.length < 3) return;
+    const snapped = snapToGrid(latlng, grid);
+    let bestIdx = 0, bestD = Infinity;
+    for (let i = 0; i < patch.geometry.length; i++) {
+      const a = patch.geometry[i];
+      const b = patch.geometry[(i + 1) % patch.geometry.length];
+      const d = distToSegMeters(snapped, a, b);
+      if (d < bestD) { bestD = d; bestIdx = i; }
+    }
+    const next = [...patch.geometry];
+    next.splice(bestIdx + 1, 0, snapped);
+    onUpdatePatchGeometry(patch.id, next);
+  };
+
   const patchPolys = patches.map((p, i) => {
     const color = COLORS[i % COLORS.length];
     const isActive = editMode && activePatchId === p.id;
@@ -120,7 +151,13 @@ function PatchDrawLayer({
             weight: isActive ? 4 : 2,
             interactive: editMode,
           }}
-          eventHandlers={editMode ? { click: (e) => { L.DomEvent.stopPropagation(e); onSelectPatch(p.id); } } : {}}
+          eventHandlers={editMode ? {
+            click: (e) => { L.DomEvent.stopPropagation(e); onSelectPatch(p.id); },
+            dblclick: (e) => {
+              L.DomEvent.stopPropagation(e);
+              if (p.id === activePatchId) insertAnchor(p, e.latlng);
+            },
+          } : {}}
         >
           <Tooltip permanent direction="center" className="killa-label" opacity={1}>
             <span
@@ -145,8 +182,9 @@ function PatchDrawLayer({
               draggable
               eventHandlers={{
                 dragend: (e) => {
-                  const np = e.target.getLatLng();
-                  const next = latlngs.map((q, j) => (j === idx ? { lat: np.lat, lng: np.lng } : q));
+                  const snapped = snapToGrid(e.target.getLatLng(), grid);
+                  e.target.setLatLng(snapped);
+                  const next = latlngs.map((q, j) => (j === idx ? { lat: snapped.lat, lng: snapped.lng } : q));
                   onUpdatePatchGeometry(p.id, next);
                 },
               }}
