@@ -373,11 +373,14 @@ export default function GeoMap() {
     // 1. One-click placement — anchor upper-left corner, rotation 0° (straight), fixed scale (10-acre mustateel)
     if (placingStep === 1 && selectedMapId) {
       setPlacementPoint(latlng);
-      setLowerLeftPoint(null);
       if (mapObjects.length > 0) {
         const transform = computeOneClickTransform(latlng, mapObjects, 0);
         if (transform) {
           setOverlay({ transform, rotation: 0, placementPoint: latlng });
+          // Show the yellow lower-left handle on the bottom mustateel corner
+          // so the placement is visible and can be dragged to rotate.
+          const bc = getBottomMustateelCorner(mapObjects);
+          if (bc) setLowerLeftPoint(transform.transform(bc.x, bc.y));
           const allLatLngs = [];
           for (const o of mapObjects) {
             if (["mustateel", "muraba", "acre"].includes(o.type)) {
@@ -795,7 +798,7 @@ export default function GeoMap() {
         )}
 
         {/* Lower-left anchor marker — shown only while placing (rotation set via slider / coordinate button after placement) */}
-        {lowerLeftPoint && !overlay && !capturing && (
+        {lowerLeftPoint && !capturing && (
           <Marker
             position={[lowerLeftPoint.lat, lowerLeftPoint.lng]}
             icon={lowerLeftIcon()}
@@ -805,10 +808,10 @@ export default function GeoMap() {
             <Tooltip permanent direction="right" className="placement-coords-tooltip">
               <div className="text-[10px] font-mono leading-tight">
                 <div className="font-bold text-yellow-600 flex items-center gap-1">
-                  <span>📍</span> نیچا کونا پلیس مارکر
+                  <span>📍</span> نیچا کونا (روٹیشن ہینڈل)
                 </div>
-                <div className="text-red-600 font-semibold">Lat: {lowerLeftPoint.lat.toFixed(6)}</div>
-                <div className="text-red-600 font-semibold">Lng: {lowerLeftPoint.lng.toFixed(6)}</div>
+                <div className="text-slate-700">Lat: {lowerLeftPoint.lat.toFixed(6)}</div>
+                <div className="text-slate-700">Lng: {lowerLeftPoint.lng.toFixed(6)}</div>
               </div>
             </Tooltip>
           </Marker>
@@ -1017,7 +1020,7 @@ export default function GeoMap() {
 
       {/* Placement hint — two-click mode with live coordinates */}
       {placingStep > 0 && selectedMapId && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 z-[1001] text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl flex flex-col items-center gap-0.5 animate-pulse"
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 z-[1001] text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl flex flex-col items-center gap-0.5 animate-pulse pointer-events-none"
           style={{ background: "#dc2626" }}>
           <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4" />
