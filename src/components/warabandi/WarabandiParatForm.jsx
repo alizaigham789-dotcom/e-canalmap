@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Printer, Clock, Languages } from "lucide-react";
+import { Plus, Trash2, Printer, Clock, Languages, Upload, Loader2 } from "lucide-react";
 
 // ====== Area format helpers ======
 function formatAreaMB(totalAcres) {
@@ -191,6 +192,8 @@ export default function WarabandiParatForm() {
   // Tashreeh start time
   const [tashreehStart, setTashreehStart] = useState("6:00");
   const [showTashreeh, setShowTashreeh] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const pdfRef = useRef();
 
   const updateHeader = (key, val) => setHeader(prev => ({ ...prev, [key]: val }));
 
@@ -279,6 +282,116 @@ export default function WarabandiParatForm() {
       }
       return updated;
     }));
+  };
+
+  // Upload PDF/image → AI reads the Parat Warabandi and fills header + rows
+  const handlePdfUpload = async (file) => {
+    if (!file) return;
+    setPdfLoading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `This is a scanned "Parat Warabandi" (پرت وارہ بندی) register document in Urdu. Extract the header and every shareholder row accurately.
+Return a JSON object with:
+- header: { mogha_number, mogha_side (L or R), rajbaha, mouza, section, sub_division, canal_division }
+- rows: an array where each item has: khatoni (کھاتہ نمبر), owner_name (نام مالک معہ والدیت), bandubast (نمبران بندوبست), total_area (کل رقبہ ایکڑ), ghair_mumkin (غیر ممکن رقبہ), khalis_raqba (خالص رقبہ), waari_minute, waari_ghante (واری بحساب رقبہ), zaidah_minute, zaidah_ghante (زائدہ وصولی), wazgi_minute, wazgi_ghante (وضگی), nikha_lega, nikha_dega (نکہ جات), tashreeh_din, tashreeh_raat (تشریح اوقات).
+Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for missing values. Return ONLY the JSON object.`,
+        file_urls: [file_url],
+        model: "claude_sonnet_4_6",
+        response_json_schema: {
+          type: "object",
+          properties: {
+            header: {
+              type: "object",
+              properties: {
+                mogha_number: { type: "string" },
+                mogha_side: { type: "string" },
+                rajbaha: { type: "string" },
+                mouza: { type: "string" },
+                section: { type: "string" },
+                sub_division: { type: "string" },
+                canal_division: { type: "string" },
+              },
+            },
+            rows: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  khatoni: { type: "string" },
+                  owner_name: { type: "string" },
+                  bandubast: { type: "string" },
+                  total_area: { type: "string" },
+                  ghair_mumkin: { type: "string" },
+                  khalis_raqba: { type: "string" },
+                  waari_minute: { type: "string" },
+                  waari_ghante: { type: "string" },
+                  zaidah_minute: { type: "string" },
+                  zaidah_ghante: { type: "string" },
+                  wazgi_minute: { type: "string" },
+                  wazgi_ghante: { type: "string" },
+                  nikha_lega: { type: "string" },
+                  nikha_dega: { type: "string" },
+                  tashreeh_din: { type: "string" },
+                  tashreeh_raat: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (result?.header) {
+        setHeader(prev => ({
+          ...prev,
+          mogha_number: result.header.mogha_number || prev.mogha_number,
+          mogha_side: result.header.mogha_side || prev.mogha_side,
+          rajbaha: result.header.rajbaha || prev.rajbaha,
+          mouza: result.header.mouza || prev.mouza,
+          section: result.header.section || prev.section,
+          sub_division: result.header.sub_division || prev.sub_division,
+          canal_division: result.header.canal_division || prev.canal_division,
+        }));
+      }
+      if (result?.rows?.length > 0) {
+        const mapped = result.rows.map(r => {
+          const khatoni = r.khatoni || "";
+          const owner_name = r.owner_name || "";
+          const total_area = r.total_area || "";
+          const ghair_mumkin = r.ghair_mumkin || "";
+          const khalis_raqba = r.khalis_raqba || calcKhalis(total_area, ghair_mumkin);
+          const row = {
+            ...emptyRow(),
+            khatoni, khatoni2: khatoni,
+            owner_name, owner_name2: owner_name,
+            bandubast: r.bandubast || "",
+            total_area, total_area2: total_area,
+            ghair_mumkin,
+            khalis_raqba,
+            waari_minute: r.waari_minute || "",
+            waari_ghante: r.waari_ghante || "",
+            zaidah_minute: r.zaidah_minute || "",
+            zaidah_ghante: r.zaidah_ghante || "",
+            wazgi_minute: r.wazgi_minute || "",
+            wazgi_ghante: r.wazgi_ghante || "",
+            nikha_lega: r.nikha_lega || "", nikha2_lega: r.nikha_lega || "",
+            nikha_dega: r.nikha_dega || "", nikha2_dega: r.nikha_dega || "",
+            tashreeh_din: r.tashreeh_din || "",
+            tashreeh_raat: r.tashreeh_raat || "",
+          };
+          const kw = calcKhalisWaari(row);
+          row.khalis_waari_minute = kw.khalis_waari_minute;
+          row.khalis_waari_ghante = kw.khalis_waari_ghante;
+          row.khalis_waari2_minute = kw.khalis_waari_minute;
+          row.khalis_waari2_ghante = kw.khalis_waari_ghante;
+          return row;
+        });
+        setRows(mapped);
+      }
+    } catch (e) {
+      alert("PDF پڑھنے میں ناکام — دوبارہ کوشش کریں");
+    }
+    setPdfLoading(false);
+    if (pdfRef.current) pdfRef.current.value = "";
   };
 
   const insertRowAfter = (i) => {
@@ -484,6 +597,13 @@ export default function WarabandiParatForm() {
             <input type="checkbox" checked={showColSr} onChange={e => setShowColSr(e.target.checked)} className="w-3 h-3" />
             کالم نمبرشمار
           </label>
+          <Button size="sm" onClick={() => pdfRef.current?.click()} disabled={pdfLoading}
+            className="h-6 text-[10px] bg-amber-500 hover:bg-amber-600 text-white gap-1 px-2">
+            {pdfLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+            {pdfLoading ? "پڑھ رہا ہے..." : "PDF اپ لوڈ"}
+          </Button>
+          <input ref={pdfRef} type="file" accept="application/pdf,image/*" className="hidden"
+            onChange={e => handlePdfUpload(e.target.files[0])} />
           <Button size="sm" onClick={() => insertRowAfter(rows.length - 1)} className="h-6 text-[10px] bg-blue-600 hover:bg-blue-700 text-white gap-1 px-2">
             <Plus className="w-3 h-3" /> قطار
           </Button>
