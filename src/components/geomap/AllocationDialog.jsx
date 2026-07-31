@@ -61,6 +61,22 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
     setGroups((prev) => prev.map((g, i) => (i === gi ? { ...g, acres: { ...g.acres, [acre]: k } } : g)));
   };
 
+  // Select every non-locked acre in a mustateel at once (default kanal = full remaining).
+  const selectAllAcres = (gi) => {
+    setGroups((prev) =>
+      prev.map((g, i) => {
+        if (i !== gi) return g;
+        const count = acreCountFor(g.mustNo);
+        const acres = {};
+        for (let acre = 1; acre <= count; acre++) {
+          const rem = remainingKanal(allocations, g.mustNo, acre);
+          if (rem > 0) acres[acre] = Math.min(8, rem);
+        }
+        return { ...g, acres };
+      })
+    );
+  };
+
   const changeMustateel = (gi, mustNo) => {
     setGroups((prev) => prev.map((g, i) => (i === gi ? { mustNo, acres: {} } : g)));
   };
@@ -150,8 +166,11 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
                       <option key={m.mustNo} value={m.mustNo}>{m.mustNo} ({m.acreCount} ac)</option>
                     ))}
                   </select>
+                  <button onClick={() => selectAllAcres(gi)} className="ml-auto text-[10px] font-bold px-2 h-7 rounded bg-green-100 text-green-700 border border-green-300 hover:bg-green-200">
+                    Select All Acres
+                  </button>
                   {groups.length > 1 && (
-                    <button onClick={() => removeGroup(gi)} className="ml-auto text-red-500 hover:text-red-700">
+                    <button onClick={() => removeGroup(gi)} className="text-red-500 hover:text-red-700">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -190,6 +209,7 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
                           <span className="font-mono text-[10px] font-bold text-slate-700 w-16">{g.mustNo}/{acre}</span>
                           <input type="range" min={1} max={maxK} value={Math.min(k, maxK)} onChange={(e) => setAcreKanal(gi, +acre, +e.target.value)} className="flex-1 accent-green-600" />
                           <span className="text-[10px] font-mono font-bold text-green-700 w-10 text-right">{Math.min(k, maxK)} K</span>
+                          <button onClick={() => setAcreKanal(gi, +acre, maxK)} className="text-[9px] font-bold px-1.5 h-6 rounded bg-green-600 text-white hover:bg-green-700">All</button>
                         </div>
                       );
                     })}
