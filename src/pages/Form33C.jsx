@@ -244,8 +244,9 @@ export default function Form33C() {
     if (isPortrait) {
       for (let i = 0; i < villages.length; i += 2) {
         const pair = villages.slice(i, i + 2);
-        const cards = pair.map(v => `<div class="card-half">${renderCardHtml(v, true)}</div>`).join("");
-        body += `<div class="page-group">${cards}</div>`;
+        const cards = pair.map(v => `<div class="card-half">${renderCardHtml(v, true)}</div>`);
+        const cutLine = pair.length === 2 ? `<div class="cut-line"><span class="scissors">✂</span></div>` : "";
+        body += `<div class="page-group">${cards[0] || ""}${cutLine}${cards[1] || ""}</div>`;
       }
     } else {
       body = villages.map(v => `<div class="page-single">${renderCardHtml(v, false)}</div>`).join("");
@@ -257,7 +258,7 @@ export default function Form33C() {
       *{box-sizing:border-box;margin:0;padding:0;}
       html,body{font-family:'Noto Nastaliq Urdu',serif;direction:rtl;width:100%;height:100%;}
       ${isPortrait
-        ? `.page-group{display:flex;flex-direction:column;height:calc(297mm - 12mm);page-break-after:always;break-after:page;overflow:hidden;}.card-half{flex:1;min-height:0;overflow:hidden;}`
+        ? `.page-group{display:flex;flex-direction:column;height:calc(297mm - 12mm);page-break-after:always;break-after:page;overflow:hidden;}.card-half{flex:1;min-height:0;overflow:hidden;}.cut-line{flex:0 0 auto;display:flex;align-items:center;justify-content:center;height:20px;position:relative;}.cut-line::before,.cut-line::after{content:"";flex:1;border-top:1.5px dashed #888;}.cut-line .scissors{font-size:16px;color:#666;padding:0 10px;background:#fff;line-height:1;}`
         : `.page-single{height:calc(210mm - 12mm);page-break-after:always;break-after:page;overflow:hidden;}`}
     </style></head><body>${body}</body></html>`);
     w.document.close();

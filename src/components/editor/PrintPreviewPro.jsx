@@ -68,7 +68,8 @@ export default function PrintPreviewPro({ mapData, canvasRef, objects, zoom, pan
         .header{border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end;}
         .title{font-size:16px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;}
         .meta{font-size:9px;color:#444;text-align:right;}
-        img{max-width:100%;height:auto;display:block;border:1px solid #aaa;image-rendering:crisp-edges;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+        img{width:100%;height:auto;display:block;border:1px solid #aaa;image-rendering:crisp-edges;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+        @media print { @page { size: A4 landscape; margin: 8mm; } html,body{width:100%;} }
         .footer{border-top:1px solid #aaa;margin-top:6px;padding-top:5px;display:flex;justify-content:space-between;font-size:8px;color:#555;}
         .legend-row{display:flex;gap:14px;font-size:8px;margin-top:3px;flex-wrap:wrap;}
         .legend-item{display:flex;align-items:center;gap:4px;}

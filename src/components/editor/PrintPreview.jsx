@@ -615,8 +615,12 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; }
         body { display: flex; flex-direction: column;${showPageBorder ? ` border:2px solid #3b82f6;` : ""} }
         .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-        .map-wrap svg { max-width:100%; max-height:100%; width:auto; height:auto; display:block; }
-        @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+        .map-wrap svg { width:100%; height:100%; display:block; }
+        @media print {
+          @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
+          html, body { width:100%; height:100%; overflow:hidden; }
+          body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        }
       </style>
     </head><body>
       ${headerHTML}
@@ -624,7 +628,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         <svg xmlns="http://www.w3.org/2000/svg"
              viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
              preserveAspectRatio="xMidYMid meet"
-             style="max-width:100%;max-height:100%;display:block;">
+             style="width:100%;height:100%;display:block;">
           <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
           ${printSvgData.svgBody}
           ${gcaLabels}
@@ -634,7 +638,10 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       ${footerHTML}
     </body></html>`);
     win.document.close();
-    win.onload = () => { setTimeout(() => win.print(), 500); };
+    let printed = false;
+    const doPrint = () => { if (printed) return; printed = true; setTimeout(() => win.print(), 400); };
+    win.onload = () => setTimeout(doPrint, 600);
+    setTimeout(doPrint, 1500);
   };
 
   // ─── SVG DOWNLOAD ────────────────────────────────────────────────────────────
