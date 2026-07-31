@@ -94,7 +94,7 @@ export default function Form1RegisterPanel({
         return `
         <tr>
           <td class="sr" rowspan="3">${i + 1}</td>
-          <td><b>${esc(g.farmer_name)}</b> <span class="mono">${esc(g.cnic)}</span> <span class="sub">Kh ${esc(g.khata_no)}</span><br/><span class="sub">S/o ${esc(g.father)}</span>${tenantLine}</td>
+          <td><b>${esc(g.farmer_name)}</b><br/><span class="mono">${esc(g.cnic)}</span><br/><span class="sub">S/o ${esc(g.father)}</span><br/><span class="sub">${esc(g.phone)}</span><br/><span class="sub">Kh ${esc(g.khata_no)}</span>${tenantLine}</td>
           <td class="blk"></td>
           <td class="num">${t.kanal}</td>
           <td class="num">${t.acres.toFixed(3)}</td>
@@ -107,6 +107,7 @@ export default function Form1RegisterPanel({
       })
       .join("");
     const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    const srW = Math.max(14, String(groups.length || 1).length * 7 + 8);
     const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Form 1 Register</title>
     <style>
       @page { size: A4 ${isMobile ? "portrait" : "landscape"}; margin: ${isMobile ? "5mm" : "8mm"}; }
@@ -118,7 +119,8 @@ export default function Form1RegisterPanel({
       th, td { border:1px solid #94a3b8; padding:${isMobile ? "1px 2px" : "2px 3px"}; vertical-align:top; word-break:break-word; }
       th { background:#1e3a5f; color:#fff; font-weight:700; }
       tr:nth-child(3n+1) td { background:#f8fafc; }
-      .sr { text-align:center; font-weight:700; font-size:${isMobile ? 8 : 11}px; background:#e2e8f0 !important; }
+      .sr { text-align:center; font-weight:700; font-size:${isMobile ? 8 : 11}px; background:#e2e8f0 !important; width:${srW}px; }
+      th:first-child { width:${srW}px; }
       .sub { font-size:${isMobile ? 6 : 7}px; color:#475569; }
       .mono { font-family: monospace; font-size:${isMobile ? 6 : 8}px; }
       .num { text-align:center; font-weight:700; }
@@ -210,12 +212,14 @@ export default function Form1RegisterPanel({
                       <tr className="bg-slate-50/60 align-top">
                         <td className="px-1 py-1 border border-slate-200 text-center font-bold text-slate-700 w-6" rowSpan={3}>{i + 1}</td>
                         <td className="px-1 py-1 border border-slate-200">
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                            <input value={g.farmer_name} onChange={(e) => onUpdateGroup(g.key, { farmer_name: e.target.value })} className="font-medium text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm min-w-[60px] flex-1" />
-                            <span className="font-mono text-[9px] text-slate-700">{g.cnic}</span>
+                          <input value={g.farmer_name} onChange={(e) => onUpdateGroup(g.key, { farmer_name: e.target.value })} className="w-full font-medium text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" />
+                          <div className="font-mono text-[9px] text-slate-700 leading-tight">{g.cnic}</div>
+                          <div className="text-[8px] text-slate-500 leading-tight">S/o {g.father}</div>
+                          <div className="text-[8px] font-mono text-slate-500 leading-tight">{g.phone}</div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[8px] text-slate-400">Kh</span>
                             <input value={g.khata_no} onChange={(e) => onUpdateGroup(g.key, { khata_no: e.target.value })} className="w-12 text-center text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" placeholder="Khata" />
                           </div>
-                          <div className="text-[8px] text-slate-500">S/o {g.father}{g.phone ? ` · ${g.phone}` : ""}</div>
                           {g.tenure === "Tenant" && g.tenant_name && (
                             <div className="text-[8px] text-amber-700 font-medium mt-0.5">Tenant: {g.tenant_name} · {g.tenant_phone} · {g.tenant_cnic}</div>
                           )}
