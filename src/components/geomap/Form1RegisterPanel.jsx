@@ -94,12 +94,12 @@ export default function Form1RegisterPanel({
         return `
         <tr>
           <td class="sr" rowspan="3">${i + 1}</td>
-          <td><b>${esc(g.farmer_name)}</b><br/><span class="sub">S/o ${esc(g.father)}</span>${tenantLine}</td>
-          <td class="mono">${esc(g.cnic)}</td>
+          <td><b>${esc(g.farmer_name)}</b> <span class="mono">${esc(g.cnic)}</span> <span class="sub">Kh ${esc(g.khata_no)}</span><br/><span class="sub">S/o ${esc(g.father)}</span>${tenantLine}</td>
           <td class="blk"></td>
           <td class="num">${t.kanal}</td>
           <td class="num">${t.acres.toFixed(3)}</td>
-          <td>${esc(g.khata_no)}</td>
+          <td class="num">${esc(info.outlet_rd || "—")}</td>
+          <td class="num">${esc(info.channel || "—")}</td>
           <td>${esc(g.tenure)}</td>
         </tr>
         <tr class="detail"><td class="lbl">Khasra/Kanal</td><td></td><td colspan="5" class="strip">${boxes}</td></tr>
@@ -135,7 +135,7 @@ export default function Form1RegisterPanel({
     </style></head><body>
     <h1>Form 1 Register</h1>
     <table><thead><tr>
-      <th>Sr</th><th>Occupier Name</th><th>CNIC</th><th>Khasra / Kanal / Crop</th><th>Tot K</th><th>Tot Ac</th><th>Khata</th><th>Own/Tnt</th>
+      <th>Sr</th><th>Occupier Name</th><th>Khasra / Kanal / Crop</th><th>Tot K</th><th>Tot Ac</th><th>Moga No</th><th>Rajbah</th><th>Own/Tnt</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <div class="totals">Total Area: ${totals.acres.toFixed(3)} Acres &nbsp;|&nbsp; ${totals.kanal.toFixed(2)} Kanal</div>
     <div class="foot"><span>Girdawar _______________</span><span>Patwari _______________</span><span>Zilladar _______________</span></div>
@@ -153,7 +153,7 @@ export default function Form1RegisterPanel({
     }, 600);
   };
 
-  const COLS = ["Sr", "Occupier Name", "CNIC", "Khasra / Kanal / Crop", "Tot K", "Tot Ac", "Khata", "Own/Tnt", ""];
+  const COLS = ["Sr", "Occupier Name", "Khasra / Kanal / Crop", "Tot K", "Tot Ac", "Moga No", "Rajbah", "Own/Tnt", ""];
   const GRID_W = 50;
 
   return (
@@ -208,22 +208,23 @@ export default function Form1RegisterPanel({
                     <React.Fragment key={g.key}>
                       {/* Row A — farmer */}
                       <tr className="bg-slate-50/60 align-top">
-                        <td className="px-1 py-1 border border-slate-200 text-center font-bold text-slate-700" rowSpan={3}>{i + 1}</td>
+                        <td className="px-1 py-1 border border-slate-200 text-center font-bold text-slate-700 w-6" rowSpan={3}>{i + 1}</td>
                         <td className="px-1 py-1 border border-slate-200">
-                          <input value={g.farmer_name} onChange={(e) => onUpdateGroup(g.key, { farmer_name: e.target.value })} className="w-full font-medium text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" />
-                          <div className="text-[8px] text-slate-500">S/o {g.father}</div>
-                          <div className="text-[8px] font-mono text-slate-500">{g.phone}</div>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <input value={g.farmer_name} onChange={(e) => onUpdateGroup(g.key, { farmer_name: e.target.value })} className="font-medium text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm min-w-[60px] flex-1" />
+                            <span className="font-mono text-[9px] text-slate-700">{g.cnic}</span>
+                            <input value={g.khata_no} onChange={(e) => onUpdateGroup(g.key, { khata_no: e.target.value })} className="w-12 text-center text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" placeholder="Khata" />
+                          </div>
+                          <div className="text-[8px] text-slate-500">S/o {g.father}{g.phone ? ` · ${g.phone}` : ""}</div>
                           {g.tenure === "Tenant" && g.tenant_name && (
                             <div className="text-[8px] text-amber-700 font-medium mt-0.5">Tenant: {g.tenant_name} · {g.tenant_phone} · {g.tenant_cnic}</div>
                           )}
                         </td>
-                        <td className="px-1 py-1 border border-slate-200 font-mono text-[9px] text-slate-700">{g.cnic}</td>
                         <td className="px-1 py-1 border border-slate-200 bg-slate-100"></td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-blue-700">{t.kanal}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-amber-700">{t.acres.toFixed(3)}</td>
-                        <td className="px-1 py-1 border border-slate-200 text-center">
-                          <input value={g.khata_no} onChange={(e) => onUpdateGroup(g.key, { khata_no: e.target.value })} className="w-14 text-center text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" />
-                        </td>
+                        <td className="px-1 py-1 border border-slate-200 text-center font-mono text-[9px] text-slate-700">{info.outlet_rd || "—"}</td>
+                        <td className="px-1 py-1 border border-slate-200 text-center font-mono text-[9px] text-slate-700">{info.channel || "—"}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center">{g.tenure}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center">
                           <button onClick={() => g.items.forEach((it) => onRemove(it.id))} className="text-red-500 hover:text-red-700" title="Remove occupier">
