@@ -77,6 +77,11 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
     );
   };
 
+  // Deselect every acre in a mustateel group.
+  const clearAcres = (gi) => {
+    setGroups((prev) => prev.map((g, i) => (i === gi ? { ...g, acres: {} } : g)));
+  };
+
   const changeMustateel = (gi, mustNo) => {
     setGroups((prev) => prev.map((g, i) => (i === gi ? { mustNo, acres: {} } : g)));
   };
@@ -166,9 +171,19 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
                       <option key={m.mustNo} value={m.mustNo}>{m.mustNo} ({m.acreCount} ac)</option>
                     ))}
                   </select>
-                  <button onClick={() => selectAllAcres(gi)} className="ml-auto text-[10px] font-bold px-2 h-7 rounded bg-green-100 text-green-700 border border-green-300 hover:bg-green-200">
-                    Select All Acres
-                  </button>
+                  {(() => {
+                    const count = acreCountFor(g.mustNo);
+                    let allSel = true;
+                    for (let acre = 1; acre <= count; acre++) {
+                      if (remainingKanal(allocations, g.mustNo, acre) > 0 && !g.acres[acre]) { allSel = false; break; }
+                    }
+                    return (
+                      <label className="ml-auto flex items-center gap-1 text-[10px] font-bold text-green-700 cursor-pointer select-none">
+                        <input type="checkbox" checked={allSel} onChange={() => (allSel ? clearAcres(gi) : selectAllAcres(gi))} className="w-3.5 h-3.5 accent-green-600" />
+                        Select All Acres
+                      </label>
+                    );
+                  })()}
                   {groups.length > 1 && (
                     <button onClick={() => removeGroup(gi)} className="text-red-500 hover:text-red-700">
                       <Trash2 className="w-3.5 h-3.5" />

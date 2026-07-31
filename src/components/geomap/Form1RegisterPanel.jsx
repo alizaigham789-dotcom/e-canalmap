@@ -17,6 +17,7 @@ export default function Form1RegisterPanel({
   setInfo,
   allocations,
   onRemove,
+  onUpdateGroup,
   totals,
   onSave,
   saving,
@@ -209,7 +210,7 @@ export default function Form1RegisterPanel({
                       <tr className="bg-slate-50/60 align-top">
                         <td className="px-1 py-1 border border-slate-200 text-center font-bold text-slate-700" rowSpan={3}>{i + 1}</td>
                         <td className="px-1 py-1 border border-slate-200">
-                          <div className="font-medium">{g.farmer_name}</div>
+                          <input value={g.farmer_name} onChange={(e) => onUpdateGroup(g.key, { farmer_name: e.target.value })} className="w-full font-medium text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" />
                           <div className="text-[8px] text-slate-500">S/o {g.father}</div>
                           <div className="text-[8px] font-mono text-slate-500">{g.phone}</div>
                           {g.tenure === "Tenant" && g.tenant_name && (
@@ -220,7 +221,9 @@ export default function Form1RegisterPanel({
                         <td className="px-1 py-1 border border-slate-200 bg-slate-100"></td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-blue-700">{t.kanal}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-amber-700">{t.acres.toFixed(3)}</td>
-                        <td className="px-1 py-1 border border-slate-200 text-center">{g.khata_no}</td>
+                        <td className="px-1 py-1 border border-slate-200 text-center">
+                          <input value={g.khata_no} onChange={(e) => onUpdateGroup(g.key, { khata_no: e.target.value })} className="w-14 text-center text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" />
+                        </td>
                         <td className="px-1 py-1 border border-slate-200 text-center">{g.tenure}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center">
                           <button onClick={() => g.items.forEach((it) => onRemove(it.id))} className="text-red-500 hover:text-red-700" title="Remove occupier">

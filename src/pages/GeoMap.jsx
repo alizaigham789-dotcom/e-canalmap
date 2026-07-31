@@ -298,6 +298,16 @@ export default function GeoMap() {
 
   const handleRemoveAllocation = (id) => setAllocations((prev) => prev.filter((a) => a.id !== id));
 
+  // Re-edit an entire occupier group (same CNIC/name): update farmer name, khata, etc.
+  const handleUpdateGroup = (groupKey, changes) => {
+    setAllocations((prev) =>
+      prev.map((a) => {
+        const key = a.cnic ? `cnic:${a.cnic}` : `name:${a.farmer_name || ""}||${a.father || ""}`;
+        return key === groupKey ? { ...a, ...changes } : a;
+      })
+    );
+  };
+
   const handleDrawComplete = useCallback((latlngs, area, khasra) => {
     const existing = allocations.filter((a) => a.geometry);
     if (patchesOverlap(latlngs, existing)) {
@@ -1220,6 +1230,7 @@ export default function GeoMap() {
         setInfo={setRegisterInfo}
         allocations={allocations}
         onRemove={handleRemoveAllocation}
+        onUpdateGroup={handleUpdateGroup}
         totals={registerTotals}
         onSave={handleSaveRegister}
         saving={savingRegister}
