@@ -745,6 +745,34 @@ export default function Editor() {
     newObjects.forEach(o => dsmRef.current.add(o));
     updates.forEach(u => dsmRef.current.update(u.id, u.changes));
     syncObjects();
+    // Auto-fit the view to the generated objects so they are visible on screen
+    const targets = newObjects.length > 0 ? newObjects : dsmRef.current.objects;
+    const pts = [];
+    for (const o of targets) {
+      if (o.x !== undefined && o.w !== undefined) {
+        pts.push({ x: o.x, y: o.y }, { x: o.x + o.w, y: o.y + o.h });
+      } else if (Array.isArray(o.points) && o.points.length) {
+        pts.push(...o.points);
+      } else if (o.start && o.end) {
+        pts.push(o.start, o.end);
+      }
+    }
+    if (pts.length) {
+      const minX = Math.min(...pts.map(p => p.x));
+      const minY = Math.min(...pts.map(p => p.y));
+      const maxX = Math.max(...pts.map(p => p.x));
+      const maxY = Math.max(...pts.map(p => p.y));
+      const canvas = canvasRef.current?.getCanvas?.();
+      const cw = canvas?.clientWidth || (typeof window !== "undefined" ? window.innerWidth - 160 : 1000);
+      const ch = canvas?.clientHeight || (typeof window !== "undefined" ? window.innerHeight - 200 : 700);
+      const w = Math.max(1, maxX - minX);
+      const h = Math.max(1, maxY - minY);
+      const pad = 140;
+      const fitZoom = Math.min(20, Math.max(0.05, Math.min((cw - pad * 2) / w, (ch - pad * 2) / h)));
+      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+      setZoom(fitZoom);
+      setPan({ x: cw / 2 - cx * fitZoom, y: ch / 2 - cy * fitZoom });
+    }
   };
 
   const handleToolChange = (tool) => {

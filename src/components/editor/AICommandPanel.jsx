@@ -62,8 +62,29 @@ ${command}
         response_json_schema: {
           type: "object",
           properties: {
-            commands: { type: "array", items: { type: "object" } },
+            commands: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  action: { type: "string", enum: ["create_mustateels","draw_chakbandi","draw_mouza","draw_canal","draw_khal","draw_road","place_moga","label_acres"] },
+                  start: { type: "number" },
+                  end: { type: "number" },
+                  mogaNumber: { type: "string" },
+                  name: { type: "string" },
+                  direction: { type: "string", enum: ["horizontal","vertical"] },
+                  position: { type: "string", enum: ["top","bottom","left","right"] },
+                  number: { type: "string" },
+                  side: { type: "string", enum: ["L","R"] },
+                  mustateelNumber: { type: "number" },
+                  acres: { type: "number" },
+                  outOfMouza: { type: "number" },
+                },
+                required: ["action"],
+              },
+            },
           },
+          required: ["commands"],
         },
       });
 
