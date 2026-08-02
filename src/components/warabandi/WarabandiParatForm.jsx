@@ -117,8 +117,9 @@ const PRINT_CSS = `
   body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:10px; direction:rtl; color:#000; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
-  th { background: #dbeafe; font-weight: bold; color: #1e3a5f; }
-  .total-row td { background: #fef9e7; font-weight: bold; }
+  th { font-weight: bold; }
+  .total-row td { font-weight: bold; }
+  tr { page-break-inside: avoid; }
   .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 7px; }
   .frac .num { border-bottom: 1px solid #000; padding-bottom: 1px; }
   .tashreeh-table th { font-size: 7px; padding: 2px; }
@@ -214,6 +215,8 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [showColSr, setShowColSr] = useState(true);
   const [printRowSr, setPrintRowSr] = useState(false);
   const [printColSr, setPrintColSr] = useState(false);
+  const [colorPrint, setColorPrint] = useState(true);
+  const [repeatHeader, setRepeatHeader] = useState(true);
   // Automation toggle
   const [autoOn, setAutoOn] = useState(true);
   // Acre-to-time rate
@@ -587,7 +590,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
 
   const tashreehSchedule = buildTashreehSchedule(rows, tashreehStart);
 
-  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, tashreehSchedule, tashreehStart, variant: isJadeed ? "jadeed" : "tarmeem" };
+  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, colorPrint, repeatHeader, tashreehSchedule, tashreehStart, variant: isJadeed ? "jadeed" : "tarmeem" };
 
   // Row action controls (left side)
   const RowActions = ({ i }) => (
@@ -639,6 +642,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             <label className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer">
               <input type="checkbox" checked={printColSr} onChange={e => setPrintColSr(e.target.checked)} className="w-3 h-3" />
               پرنٹ کالم نمبرشمار
+            </label>
+            <label className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={colorPrint} onChange={e => setColorPrint(e.target.checked)} className="w-3 h-3" />
+              رنگین پرنٹ
+            </label>
+            <label className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={repeatHeader} onChange={e => setRepeatHeader(e.target.checked)} className="w-3 h-3" />
+              ہیڈر دہرائیں
             </label>
             <Button size="sm" onClick={() => setShowPrint(true)} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1">
               <Printer className="w-3 h-3" /> پرنٹ
@@ -995,12 +1006,17 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   );
 }
 
-function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, tashreehSchedule, onClose, variant }) {
+function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, colorPrint, repeatHeader, tashreehSchedule, onClose, variant }) {
   const isJadeed = variant === "jadeed";
   const showSummary = !isJadeed;
-  const thP = { border: "1.5px solid #1e3a5f", padding: "3px 4px", textAlign: "center", backgroundColor: "#dbeafe", fontSize: "8px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" };
+  const thP = { border: "1.5px solid #1e3a5f", padding: "3px 4px", textAlign: "center", backgroundColor: colorPrint ? "#dbeafe" : "#fff", fontSize: "8px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: colorPrint ? "#1e3a5f" : "#000" };
+  const thLetters = { ...thP, backgroundColor: colorPrint ? "#f0f4ff" : "#fff" };
+  const thSub = { ...thP, backgroundColor: colorPrint ? "#eff6ff" : "#fff" };
   const tdP = { border: "1.5px solid #555", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontFamily: "'Noto Nastaliq Urdu', serif" };
-  const tdTotal = { border: "1.5px solid #333", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontWeight: "bold", backgroundColor: "#fef9e7", fontFamily: "'Noto Nastaliq Urdu', serif" };
+  const tdGreen = { ...tdP, backgroundColor: colorPrint ? "#f0fdf4" : undefined };
+  const tdBlue = { ...tdP, backgroundColor: colorPrint ? "#eff6ff" : undefined };
+  const tdTotal = { border: "1.5px solid #333", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontWeight: "bold", backgroundColor: colorPrint ? "#fef9e7" : undefined, fontFamily: "'Noto Nastaliq Urdu', serif" };
+  const colCount = (printRowSr ? 1 : 0) + (showSummary ? 7 : 0) + 18;
 
   const handlePrint = () => {
     const w = window.open("", "_blank", "width=1300,height=900");
@@ -1019,6 +1035,132 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
     </>
   );
 
+  // Reusable header rows (col letters + main header + sub header)
+  const headerRows = (
+    <>
+      {printColSr && (
+        <tr>
+          {printRowSr && <th style={{ ...thLetters, fontSize: "7px" }}>#</th>}
+          {COL_LETTERS.slice(isJadeed ? 7 : 0).map((l, i) => <th key={i} style={{ ...thLetters, fontSize: "7px" }}>{l}</th>)}
+        </tr>
+      )}
+      <tr>
+        {printRowSr && <th style={thP} rowSpan={2}>نمبرشمار</th>}
+        {showSummary && <>
+        <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
+        <th style={{ ...thP, minWidth: 70 }} rowSpan={2}>نام مالک معہ والدیت</th>
+        <th style={thP} rowSpan={2}>{kulRaqbaHeader}</th>
+        <th style={thP} colSpan={2}>خالص واری</th>
+        <th style={thP} colSpan={2}>نکہ جات</th>
+        </>}
+        <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
+        <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نام مالک معہ والدیت</th>
+        <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نمبران بندوبست</th>
+        <th style={thP} rowSpan={2}>{kulRaqbaHeader}</th>
+        <th style={thP} rowSpan={2}>
+          <div>غیر ممکن رقبہ</div>
+          <div style={{ fontSize: "7px", fontWeight: "normal", borderTop: "1px solid #aaa", marginTop: "1px", paddingTop: "1px" }}>ایکڑ</div>
+        </th>
+        <th style={thP} rowSpan={2}>
+          <div>خالص رقبہ</div>
+          <div style={{ fontSize: "7px", fontWeight: "normal", borderTop: "1px solid #aaa", marginTop: "1px", paddingTop: "1px" }}>ایکڑ</div>
+        </th>
+        <th style={thP} colSpan={2}>واری بحساب رقبہ</th>
+        <th style={thP} colSpan={2}>زائدہ وصولی</th>
+        <th style={thP} colSpan={2}>وضگی</th>
+        <th style={thP} colSpan={2}>خالص واری</th>
+        <th style={thP} colSpan={2}>نکہ جات</th>
+        <th style={thP} rowSpan={2}>تشریح اوقات دن</th>
+        <th style={thP} rowSpan={2}>تشریح اوقات رات</th>
+      </tr>
+      <tr>
+        {showSummary && <>
+        <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
+        <th style={thSub}>لیگا</th><th style={thSub}>دیگا</th>
+        </>}
+        <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
+        <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
+        <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
+        <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
+        <th style={thSub}>لیگا</th><th style={thSub}>دیگا</th>
+      </tr>
+    </>
+  );
+
+  // Header line (title with mogha/rajbaha details) — full-width row that repeats with thead
+  const headerLineRow = (
+    <tr>
+      <th colSpan={colCount} style={{ ...thP, fontSize: "11px", textAlign: "center", backgroundColor: colorPrint ? "#e0e7ff" : "#fff", border: "2px solid #1e3a5f" }}>
+        {headerLine}
+      </th>
+    </tr>
+  );
+
+  // Data rows with colored cells matching screen preview
+  const dataRows = rows.map((row, i) => (
+    <tr key={i}>
+      {printRowSr && <td style={tdP}>{i + 1}</td>}
+      {showSummary && <>
+      <td style={tdP}>{d(row.khatoni2)}</td>
+      <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name2)}</td>
+      <td style={tdP}>{d(row.total_area2)}</td>
+      <td style={tdBlue}>{d(row.khalis_waari2_minute)}</td>
+      <td style={tdBlue}>{d(row.khalis_waari2_ghante)}</td>
+      <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_lega ? fracHtml(row.nikha2_lega) : "-" }} />
+      <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_dega ? fracHtml(row.nikha2_dega) : "-" }} />
+      </>}
+      <td style={tdP}>{d(row.khatoni)}</td>
+      <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name)}</td>
+      <td style={tdP} dangerouslySetInnerHTML={{ __html: row.bandubast ? fracHtml(row.bandubast) : "-" }} />
+      <td style={tdP}>{d(row.total_area)}</td>
+      <td style={tdP}>{d(row.ghair_mumkin)}</td>
+      <td style={tdGreen}>{d(row.khalis_raqba)}</td>
+      <td style={tdP}>{d(row.waari_minute)}</td>
+      <td style={tdP}>{d(row.waari_ghante)}</td>
+      <td style={tdP}>{d(row.zaidah_minute)}</td>
+      <td style={tdP}>{d(row.zaidah_ghante)}</td>
+      <td style={tdP}>{d(row.wazgi_minute)}</td>
+      <td style={tdP}>{d(row.wazgi_ghante)}</td>
+      <td style={tdBlue}>{d(row.khalis_waari_minute)}</td>
+      <td style={tdBlue}>{d(row.khalis_waari_ghante)}</td>
+      <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha_lega ? fracHtml(row.nikha_lega) : "-" }} />
+      <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha_dega ? fracHtml(row.nikha_dega) : "-" }} />
+      <td style={tdP}>{d(row.tashreeh_din)}</td>
+      <td style={tdP}>{d(row.tashreeh_raat)}</td>
+    </tr>
+  ));
+
+  // Total (میزان) row
+  const totalRow = (
+    <tr className="total-row">
+      {printRowSr && <td style={tdTotal}>—</td>}
+      {showSummary && <>
+      <td style={tdTotal}>—</td>
+      <td style={{ ...tdTotal, textAlign: "right" }}>میزان</td>
+      <td style={tdTotal}>{sumCol(rows, "total_area2")}</td>
+      <td style={tdTotal}>{sumCol(rows, "khalis_waari2_minute")}</td>
+      <td style={tdTotal}>{sumCol(rows, "khalis_waari2_ghante")}</td>
+      <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
+      </>}
+      <td style={tdTotal}>—</td>
+      <td style={{ ...tdTotal, textAlign: "right" }}>میزان</td>
+      <td style={tdTotal}>—</td>
+      <td style={tdTotal}>{sumCol(rows, "total_area")}</td>
+      <td style={tdTotal}>{sumCol(rows, "ghair_mumkin")}</td>
+      <td style={tdTotal}>{sumCol(rows, "khalis_raqba")}</td>
+      <td style={tdTotal}>{sumCol(rows, "waari_minute")}</td>
+      <td style={tdTotal}>{sumCol(rows, "waari_ghante")}</td>
+      <td style={tdTotal}>{sumCol(rows, "zaidah_minute")}</td>
+      <td style={tdTotal}>{sumCol(rows, "zaidah_ghante")}</td>
+      <td style={tdTotal}>{sumCol(rows, "wazgi_minute")}</td>
+      <td style={tdTotal}>{sumCol(rows, "wazgi_ghante")}</td>
+      <td style={tdTotal}>{sumCol(rows, "khalis_waari_minute")}</td>
+      <td style={tdTotal}>{sumCol(rows, "khalis_waari_ghante")}</td>
+      <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
+      <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
+    </tr>
+  );
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-auto py-6">
       <div className="bg-white rounded-xl shadow-2xl max-w-[1300px] w-full mx-4">
@@ -1031,121 +1173,31 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         </div>
 
         <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-          <div style={{ textAlign: "center", fontSize: "14px", fontWeight: "bold", marginBottom: "10px", borderBottom: "2px solid #1e3a5f", paddingBottom: "6px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" }}>
-            {headerLine}
-          </div>
-
-          <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
-            <thead>
-              {printColSr && (
-                <tr style={{ backgroundColor: "#eff6ff" }}>
-                  {printRowSr && <th style={{ ...thP, fontSize: "7px" }}>#</th>}
-                  {COL_LETTERS.slice(isJadeed ? 7 : 0).map((l, i) => <th key={i} style={{ ...thP, fontSize: "7px" }}>{l}</th>)}
-                </tr>
-              )}
-              <tr style={{ backgroundColor: "#dbeafe" }}>
-                {printRowSr && <th style={thP} rowSpan={2}>نمبرشمار</th>}
-                {showSummary && <>
-                <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
-                <th style={{ ...thP, minWidth: 70 }} rowSpan={2}>نام مالک معہ والدیت</th>
-                <th style={thP} rowSpan={2}>{kulRaqbaHeader}</th>
-                <th style={thP} colSpan={2}>خالص واری</th>
-                <th style={thP} colSpan={2}>نکہ جات</th>
-                </>}
-                <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
-                <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نام مالک معہ والدیت</th>
-                <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نمبران بندوبست</th>
-                <th style={thP} rowSpan={2}>{kulRaqbaHeader}</th>
-                <th style={thP} rowSpan={2}>
-                  <div>غیر ممکن رقبہ</div>
-                  <div style={{ fontSize: "7px", fontWeight: "normal", borderTop: "1px solid #aaa", marginTop: "1px", paddingTop: "1px" }}>ایکڑ</div>
-                </th>
-                <th style={thP} rowSpan={2}>
-                  <div>خالص رقبہ</div>
-                  <div style={{ fontSize: "7px", fontWeight: "normal", borderTop: "1px solid #aaa", marginTop: "1px", paddingTop: "1px" }}>ایکڑ</div>
-                </th>
-                <th style={thP} colSpan={2}>واری بحساب رقبہ</th>
-                <th style={thP} colSpan={2}>زائدہ وصولی</th>
-                <th style={thP} colSpan={2}>وضگی</th>
-                <th style={thP} colSpan={2}>خالص واری</th>
-                <th style={thP} colSpan={2}>نکہ جات</th>
-                <th style={thP} rowSpan={2}>تشریح اوقات دن</th>
-                <th style={thP} rowSpan={2}>تشریح اوقات رات</th>
-              </tr>
-              <tr style={{ backgroundColor: "#eff6ff" }}>
-                {showSummary && <>
-                <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
-                <th style={thP}>لیگا</th><th style={thP}>دیگا</th>
-                </>}
-                <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
-                <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
-                <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
-                <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
-                <th style={thP}>لیگا</th><th style={thP}>دیگا</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr key={i}>
-                  {printRowSr && <td style={tdP}>{i + 1}</td>}
-                  {showSummary && <>
-                  <td style={tdP}>{d(row.khatoni2)}</td>
-                  <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name2)}</td>
-                  <td style={tdP}>{d(row.total_area2)}</td>
-                  <td style={tdP}>{d(row.khalis_waari2_minute)}</td>
-                  <td style={tdP}>{d(row.khalis_waari2_ghante)}</td>
-                  <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_lega ? fracHtml(row.nikha2_lega) : "-" }} />
-                  <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_dega ? fracHtml(row.nikha2_dega) : "-" }} />
-                  </>}
-                  <td style={tdP}>{d(row.khatoni)}</td>
-                  <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name)}</td>
-                  <td style={tdP} dangerouslySetInnerHTML={{ __html: row.bandubast ? fracHtml(row.bandubast) : "-" }} />
-                  <td style={tdP}>{d(row.total_area)}</td>
-                  <td style={tdP}>{d(row.ghair_mumkin)}</td>
-                  <td style={tdP}>{d(row.khalis_raqba)}</td>
-                  <td style={tdP}>{d(row.waari_minute)}</td>
-                  <td style={tdP}>{d(row.waari_ghante)}</td>
-                  <td style={tdP}>{d(row.zaidah_minute)}</td>
-                  <td style={tdP}>{d(row.zaidah_ghante)}</td>
-                  <td style={tdP}>{d(row.wazgi_minute)}</td>
-                  <td style={tdP}>{d(row.wazgi_ghante)}</td>
-                  <td style={tdP}>{d(row.khalis_waari_minute)}</td>
-                  <td style={tdP}>{d(row.khalis_waari_ghante)}</td>
-                  <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha_lega ? fracHtml(row.nikha_lega) : "-" }} />
-                  <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha_dega ? fracHtml(row.nikha_dega) : "-" }} />
-                  <td style={tdP}>{d(row.tashreeh_din)}</td>
-                  <td style={tdP}>{d(row.tashreeh_raat)}</td>
-                </tr>
-              ))}
-              <tr className="total-row">
-                {printRowSr && <td style={tdTotal}>—</td>}
-                {showSummary && <>
-                <td style={tdTotal}>—</td>
-                <td style={{ ...tdTotal, textAlign: "right" }}>میزان</td>
-                <td style={tdTotal}>{sumCol(rows, "total_area2")}</td>
-                <td style={tdTotal}>{sumCol(rows, "khalis_waari2_minute")}</td>
-                <td style={tdTotal}>{sumCol(rows, "khalis_waari2_ghante")}</td>
-                <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
-                </>}
-                <td style={tdTotal}>—</td>
-                <td style={{ ...tdTotal, textAlign: "right" }}>میزان</td>
-                <td style={tdTotal}>—</td>
-                <td style={tdTotal}>{sumCol(rows, "total_area")}</td>
-                <td style={tdTotal}>{sumCol(rows, "ghair_mumkin")}</td>
-                <td style={tdTotal}>{sumCol(rows, "khalis_raqba")}</td>
-                <td style={tdTotal}>{sumCol(rows, "waari_minute")}</td>
-                <td style={tdTotal}>{sumCol(rows, "waari_ghante")}</td>
-                <td style={tdTotal}>{sumCol(rows, "zaidah_minute")}</td>
-                <td style={tdTotal}>{sumCol(rows, "zaidah_ghante")}</td>
-                <td style={tdTotal}>{sumCol(rows, "wazgi_minute")}</td>
-                <td style={tdTotal}>{sumCol(rows, "wazgi_ghante")}</td>
-                <td style={tdTotal}>{sumCol(rows, "khalis_waari_minute")}</td>
-                <td style={tdTotal}>{sumCol(rows, "khalis_waari_ghante")}</td>
-                <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
-                <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
-              </tr>
-            </tbody>
-          </table>
+          {repeatHeader ? (
+            <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
+              <thead>
+                {headerLineRow}
+                {headerRows}
+              </thead>
+              <tbody>
+                {dataRows}
+                {totalRow}
+              </tbody>
+            </table>
+          ) : (
+            <>
+              <div style={{ textAlign: "center", fontSize: "14px", fontWeight: "bold", marginBottom: "10px", borderBottom: "2px solid #1e3a5f", paddingBottom: "6px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" }}>
+                {headerLine}
+              </div>
+              <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
+                <tbody>
+                  {headerRows}
+                  {dataRows}
+                  {totalRow}
+                </tbody>
+              </table>
+            </>
+          )}
 
           {/* Tashreeh Schedule Table in print */}
           {tashreehSchedule.length > 0 && (
