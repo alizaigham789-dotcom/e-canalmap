@@ -57,6 +57,31 @@ function sumCol(rows, key) {
 
 function d(val) { return (val === "" || val === null || val === undefined) ? "-" : val; }
 
+// Convert Eastern Arabic / Urdu digits (۱۲۳ ٠١٢) → Western (123) for numeric fields.
+// Also strips stray thousands separators (، ,) that OCR sometimes keeps.
+const EAST_DIGIT_MAP = { '۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9','٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
+function normalizeDigits(val) {
+  if (val === null || val === undefined || val === "") return val;
+  return String(val)
+    .replace(/[۰-۹٠-٩]/g, d => EAST_DIGIT_MAP[d] || d)
+    .replace(/[،,](?=\d{3}\b)/g, ""); // remove thousands separators like 1,234
+}
+
+// Numeric fields that should always be normalized to Western digits
+const NUMERIC_FIELDS = [
+  "total_area","ghair_mumkin","khalis_raqba",
+  "waari_minute","waari_ghante","zaidah_minute","zaidah_ghante",
+  "wazgi_minute","wazgi_ghante","khalis_waari_minute","khalis_waari_ghante",
+  "total_area2","khalis_waari2_minute","khalis_waari2_ghante",
+];
+function normalizeRowDigits(row) {
+  const out = { ...row };
+  for (const k of NUMERIC_FIELDS) {
+    if (out[k] !== undefined && out[k] !== "") out[k] = normalizeDigits(out[k]);
+  }
+  return out;
+}
+
 // Convert total minutes to hours+minutes string
 function minsToStr(totalMins) {
   const m = Math.round(totalMins);
@@ -342,66 +367,86 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
         },
       };
 
+      const COMMON_DIGIT_RULES = `
+CRITICAL RULES FOR NUMERIC FIELDS:
+1. Convert ALL Eastern-Arabic / Urdu digits (۰۱۲۳۴۵۶۷۸۹ ٠١٢٣٤٥٦٧٨٩) to Western digits (0123456789). E.g. "۷.۲۴" → "7.24", "۱٢۳" → "123".
+2. Strip thousands separators (، or ,) inside numbers: "1,234" → "1234".
+3. Keep decimal points as "." (not ،). Preserve fractional values exactly: "7.10", "0.14", "12.5".
+4. If a numeric cell is blank or "—", use empty string "".
+5. Keep owner_name and nikha text in original Urdu script (Nastaliq). Do NOT translate names.
+6. If a value is ambiguous or unreadable, use empty string "" — do NOT guess.`;
+
+      const COLUMN_MAP = `
+COLUMN MAPPING (table is read RIGHT-TO-LEFT in Urdu, columns 1→n from right):
+  نمبر شمار (serial) → khatoni
+  نام مالک یا قابض اراضی معہ ولدیت (owner + father) → owner_name  [URDU, keep as-is]
+  نمبران مربعہ جات / تفصیل بندوبست (plot nos.) → bandubast
+  رقبہ بروئے ایکڑ (total acres) → total_area  [numeric]
+  غیر ممکن رقبہ (unusable) → ghair_mumkin  [numeric]
+  خالص رقبہ (net area = total − unusable) → khalis_raqba  [numeric]
+  واری بحساب رقبہ منٹ / گھنٹہ (water turn min / hr) → waari_minute / waari_ghante  [numeric]
+  زائدہ وصولی منٹ / گھنٹہ (extra min / hr) → zaidah_minute / zaidah_ghante  [numeric]
+  وضگی منٹ / گھنٹہ (deduction min / hr) → wazgi_minute / wazgi_ghante  [numeric]
+  خالص واری / کل پانی منٹ / گھنٹہ (net water min / hr) → khalis_waari_minute / khalis_waari_ghante  [numeric]
+  کس نکہ سے پانی لاوے گا (water source) → nikha_lega  [URDU]
+  کس نکہ پر پانی دے گا (water dest) → nikha_dega  [URDU]
+  تشریح اوقات دن (day start time) → tashreeh_din  [URDU text]
+  تشریح اوقات رات (night end time) → tashreeh_raat  [URDU text]
+Skip the میزان (totals) row, header rows, and sub-header rows. Extract ONLY data rows where owner_name or total_area is present.`;
+
+      let result;
       if (isSpreadsheet) {
-        // Excel / CSV → use InvokeLLM for intelligent column mapping
-        const result = await base44.integrations.Core.InvokeLLM({
+        // Excel / CSV → InvokeLLM with intelligent column mapping
+        result = await base44.integrations.Core.InvokeLLM({
           prompt: `This Excel/CSV file contains a Parat Warabandi (پرت وارہ بندی) or Tarmeem Warabandi (ترمیم وارہ بندی) register in Urdu.
-The spreadsheet may have Urdu column headers in row 3 or 4. Columns from RIGHT to LEFT (Urdu RTL order):
-- نمبر شمار = serial/row number → khatoni
-- نام مالک یا قابض اراضی معہ ولدیت = owner name → owner_name (keep Urdu)
-- نمبران مربعہ جات / تفصیل نمبران کیفیت = land details → bandubast
-- رقبہ بروئے ایکڑ = area in acres → total_area
-- غیر ممکن = unusable area → ghair_mumkin
-- خالص رقبہ = net area → khalis_raqba
-- واری بحساب رقبہ گھنٹہ/منٹ = water turn by area hours/minutes → waari_ghante / waari_minute
-- زائدہ واری / لیڈ گھنٹہ/منٹ → zaidah_ghante / zaidah_minute
-- وضگی گھنٹہ/منٹ → wazgi_ghante / wazgi_minute
-- کل پانی / خالص واری گھنٹہ/منٹ → khalis_waari_ghante / khalis_waari_minute
-- کس نکہ سے پانی لاوے گا (مربع/کیلہ) → nikha_lega
-- کس نکہ پر پانی دے گا (مربع/کیلہ) → nikha_dega
-- اوقات داری شروع → tashreeh_din
-- اوقات داری ختم → tashreeh_raat
-Also extract header: mogha_number (موگہ نمبر), mogha_side (L/R), rajbaha (راجباہ), mouza (موضع), section (سیکشن), sub_division (تحصیل), canal_division (ضلع).
-Skip header/sub-header rows. Extract only actual data rows (where owner_name or total_area is present).
-Use empty string "" for any missing value. Return ONLY the JSON object.`,
+The spreadsheet may have Urdu column headers in row 1-4. Identify the header row, then map each data column.${COLUMN_MAP}
+
+Also extract the document header metadata if present anywhere:
+  mogha_number (موگہ نمبر, e.g. "18650"), mogha_side (L or R), rajbaha (راجباہ), mouza (موضع/چک), section (سیکشن), sub_division (سب ڈویژن/تحصیل), canal_division (ضلع/ڈویژن).
+${COMMON_DIGIT_RULES}
+Use empty string "" for any missing value. Return ONLY the JSON object — no markdown, no explanation.`,
           file_urls: [file_url],
           model: "claude_sonnet_4_6",
           response_json_schema: AI_SCHEMA,
         });
-        setPdfPreview(result);
       } else {
-        // PDF / image → AI vision extraction
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `This is a scanned Parat Warabandi (پرت وارہ بندی) or Tarmeem Warabandi (ترمیم وارہ بندی) document in Urdu.
-Read the HEADER line at the top for: موگہ نمبر (mogha_number), طرف L/R (mogha_side), راجباہ (rajbaha), موضع/چک (mouza), سیکشن (section), تحصیل/سب ڈویژن (sub_division), ضلع/ڈویژن (canal_division).
-For EACH DATA ROW in the table extract:
-- khatoni: نمبر شمار (col 1, serial number)
-- owner_name: نام مالک یا قابض اراضی معہ ولدیت (keep full Urdu name)
-- bandubast: نمبران مربعہ جات e.g. "78-82" or "527/6"
-- total_area: کل رقبہ (numeric, e.g. "7.24")
-- ghair_mumkin: غیر ممکن رقبہ (numeric, e.g. "0.14")
-- khalis_raqba: خالص رقبہ (numeric, e.g. "7.10")
-- waari_ghante: واری بحساب رقبہ گھنٹہ (numeric)
-- waari_minute: واری بحساب رقبہ منٹ (numeric)
-- zaidah_ghante: زائدہ واری گھنٹہ
-- zaidah_minute: زائدہ واری منٹ
-- wazgi_ghante: وضگی گھنٹہ
-- wazgi_minute: وضگی منٹ
-- khalis_waari_ghante: خالص واری / کل پانی گھنٹہ (numeric)
-- khalis_waari_minute: خالص واری / کل پانی منٹ (numeric)
-- nikha_lega: کس نکہ سے پانی لاوے گا (e.g. "ہیڈ موگہ")
-- nikha_dega: کس نکہ پر پانی دے گا (e.g. "527/6")
-- tashreeh_din: اوقات داری شروع (e.g. "صبح 6 بجے سے سوموار")
-- tashreeh_raat: اوقات داری ختم (e.g. "دن 12:24 تک")
-IMPORTANT: Skip totals/میزان rows. Keep all Urdu text in Urdu. Use "" for missing. Return ONLY the JSON.`,
+        // PDF / image → AI vision + OCR extraction (Claude Sonnet — strong Urdu Nastaliq OCR)
+        result = await base44.integrations.Core.InvokeLLM({
+          prompt: `You are an expert OCR + document analysis AI specialized in Pakistani irrigation land records.
+This image/PDF is a scanned Parat Warabandi (پرت وارہ بندی) or Tarmeem Warabandi (ترمیم وارہ بندی) document written in Urdu (Nastaliq script), with mixed English text and numerals.
+
+STEP 1 — HEADER: Read the top header line of the document for:
+  mogha_number (موگہ نمبری, e.g. "18650"), mogha_side (طرف L or R), rajbaha (راجباہ), mouza (موضع/چک), section (سیکشن), sub_division (سب ڈویژن/تحصیل), canal_division (ضلع/کینال ڈویژن).
+
+STEP 2 — TABLE ROWS: The table has many columns. For EACH DATA ROW extract these fields.${COLUMN_MAP}
+
+STEP 3 — QUALITY: If a cell is blurred, crossed out, or illegible, use empty string "". If an entire row is a sub-total or the میزان (totals) row, SKIP it.
+
+${COMMON_DIGIT_RULES}
+
+Return ONLY a valid JSON object matching the schema — no markdown fences, no commentary.`,
           file_urls: [file_url],
           model: "claude_sonnet_4_6",
           response_json_schema: AI_SCHEMA,
         });
-        setPdfPreview(result);
       }
+      // Normalize digits + filter empty/total rows for a clean preview
+      const cleaned = {
+        header: result?.header || {},
+        rows: (result?.rows || [])
+          .filter(r => r && (r.owner_name || r.khatoni || r.total_area))
+          .map(r => {
+            const nr = {};
+            for (const [k, v] of Object.entries(r)) {
+              nr[k] = NUMERIC_FIELDS.includes(k) ? normalizeDigits(v) : v;
+            }
+            return nr;
+          }),
+      };
+      setPdfPreview(cleaned);
     } catch (e) {
-      alert("اسکین ناکام — دوبارہ کوشش کریں");
+      console.error("AI scan failed", e);
+      setPdfPreview({ __error: e?.message || "unknown" });
     }
     setPdfLoading(false);
     if (pdfRef.current) pdfRef.current.value = "";
@@ -462,7 +507,7 @@ IMPORTANT: Skip totals/میزان rows. Keep all Urdu text in Urdu. Use "" for m
         }
         return row;
       });
-      setRows(mapped);
+      setRows(mapped.map(normalizeRowDigits));
     }
     setPdfPreview(null);
   };
@@ -509,7 +554,7 @@ IMPORTANT: Skip totals/میزان rows. Keep all Urdu text in Urdu. Use "" for m
       }
       return row;
     });
-    setRows(mapped);
+    setRows(mapped.map(normalizeRowDigits));
   };
 
   const insertRowAfter = (i) => {
