@@ -1,8 +1,9 @@
 import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Printer, Clock, Languages, ScanLine, Loader2 } from "lucide-react";
+import { Plus, Trash2, Printer, Clock, Languages, ScanLine, Loader2, ClipboardPaste } from "lucide-react";
 import PdfUploadPreview from "./PdfUploadPreview";
+import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
 
 // ====== Area format helpers ======
 function formatAreaMB(totalAcres) {
@@ -197,6 +198,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [showTashreeh, setShowTashreeh] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfPreview, setPdfPreview] = useState(null);
+  const [showPaste, setShowPaste] = useState(false);
   const pdfRef = useRef();
 
   const updateHeader = (key, val) => setHeader(prev => ({ ...prev, [key]: val }));
@@ -465,6 +467,51 @@ IMPORTANT: Skip totals/میزان rows. Keep all Urdu text in Urdu. Use "" for m
     setPdfPreview(null);
   };
 
+  // Apply pasted Excel data (array of row objects keyed by PASTE_COLUMNS)
+  const applyPastedData = (pastedRows) => {
+    if (!pastedRows || pastedRows.length === 0) return;
+    const mapped = pastedRows.map(r => {
+      const khatoni = r.khatoni || "";
+      const owner_name = r.owner_name || "";
+      const total_area = r.total_area || "";
+      const ghair_mumkin = r.ghair_mumkin || "";
+      const khalis_raqba = r.khalis_raqba || calcKhalis(total_area, ghair_mumkin);
+      const row = {
+        ...emptyRow(),
+        khatoni, khatoni2: khatoni,
+        owner_name, owner_name2: owner_name,
+        bandubast: r.bandubast || "",
+        total_area, total_area2: total_area,
+        ghair_mumkin,
+        khalis_raqba,
+        waari_minute: r.waari_minute || "",
+        waari_ghante: r.waari_ghante || "",
+        zaidah_minute: r.zaidah_minute || "",
+        zaidah_ghante: r.zaidah_ghante || "",
+        wazgi_minute: r.wazgi_minute || "",
+        wazgi_ghante: r.wazgi_ghante || "",
+        nikha_lega: r.nikha_lega || "", nikha2_lega: r.nikha_lega || "",
+        nikha_dega: r.nikha_dega || "", nikha2_dega: r.nikha_dega || "",
+        tashreeh_din: r.tashreeh_din || "",
+        tashreeh_raat: r.tashreeh_raat || "",
+      };
+      if (r.khalis_waari_ghante || r.khalis_waari_minute) {
+        row.khalis_waari_ghante = r.khalis_waari_ghante || "0";
+        row.khalis_waari_minute = r.khalis_waari_minute || "0";
+        row.khalis_waari2_ghante = row.khalis_waari_ghante;
+        row.khalis_waari2_minute = row.khalis_waari_minute;
+      } else {
+        const kw = calcKhalisWaari(row);
+        row.khalis_waari_minute = kw.khalis_waari_minute;
+        row.khalis_waari_ghante = kw.khalis_waari_ghante;
+        row.khalis_waari2_minute = kw.khalis_waari_minute;
+        row.khalis_waari2_ghante = kw.khalis_waari_ghante;
+      }
+      return row;
+    });
+    setRows(mapped);
+  };
+
   const insertRowAfter = (i) => {
     setRows(prev => {
       const next = [...prev];
@@ -668,6 +715,10 @@ IMPORTANT: Skip totals/میزان rows. Keep all Urdu text in Urdu. Use "" for m
             <input type="checkbox" checked={showColSr} onChange={e => setShowColSr(e.target.checked)} className="w-3 h-3" />
             کالم نمبرشمار
           </label>
+          <Button size="sm" onClick={() => setShowPaste(true)}
+            className="h-6 text-[10px] bg-teal-600 hover:bg-teal-700 text-white gap-1 px-2">
+            <ClipboardPaste className="w-3 h-3" /> کاپی پیسٹ
+          </Button>
           <Button size="sm" onClick={() => pdfRef.current?.click()} disabled={pdfLoading}
             className="h-6 text-[10px] bg-amber-500 hover:bg-amber-600 text-white gap-1 px-2">
             {pdfLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ScanLine className="w-3 h-3" />}
@@ -884,6 +935,13 @@ IMPORTANT: Skip totals/میزان rows. Keep all Urdu text in Urdu. Use "" for m
           loading={pdfLoading}
           onClose={() => setPdfPreview(null)}
           onApply={applyExtractedData}
+        />
+      )}
+
+      {showPaste && (
+        <PasteDataDialog
+          onClose={() => setShowPaste(false)}
+          onApply={applyPastedData}
         />
       )}
 
