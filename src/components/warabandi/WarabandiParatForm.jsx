@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Printer, Clock, Languages, Upload, Loader2 } from "lucide-react";
+import PdfUploadPreview from "./PdfUploadPreview";
 
 // ====== Area format helpers ======
 function formatAreaMB(totalAcres) {
@@ -193,6 +194,7 @@ export default function WarabandiParatForm() {
   const [tashreehStart, setTashreehStart] = useState("6:00");
   const [showTashreeh, setShowTashreeh] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState(null);
   const pdfRef = useRef();
 
   const updateHeader = (key, val) => setHeader(prev => ({ ...prev, [key]: val }));
@@ -340,58 +342,64 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
           },
         },
       });
-      if (result?.header) {
-        setHeader(prev => ({
-          ...prev,
-          mogha_number: result.header.mogha_number || prev.mogha_number,
-          mogha_side: result.header.mogha_side || prev.mogha_side,
-          rajbaha: result.header.rajbaha || prev.rajbaha,
-          mouza: result.header.mouza || prev.mouza,
-          section: result.header.section || prev.section,
-          sub_division: result.header.sub_division || prev.sub_division,
-          canal_division: result.header.canal_division || prev.canal_division,
-        }));
-      }
-      if (result?.rows?.length > 0) {
-        const mapped = result.rows.map(r => {
-          const khatoni = r.khatoni || "";
-          const owner_name = r.owner_name || "";
-          const total_area = r.total_area || "";
-          const ghair_mumkin = r.ghair_mumkin || "";
-          const khalis_raqba = r.khalis_raqba || calcKhalis(total_area, ghair_mumkin);
-          const row = {
-            ...emptyRow(),
-            khatoni, khatoni2: khatoni,
-            owner_name, owner_name2: owner_name,
-            bandubast: r.bandubast || "",
-            total_area, total_area2: total_area,
-            ghair_mumkin,
-            khalis_raqba,
-            waari_minute: r.waari_minute || "",
-            waari_ghante: r.waari_ghante || "",
-            zaidah_minute: r.zaidah_minute || "",
-            zaidah_ghante: r.zaidah_ghante || "",
-            wazgi_minute: r.wazgi_minute || "",
-            wazgi_ghante: r.wazgi_ghante || "",
-            nikha_lega: r.nikha_lega || "", nikha2_lega: r.nikha_lega || "",
-            nikha_dega: r.nikha_dega || "", nikha2_dega: r.nikha_dega || "",
-            tashreeh_din: r.tashreeh_din || "",
-            tashreeh_raat: r.tashreeh_raat || "",
-          };
-          const kw = calcKhalisWaari(row);
-          row.khalis_waari_minute = kw.khalis_waari_minute;
-          row.khalis_waari_ghante = kw.khalis_waari_ghante;
-          row.khalis_waari2_minute = kw.khalis_waari_minute;
-          row.khalis_waari2_ghante = kw.khalis_waari_ghante;
-          return row;
-        });
-        setRows(mapped);
-      }
+      setPdfPreview(result);
     } catch (e) {
       alert("PDF پڑھنے میں ناکام — دوبارہ کوشش کریں");
     }
     setPdfLoading(false);
     if (pdfRef.current) pdfRef.current.value = "";
+  };
+
+  // Apply the previewed/edited extraction to the header + table rows
+  const applyExtractedData = (result) => {
+    if (result?.header) {
+      setHeader(prev => ({
+        ...prev,
+        mogha_number: result.header.mogha_number || prev.mogha_number,
+        mogha_side: result.header.mogha_side || prev.mogha_side,
+        rajbaha: result.header.rajbaha || prev.rajbaha,
+        mouza: result.header.mouza || prev.mouza,
+        section: result.header.section || prev.section,
+        sub_division: result.header.sub_division || prev.sub_division,
+        canal_division: result.header.canal_division || prev.canal_division,
+      }));
+    }
+    if (result?.rows?.length > 0) {
+      const mapped = result.rows.map(r => {
+        const khatoni = r.khatoni || "";
+        const owner_name = r.owner_name || "";
+        const total_area = r.total_area || "";
+        const ghair_mumkin = r.ghair_mumkin || "";
+        const khalis_raqba = r.khalis_raqba || calcKhalis(total_area, ghair_mumkin);
+        const row = {
+          ...emptyRow(),
+          khatoni, khatoni2: khatoni,
+          owner_name, owner_name2: owner_name,
+          bandubast: r.bandubast || "",
+          total_area, total_area2: total_area,
+          ghair_mumkin,
+          khalis_raqba,
+          waari_minute: r.waari_minute || "",
+          waari_ghante: r.waari_ghante || "",
+          zaidah_minute: r.zaidah_minute || "",
+          zaidah_ghante: r.zaidah_ghante || "",
+          wazgi_minute: r.wazgi_minute || "",
+          wazgi_ghante: r.wazgi_ghante || "",
+          nikha_lega: r.nikha_lega || "", nikha2_lega: r.nikha_lega || "",
+          nikha_dega: r.nikha_dega || "", nikha2_dega: r.nikha_dega || "",
+          tashreeh_din: r.tashreeh_din || "",
+          tashreeh_raat: r.tashreeh_raat || "",
+        };
+        const kw = calcKhalisWaari(row);
+        row.khalis_waari_minute = kw.khalis_waari_minute;
+        row.khalis_waari_ghante = kw.khalis_waari_ghante;
+        row.khalis_waari2_minute = kw.khalis_waari_minute;
+        row.khalis_waari2_ghante = kw.khalis_waari_ghante;
+        return row;
+      });
+      setRows(mapped);
+    }
+    setPdfPreview(null);
   };
 
   const insertRowAfter = (i) => {
@@ -792,6 +800,15 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
           ))}
         </div>
       </div>
+
+      {(pdfLoading || pdfPreview) && (
+        <PdfUploadPreview
+          data={pdfPreview}
+          loading={pdfLoading}
+          onClose={() => setPdfPreview(null)}
+          onApply={applyExtractedData}
+        />
+      )}
 
       {showPrint && <PrintModal {...printData} onClose={() => setShowPrint(false)} />}
     </div>
