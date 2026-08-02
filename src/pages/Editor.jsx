@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SnapSettingsPanel from "@/components/editor/SnapSettingsPanel";
 import MapDetailsDialog from "@/components/editor/MapDetailsDialog";
+import MapMinimap from "@/components/editor/MapMinimap";
 // DamageMarkerDialog removed — damage tool is now a simple line draw
 
 const DEFAULT_LAYERS = {
@@ -1223,6 +1224,16 @@ export default function Editor() {
             }}
             onBoxSelect={handleBoxSelect}
             pageBorderStyle={pageBorderStyle}
+          />
+
+          {/* Map preview — bottom-right corner so a lost map can be located */}
+          <MapMinimap
+            objects={objects}
+            zoom={zoom}
+            pan={pan}
+            mainCanvasRef={canvasRef}
+            onNavigate={(newPan) => { setPan(newPan); }}
+            colorSettings={colorSettings}
           />
 
           {/* Top-right toolbar buttons */}
