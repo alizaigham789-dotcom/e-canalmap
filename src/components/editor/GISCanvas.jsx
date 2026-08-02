@@ -72,6 +72,9 @@ const GISCanvas = forwardRef(function GISCanvas(
   const [boxSelectDraft, setBoxSelectDraft] = useState(null);
   // Pinch-to-zoom state (mobile) — tracks initial finger distance + zoom
   const pinchRef = useRef(null);
+  // Double-tap detection (mobile) — finishes line-tool drawing like desktop double-click
+  const lastTapRef = useRef({ time: 0, x: 0, y: 0 });
+  const justFinishedRef = useRef(false);
   // 1 world unit = 1 foot (DIMENSIONS.ACRE.width = 220ft, etc.)
   const FT_PER_UNIT = 1;
 
@@ -729,6 +732,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   }, [activeTool, pan, zoom, onAddObject, onBoxSelect, objects]);
 
   const handleDblClick = useCallback((e) => {
+    if (justFinishedRef.current) { justFinishedRef.current = false; return; }
     if (activeTool === "measure" && measurePoly && measurePoly.length >= 3) {
       // Calculate area (shoelace) + perimeter
       let area2 = 0, perim = 0;
@@ -824,6 +828,21 @@ const GISCanvas = forwardRef(function GISCanvas(
     }
     const touch = getTouchPoint(e);
     if (!touch) return;
+    // Double-tap → finish line drawing (canal/khal/road/mouza/chakbandi) — mobile parity with desktop double-click
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if ((now - last.time < 350) && Math.hypot(touch.clientX - last.x, touch.clientY - last.y) < 30 && ["canal","khal","road","mouza","chakbandi"].includes(activeTool)) {
+      clearLongPress();
+      justFinishedRef.current = true;
+      if (activeTool === "canal") onCanalFinish();
+      else if (activeTool === "khal") onKhalFinish();
+      else if (activeTool === "road") onRoadFinish();
+      else if (activeTool === "mouza") onMouzaFinish();
+      else if (activeTool === "chakbandi") onChakbandiFinish();
+      lastTapRef.current = { time: 0, x: 0, y: 0 };
+      return;
+    }
+    lastTapRef.current = { time: now, x: touch.clientX, y: touch.clientY };
     touchMoved.current = false;
     if (activeTool === "select" || activeTool === "move") {
       const canvas = canvasRef.current;
@@ -843,7 +862,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
     }
     handleMouseDown(touch);
-  }, [activeTool, pan, zoom, handleMouseDown, onSelect]);
+  }, [activeTool, pan, zoom, handleMouseDown, onSelect, onCanalFinish, onKhalFinish, onRoadFinish, onMouzaFinish, onChakbandiFinish]);
 
   const handleTouchMove = useCallback((e) => {
     // Pinch-to-zoom: two fingers → zoom toward pinch center

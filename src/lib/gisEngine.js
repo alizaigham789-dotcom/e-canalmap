@@ -1057,7 +1057,7 @@ export function buildMapHeaderText(mapData) {
   const tehsil = mapData?.tehsil || "_____";
   const district = mapData?.district || "_____";
   const mogaToken = `${number}${side ? `/${side}` : ""}`;
-  return `خاکہ دستی\u2002\u2002موگہ نمبری\u2002\u2066${mogaToken}\u2069،\u2002راجباہ ${rajbah}،\u2002موضع ${village}،\u2002ضلعداری سیکشن ${zilladarSection}،\u2002سب ڈویژن ${tehsil}،\u2002ڈویژن ${district}`;
+  return `خاکہ دستی\u2009\u2009موگہ نمبری\u2009\u2066${mogaToken}\u2069،\u2009راجباہ ${rajbah}،\u2009موضع ${village}،\u2009ضلعداری سیکشن ${zilladarSection}،\u2009سب ڈویژن ${tehsil}،\u2009ڈویژن ${district}`;
 }
 
 // Bordered single-line header box for print/export output — auto-shrinks to fit one line
