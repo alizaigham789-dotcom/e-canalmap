@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Printer, Clock, Languages, Upload, Loader2 } from "lucide-react";
+import { Plus, Trash2, Printer, Clock, Languages, ScanLine, Loader2 } from "lucide-react";
 import PdfUploadPreview from "./PdfUploadPreview";
 
 // ====== Area format helpers ======
@@ -288,65 +288,107 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
     }));
   };
 
-  // Upload PDF/image → AI reads the Parat Warabandi and fills header + rows
-  const handlePdfUpload = async (file) => {
+  // AI Scanner — reads PDF / image / Excel / CSV and fills header + rows
+  const handleScan = async (file) => {
     if (!file) return;
     setPdfLoading(true);
     try {
+      const isSpreadsheet = /\.(xlsx|xls|csv)$/i.test(file.name) || file.type.includes("sheet") || file.type.includes("csv") || file.type.includes("excel");
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `This is a scanned "Parat Warabandi" (پرت وارہ بندی) register document in Urdu. Extract the header and every shareholder row accurately.
-Return a JSON object with:
-- header: { mogha_number, mogha_side (L or R), rajbaha, mouza, section, sub_division, canal_division }
-- rows: an array where each item has: khatoni (کھاتہ نمبر), owner_name (نام مالک معہ والدیت), bandubast (نمبران بندوبست), total_area (کل رقبہ ایکڑ), ghair_mumkin (غیر ممکن رقبہ), khalis_raqba (خالص رقبہ), waari_minute, waari_ghante (واری بحساب رقبہ), zaidah_minute, zaidah_ghante (زائدہ وصولی), wazgi_minute, wazgi_ghante (وضگی), nikha_lega, nikha_dega (نکہ جات), tashreeh_din, tashreeh_raat (تشریح اوقات).
-Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for missing values. Return ONLY the JSON object.`,
-        file_urls: [file_url],
-        model: "claude_sonnet_4_6",
-        response_json_schema: {
-          type: "object",
-          properties: {
-            header: {
-              type: "object",
-              properties: {
-                mogha_number: { type: "string" },
-                mogha_side: { type: "string" },
-                rajbaha: { type: "string" },
-                mouza: { type: "string" },
-                section: { type: "string" },
-                sub_division: { type: "string" },
-                canal_division: { type: "string" },
-              },
-            },
-            rows: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  khatoni: { type: "string" },
-                  owner_name: { type: "string" },
-                  bandubast: { type: "string" },
-                  total_area: { type: "string" },
-                  ghair_mumkin: { type: "string" },
-                  khalis_raqba: { type: "string" },
-                  waari_minute: { type: "string" },
-                  waari_ghante: { type: "string" },
-                  zaidah_minute: { type: "string" },
-                  zaidah_ghante: { type: "string" },
-                  wazgi_minute: { type: "string" },
-                  wazgi_ghante: { type: "string" },
-                  nikha_lega: { type: "string" },
-                  nikha_dega: { type: "string" },
-                  tashreeh_din: { type: "string" },
-                  tashreeh_raat: { type: "string" },
+
+      if (isSpreadsheet) {
+        // Excel / CSV → structured extraction into relevant columns
+        const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
+          file_url,
+          json_schema: {
+            type: "object",
+            properties: {
+              rows: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    khatoni: { type: "string" },
+                    owner_name: { type: "string" },
+                    bandubast: { type: "string" },
+                    total_area: { type: "string" },
+                    ghair_mumkin: { type: "string" },
+                    khalis_raqba: { type: "string" },
+                    waari_minute: { type: "string" },
+                    waari_ghante: { type: "string" },
+                    zaidah_minute: { type: "string" },
+                    zaidah_ghante: { type: "string" },
+                    wazgi_minute: { type: "string" },
+                    wazgi_ghante: { type: "string" },
+                    nikha_lega: { type: "string" },
+                    nikha_dega: { type: "string" },
+                    tashreeh_din: { type: "string" },
+                    tashreeh_raat: { type: "string" },
+                  },
                 },
               },
             },
           },
-        },
-      });
-      setPdfPreview(result);
+        });
+        const out = result?.output;
+        const rows = Array.isArray(out) ? out : (out?.rows || []);
+        setPdfPreview({ header: {}, rows });
+      } else {
+        // PDF / image → AI vision extraction
+        const result = await base44.integrations.Core.InvokeLLM({
+          prompt: `This is a scanned "Parat Warabandi" (پرت وارہ بندی) register document in Urdu. Extract the header and every shareholder row accurately.
+Return a JSON object with:
+- header: { mogha_number, mogha_side (L or R), rajbaha, mouza, section, sub_division, canal_division }
+- rows: an array where each item has: khatoni (کھاتہ نمبر), owner_name (نام مالک معہ والدیت), bandubast (نمبران بندوبست), total_area (کل رقبہ ایکڑ), ghair_mumkin (غیر ممکن رقبہ), khalis_raqba (خالص رقبہ), waari_minute, waari_ghante (واری بحساب رقبہ), zaidah_minute, zaidah_ghante (زائدہ وصولی), wazgi_minute, wazgi_ghante (وضگی), nikha_lega, nikha_dega (نکہ جات), tashreeh_din, tashreeh_raat (تشریح اوقات).
+Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for missing values. Return ONLY the JSON object.`,
+          file_urls: [file_url],
+          model: "claude_sonnet_4_6",
+          response_json_schema: {
+            type: "object",
+            properties: {
+              header: {
+                type: "object",
+                properties: {
+                  mogha_number: { type: "string" },
+                  mogha_side: { type: "string" },
+                  rajbaha: { type: "string" },
+                  mouza: { type: "string" },
+                  section: { type: "string" },
+                  sub_division: { type: "string" },
+                  canal_division: { type: "string" },
+                },
+              },
+              rows: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    khatoni: { type: "string" },
+                    owner_name: { type: "string" },
+                    bandubast: { type: "string" },
+                    total_area: { type: "string" },
+                    ghair_mumkin: { type: "string" },
+                    khalis_raqba: { type: "string" },
+                    waari_minute: { type: "string" },
+                    waari_ghante: { type: "string" },
+                    zaidah_minute: { type: "string" },
+                    zaidah_ghante: { type: "string" },
+                    wazgi_minute: { type: "string" },
+                    wazgi_ghante: { type: "string" },
+                    nikha_lega: { type: "string" },
+                    nikha_dega: { type: "string" },
+                    tashreeh_din: { type: "string" },
+                    tashreeh_raat: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+        });
+        setPdfPreview(result);
+      }
     } catch (e) {
-      alert("PDF پڑھنے میں ناکام — دوبارہ کوشش کریں");
+      alert("اسکین ناکام — دوبارہ کوشش کریں");
     }
     setPdfLoading(false);
     if (pdfRef.current) pdfRef.current.value = "";
@@ -609,11 +651,11 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
           </label>
           <Button size="sm" onClick={() => pdfRef.current?.click()} disabled={pdfLoading}
             className="h-6 text-[10px] bg-amber-500 hover:bg-amber-600 text-white gap-1 px-2">
-            {pdfLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-            {pdfLoading ? "پڑھ رہا ہے..." : "PDF اپ لوڈ"}
+            {pdfLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ScanLine className="w-3 h-3" />}
+            {pdfLoading ? "پڑھ رہا ہے..." : "AI اسکینر"}
           </Button>
-          <input ref={pdfRef} type="file" accept="application/pdf,image/*" className="hidden"
-            onChange={e => handlePdfUpload(e.target.files[0])} />
+          <input ref={pdfRef} type="file" accept="application/pdf,image/*,.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden"
+            onChange={e => handleScan(e.target.files[0])} />
           <Button size="sm" onClick={() => insertRowAfter(rows.length - 1)} className="h-6 text-[10px] bg-blue-600 hover:bg-blue-700 text-white gap-1 px-2">
             <Plus className="w-3 h-3" /> قطار
           </Button>
