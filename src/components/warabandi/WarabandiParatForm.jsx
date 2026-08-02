@@ -296,94 +296,105 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       const isSpreadsheet = /\.(xlsx|xls|csv)$/i.test(file.name) || file.type.includes("sheet") || file.type.includes("csv") || file.type.includes("excel");
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      if (isSpreadsheet) {
-        // Excel / CSV → structured extraction into relevant columns
-        const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
-          file_url,
-          json_schema: {
+      const AI_SCHEMA = {
+        type: "object",
+        properties: {
+          header: {
             type: "object",
             properties: {
-              rows: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    khatoni: { type: "string" },
-                    owner_name: { type: "string" },
-                    bandubast: { type: "string" },
-                    total_area: { type: "string" },
-                    ghair_mumkin: { type: "string" },
-                    khalis_raqba: { type: "string" },
-                    waari_minute: { type: "string" },
-                    waari_ghante: { type: "string" },
-                    zaidah_minute: { type: "string" },
-                    zaidah_ghante: { type: "string" },
-                    wazgi_minute: { type: "string" },
-                    wazgi_ghante: { type: "string" },
-                    nikha_lega: { type: "string" },
-                    nikha_dega: { type: "string" },
-                    tashreeh_din: { type: "string" },
-                    tashreeh_raat: { type: "string" },
-                  },
-                },
+              mogha_number: { type: "string", description: "موگہ نمبر e.g. 16000" },
+              mogha_side: { type: "string", description: "L یا R طرف" },
+              rajbaha: { type: "string", description: "راجباہ نام" },
+              mouza: { type: "string", description: "موضع/چک نمبر" },
+              section: { type: "string", description: "سیکشن" },
+              sub_division: { type: "string", description: "تحصیل/سب ڈویژن" },
+              canal_division: { type: "string", description: "ضلع/ڈویژن" },
+            },
+          },
+          rows: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                khatoni: { type: "string", description: "نمبر شمار یا کھاتہ نمبر (col 1 or نمبر شمار)" },
+                owner_name: { type: "string", description: "نام مالک یا قابض اراضی معہ ولدیت (keep in Urdu)" },
+                bandubast: { type: "string", description: "نمبران مربعہ جات / تفصیل بندوبست" },
+                total_area: { type: "string", description: "کل رقبہ بروئے ایکڑ (numeric)" },
+                ghair_mumkin: { type: "string", description: "غیر ممکن رقبہ (numeric)" },
+                khalis_raqba: { type: "string", description: "خالص رقبہ = کل رقبہ − غیر ممکن (numeric)" },
+                waari_ghante: { type: "string", description: "واری بحساب رقبہ گھنٹہ (numeric)" },
+                waari_minute: { type: "string", description: "واری بحساب رقبہ منٹ (numeric)" },
+                zaidah_ghante: { type: "string", description: "زائدہ واری / لیڈ گھنٹہ (numeric)" },
+                zaidah_minute: { type: "string", description: "زائدہ واری / لیڈ منٹ (numeric)" },
+                wazgi_ghante: { type: "string", description: "وضگی گھنٹہ (numeric)" },
+                wazgi_minute: { type: "string", description: "وضگی منٹ (numeric)" },
+                khalis_waari_ghante: { type: "string", description: "خالص واری / کل پانی گھنٹہ (numeric)" },
+                khalis_waari_minute: { type: "string", description: "خالص واری / کل پانی منٹ (numeric)" },
+                nikha_lega: { type: "string", description: "کس نکہ سے پانی لاوے گا (مربع/کیلہ)" },
+                nikha_dega: { type: "string", description: "کس نکہ پر پانی دے گا (مربع/کیلہ)" },
+                tashreeh_din: { type: "string", description: "اوقات داری — شروع وقت (day/time string e.g. سوموار صبح 6 بجے)" },
+                tashreeh_raat: { type: "string", description: "اوقات داری — ختم وقت (day/time string)" },
               },
             },
           },
+        },
+      };
+
+      if (isSpreadsheet) {
+        // Excel / CSV → use InvokeLLM for intelligent column mapping
+        const result = await base44.integrations.Core.InvokeLLM({
+          prompt: `This Excel/CSV file contains a Parat Warabandi (پرت وارہ بندی) or Tarmeem Warabandi (ترمیم وارہ بندی) register in Urdu.
+The spreadsheet may have Urdu column headers in row 3 or 4. Columns from RIGHT to LEFT (Urdu RTL order):
+- نمبر شمار = serial/row number → khatoni
+- نام مالک یا قابض اراضی معہ ولدیت = owner name → owner_name (keep Urdu)
+- نمبران مربعہ جات / تفصیل نمبران کیفیت = land details → bandubast
+- رقبہ بروئے ایکڑ = area in acres → total_area
+- غیر ممکن = unusable area → ghair_mumkin
+- خالص رقبہ = net area → khalis_raqba
+- واری بحساب رقبہ گھنٹہ/منٹ = water turn by area hours/minutes → waari_ghante / waari_minute
+- زائدہ واری / لیڈ گھنٹہ/منٹ → zaidah_ghante / zaidah_minute
+- وضگی گھنٹہ/منٹ → wazgi_ghante / wazgi_minute
+- کل پانی / خالص واری گھنٹہ/منٹ → khalis_waari_ghante / khalis_waari_minute
+- کس نکہ سے پانی لاوے گا (مربع/کیلہ) → nikha_lega
+- کس نکہ پر پانی دے گا (مربع/کیلہ) → nikha_dega
+- اوقات داری شروع → tashreeh_din
+- اوقات داری ختم → tashreeh_raat
+Also extract header: mogha_number (موگہ نمبر), mogha_side (L/R), rajbaha (راجباہ), mouza (موضع), section (سیکشن), sub_division (تحصیل), canal_division (ضلع).
+Skip header/sub-header rows. Extract only actual data rows (where owner_name or total_area is present).
+Use empty string "" for any missing value. Return ONLY the JSON object.`,
+          file_urls: [file_url],
+          model: "claude_sonnet_4_6",
+          response_json_schema: AI_SCHEMA,
         });
-        const out = result?.output;
-        const rows = Array.isArray(out) ? out : (out?.rows || []);
-        setPdfPreview({ header: {}, rows });
+        setPdfPreview(result);
       } else {
         // PDF / image → AI vision extraction
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `This is a scanned "Parat Warabandi" (پرت وارہ بندی) register document in Urdu. Extract the header and every shareholder row accurately.
-Return a JSON object with:
-- header: { mogha_number, mogha_side (L or R), rajbaha, mouza, section, sub_division, canal_division }
-- rows: an array where each item has: khatoni (کھاتہ نمبر), owner_name (نام مالک معہ والدیت), bandubast (نمبران بندوبست), total_area (کل رقبہ ایکڑ), ghair_mumkin (غیر ممکن رقبہ), khalis_raqba (خالص رقبہ), waari_minute, waari_ghante (واری بحساب رقبہ), zaidah_minute, zaidah_ghante (زائدہ وصولی), wazgi_minute, wazgi_ghante (وضگی), nikha_lega, nikha_dega (نکہ جات), tashreeh_din, tashreeh_raat (تشریح اوقات).
-Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for missing values. Return ONLY the JSON object.`,
+          prompt: `This is a scanned Parat Warabandi (پرت وارہ بندی) or Tarmeem Warabandi (ترمیم وارہ بندی) document in Urdu.
+Read the HEADER line at the top for: موگہ نمبر (mogha_number), طرف L/R (mogha_side), راجباہ (rajbaha), موضع/چک (mouza), سیکشن (section), تحصیل/سب ڈویژن (sub_division), ضلع/ڈویژن (canal_division).
+For EACH DATA ROW in the table extract:
+- khatoni: نمبر شمار (col 1, serial number)
+- owner_name: نام مالک یا قابض اراضی معہ ولدیت (keep full Urdu name)
+- bandubast: نمبران مربعہ جات e.g. "78-82" or "527/6"
+- total_area: کل رقبہ (numeric, e.g. "7.24")
+- ghair_mumkin: غیر ممکن رقبہ (numeric, e.g. "0.14")
+- khalis_raqba: خالص رقبہ (numeric, e.g. "7.10")
+- waari_ghante: واری بحساب رقبہ گھنٹہ (numeric)
+- waari_minute: واری بحساب رقبہ منٹ (numeric)
+- zaidah_ghante: زائدہ واری گھنٹہ
+- zaidah_minute: زائدہ واری منٹ
+- wazgi_ghante: وضگی گھنٹہ
+- wazgi_minute: وضگی منٹ
+- khalis_waari_ghante: خالص واری / کل پانی گھنٹہ (numeric)
+- khalis_waari_minute: خالص واری / کل پانی منٹ (numeric)
+- nikha_lega: کس نکہ سے پانی لاوے گا (e.g. "ہیڈ موگہ")
+- nikha_dega: کس نکہ پر پانی دے گا (e.g. "527/6")
+- tashreeh_din: اوقات داری شروع (e.g. "صبح 6 بجے سے سوموار")
+- tashreeh_raat: اوقات داری ختم (e.g. "دن 12:24 تک")
+IMPORTANT: Skip totals/میزان rows. Keep all Urdu text in Urdu. Use "" for missing. Return ONLY the JSON.`,
           file_urls: [file_url],
           model: "claude_sonnet_4_6",
-          response_json_schema: {
-            type: "object",
-            properties: {
-              header: {
-                type: "object",
-                properties: {
-                  mogha_number: { type: "string" },
-                  mogha_side: { type: "string" },
-                  rajbaha: { type: "string" },
-                  mouza: { type: "string" },
-                  section: { type: "string" },
-                  sub_division: { type: "string" },
-                  canal_division: { type: "string" },
-                },
-              },
-              rows: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    khatoni: { type: "string" },
-                    owner_name: { type: "string" },
-                    bandubast: { type: "string" },
-                    total_area: { type: "string" },
-                    ghair_mumkin: { type: "string" },
-                    khalis_raqba: { type: "string" },
-                    waari_minute: { type: "string" },
-                    waari_ghante: { type: "string" },
-                    zaidah_minute: { type: "string" },
-                    zaidah_ghante: { type: "string" },
-                    wazgi_minute: { type: "string" },
-                    wazgi_ghante: { type: "string" },
-                    nikha_lega: { type: "string" },
-                    nikha_dega: { type: "string" },
-                    tashreeh_din: { type: "string" },
-                    tashreeh_raat: { type: "string" },
-                  },
-                },
-              },
-            },
-          },
+          response_json_schema: AI_SCHEMA,
         });
         setPdfPreview(result);
       }
@@ -434,11 +445,19 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
           tashreeh_din: r.tashreeh_din || "",
           tashreeh_raat: r.tashreeh_raat || "",
         };
-        const kw = calcKhalisWaari(row);
-        row.khalis_waari_minute = kw.khalis_waari_minute;
-        row.khalis_waari_ghante = kw.khalis_waari_ghante;
-        row.khalis_waari2_minute = kw.khalis_waari_minute;
-        row.khalis_waari2_ghante = kw.khalis_waari_ghante;
+        // Use AI-provided khalis_waari if available, else calculate
+        if (r.khalis_waari_ghante || r.khalis_waari_minute) {
+          row.khalis_waari_ghante = r.khalis_waari_ghante || "0";
+          row.khalis_waari_minute = r.khalis_waari_minute || "0";
+          row.khalis_waari2_ghante = row.khalis_waari_ghante;
+          row.khalis_waari2_minute = row.khalis_waari_minute;
+        } else {
+          const kw = calcKhalisWaari(row);
+          row.khalis_waari_minute = kw.khalis_waari_minute;
+          row.khalis_waari_ghante = kw.khalis_waari_ghante;
+          row.khalis_waari2_minute = kw.khalis_waari_minute;
+          row.khalis_waari2_ghante = kw.khalis_waari_ghante;
+        }
         return row;
       });
       setRows(mapped);
