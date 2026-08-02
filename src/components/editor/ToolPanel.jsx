@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import {
-  Square, RectangleVertical, RectangleHorizontal,
+  RectangleVertical, RectangleHorizontal,
   MousePointer2, Hand, Eraser,
   RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Move, Waves, AlertTriangle, Ruler
 } from "lucide-react";
@@ -59,7 +59,7 @@ const TOOLS = [
   null,
   { id: "move", label: "Move (D) — drag parcels", icon: Move, group: "edit", color: "text-orange-400" },
   null,
-  { id: "acre", label: "Acre 220×198 ft (A)", icon: Square, group: "draw", color: "text-yellow-400" },
+  { id: "eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
   { id: "mustateel", label: "Mustateel 440×990 ft (M)", icon: RectangleVertical, group: "draw", color: "text-red-400" },
   { id: "muraba", label: "Muraba 1100×990 ft (B)", icon: RectangleHorizontal, group: "draw", color: "text-red-500" },
   null,
@@ -71,8 +71,6 @@ const TOOLS = [
   { id: "mouza", label: "Mouza Boundary (U)", icon: MouzaIcon, group: "draw", color: "text-slate-700" },
   { id: "damageMarker", label: "Canal Damage Marker (G)", icon: AlertTriangle, group: "draw", color: "text-red-500" },
   { id: "measure", label: "Measure Distance (X)", icon: Ruler, group: "draw", color: "text-purple-500" },
-  null,
-  { id: "eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
 ];
 
 export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, onZoomIn, onZoomOut, onFitView, canUndo, canRedo }) {

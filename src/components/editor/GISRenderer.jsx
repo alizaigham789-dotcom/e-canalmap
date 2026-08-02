@@ -298,7 +298,7 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
     ctx.fillStyle = C.labelColor || "#1e293b";
     const drawSplitLabel = (text, center, halfW) => {
       if (!text) return;
-      let maxFontPx = Math.min(obj.w, obj.h) * 0.22;
+      let maxFontPx = Math.min(obj.w, obj.h) * 0.26;
       ctx.font = `900 ${maxFontPx}px Rajdhani, sans-serif`;
       const measured = ctx.measureText(text);
       const maxW = (halfW || obj.w * 0.5) * 0.80;

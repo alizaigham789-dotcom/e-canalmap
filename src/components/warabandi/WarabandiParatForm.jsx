@@ -172,9 +172,9 @@ function buildTashreehSchedule(rows, startTimeStr) {
   return schedule;
 }
 
-export default function WarabandiParatForm() {
+export default function WarabandiParatForm({ defaultDocType = "پرت وارہ بندی" }) {
   const [isUrduMode, setIsUrduMode] = useState(false);
-  const [docType, setDocType] = useState("پرت وارہ بندی");
+  const [docType, setDocType] = useState(defaultDocType);
   const [header, setHeader] = useState({
     mogha_number: "18650", mogha_side: "R", rajbaha: "پیلو مائنر",
     mouza: "روڈہ", section: "گنجیال", sub_division: "قائد آباد", canal_division: "خوشاب",
