@@ -31,7 +31,7 @@ export default function ParatWarabandi() {
   const editId = urlParams.get("id");
 
   const [mode, setMode] = useState(editId ? "edit" : "list");
-  const [activeTab, setActiveTab] = useState("parat-jadeed"); // "parat-jadeed" | "tarmeem"
+  const [selectedOption, setSelectedOption] = useState(null); // null | "jadeed" | "tarmeem"
   const [formData, setFormData] = useState({ ...EMPTY_DATA });
   const [shareholders, setShareholders] = useState([emptyRow(1), emptyRow(2), emptyRow(3)]);
   const [showPrint, setShowPrint] = useState(false);
@@ -117,28 +117,45 @@ export default function ParatWarabandi() {
                 <p className="text-[9px] text-slate-400 font-mono" style={{ fontFamily: "serif" }}>پرت وارابندی</p>
               </div>
             </div>
-            <Button onClick={handleNew} className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 text-xs">
-              <Plus className="w-3.5 h-3.5" /> New
-            </Button>
-          </div>
-          {/* Tabs */}
-          <div className="max-w-md mx-auto px-5 flex gap-1 pb-2">
-            <button onClick={() => setActiveTab("parat-jadeed")}
-              className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${activeTab === "parat-jadeed" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
-              پرت وارابندی جدید
-            </button>
-            <button onClick={() => setActiveTab("tarmeem")}
-              className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${activeTab === "tarmeem" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
-              ترمیم وارہ بندی
-            </button>
+            {selectedOption && (
+              <Button onClick={() => setSelectedOption(null)} variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 gap-1 text-xs">
+                <ArrowLeft className="w-3.5 h-3.5" /> واپسی
+              </Button>
+            )}
           </div>
         </header>
 
         <main className="max-w-5xl mx-auto px-4 py-5">
-          {activeTab === "parat-jadeed" ? (
-            <WarabandiParatForm key="jadeed" defaultDocType="پرت وارہ بندی" />
+          {!selectedOption ? (
+            <div className="max-w-md mx-auto py-8 space-y-3">
+              <h2 className="text-center text-sm font-bold text-slate-700 mb-4" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>پرت وارابندی — آپشن منتخب کریں</h2>
+              <button onClick={() => setSelectedOption("jadeed")}
+                className="w-full flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-4 hover:border-emerald-300 hover:shadow-md transition-all text-right">
+                <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-slate-800" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>پرت وارابندی جدید</h3>
+                  <p className="text-[10px] text-slate-500 mt-0.5" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>نئی وارہ بندی مرتب کریں</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300" />
+              </button>
+              <button onClick={() => setSelectedOption("tarmeem")}
+                className="w-full flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all text-right">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-slate-800" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>ترمیم وارہ بندی</h3>
+                  <p className="text-[10px] text-slate-500 mt-0.5" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>ترمیم وارہ بندی مرتب کریں</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300" />
+              </button>
+            </div>
+          ) : selectedOption === "jadeed" ? (
+            <WarabandiParatForm key="jadeed" defaultDocType="پرت وارہ بندی" variant="jadeed" />
           ) : (
-            <WarabandiParatForm key="tarmeem" defaultDocType="کیس ترمیم وارہ بندی" />
+            <WarabandiParatForm key="tarmeem" defaultDocType="کیس ترمیم وارہ بندی" variant="tarmeem" />
           )}
         </main>
 

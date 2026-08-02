@@ -172,7 +172,9 @@ function buildTashreehSchedule(rows, startTimeStr) {
   return schedule;
 }
 
-export default function WarabandiParatForm({ defaultDocType = "پرت وارہ بندی" }) {
+export default function WarabandiParatForm({ defaultDocType = "پرت وارہ بندی", variant = "tarmeem" }) {
+  const isJadeed = variant === "jadeed";
+  const showSummary = !isJadeed;
   const [isUrduMode, setIsUrduMode] = useState(false);
   const [docType, setDocType] = useState(defaultDocType);
   const [header, setHeader] = useState({
@@ -432,7 +434,7 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
 
   const tashreehSchedule = buildTashreehSchedule(rows, tashreehStart);
 
-  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, tashreehSchedule, tashreehStart };
+  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, tashreehSchedule, tashreehStart, variant };
 
   // Row action controls (left side)
   const RowActions = ({ i }) => (
@@ -636,7 +638,7 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
               {showColSr && (
                 <tr style={{ backgroundColor: "#f0f4ff" }}>
                   {showRowSr && <th className={thCls} style={{ fontSize: "8px", width: 28 }}>#</th>}
-                  {COL_LETTERS.map((l, i) => (
+                  {COL_LETTERS.slice(isJadeed ? 7 : 0).map((l, i) => (
                     <th key={i} className={thCls} style={{ fontSize: "8px" }}>{l}</th>
                   ))}
                   <th className={thCls} style={{ width: 28 }}></th>
@@ -644,6 +646,7 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
               )}
               <tr style={{ backgroundColor: "#dbeafe" }}>
                 {showRowSr && <th className={thCls} rowSpan={2} style={{ width: 28 }}>نمبرشمار</th>}
+                {showSummary && <>
                 <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 80 }}>نام مالک معہ والدیت</th>
                 {/* کل رقبہ with ایکڑ sub-label */}
@@ -653,6 +656,7 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
                 </th>
                 <th className={thCls} colSpan={2}>خالص واری</th>
                 <th className={thCls} colSpan={2}>نکہ جات</th>
+                </>}
                 <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 80 }}>نام مالک معہ والدیت</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 90 }}>نمبران بندوبست</th>
@@ -672,8 +676,10 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
                 <th className={thCls} rowSpan={2} style={{ width: 28 }}></th>
               </tr>
               <tr style={{ backgroundColor: "#eff6ff" }}>
+                {showSummary && <>
                 <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
                 <th className={thCls}>لیگا</th><th className={thCls}>دیگا</th>
+                </>}
                 <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
                 <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
                 <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
@@ -686,6 +692,7 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
               {rows.map((row, i) => (
                 <tr key={i} className="hover:bg-blue-50/30">
                   {showRowSr && <td className={tdCls} style={{ fontSize: "9px", color: "#1d4ed8", minWidth: 28, textAlign: "center", fontWeight: "bold" }}>{i + 1}</td>}
+                  {showSummary && <>
                   <td className={tdCls}><input value={row.khatoni2} onChange={e => updateRow(i, "khatoni2", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
                   <td className={tdCls} style={{ minWidth: 80 }}>
                     <input value={row.owner_name2} onChange={e => updateRow(i, "owner_name2", e.target.value)} className={inp}
@@ -702,6 +709,7 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
                   <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls}><input value={row.nikha2_lega} onChange={e => updateRow(i, "nikha2_lega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} /></td>
                   <td className={tdCls}><input value={row.nikha2_dega} onChange={e => updateRow(i, "nikha2_dega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} /></td>
+                  </>}
                   <td className={tdCls}><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
                   <td className={tdCls} style={{ minWidth: 80 }}>
                     <input value={row.owner_name} onChange={e => updateRow(i, "owner_name", e.target.value)} className={inp}
@@ -745,12 +753,14 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
               {/* میزان row */}
               <tr style={{ backgroundColor: "#fef9e7" }}>
                 {showRowSr && <td className={totalCls}>—</td>}
+                {showSummary && <>
                 <td className={totalCls}>—</td>
                 <td className={totalCls} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>میزان</td>
                 <td className={totalCls}>{sumCol(rows, "total_area2")}</td>
                 <td className={totalCls}>{sumCol(rows, "khalis_waari2_minute")}</td>
                 <td className={totalCls}>{sumCol(rows, "khalis_waari2_ghante")}</td>
                 <td className={totalCls}>—</td><td className={totalCls}>—</td>
+                </>}
                 <td className={totalCls}>—</td>
                 <td className={totalCls} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>میزان</td>
                 <td className={totalCls}>—</td>
@@ -815,7 +825,9 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
   );
 }
 
-function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, tashreehSchedule, onClose }) {
+function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, tashreehSchedule, onClose, variant }) {
+  const isJadeed = variant === "jadeed";
+  const showSummary = !isJadeed;
   const thP = { border: "1.5px solid #1e3a5f", padding: "3px 4px", textAlign: "center", backgroundColor: "#dbeafe", fontSize: "8px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" };
   const tdP = { border: "1.5px solid #555", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontFamily: "'Noto Nastaliq Urdu', serif" };
   const tdTotal = { border: "1.5px solid #333", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontWeight: "bold", backgroundColor: "#fef9e7", fontFamily: "'Noto Nastaliq Urdu', serif" };
@@ -858,16 +870,18 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
               {printColSr && (
                 <tr style={{ backgroundColor: "#eff6ff" }}>
                   {printRowSr && <th style={{ ...thP, fontSize: "7px" }}>#</th>}
-                  {COL_LETTERS.map((l, i) => <th key={i} style={{ ...thP, fontSize: "7px" }}>{l}</th>)}
+                  {COL_LETTERS.slice(isJadeed ? 7 : 0).map((l, i) => <th key={i} style={{ ...thP, fontSize: "7px" }}>{l}</th>)}
                 </tr>
               )}
               <tr style={{ backgroundColor: "#dbeafe" }}>
                 {printRowSr && <th style={thP} rowSpan={2}>نمبرشمار</th>}
+                {showSummary && <>
                 <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
                 <th style={{ ...thP, minWidth: 70 }} rowSpan={2}>نام مالک معہ والدیت</th>
                 <th style={thP} rowSpan={2}>{kulRaqbaHeader}</th>
                 <th style={thP} colSpan={2}>خالص واری</th>
                 <th style={thP} colSpan={2}>نکہ جات</th>
+                </>}
                 <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
                 <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نام مالک معہ والدیت</th>
                 <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نمبران بندوبست</th>
@@ -883,8 +897,10 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
                 <th style={thP} rowSpan={2}>تشریح اوقات رات</th>
               </tr>
               <tr style={{ backgroundColor: "#eff6ff" }}>
+                {showSummary && <>
                 <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
                 <th style={thP}>لیگا</th><th style={thP}>دیگا</th>
+                </>}
                 <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
                 <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
                 <th style={thP}>منٹ</th><th style={thP}>گھنٹے</th>
@@ -896,6 +912,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
               {rows.map((row, i) => (
                 <tr key={i}>
                   {printRowSr && <td style={tdP}>{i + 1}</td>}
+                  {showSummary && <>
                   <td style={tdP}>{d(row.khatoni2)}</td>
                   <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name2)}</td>
                   <td style={tdP}>{d(row.total_area2)}</td>
@@ -903,6 +920,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
                   <td style={tdP}>{d(row.khalis_waari2_ghante)}</td>
                   <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_lega ? fracHtml(row.nikha2_lega) : "-" }} />
                   <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_dega ? fracHtml(row.nikha2_dega) : "-" }} />
+                  </>}
                   <td style={tdP}>{d(row.khatoni)}</td>
                   <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name)}</td>
                   <td style={tdP} dangerouslySetInnerHTML={{ __html: row.bandubast ? fracHtml(row.bandubast) : "-" }} />
@@ -925,12 +943,14 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
               ))}
               <tr className="total-row">
                 {printRowSr && <td style={tdTotal}>—</td>}
+                {showSummary && <>
                 <td style={tdTotal}>—</td>
                 <td style={{ ...tdTotal, textAlign: "right" }}>میزان</td>
                 <td style={tdTotal}>{sumCol(rows, "total_area2")}</td>
                 <td style={tdTotal}>{sumCol(rows, "khalis_waari2_minute")}</td>
                 <td style={tdTotal}>{sumCol(rows, "khalis_waari2_ghante")}</td>
                 <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
+                </>}
                 <td style={tdTotal}>—</td>
                 <td style={{ ...tdTotal, textAlign: "right" }}>میزان</td>
                 <td style={tdTotal}>—</td>
