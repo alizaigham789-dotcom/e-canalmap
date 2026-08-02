@@ -172,11 +172,11 @@ function buildTashreehSchedule(rows, startTimeStr) {
   return schedule;
 }
 
-export default function WarabandiParatForm({ defaultDocType = "پرت وارہ بندی", variant = "tarmeem" }) {
-  const isJadeed = variant === "jadeed";
-  const showSummary = !isJadeed;
+export default function WarabandiParatForm({ defaultDocType = "پرت وارہ بندی" }) {
   const [isUrduMode, setIsUrduMode] = useState(false);
   const [docType, setDocType] = useState(defaultDocType);
+  const isJadeed = docType === "پرت وارہ بندی";
+  const showSummary = !isJadeed;
   const [header, setHeader] = useState({
     mogha_number: "18650", mogha_side: "R", rajbaha: "پیلو مائنر",
     mouza: "روڈہ", section: "گنجیال", sub_division: "قائد آباد", canal_division: "خوشاب",
@@ -434,7 +434,7 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
 
   const tashreehSchedule = buildTashreehSchedule(rows, tashreehStart);
 
-  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, tashreehSchedule, tashreehStart, variant };
+  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, tashreehSchedule, tashreehStart, variant: isJadeed ? "jadeed" : "tarmeem" };
 
   // Row action controls (left side)
   const RowActions = ({ i }) => (
@@ -664,8 +664,14 @@ Keep Urdu names in Urdu and numerals exactly as printed. Use empty string for mi
                   <div>کل رقبہ</div>
                   <div style={{ fontSize: "8px", fontWeight: "normal", color: "#555", borderTop: "1px solid #aaa", marginTop: "2px", paddingTop: "2px" }}>ایکڑ</div>
                 </th>
-                <th className={thCls} rowSpan={2}>غیر ممکن رقبہ</th>
-                <th className={thCls} rowSpan={2}>خالص رقبہ</th>
+                <th className={thCls} rowSpan={2}>
+                  <div>غیر ممکن رقبہ</div>
+                  <div style={{ fontSize: "8px", fontWeight: "normal", color: "#555", borderTop: "1px solid #aaa", marginTop: "2px", paddingTop: "2px" }}>ایکڑ</div>
+                </th>
+                <th className={thCls} rowSpan={2}>
+                  <div>خالص رقبہ</div>
+                  <div style={{ fontSize: "8px", fontWeight: "normal", color: "#555", borderTop: "1px solid #aaa", marginTop: "2px", paddingTop: "2px" }}>ایکڑ</div>
+                </th>
                 <th className={thCls} colSpan={2}>واری بحساب رقبہ</th>
                 <th className={thCls} colSpan={2}>زائدہ وصولی</th>
                 <th className={thCls} colSpan={2}>وضگی</th>
@@ -886,8 +892,14 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
                 <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نام مالک معہ والدیت</th>
                 <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نمبران بندوبست</th>
                 <th style={thP} rowSpan={2}>{kulRaqbaHeader}</th>
-                <th style={thP} rowSpan={2}>غیر ممکن رقبہ</th>
-                <th style={thP} rowSpan={2}>خالص رقبہ</th>
+                <th style={thP} rowSpan={2}>
+                  <div>غیر ممکن رقبہ</div>
+                  <div style={{ fontSize: "7px", fontWeight: "normal", borderTop: "1px solid #aaa", marginTop: "1px", paddingTop: "1px" }}>ایکڑ</div>
+                </th>
+                <th style={thP} rowSpan={2}>
+                  <div>خالص رقبہ</div>
+                  <div style={{ fontSize: "7px", fontWeight: "normal", borderTop: "1px solid #aaa", marginTop: "1px", paddingTop: "1px" }}>ایکڑ</div>
+                </th>
                 <th style={thP} colSpan={2}>واری بحساب رقبہ</th>
                 <th style={thP} colSpan={2}>زائدہ وصولی</th>
                 <th style={thP} colSpan={2}>وضگی</th>
