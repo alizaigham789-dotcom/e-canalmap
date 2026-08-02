@@ -135,70 +135,6 @@ function fracHtml(val) {
   return val;
 }
 
-// Parse time string like "6:00" → total minutes from midnight
-function parseTime(str) {
-  if (!str) return null;
-  const m = str.trim().match(/(\d+):(\d+)/);
-  if (!m) return null;
-  return parseInt(m[1]) * 60 + parseInt(m[2]);
-}
-
-// Format minutes-from-midnight back to "H:MM"
-function formatTime(totalMins) {
-  const h = Math.floor(((totalMins % 1440) + 1440) % 1440 / 60);
-  const m = ((totalMins % 1440) + 1440) % 1440 % 60;
-  return `${h}:${String(m).padStart(2, "0")}`;
-}
-
-// Build tashreeh schedule from rows' خالص واری and a start time
-function buildTashreehSchedule(rows, startTimeStr) {
-  const startMins = parseTime(startTimeStr);
-  if (startMins === null) return [];
-  
-  const URDU_DAYS = ["اتوار","سوموار","منگل","بدھ","جمعرات","جمعہ","ہفتہ"];
-  const URDU_TIMES = [
-    { from: 0, to: 360, label: "الصبح" },
-    { from: 360, to: 720, label: "صبح" },
-    { from: 720, to: 1260, label: "دوپہر" },
-    { from: 1260, to: 1560, label: "شام" },
-    { from: 1560, to: 1440, label: "رات" },
-  ];
-  
-  function timeLabel(mins) {
-    const mOfDay = ((mins % 1440) + 1440) % 1440;
-    let period = "رات";
-    if (mOfDay < 360) period = "الصبح";
-    else if (mOfDay < 720) period = "صبح";
-    else if (mOfDay < 1260) period = "دوپہر";
-    else if (mOfDay < 1560) period = "شام";
-    const dayIdx = Math.floor(((mins % (7 * 1440)) + 7 * 1440) % (7 * 1440) / 1440);
-    return `${URDU_DAYS[dayIdx % 7]} ${period} ${formatTime(mOfDay)}`;
-  }
-
-  const schedule = [];
-  let cursor = startMins;
-
-  rows.forEach((row, i) => {
-    const hh = parseFloat(row.khalis_waari_ghante) || 0;
-    const mm = parseFloat(row.khalis_waari_minute) || 0;
-    const dur = hh * 60 + mm;
-    if (dur === 0) return;
-    const from = cursor;
-    const to = cursor + dur;
-    schedule.push({
-      sr: i + 1,
-      name: row.owner_name || row.owner_name2 || `حصہ دار ${i + 1}`,
-      khatoni: row.khatoni || row.khatoni2 || "",
-      from: timeLabel(from),
-      to: timeLabel(to),
-      dur: `${String(Math.floor(dur / 60))} گھ ${String(dur % 60)} منٹ`,
-    });
-    cursor = to;
-  });
-
-  return schedule;
-}
-
 export default function WarabandiParatForm({ defaultDocType = "پرت وارہ بندی" }) {
   const [isUrduMode, setIsUrduMode] = useState(false);
   const [docType, setDocType] = useState(defaultDocType);
@@ -215,15 +151,10 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [showColSr, setShowColSr] = useState(true);
   const [printRowSr, setPrintRowSr] = useState(false);
   const [printColSr, setPrintColSr] = useState(false);
-  const [colorPrint, setColorPrint] = useState(true);
-  const [repeatHeader, setRepeatHeader] = useState(true);
   // Automation toggle
   const [autoOn, setAutoOn] = useState(true);
   // Acre-to-time rate
   const [acreMinutes, setAcreMinutes] = useState("6");
-  // Tashreeh start time
-  const [tashreehStart, setTashreehStart] = useState("6:00");
-  const [showTashreeh, setShowTashreeh] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfPreview, setPdfPreview] = useState(null);
   const [showPaste, setShowPaste] = useState(false);
@@ -588,9 +519,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const tdCls = "border border-slate-300 text-center px-0 py-0 text-[10px]";
   const totalCls = "border border-slate-400 text-center px-0.5 py-1 text-[10px] font-bold bg-amber-50";
 
-  const tashreehSchedule = buildTashreehSchedule(rows, tashreehStart);
-
-  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, colorPrint, repeatHeader, tashreehSchedule, tashreehStart, variant: isJadeed ? "jadeed" : "tarmeem" };
+  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, variant: isJadeed ? "jadeed" : "tarmeem" };
 
   // Row action controls (left side)
   const RowActions = ({ i }) => (
@@ -643,14 +572,6 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               <input type="checkbox" checked={printColSr} onChange={e => setPrintColSr(e.target.checked)} className="w-3 h-3" />
               پرنٹ کالم نمبرشمار
             </label>
-            <label className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={colorPrint} onChange={e => setColorPrint(e.target.checked)} className="w-3 h-3" />
-              رنگین پرنٹ
-            </label>
-            <label className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={repeatHeader} onChange={e => setRepeatHeader(e.target.checked)} className="w-3 h-3" />
-              ہیڈر دہرائیں
-            </label>
             <Button size="sm" onClick={() => setShowPrint(true)} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1">
               <Printer className="w-3 h-3" /> پرنٹ
             </Button>
@@ -681,46 +602,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           <Button size="sm" onClick={calcWaariFromAcre} className="h-6 text-[10px] bg-amber-500 hover:bg-amber-600 text-white px-2">
             واری حساب کریں
           </Button>
-          <div className="flex items-center gap-1 mr-3">
-            <span className="text-xs text-amber-700">تشریح آغاز وقت:</span>
-            <input type="text" value={tashreehStart} onChange={e => setTashreehStart(e.target.value)} placeholder="6:00"
-              className="w-16 border border-amber-300 rounded px-1 py-0.5 text-xs text-center bg-white focus:outline-none focus:border-amber-500" />
-          </div>
-          <button onClick={() => setShowTashreeh(v => !v)} className="text-xs text-blue-600 underline">
-            {showTashreeh ? "وقت ٹیبل چھپائیں" : "وقت ٹیبل دیکھیں"}
-          </button>
         </div>
-
-        {/* Tashreeh schedule preview */}
-        {showTashreeh && tashreehSchedule.length > 0 && (
-          <div className="mb-3 p-2 bg-white border border-slate-200 rounded overflow-x-auto" dir="rtl">
-            <p className="text-[10px] font-semibold text-slate-600 mb-1" style={{ fontFamily: "serif" }}>تشریح اوقات جدول</p>
-            <table style={{ borderCollapse: "collapse", fontSize: "9px", fontFamily: "'Noto Nastaliq Urdu', serif", width: "100%" }}>
-              <thead>
-                <tr style={{ backgroundColor: "#dbeafe" }}>
-                  <th style={{ border: "1px solid #ccc", padding: "2px 4px" }}>نمبر</th>
-                  <th style={{ border: "1px solid #ccc", padding: "2px 4px" }}>کھاتہ</th>
-                  <th style={{ border: "1px solid #ccc", padding: "2px 4px" }}>نام</th>
-                  <th style={{ border: "1px solid #ccc", padding: "2px 8px" }}>سے</th>
-                  <th style={{ border: "1px solid #ccc", padding: "2px 8px" }}>تک</th>
-                  <th style={{ border: "1px solid #ccc", padding: "2px 4px" }}>مدت</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tashreehSchedule.map((s, i) => (
-                  <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "#f8faff" : "#fff" }}>
-                    <td style={{ border: "1px solid #ccc", padding: "2px 4px", textAlign: "center" }}>{s.sr}</td>
-                    <td style={{ border: "1px solid #ccc", padding: "2px 4px", textAlign: "center" }}>{s.khatoni}</td>
-                    <td style={{ border: "1px solid #ccc", padding: "2px 6px" }}>{s.name}</td>
-                    <td style={{ border: "1px solid #ccc", padding: "2px 6px" }}>{s.from}</td>
-                    <td style={{ border: "1px solid #ccc", padding: "2px 6px" }}>{s.to}</td>
-                    <td style={{ border: "1px solid #ccc", padding: "2px 4px", textAlign: "center" }}>{s.dur}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
 
         <div dir="rtl" className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
           <div className="flex flex-col gap-0.5">
@@ -754,7 +636,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         </div>
 
         <div dir="rtl" className="mt-3 p-2 bg-white border border-dashed border-slate-300 rounded text-center text-[11px] text-blue-700 font-bold"
-          style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 2.2 }}>
+          style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 2.6, letterSpacing: "0.3px" }}>
           {headerLine}
         </div>
       </div>
@@ -1006,17 +888,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   );
 }
 
-function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, colorPrint, repeatHeader, tashreehSchedule, onClose, variant }) {
+function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, onClose, variant }) {
   const isJadeed = variant === "jadeed";
   const showSummary = !isJadeed;
-  const thP = { border: "1.5px solid #1e3a5f", padding: "3px 4px", textAlign: "center", backgroundColor: colorPrint ? "#dbeafe" : "#fff", fontSize: "8px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: colorPrint ? "#1e3a5f" : "#000" };
-  const thLetters = { ...thP, backgroundColor: colorPrint ? "#f0f4ff" : "#fff" };
-  const thSub = { ...thP, backgroundColor: colorPrint ? "#eff6ff" : "#fff" };
+  const thP = { border: "1.5px solid #1e3a5f", padding: "3px 4px", textAlign: "center", backgroundColor: "#dbeafe", fontSize: "8px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" };
+  const thLetters = { ...thP, backgroundColor: "#f0f4ff" };
+  const thSub = { ...thP, backgroundColor: "#eff6ff" };
   const tdP = { border: "1.5px solid #555", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontFamily: "'Noto Nastaliq Urdu', serif" };
-  const tdGreen = { ...tdP, backgroundColor: colorPrint ? "#f0fdf4" : undefined };
-  const tdBlue = { ...tdP, backgroundColor: colorPrint ? "#eff6ff" : undefined };
-  const tdTotal = { border: "1.5px solid #333", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontWeight: "bold", backgroundColor: colorPrint ? "#fef9e7" : undefined, fontFamily: "'Noto Nastaliq Urdu', serif" };
-  const colCount = (printRowSr ? 1 : 0) + (showSummary ? 7 : 0) + 18;
+  const tdTotal = { border: "1.5px solid #333", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontWeight: "bold", backgroundColor: "#fef9e7", fontFamily: "'Noto Nastaliq Urdu', serif" };
 
   const handlePrint = () => {
     const w = window.open("", "_blank", "width=1300,height=900");
@@ -1087,16 +966,9 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
     </>
   );
 
-  // Header line (title with mogha/rajbaha details) — full-width row that repeats with thead
-  const headerLineRow = (
-    <tr>
-      <th colSpan={colCount} style={{ ...thP, fontSize: "11px", textAlign: "center", backgroundColor: colorPrint ? "#e0e7ff" : "#fff", border: "2px solid #1e3a5f" }}>
-        {headerLine}
-      </th>
-    </tr>
-  );
+  // (header line is rendered as a borderless div before the table — first page only)
 
-  // Data rows with colored cells matching screen preview
+  // Data rows
   const dataRows = rows.map((row, i) => (
     <tr key={i}>
       {printRowSr && <td style={tdP}>{i + 1}</td>}
@@ -1104,8 +976,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <td style={tdP}>{d(row.khatoni2)}</td>
       <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name2)}</td>
       <td style={tdP}>{d(row.total_area2)}</td>
-      <td style={tdBlue}>{d(row.khalis_waari2_minute)}</td>
-      <td style={tdBlue}>{d(row.khalis_waari2_ghante)}</td>
+      <td style={tdP}>{d(row.khalis_waari2_minute)}</td>
+      <td style={tdP}>{d(row.khalis_waari2_ghante)}</td>
       <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_lega ? fracHtml(row.nikha2_lega) : "-" }} />
       <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_dega ? fracHtml(row.nikha2_dega) : "-" }} />
       </>}
@@ -1114,15 +986,15 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <td style={tdP} dangerouslySetInnerHTML={{ __html: row.bandubast ? fracHtml(row.bandubast) : "-" }} />
       <td style={tdP}>{d(row.total_area)}</td>
       <td style={tdP}>{d(row.ghair_mumkin)}</td>
-      <td style={tdGreen}>{d(row.khalis_raqba)}</td>
+      <td style={tdP}>{d(row.khalis_raqba)}</td>
       <td style={tdP}>{d(row.waari_minute)}</td>
       <td style={tdP}>{d(row.waari_ghante)}</td>
       <td style={tdP}>{d(row.zaidah_minute)}</td>
       <td style={tdP}>{d(row.zaidah_ghante)}</td>
       <td style={tdP}>{d(row.wazgi_minute)}</td>
       <td style={tdP}>{d(row.wazgi_ghante)}</td>
-      <td style={tdBlue}>{d(row.khalis_waari_minute)}</td>
-      <td style={tdBlue}>{d(row.khalis_waari_ghante)}</td>
+      <td style={tdP}>{d(row.khalis_waari_minute)}</td>
+      <td style={tdP}>{d(row.khalis_waari_ghante)}</td>
       <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha_lega ? fracHtml(row.nikha_lega) : "-" }} />
       <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha_dega ? fracHtml(row.nikha_dega) : "-" }} />
       <td style={tdP}>{d(row.tashreeh_din)}</td>
@@ -1173,64 +1045,21 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         </div>
 
         <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-          {repeatHeader ? (
-            <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
-              <thead>
-                {headerLineRow}
-                {headerRows}
-              </thead>
-              <tbody>
-                {dataRows}
-                {totalRow}
-              </tbody>
-            </table>
-          ) : (
-            <>
-              <div style={{ textAlign: "center", fontSize: "14px", fontWeight: "bold", marginBottom: "10px", borderBottom: "2px solid #1e3a5f", paddingBottom: "6px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" }}>
-                {headerLine}
-              </div>
-              <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
-                <tbody>
-                  {headerRows}
-                  {dataRows}
-                  {totalRow}
-                </tbody>
-              </table>
-            </>
-          )}
+          {/* Header line — first page only (borderless div outside the table so it doesn't repeat) */}
+          <div style={{ textAlign: "center", fontSize: "13px", fontWeight: "bold", marginBottom: "8px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 2.4, letterSpacing: "0.4px" }}>
+            {headerLine}
+          </div>
 
-          {/* Tashreeh Schedule Table in print */}
-          {tashreehSchedule.length > 0 && (
-            <div style={{ marginTop: "16px" }}>
-              <div style={{ fontSize: "11px", fontWeight: "bold", marginBottom: "6px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" }}>
-                تشریح اوقات جدول
-              </div>
-              <table className="tashreeh-table" style={{ borderCollapse: "collapse", width: "100%", direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-                <thead>
-                  <tr style={{ backgroundColor: "#dbeafe" }}>
-                    <th style={{ border: "1px solid #333", padding: "2px 4px", fontSize: "7px", color: "#1e3a5f" }}>نمبر</th>
-                    <th style={{ border: "1px solid #333", padding: "2px 4px", fontSize: "7px", color: "#1e3a5f" }}>کھاتہ</th>
-                    <th style={{ border: "1px solid #333", padding: "2px 8px", fontSize: "7px", color: "#1e3a5f" }}>نام مالک</th>
-                    <th style={{ border: "1px solid #333", padding: "2px 8px", fontSize: "7px", color: "#1e3a5f" }}>آغاز وقت</th>
-                    <th style={{ border: "1px solid #333", padding: "2px 8px", fontSize: "7px", color: "#1e3a5f" }}>اختتام وقت</th>
-                    <th style={{ border: "1px solid #333", padding: "2px 4px", fontSize: "7px", color: "#1e3a5f" }}>مدت</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tashreehSchedule.map((s, i) => (
-                    <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "#f8faff" : "#fff" }}>
-                      <td style={{ border: "1px solid #555", padding: "2px 4px", textAlign: "center", fontSize: "7px" }}>{s.sr}</td>
-                      <td style={{ border: "1px solid #555", padding: "2px 4px", textAlign: "center", fontSize: "7px" }}>{s.khatoni}</td>
-                      <td style={{ border: "1px solid #555", padding: "2px 6px", fontSize: "7px" }}>{s.name}</td>
-                      <td style={{ border: "1px solid #555", padding: "2px 6px", fontSize: "7px" }}>{s.from}</td>
-                      <td style={{ border: "1px solid #555", padding: "2px 6px", fontSize: "7px" }}>{s.to}</td>
-                      <td style={{ border: "1px solid #555", padding: "2px 4px", textAlign: "center", fontSize: "7px" }}>{s.dur}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {/* Table — column headers in <thead> repeat on every printed page */}
+          <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
+            <thead>
+              {headerRows}
+            </thead>
+            <tbody>
+              {dataRows}
+              {totalRow}
+            </tbody>
+          </table>
 
           {/* جناب عالیٰ + Notes */}
           <div style={{ marginTop: "20px", direction: "rtl" }}>
