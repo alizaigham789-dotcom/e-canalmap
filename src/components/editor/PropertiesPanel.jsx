@@ -431,15 +431,15 @@ function KhalWidthControl({ value, onChange }) {
   );
 }
 
-// Canal width — continuous range 3–250 ft (covers minor, disty & main canals)
+// Canal width — continuous range 3–150 ft (default 100 ft)
 function CanalWidthControl({ name, value, onChange }) {
-  const min = 3, max = 250;
-  const clamped = Math.min(max, Math.max(min, value || 14));
+  const min = 3, max = 150;
+  const clamped = Math.min(max, Math.max(min, value || 100));
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
         <label className="text-[10px] text-slate-400 uppercase tracking-wider">Width (ft)</label>
-        <span className="text-[9px] text-blue-500 font-medium">Canal · 3–250 ft</span>
+        <span className="text-[9px] text-blue-500 font-medium">Canal · 3–150 ft</span>
       </div>
       <div className="flex items-center gap-2">
         <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
@@ -451,7 +451,7 @@ function CanalWidthControl({ name, value, onChange }) {
           onClick={() => onChange(Math.min(max, clamped + 1))}>+</Button>
         <span className="text-xs text-slate-600 font-mono w-10 text-center">{clamped}ft</span>
       </div>
-      <p className="text-[9px] text-slate-400 mt-0.5">3 سے 250 فٹ تک</p>
+      <p className="text-[9px] text-slate-400 mt-0.5">3 سے 150 فٹ تک (ڈیفالٹ 100)</p>
     </div>
   );
 }

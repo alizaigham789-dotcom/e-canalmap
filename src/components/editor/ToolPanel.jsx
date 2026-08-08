@@ -115,22 +115,20 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
             );
           }
 
-          const activeClass = "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20";
+          const activeClass = "bg-gradient-to-br from-blue-500 to-blue-700 border-blue-400 text-white shadow-lg shadow-blue-500/30";
           return (
             <Tooltip key={tool.id}>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg transition-all shrink-0 ${
-                    isActive
-                      ? activeClass
-                      : `text-slate-500 hover:text-slate-800 hover:bg-slate-100 ${tool.color || ""}`
-                  }`}
+                <button
                   onClick={() => onToolChange(tool.id)}
+                  className={`${
+                    isActive
+                      ? "w-11 h-11 sm:w-[52px] sm:h-[52px] rounded-xl border-2 " + activeClass
+                      : `w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 ${tool.color || ""}`
+                  } transition-all duration-200 flex items-center justify-center shrink-0`}
                 >
-                  <Icon className="w-4 h-4" />
-                </Button>
+                  <Icon className={isActive ? "w-5 h-5 sm:w-6 sm:h-6" : "w-4 h-4"} />
+                </button>
               </TooltipTrigger>
               <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">
                 {tool.label}

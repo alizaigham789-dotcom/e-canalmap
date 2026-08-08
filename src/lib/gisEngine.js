@@ -402,7 +402,8 @@ export function autoAssignLabel(type, existingObjects, startFrom = null) {
   if (!["mustateel", "muraba"].includes(type)) return "";
   const numbers = existingObjects
     .filter(o => o.type === type && o.label)
-    .map(o => { const m = o.label.match(/(\d+)/); return m ? parseInt(m[1], 10) : 0; });
+    .map(o => { const m = o.label.match(/(\d+)/); return m ? parseInt(m[1], 10) : 0; })
+    .filter(n => n > 0);
   if (startFrom !== null && !isNaN(startFrom)) {
     // Start from user-specified number — find the next unused number >= startFrom
     const numSet = new Set(numbers);
@@ -410,8 +411,15 @@ export function autoAssignLabel(type, existingObjects, startFrom = null) {
     while (numSet.has(n)) n++;
     return String(n);
   }
-  const nextNum = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
-  return String(nextNum);
+  // Gap-fill within existing range: find smallest unused number >= min, else max+1
+  if (numbers.length === 0) return "1";
+  const min = Math.min(...numbers);
+  const max = Math.max(...numbers);
+  const numSet = new Set(numbers);
+  for (let n = min; n <= max; n++) {
+    if (!numSet.has(n)) return String(n);
+  }
+  return String(max + 1);
 }
 
 // ============================================================
@@ -458,7 +466,7 @@ export function createCanal(points, name = "") {
   return {
     id: `canal_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "canal", points: points.map(p => ({ ...p })), name,
-    width: DIMENSIONS.CANAL_WIDTH,
+    width: 100, // default 100 ft (1px ≈ 1ft on this canvas)
     canalStyle: "flat", // "flat" (squared banks + blue water center, default) or "3d" (ribbon + glow + highlight)
   };
 }

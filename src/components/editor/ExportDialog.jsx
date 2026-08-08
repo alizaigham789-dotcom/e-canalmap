@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Globe, Map, Table2, Image, FileImage } from "lucide-react";
+import { Download, FileText, Globe, Map, Table2, Image, FileImage, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas } from "@/lib/printRenderHelpers";
 import { drawExclusionHatchOnCanvas } from "@/components/editor/GISRenderer";
+import { canvasToPdfBlob, downloadBlob, shareBlob } from "@/lib/pdfExport";
 
 
 export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {}, pageBorderStyle = "none" }) {
@@ -313,42 +314,54 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }, "image/jpeg", 0.95);
   };
 
-  // ---- Export as PDF (raster) — single page, Urdu header ----
+  // ---- Export as PDF file (jsPDF — saves to storage on mobile) ----
   const exportPDF = async () => {
     setLoading("pdf");
-    const canvas = renderToCanvas(2);
-    const imgData = canvas.toDataURL("image/jpeg", 0.95);
-    const totalGCA = calculateTotalGCA(objects);
-    const headerHTML = buildPrintHeaderHTML(mapData);
-    const footerHTML = buildPrintFooterHTML(mapData);
-    // A4 landscape: fit map on single page
-    const _ps = PAGE_SIZES[pageSize] || PAGE_SIZES.A4;
-    const pw = pageOrientation === "landscape" ? _ps.h : _ps.w;
-    const ph = pageOrientation === "landscape" ? _ps.w : _ps.h;
-    const mapAreaH = ph;
-    const ratio = Math.min(pw / canvas.width, mapAreaH / canvas.height);
-    const iw = canvas.width * ratio, ih = canvas.height * ratio;
-    const ix = (pw - iw) / 2;
+    try {
+      const canvas = renderToCanvas(2);
+      const blob = await canvasToPdfBlob(canvas, mapData, pageOrientation, pageSize);
+      downloadBlob(blob, `${mapData?.title || "map"}.pdf`);
+      toast.success("PDF محفوظ ہو گیا");
+    } catch (e) {
+      toast.error("PDF بنانے میں مسئلہ");
+    }
+    setLoading(null);
+  };
 
-    const win = window.open("", "_blank");
-    if (!win) { toast.error("Popup blocked — allow popups for this site"); setLoading(null); return; }
-    win.document.write(`<!DOCTYPE html><html><head><title>Khaka Dasti</title>
-    <style>
-      @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
-      @page { size: ${pageSize} ${pageOrientation}; margin: 6mm; }
-      * { margin:0; padding:0; box-sizing:border-box; }
-      html, body { width:100%; height:100%; overflow:hidden; background:white; font-family:Rajdhani,Arial,sans-serif; }
-      body { display: flex; flex-direction: column;${pageBorderStyle !== "none" && pageBorderStyle ? ` border:2px ${pageBorderStyle} #3b82f6;` : ""} }
-      .map-area { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-      .map-area img { max-width:100%; max-height:100%; width:auto; height:auto; }
-      @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
-    </style></head><body>
-    ${headerHTML}
-    <div class="map-area"><img src="${imgData}" /></div>
-    ${footerHTML}
-    </body></html>`);
-    win.document.close();
-    win.onload = () => { setTimeout(() => { win.print(); setLoading(null); }, 500); };
+  // ---- Share PDF via Web Share API (WhatsApp etc.) ----
+  const sharePDF = async () => {
+    setLoading("pdf-share");
+    try {
+      const canvas = renderToCanvas(2);
+      const blob = await canvasToPdfBlob(canvas, mapData, pageOrientation, pageSize);
+      const fname = `${mapData?.title || "map"}.pdf`;
+      const result = await shareBlob(blob, fname, mapData?.title || "Map", "Chakbandi GIS Map");
+      if (result === "unsupported") {
+        downloadBlob(blob, fname);
+        toast.info("شیئرنگ سپورٹڈ نہیں — PDF ڈاؤن لوڈ ہو گیا");
+      }
+    } catch (e) {
+      toast.error("شیئر کرنے میں مسئلہ");
+    }
+    setLoading(null);
+  };
+
+  // ---- Share JPG via Web Share API ----
+  const shareJPG = async () => {
+    setLoading("jpg-share");
+    try {
+      const canvas = renderToCanvas(2);
+      const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.95));
+      const fname = `${mapData?.title || "map"}.jpg`;
+      const result = await shareBlob(blob, fname, mapData?.title || "Map", "Chakbandi GIS Map");
+      if (result === "unsupported") {
+        downloadBlob(blob, fname);
+        toast.info("شیئرنگ سپورٹڈ نہیں — تصویر ڈاؤن لوڈ ہو گیا");
+      }
+    } catch (e) {
+      toast.error("شیئر کرنے میں مسئلہ");
+    }
+    setLoading(null);
   };
 
   // ---- Export as Vector PDF (SVG in print window) ----
@@ -743,9 +756,11 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
   const exportJSON = () => downloadText(JSON.stringify({map:mapData,objects},null,2),`${mapData?.title||"map"}_raw.json`,"application/json");
 
   const EXPORTS = [
+    { label: "PDF File", desc: "محفوظ PDF فائل (موبائل پر بھی)", icon: FileImage, color: "text-red-400", action: exportPDF, key: "pdf" },
+    { label: "Share PDF", desc: "WhatsApp یا کہیں بھی شیئر کریں", icon: Share2, color: "text-emerald-400", action: sharePDF, key: "pdf-share" },
     { label: "JPG Image", desc: "High-res raster image (2×)", icon: Image, color: "text-amber-400", action: exportJPG, key: "jpg" },
-    { label: "PDF (Print)", desc: "Raster PDF, A3 landscape", icon: FileImage, color: "text-red-400", action: exportPDF, key: "pdf" },
-    { label: "Vector PDF", desc: "SVG-based crisp vector PDF", icon: FileText, color: "text-purple-400", action: exportVectorPDF, key: "vpdf" },
+    { label: "Share JPG", desc: "تصویر WhatsApp یا کہیں بھی شیئر کریں", icon: Share2, color: "text-teal-400", action: shareJPG, key: "jpg-share" },
+    { label: "Vector PDF", desc: "SVG-based crisp vector PDF (print)", icon: FileText, color: "text-purple-400", action: exportVectorPDF, key: "vpdf" },
     { label: "Offline HTML Map", desc: "Scrollable viewer, 1000+ objects", icon: Globe, color: "text-emerald-400", action: exportOfflineHTML, key: "html" },
     { label: "GeoJSON", desc: "Standard GIS vector format", icon: Map, color: "text-blue-400", action: exportGeoJSON, key: "geo" },
     { label: "CSV", desc: "Spreadsheet / tabular data", icon: Table2, color: "text-cyan-400", action: exportCSV, key: "csv" },

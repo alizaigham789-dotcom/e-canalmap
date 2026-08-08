@@ -4,7 +4,27 @@ import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
-import { Move } from "lucide-react";
+import { Move, Download, Share2, Loader2 } from "lucide-react";
+import { canvasToPdfBlob, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdfExport";
+import { toast } from "sonner";
+
+// Lead-pencil print mode — dim grey lines like a hand-drawn sketch, red mouza
+const PENCIL_COLORS = {
+  mustateelStroke: "#555555",
+  mustateelFill: "none",
+  murabaStroke: "#555555",
+  murabaFill: "none",
+  acreStroke: "#888888",
+  acreFill: "none",
+  canalStroke: "#555555",
+  canalFill: "rgba(0,0,0,0.04)",
+  khalStroke: "#666666",
+  roadStroke: "#555555",
+  chakbandiStroke: "#333333",
+  mouzaStroke: "#dc2626",
+  labelColor: "#333333",
+  outletStroke: "#555555",
+};
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
@@ -442,11 +462,13 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [scale, setScale] = useState(100);
   const [mogaFilter, setMogaFilter] = useState(selectedMogaFilter || "");
   const [bwMode, setBwMode] = useState(false);
+  const [pencilMode, setPencilMode] = useState(false);
   const [pageOrientation, setPageOrientation] = useState("landscape");
   const [pageSize, setPageSize] = useState("A4");
   const [showLegendInPrint, setShowLegendInPrint] = useState(true);
   const [showPageBorder, setShowPageBorder] = useState(false);
   const [legendMoveMode, setLegendMoveMode] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const svgWrapRef = useRef(null);
 
   // Persist legend position per-map in localStorage so it survives close/reopen
@@ -475,22 +497,25 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     return [...s].sort((a, b) => parseInt(a) - parseInt(b));
   }, [objects]);
 
-  // In B&W mode, override all colors to black/grey
+  // In B&W mode, override all colors to black/grey; pencil mode uses dim grey + red mouza
   const effectiveColors = useMemo(() => {
-    if (!bwMode) return colorSettings || {};
-    return {
-      mustateelStroke: "#000000", mustateelFill: "none",
-      murabaStroke: "#000000", murabaFill: "none",
-      acreStroke: "#555555", acreFill: "none",
-      canalStroke: "#333333", canalFill: "rgba(0,0,0,0.08)",
-      khalStroke: "#444444",
-      roadStroke: "#222222",
-      chakbandiStroke: "#000000",
-      mouzaStroke: "#000000",
-      labelColor: "#000000",
-      outletStroke: "#333333",
-    };
-  }, [bwMode, colorSettings]);
+    if (bwMode) {
+      return {
+        mustateelStroke: "#000000", mustateelFill: "none",
+        murabaStroke: "#000000", murabaFill: "none",
+        acreStroke: "#555555", acreFill: "none",
+        canalStroke: "#333333", canalFill: "rgba(0,0,0,0.08)",
+        khalStroke: "#444444",
+        roadStroke: "#222222",
+        chakbandiStroke: "#000000",
+        mouzaStroke: "#000000",
+        labelColor: "#000000",
+        outletStroke: "#333333",
+      };
+    }
+    if (pencilMode) return { ...(colorSettings || {}), ...PENCIL_COLORS };
+    return colorSettings || {};
+  }, [bwMode, pencilMode, colorSettings]);
 
   const svgData = useMemo(
     () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 0.5),
@@ -656,6 +681,40 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     URL.revokeObjectURL(url);
   };
 
+  // ─── PDF FILE DOWNLOAD (jsPDF — saves to storage on mobile) ──────────────────
+  const handleDownloadPDF = async () => {
+    if (!svgString) return;
+    setPdfLoading(true);
+    try {
+      const canvas = await svgToCanvas(svgString, 2);
+      const blob = await canvasToPdfBlob(canvas, mapData, pageOrientation, pageSize);
+      downloadBlob(blob, `${mapData?.title || "map"}${mogaFilter ? `_moga_${mogaFilter}` : ""}.pdf`);
+      toast.success("PDF محفوظ ہو گیا");
+    } catch (e) {
+      toast.error("PDF بنانے میں مسئلہ");
+    }
+    setPdfLoading(false);
+  };
+
+  // ─── SHARE PDF (Web Share API — WhatsApp etc.) ───────────────────────────────
+  const handleSharePDF = async () => {
+    if (!svgString) return;
+    setPdfLoading(true);
+    try {
+      const canvas = await svgToCanvas(svgString, 2);
+      const blob = await canvasToPdfBlob(canvas, mapData, pageOrientation, pageSize);
+      const fname = `${mapData?.title || "map"}${mogaFilter ? `_moga_${mogaFilter}` : ""}.pdf`;
+      const result = await shareBlob(blob, fname, mapData?.title || "Map", "Chakbandi GIS Map");
+      if (result === "unsupported") {
+        downloadBlob(blob, fname);
+        toast.info("شیئرنگ سپورٹڈ نہیں — PDF ڈاؤن لوڈ ہو گیا");
+      }
+    } catch (e) {
+      toast.error("شیئر کرنے میں مسئلہ");
+    }
+    setPdfLoading(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-0 sm:p-4">
       <div className="bg-white border border-slate-200 rounded-none sm:rounded-2xl shadow-2xl flex flex-col w-full h-full sm:h-auto sm:max-w-5xl sm:max-h-[95vh]">
@@ -689,11 +748,31 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             >
               {bwMode ? "🎨 Colour" : "⬛ B&W"}
             </button>
+            {/* Pencil Mode Toggle — lead-pencil sketch style, red mouza */}
+            <button
+              onClick={() => setPencilMode(v => !v)}
+              className={`h-8 px-3 rounded-md text-xs font-bold border transition-all ${pencilMode ? "bg-amber-600 text-white border-amber-600" : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"}`}
+              title="Lead Pencil Mode — dim grey lines, red mouza"
+            >
+              ✏️ پنسل
+            </button>
             {/* SVG Download */}
             <Button size="sm" variant="outline"
               className="h-8 border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs gap-1"
               onClick={handleDownloadSVG}>
               <FileText className="w-3.5 h-3.5" /> SVG
+            </Button>
+            {/* PDF File Download — saves to storage on mobile */}
+            <Button size="sm" variant="outline" disabled={pdfLoading}
+              className="h-8 border-red-300 text-red-600 hover:text-red-900 hover:bg-red-50 text-xs gap-1"
+              onClick={handleDownloadPDF}>
+              {pdfLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} PDF
+            </Button>
+            {/* Share PDF — WhatsApp etc. */}
+            <Button size="sm" disabled={pdfLoading}
+              className="h-8 bg-emerald-600 hover:bg-emerald-500 text-white text-xs gap-1"
+              onClick={handleSharePDF}>
+              {pdfLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />} شیئر
             </Button>
             {/* Page size */}
             <select

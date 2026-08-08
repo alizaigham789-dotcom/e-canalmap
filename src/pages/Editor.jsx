@@ -616,8 +616,7 @@ export default function Editor() {
       obj = createMustateel(snap.x, snap.y);
       const startN = mustateelStartNumRef.current !== "" ? parseInt(mustateelStartNumRef.current, 10) : null;
       obj.label = autoAssignLabel("mustateel", dsmRef.current.objects, startN);
-      // Always track next number so subsequent draws continue the sequence
-      setMustateelStartNum(String(parseInt(obj.label, 10) + 1));
+      // Gap-fill numbering: do NOT auto-advance startNum — deleted numbers are reused
     }
     else if (type === "muraba") {
       const proto = createMuraba(0, 0);
@@ -632,7 +631,7 @@ export default function Editor() {
       obj = createMuraba(snap.x, snap.y);
       const startN = murabaStartNumRef.current !== "" ? parseInt(murabaStartNumRef.current, 10) : null;
       obj.label = autoAssignLabel("muraba", dsmRef.current.objects, startN);
-      setMurabaStartNum(String(parseInt(obj.label, 10) + 1));
+      // Gap-fill numbering: do NOT auto-advance startNum — deleted numbers are reused
     }
 
     if (obj) {

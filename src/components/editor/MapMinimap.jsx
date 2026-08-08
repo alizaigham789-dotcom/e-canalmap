@@ -12,9 +12,9 @@ import React, { useRef, useEffect, useCallback } from "react";
 //   onNavigate    — (pan) => void  — called with a new pan to re-center
 //   colorSettings — for consistent object colors
 
-const MINI_W = 168;
-const MINI_H = 120;
-const PAD = 10;
+const MINI_W = 116;
+const MINI_H = 82;
+const PAD = 8;
 
 // Simplified color palette for the minimap (keeps it readable at small size)
 const TYPE_COLOR = {
