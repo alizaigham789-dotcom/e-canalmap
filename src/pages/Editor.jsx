@@ -576,8 +576,11 @@ export default function Editor() {
 
   const handleAddObject = useCallback((type, data) => {
     if (type === "__delete__") {
+      const delObj = dsmRef.current.objects.find(o => o.id === data.id);
       explicitDeleteRef.current = true;
       dsmRef.current.remove(data.id);
+      if (delObj?.type === "mustateel") setMustateelStartNum("");
+      if (delObj?.type === "muraba") setMurabaStartNum("");
       if (selectedId === data.id) setSelectedId(null);
       syncObjects();
       return;
@@ -873,9 +876,12 @@ export default function Editor() {
   const handleDeleteObject = (id) => {
     const obj = dsmRef.current.objects.find(o => o.id === id);
     const wasMustateel = obj?.type === "mustateel";
+    const wasMuraba = obj?.type === "muraba";
     const idx = dsmRef.current.objects.findIndex(o => o.id === id);
     explicitDeleteRef.current = true;
     dsmRef.current.remove(id);
+    if (wasMustateel) setMustateelStartNum("");
+    if (wasMuraba) setMurabaStartNum("");
     if (wasMustateel) {
       // Auto-select the previous mustateel so the user can keep deleting / editing
       // without re-selecting each time. Falls back to the next mustateel, then null.
