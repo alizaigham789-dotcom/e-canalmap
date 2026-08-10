@@ -1072,9 +1072,9 @@ export function buildMapHeaderText(mapData) {
 export function buildPrintHeaderHTML(mapData) {
   const text = buildMapHeaderText(mapData);
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
-  return `<div style="width:100%;box-sizing:border-box;padding:4px 10px;">
-    <div id="print-header-box" style="border-bottom:2px solid #000; padding:6px 14px 8px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box;">
-      <span id="print-header-text" style="white-space:nowrap; font-family:${uf}; font-weight:bold; font-size:48px; direction:rtl;">${text}</span>
+  return `<div style="width:100%;box-sizing:border-box;padding:6px 12px;">
+    <div id="print-header-box" style="border-bottom:3px solid #000; padding:10px 18px 12px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box; background:#f1f5f9; border-radius:4px 4px 0 0;">
+      <span id="print-header-text" style="white-space:nowrap; font-family:${uf}; font-weight:bold; font-size:52px; direction:rtl; color:#0f172a;">${text}</span>
     </div>
   </div>
   <script>
@@ -1113,7 +1113,7 @@ export function buildPrintFooterHTML(mapData, options = {}) {
   const { showBorder = false } = options;
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
   const borderStyle = showBorder ? "border:2px solid #000;" : "";
-  return `<div style="${borderStyle} font-family:${uf}; direction:rtl; margin-top:2px; padding:18px 16px; display:flex; justify-content:space-between; font-size:22px; font-weight:bold;">
+  return `<div style="${borderStyle} border-top:2px solid #000; font-family:${uf}; direction:rtl; margin-top:6px; padding:22px 28px; display:flex; justify-content:space-between; font-size:26px; font-weight:bold; color:#0f172a;">
     <span>مرتب کنندہ _______________</span>
     <span>ضلعدار _______________</span>
   </div>`;

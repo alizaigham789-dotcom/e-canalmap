@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback } from "react";
 import { X, Download, FileImage, FileText, FileType2, Loader2, Printer, Share2 } from "lucide-react";
 import { buildSVG } from "@/lib/svgMapBuilder";
 import { buildPrintHeaderHTML, buildPrintFooterHTML, buildMapHeaderText } from "@/lib/gisEngine";
-import { canvasToPdfBlob, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdfExport";
+import { canvasToPdfBlob, canvasToPdfBlobRaw, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdfExport";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 
 // ─── SVG → Canvas renderer (for PNG / PDF) ─────────────────────────
@@ -114,43 +114,61 @@ export default function GeoMapExportDialog({
 
   function drawHeaderFooterOnCanvas(ctx, mapCanvas, headerH, footerH) {
     const fullW = mapCanvas.width;
-    const fullH = headerH + mapCanvas.height + footerH;
-    // White background already set by caller
-    // Header text
+    // ── Header — single line, big, bold, beautiful ──
     const text = buildMapHeaderText(mapData);
     if (text) {
       ctx.save();
+      // Subtle background bar for a framed look
+      ctx.fillStyle = "#f1f5f9";
+      ctx.fillRect(0, 0, fullW, headerH);
       ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      let fontSize = Math.min(48, fullW / 20);
+      ctx.textBaseline = "middle";
+      // Bigger font — scales with canvas width, min 36px
+      let fontSize = Math.max(36, fullW / 14);
       ctx.font = `bold ${fontSize}px "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif`;
-      const maxWidth = fullW - 40;
-      while (ctx.measureText(text).width > maxWidth && fontSize > 10) {
+      const maxWidth = fullW - 80;
+      while (ctx.measureText(text).width > maxWidth && fontSize > 14) {
         fontSize -= 1;
         ctx.font = `bold ${fontSize}px "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif`;
       }
       ctx.fillStyle = "#000000";
       ctx.direction = "rtl";
-      ctx.fillText(text, fullW / 2, 8);
+      ctx.fillText(text, fullW / 2, headerH / 2);
+      // Bold bottom border under header
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, headerH);
+      ctx.lineTo(fullW, headerH);
+      ctx.stroke();
       ctx.restore();
     }
-    // Footer text — muratab kuninda / zilladar
-    const footerY = headerH + mapCanvas.height + 12;
+    // ── Footer — muratab kuninda / zilladar — matches Map Editor print size ──
+    const footerBaseY = headerH + mapCanvas.height;
     ctx.save();
-    ctx.font = `bold 16px "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif`;
+    // Top border above footer
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, footerBaseY);
+    ctx.lineTo(fullW, footerBaseY);
+    ctx.stroke();
+    // Font scales with canvas width — matches buildPrintFooterHTML (24px on screen)
+    let footerFont = Math.max(22, fullW / 28);
+    ctx.font = `bold ${footerFont}px "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif`;
     ctx.fillStyle = "#000000";
     ctx.direction = "rtl";
-    ctx.textBaseline = "top";
+    ctx.textBaseline = "middle";
     ctx.textAlign = "center";
-    ctx.fillText("مرتب کنندہ _______________", fullW * 0.25, footerY);
-    ctx.fillText("ضلعدار _______________", fullW * 0.75, footerY);
+    ctx.fillText("مرتب کنندہ _______________", fullW * 0.25, footerBaseY + footerH / 2);
+    ctx.fillText("ضلعدار _______________", fullW * 0.75, footerBaseY + footerH / 2);
     ctx.restore();
   }
 
   async function buildFullCanvas(mapCanvas) {
     await ensureFont();
-    const headerH = Math.max(60, Math.round(mapCanvas.width * 0.06));
-    const footerH = Math.max(50, Math.round(mapCanvas.width * 0.05));
+    const headerH = Math.max(80, Math.round(mapCanvas.width * 0.09));
+    const footerH = Math.max(70, Math.round(mapCanvas.width * 0.07));
     const fullCanvas = document.createElement("canvas");
     fullCanvas.width = mapCanvas.width;
     fullCanvas.height = mapCanvas.height + headerH + footerH;
@@ -215,11 +233,11 @@ export default function GeoMapExportDialog({
         const h = Math.round(svgData.viewH * scale);
         canvas = await renderSVGtoCanvas(svgString, w, h);
       }
-      // Use Map Editor's canvasToPdfBlob — draws Urdu header on canvas + fits to page
+      // buildFullCanvas already drew header + footer + map — use RAW conversion (no second header)
       const fullCanvas = await buildFullCanvas(canvas);
       const orientationMap = orientation === "portrait" ? "portrait" : "landscape";
       const pageSizeMap = pageSize === "a4" ? "A4" : pageSize === "a3" ? "A3" : pageSize === "legal" ? "Legal" : "Letter";
-      const blob = await canvasToPdfBlob(fullCanvas, mapData, orientationMap, pageSizeMap);
+      const blob = await canvasToPdfBlobRaw(fullCanvas, orientationMap, pageSizeMap);
       downloadBlob(blob, `${baseName}${mogaFilter ? `_moga_${mogaFilter}` : ""}${satellite ? "_satellite" : ""}.pdf`);
     } catch (e) {
       alert("PDF export failed: " + (e.message || "unknown error"));
