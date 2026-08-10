@@ -64,7 +64,7 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
     srcCanvas = scaled;
   }
 
-  // Draw the Urdu footer (مرتب کنندہ / ضلعدار) at the bottom of the canvas
+  // Draw the Urdu footer (مرتب کنندہ on right, ضلعدار on left) — label above underline
   function drawFooterOnCanvas(ctx, canvasWidth, footerY, footerHeight) {
     ctx.save();
     // Top border above footer
@@ -74,15 +74,34 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
     ctx.moveTo(0, footerY);
     ctx.lineTo(canvasWidth, footerY);
     ctx.stroke();
-    let footerFont = Math.max(22, canvasWidth / 28);
+
+    let footerFont = Math.max(20, canvasWidth / 32);
     ctx.font = `bold ${footerFont}px "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif`;
     ctx.fillStyle = "#000000";
     ctx.direction = "rtl";
-    ctx.textBaseline = "middle";
+    ctx.textBaseline = "alphabetic";
+
+    const labelY = footerY + footerHeight * 0.45;
+    const lineY = footerY + footerHeight * 0.72;
+    const lineW = canvasWidth * 0.22;
+
+    // مرتب کنندہ — right side
     ctx.textAlign = "center";
-    // مرتب کنندہ on RIGHT (first in RTL), ضلعدار on LEFT (second in RTL)
-    ctx.fillText("مرتب کنندہ _______________", canvasWidth * 0.75, footerY + footerHeight / 2);
-    ctx.fillText("ضلعدار _______________", canvasWidth * 0.25, footerY + footerHeight / 2);
+    ctx.fillText("مرتب کنندہ", canvasWidth * 0.78, labelY);
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(canvasWidth * 0.78 - lineW / 2, lineY);
+    ctx.lineTo(canvasWidth * 0.78 + lineW / 2, lineY);
+    ctx.stroke();
+
+    // ضلعدار — left side
+    ctx.fillText("ضلعدار", canvasWidth * 0.22, labelY);
+    ctx.beginPath();
+    ctx.moveTo(canvasWidth * 0.22 - lineW / 2, lineY);
+    ctx.lineTo(canvasWidth * 0.22 + lineW / 2, lineY);
+    ctx.stroke();
+
     ctx.restore();
   }
 

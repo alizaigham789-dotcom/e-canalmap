@@ -1110,12 +1110,16 @@ export function buildPrintHeaderHTML(mapData) {
 }
 
 export function buildPrintFooterHTML(mapData, options = {}) {
-  const { showBorder = false } = options;
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
-  const borderStyle = showBorder ? "border:2px solid #000;" : "";
-  return `<div style="${borderStyle} border-top:3px solid #000; font-family:${uf}; direction:rtl; margin-top:8px; padding:26px 36px; display:flex; justify-content:space-between; align-items:center; font-size:30px; font-weight:bold; color:#0f172a; background:#f8fafc;">
-    <span style="display:inline-flex; align-items:center; gap:10px;">مرتب کنندہ <span style="border-bottom:2px solid #0f172a; display:inline-block; min-width:200px; height:2px;"></span></span>
-    <span style="display:inline-flex; align-items:center; gap:10px;">ضلعدار <span style="border-bottom:2px solid #0f172a; display:inline-block; min-width:200px; height:2px;"></span></span>
+  return `<div style="border-top:2px solid #000; font-family:${uf}; direction:rtl; padding:18px 32px 10px; display:flex; justify-content:space-between; align-items:flex-end; font-size:22px; font-weight:bold; color:#0f172a;">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+      <span>مرتب کنندہ</span>
+      <span style="border-top:1.5px solid #000; width:220px; display:block;"></span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+      <span>ضلعدار</span>
+      <span style="border-top:1.5px solid #000; width:220px; display:block;"></span>
+    </div>
   </div>`;
 }
 

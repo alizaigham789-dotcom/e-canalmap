@@ -160,8 +160,17 @@ export default function GeoMapExportDialog({
     ctx.direction = "rtl";
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
-    ctx.fillText("مرتب کنندہ _______________", fullW * 0.75, footerBaseY + footerH / 2);
-    ctx.fillText("ضلعدار _______________", fullW * 0.25, footerBaseY + footerH / 2);
+    const labelY = footerBaseY + footerH * 0.42;
+    const lineY = footerBaseY + footerH * 0.72;
+    const lineW = fullW * 0.22;
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "center";
+    ctx.fillText("مرتب کنندہ", fullW * 0.78, labelY);
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(fullW * 0.78 - lineW / 2, lineY); ctx.lineTo(fullW * 0.78 + lineW / 2, lineY); ctx.stroke();
+    ctx.fillText("ضلعدار", fullW * 0.22, labelY);
+    ctx.beginPath(); ctx.moveTo(fullW * 0.22 - lineW / 2, lineY); ctx.lineTo(fullW * 0.22 + lineW / 2, lineY); ctx.stroke();
     ctx.restore();
   }
 
