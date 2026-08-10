@@ -462,14 +462,29 @@ function SettingSlider({ label, value, min, max, step, onChange, unit = "" }) {
   );
 }
 
+// Page dimensions in mm (width × height, portrait)
+const PAGE_DIMENSIONS = {
+  A4: { w: 210, h: 297 },
+  A3: { w: 297, h: 420 },
+  A2: { w: 420, h: 594 },
+  A1: { w: 594, h: 841 },
+  A0: { w: 841, h: 1189 },
+};
+
 // ─── COMPONENT ─────────────────────────────────────────────────────────────────
 export default function PrintPreview({ mapData, objects, colorSettings, onClose, selectedMogaFilter, killaVisibility = {}, pageBorderStyle = "none" }) {
   const [scale, setScale] = useState(100);
   const [mogaFilter, setMogaFilter] = useState(selectedMogaFilter || "");
   const [bwMode, setBwMode] = useState(false);
   const [pencilMode, setPencilMode] = useState(false);
-  const [pageOrientation, setPageOrientation] = useState("landscape");
+  const [pageOrientation, setPageOrientation] = useState("portrait");
   const [pageSize, setPageSize] = useState("A4");
+
+  // Compute page aspect ratio for preview container
+  const pageAspect = useMemo(() => {
+    const dim = PAGE_DIMENSIONS[pageSize] || PAGE_DIMENSIONS.A4;
+    return pageOrientation === "portrait" ? dim.w / dim.h : dim.h / dim.w;
+  }, [pageSize, pageOrientation]);
   const [showLegendInPrint, setShowLegendInPrint] = useState(true);
   const [showPageBorder, setShowPageBorder] = useState(false);
   const [legendMoveMode, setLegendMoveMode] = useState(false);
@@ -648,7 +663,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         * { margin:0; padding:0; box-sizing:border-box; }
         html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; }
         body { display: flex; flex-direction: column;${showPageBorder ? ` border:2px solid #3b82f6;` : ""} }
-        .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: flex-start; justify-content: center; }
         .map-wrap svg { width:100%; height:100%; display:block; }
         @media print {
           @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
@@ -661,7 +676,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       <div class="map-wrap">
         <svg xmlns="http://www.w3.org/2000/svg"
              viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
-             preserveAspectRatio="xMidYMid meet"
+             preserveAspectRatio="xMidYMin meet"
              style="width:100%;height:100%;display:block;">
           <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
           ${printSvgData.svgBody}
@@ -875,25 +890,24 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         <div className="flex-1 overflow-auto bg-slate-100 p-2 sm:p-6 flex items-start justify-center">
           <div
             ref={svgWrapRef}
-            className={`bg-white shadow-2xl relative ${legendMoveMode ? "cursor-crosshair ring-4 ring-green-400/50" : ""}`}
-            style={{ width: `${scale}%`, minWidth: 280, border: showPageBorder ? `2px solid #3b82f6` : "none" }}
+            className={`bg-white shadow-2xl relative flex flex-col ${legendMoveMode ? "cursor-crosshair ring-4 ring-green-400/50" : ""}`}
+            style={{ width: `${scale}%`, minWidth: 280, maxWidth: pageOrientation === "portrait" ? 460 : 900, aspectRatio: pageAspect, border: showPageBorder ? `2px solid #3b82f6` : "none" }}
             onClick={handlePreviewClick}
           >
             <PrintHeaderBox mapData={mapData} />
-            {/* SVG Map — pure inline vector (no img tag, preserves cross sizes exactly) */}
-            {inlineSvgMarkup ? (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox={`${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}`}
-                style={{ width:"100%", display:"block" }}
-                dangerouslySetInnerHTML={{ __html: inlineSvgMarkup }}
-              />
-            ) : (
-              <div style={{ padding:40, textAlign:"center", color:"#999" }}>No objects to print</div>
-            )}
-
-            {/* Footer info */}
-            <div style={{ padding:"6px 14px", borderTop:"1px solid #bbb", display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6, fontSize:9, color:"#777" }}>
+            {/* SVG Map — pure inline vector, fills remaining space between header & footer */}
+            <div className="flex-1 min-h-0 overflow-hidden flex items-start justify-center">
+              {inlineSvgMarkup ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox={`${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}`}
+                  preserveAspectRatio="xMidYMin meet"
+                  style={{ width:"100%", height:"100%", display:"block" }}
+                  dangerouslySetInnerHTML={{ __html: inlineSvgMarkup }}
+                />
+              ) : (
+                <div style={{ padding:40, textAlign:"center", color:"#999" }}>No objects to print</div>
+              )}
             </div>
             {/* Signature footer — مرتب کنندہ / ضلعدار at the end */}
             <div dangerouslySetInnerHTML={{ __html: buildPrintFooterHTML(mapData) }} />

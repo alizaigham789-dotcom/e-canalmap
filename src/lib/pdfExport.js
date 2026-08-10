@@ -86,7 +86,7 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
   const iw = fullCanvas.width * ratio;
   const ih = fullCanvas.height * ratio;
   const ix = (pw - iw) / 2;
-  const iy = (ph - ih) / 2;
+  const iy = 0; // top-align — no space above header
   pdf.addImage(imgData, "JPEG", ix, iy, iw, ih);
   return pdf.output("blob");
 }
@@ -144,7 +144,7 @@ export async function canvasToPdfBlobRaw(canvas, pageOrientation = "landscape", 
   const iw = src.width * ratio;
   const ih = src.height * ratio;
   const ix = (pw - iw) / 2;
-  const iy = (ph - ih) / 2;
+  const iy = 0; // top-align — no space above
   pdf.addImage(imgData, "JPEG", ix, iy, iw, ih);
   return pdf.output("blob");
 }
