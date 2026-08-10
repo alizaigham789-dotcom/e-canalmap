@@ -240,19 +240,31 @@ function svgChakbandi(obj, C, idx, viewW) {
 
 function svgCanal(obj, C, idx) {
   if (!obj.points || obj.points.length < 2) return "";
-  const halfW = (obj.width || DIMENSIONS.CANAL_WIDTH) / 2;
-  const fillPath = parallelSmoothClosedPath(obj.points, halfW);
-  const left = getParallelPolyline(obj.points, -halfW);
-  const right = getParallelPolyline(obj.points, halfW);
-  const fillColor = C.canalFill || "rgba(30,144,255,0.25)";
-  const strokeColor = C.canalStroke || "#0284c7";
+  const w = (obj.width || DIMENSIONS.CANAL_WIDTH);
+  const centerPath = pointsToSmoothPath(obj.points);
+  const fillColor = C.canalFill || "rgba(163,218,244,0.70)";
+  const strokeColor = C.canalStroke || "#2B7AB8";
   const cf = canalNameFont();
   const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf) : "";
-  return `
+  if (obj.canalStyle === "flat") {
+    const halfW = w / 2;
+    const fillPath = parallelSmoothClosedPath(obj.points, halfW);
+    const left = getParallelPolyline(obj.points, -halfW);
+    const right = getParallelPolyline(obj.points, halfW);
+    return `
 <g key="canal_${idx}">
   <path d="${fillPath}" fill="${fillColor}" />
-  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
+  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
+  ${nameSvg}
+</g>`;
+  }
+  return `
+<g key="canal_${idx}">
+  <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 8}" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"/>
+  <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${centerPath}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="${Math.max(1, w * 0.12).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>
   ${nameSvg}
 </g>`;
 }

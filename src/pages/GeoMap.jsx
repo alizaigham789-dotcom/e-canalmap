@@ -235,6 +235,7 @@ export default function GeoMap() {
     .sort((a, b) => +a.mustNo - +b.mustNo), [mapObjects, selectedMoga]);
 
   const patchesWithGeometry = useMemo(() => allocations.filter((a) => a.geometry), [allocations]);
+  const khalsExist = useMemo(() => mapObjects.some(o => o.type === "khal"), [mapObjects]);
 
   // ─── FORM 1 ALLOCATION (Farmer Patch Selection) ───────────────
   const outletForMoga = useMemo(
@@ -1185,6 +1186,14 @@ export default function GeoMap() {
       {khalTool === "edit" && overlay && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-orange-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <Pencil className="w-3 h-3" /> کسی خال پر کلک کریں — نوڈس کو کھینچ کر ایڈجسٹ کریں، × سے حذف کریں
+        </div>
+      )}
+
+      {/* Always-on khal edit hint — long-press / double-click any khal to edit */}
+      {overlay && !khalTool && khalsExist && (
+        <div className="absolute bottom-48 left-1/2 -translate-x-1/2 z-[1000] bg-blue-600/90 text-white text-[10px] font-medium px-3 h-7 rounded-full shadow-xl flex items-center gap-1.5">
+          <Waves className="w-3 h-3" />
+          خال پر ڈبل کلک یا لانگ پریس کریں — نوڈس کھینچ کر ایڈٹ کریں
         </div>
       )}
 

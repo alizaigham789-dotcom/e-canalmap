@@ -3,6 +3,7 @@ import { X, Download, FileImage, FileText, FileType2, Loader2, Printer, Share2 }
 import { buildSVG } from "@/lib/svgMapBuilder";
 import { buildPrintHeaderHTML, buildPrintFooterHTML, buildMapHeaderText } from "@/lib/gisEngine";
 import { canvasToPdfBlob, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdfExport";
+import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 
 // ─── SVG → Canvas renderer (for PNG / PDF) ─────────────────────────
 function renderSVGtoCanvas(svgString, width, height) {
@@ -302,17 +303,23 @@ export default function GeoMapExportDialog({
           <div className="flex-1 min-h-0 bg-slate-100 overflow-auto p-3 sm:p-4 max-h-[40vh] sm:max-h-none">
             {svgData ? (
               <div className="flex items-center justify-center min-h-full">
-                <div
-                  className="bg-white shadow-lg border border-slate-200"
-                  dangerouslySetInnerHTML={{
-                    __html: `<svg xmlns="http://www.w3.org/2000/svg"
-                      viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
-                      style="max-width:100%;max-height:60vh;width:auto;height:auto;display:block;">
-                      <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
-                      ${svgData.svgBody}
-                    </svg>`,
-                  }}
-                />
+                <div className="bg-white shadow-lg border border-slate-200 flex flex-col" style={{ width: "min(100%, 700px)" }}>
+                  {/* Header line — same format as Map Editor print */}
+                  <PrintHeaderBox mapData={mapData} />
+                  {/* SVG map */}
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: `<svg xmlns="http://www.w3.org/2000/svg"
+                        viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
+                        style="max-width:100%;max-height:55vh;width:auto;height:auto;display:block;">
+                        <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
+                        ${svgData.svgBody}
+                      </svg>`,
+                    }}
+                  />
+                  {/* Footer — muratab kuninda / zilladar signatures */}
+                  <div dangerouslySetInnerHTML={{ __html: buildPrintFooterHTML(mapData) }} />
+                </div>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm">
