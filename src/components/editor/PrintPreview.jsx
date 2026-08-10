@@ -660,14 +660,14 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       <title>Khaka Dasti</title>
       <style>
         @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
-        @page { margin: 6mm ${printMargin}cm; size: ${pageSize} ${pageOrientation}; }
+        @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
         * { margin:0; padding:0; box-sizing:border-box; }
         html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; }
         body { display: flex; flex-direction: column;${showPageBorder ? ` border:2px solid #3b82f6;` : ""} }
-        .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 0 ${printMargin}cm; }
         .map-wrap svg { width:100%; height:100%; display:block; }
         @media print {
-          @page { margin: 6mm ${printMargin}cm; size: ${pageSize} ${pageOrientation}; }
+          @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
           html, body { width:100%; height:100%; overflow:hidden; }
           body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
         }

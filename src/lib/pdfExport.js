@@ -131,19 +131,24 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
   drawHeaderOnCanvas(fctx, mapData, compositeW, headerH);
   // Footer at the very bottom
   drawFooterOnCanvas(fctx, compositeW, compositeH - footerH, footerH);
-  // Map centered between header and footer (both horizontally & vertically)
+  // Map centered between header and footer (both horizontally & vertically).
+  // Side margin applies ONLY to the map — header & footer stay full width.
   const availH = compositeH - headerH - footerH;
-  const mapY = headerH + Math.max(0, (availH - srcCanvas.height) / 2);
-  const mapX = Math.max(0, (compositeW - srcCanvas.width) / 2);
-  fctx.drawImage(srcCanvas, mapX, mapY);
+  const marginMm = (marginCm || 0) * 10;
+  const marginPx = Math.round(marginMm * (compositeW / pw));
+  const mapAvailW = compositeW - 2 * marginPx;
+  const mapScale = Math.min(1, mapAvailW / srcCanvas.width);
+  const mapDrawW = srcCanvas.width * mapScale;
+  const mapDrawH = srcCanvas.height * mapScale;
+  const mapY = headerH + Math.max(0, (availH - mapDrawH) / 2);
+  const mapX = marginPx + Math.max(0, (mapAvailW - mapDrawW) / 2);
+  fctx.drawImage(srcCanvas, mapX, mapY, mapDrawW, mapDrawH);
 
   const imgData = fullCanvas.toDataURL("image/jpeg", 0.92);
-  const marginMm = (marginCm || 0) * 10;
-  const availW = pw - 2 * marginMm;
-  const ratio = Math.min(availW / compositeW, ph / compositeH);
+  const ratio = Math.min(pw / compositeW, ph / compositeH);
   const iw = compositeW * ratio;
   const ih = compositeH * ratio;
-  const ix = marginMm + (availW - iw) / 2;
+  const ix = (pw - iw) / 2;
   const iy = (ph - ih) / 2;
   pdf.addImage(imgData, "JPEG", ix, iy, iw, ih);
   return pdf.output("blob");
