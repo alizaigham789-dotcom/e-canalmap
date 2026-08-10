@@ -16,14 +16,16 @@ const PENCIL_COLORS = {
   murabaFill: "none",
   acreStroke: "#888888",
   acreFill: "none",
-  canalStroke: "#555555",
-  canalFill: "rgba(0,0,0,0.04)",
-  khalStroke: "#666666",
+  canalStroke: "#222222",
+  canalFill: "rgba(0,0,0,0.30)",
+  khalStroke: "#1a1a1a",
+  khalFill: "rgba(0,0,0,0.38)",
   roadStroke: "#555555",
   chakbandiStroke: "#333333",
   mouzaStroke: "#dc2626",
   labelColor: "#333333",
   outletStroke: "#555555",
+  gridStroke: "#999999",
 };
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
@@ -85,11 +87,12 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
   const fontSize = Math.min(obj.w * 0.30, obj.h * 0.30);
   const killaGrid = getMustateeelKillaGrid();
 
-  // Killa grid lines — solid, slightly thinner than boundary
+  // Killa grid lines — slightly lighter than the boundary so they read as internal divisions
+  const gridColor = C.gridStroke || strokeColor;
   let gridLines = "";
-  gridLines += `<line x1="${obj.x + cellW}" y1="${obj.y}" x2="${obj.x + cellW}" y2="${obj.y + obj.h}" stroke="${strokeColor}" stroke-width="1.2"/>`;
+  gridLines += `<line x1="${obj.x + cellW}" y1="${obj.y}" x2="${obj.x + cellW}" y2="${obj.y + obj.h}" stroke="${gridColor}" stroke-width="1.2"/>`;
   for (let r = 1; r < 5; r++) {
-    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-width="1.2"/>`;
+    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${gridColor}" stroke-width="1.2"/>`;
   }
 
   // Killa numbers — only if showKilla is true
@@ -142,12 +145,13 @@ function svgMuraba(obj, C, idx, showKilla = true, mouzaSplit = null) {
   const fontSize = Math.min(obj.w * 0.22, obj.h * 0.22);
   const killaGrid = getMurabaKillaGrid();
 
+  const gridColor = C.gridStroke || strokeColor;
   let gridLines = "";
   for (let c = 1; c < 5; c++) {
-    gridLines += `<line x1="${obj.x + c*cellW}" y1="${obj.y}" x2="${obj.x + c*cellW}" y2="${obj.y + obj.h}" stroke="${strokeColor}" stroke-width="1.2"/>`;
+    gridLines += `<line x1="${obj.x + c*cellW}" y1="${obj.y}" x2="${obj.x + c*cellW}" y2="${obj.y + obj.h}" stroke="${gridColor}" stroke-width="1.2"/>`;
   }
   for (let r = 1; r < 5; r++) {
-    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-width="1.2"/>`;
+    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${gridColor}" stroke-width="1.2"/>`;
   }
 
   let killaLabels = "";
@@ -319,6 +323,7 @@ function svgKhal(obj, C, idx) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
   const color = C.khalStroke || "#2563eb";
+  const khalFill = C.khalFill || `${color}22`;
   // Straight polylines (no smooth curve — matches editor exactly)
   const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
@@ -340,7 +345,7 @@ function svgKhal(obj, C, idx) {
   const p2y = (last.y - aLen * Math.sin(ang) - aW * Math.cos(ang)).toFixed(1);
   return `
 <g key="khal_${idx}">
-  <polygon points="${fillPts}" fill="${color}22" />
+  <polygon points="${fillPts}" fill="${khalFill}" />
   <polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>
@@ -603,6 +608,10 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   // ─── VECTOR PRINT — single page, Urdu header ─────────────────────────────────
   const handlePrint = () => {
     if (!svgData) return;
+    // Mobile browsers can't handle window.open + document.write + print reliably
+    // (shows about:blank). Fall back to direct PDF download on mobile.
+    const isMobile = (typeof window !== "undefined" && window.innerWidth < 768) || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+    if (isMobile) { handleDownloadPDF(); return; }
     const totalGCA = calculateTotalGCA(objects);
     const headerHTML = buildPrintHeaderHTML(mapData);
     const footerHTML = buildPrintFooterHTML(mapData);

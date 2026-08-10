@@ -69,8 +69,8 @@ export default function GeoMapExportDialog({
       mustateelStroke: "#000000", mustateelFill: "none",
       murabaStroke: "#000000", murabaFill: "none",
       acreStroke: "#555555", acreFill: "none",
-      canalStroke: "#333333", canalFill: "rgba(0,0,0,0.08)",
-      khalStroke: "#444444",
+      canalStroke: "#333333", canalFill: "rgba(0,0,0,0.12)",
+      khalStroke: "#222222", khalFill: "rgba(0,0,0,0.30)",
       watercourseStroke: "#444444",
       roadStroke: "#222222",
       chakbandiStroke: "#000000",
@@ -231,6 +231,10 @@ export default function GeoMapExportDialog({
   // (same format as Map Editor's Vector PDF export)
   const handlePrintVectorPDF = () => {
     if (!svgData) return;
+    // Mobile browsers can't handle window.open + document.write + print (shows about:blank).
+    // Fall back to direct PDF download on mobile.
+    const isMobile = (typeof window !== "undefined" && window.innerWidth < 768) || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+    if (isMobile) { handleDownloadPDF(); return; }
     setExporting(true);
     try {
       const headerHTML = buildPrintHeaderHTML(mapData);

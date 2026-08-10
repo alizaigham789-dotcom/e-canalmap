@@ -105,10 +105,11 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
   const fontSize = Math.min(obj.w * 0.30, obj.h * 0.30);
   const killaGrid = getMustateeelKillaGrid();
 
+  const gridColor = C.gridStroke || strokeColor;
   let gridLines = "";
-  gridLines += `<line x1="${obj.x + cellW}" y1="${obj.y}" x2="${obj.x + cellW}" y2="${obj.y + obj.h}" stroke="${strokeColor}" stroke-width="1.2"/>`;
+  gridLines += `<line x1="${obj.x + cellW}" y1="${obj.y}" x2="${obj.x + cellW}" y2="${obj.y + obj.h}" stroke="${gridColor}" stroke-width="1.2"/>`;
   for (let r = 1; r < 5; r++) {
-    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-width="1.2"/>`;
+    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${gridColor}" stroke-width="1.2"/>`;
   }
 
   let killaLabels = "";
@@ -150,12 +151,13 @@ function svgMuraba(obj, C, idx, showKilla = true) {
   const fontSize = Math.min(obj.w * 0.22, obj.h * 0.22);
   const killaGrid = getMurabaKillaGrid();
 
+  const gridColor = C.gridStroke || strokeColor;
   let gridLines = "";
   for (let c = 1; c < 5; c++) {
-    gridLines += `<line x1="${obj.x + c*cellW}" y1="${obj.y}" x2="${obj.x + c*cellW}" y2="${obj.y + obj.h}" stroke="${strokeColor}" stroke-width="1.2"/>`;
+    gridLines += `<line x1="${obj.x + c*cellW}" y1="${obj.y}" x2="${obj.x + c*cellW}" y2="${obj.y + obj.h}" stroke="${gridColor}" stroke-width="1.2"/>`;
   }
   for (let r = 1; r < 5; r++) {
-    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${strokeColor}" stroke-width="1.2"/>`;
+    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${gridColor}" stroke-width="1.2"/>`;
   }
 
   let killaLabels = "";
@@ -261,6 +263,7 @@ function svgKhal(obj, C, idx) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
   const color = C.khalStroke || "#2563eb";
+  const khalFill = C.khalFill || `${color}22`;
   const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
@@ -279,7 +282,7 @@ function svgKhal(obj, C, idx) {
   const p2y = (last.y - aLen * Math.sin(ang) - aW * Math.cos(ang)).toFixed(1);
   return `
 <g key="khal_${idx}">
-  <polygon points="${fillPts}" fill="${color}22" />
+  <polygon points="${fillPts}" fill="${khalFill}" />
   <polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>
