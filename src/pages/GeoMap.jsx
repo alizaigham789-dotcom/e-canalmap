@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Eye } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Eye, Waves } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -24,9 +24,11 @@ import AllocationLayer from "@/components/geomap/AllocationLayer";
 import AllocationDialog from "@/components/geomap/AllocationDialog";
 import PatchDrawLayer from "@/components/geomap/PatchDrawLayer";
 import PatchDialog from "@/components/geomap/PatchDialog";
+import KhalDrawLayer from "@/components/geomap/KhalDrawLayer";
 import { remainingKanal, acreAllocations, kanalUsedInAcre, parcelKillaCells } from "@/lib/allocationEngine";
 import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
+import { inverseTransform } from "@/lib/geoOverlay";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
   polygonAreaSqMeters, sqMetersToUnits,
@@ -163,6 +165,7 @@ export default function GeoMap() {
   const [capturing, setCapturing] = useState(false);
   const [showForm1, setShowForm1] = useState(false);
   const [allocTool, setAllocTool] = useState(null); // null | "cell" | "draw" | "edit"
+  const [khalTool, setKhalTool] = useState(null); // null | "draw" | "edit"
   const [allocations, setAllocations] = useState([]);
   const [allocCell, setAllocCell] = useState(null);
   const [patchDialog, setPatchDialog] = useState(null);
@@ -336,6 +339,48 @@ export default function GeoMap() {
     );
   }, [mapObjects, overlay, selectedMoga]);
 
+  // ─── KHAL DRAW / EDIT (GeoMap) ───────────────────────────────
+  // Save a new khal drawn on the satellite map into the map's drawing_data.
+  const handleKhalDrawn = useCallback(async (khal) => {
+    if (!selectedMapId || !selectedMap) return;
+    const currentObjs = selectedMap.drawing_data ? DrawingStateManager.deserialize(selectedMap.drawing_data) : [];
+    const updated = [...currentObjs, khal];
+    try {
+      await base44.entities.LandMap.update(selectedMapId, { drawing_data: JSON.stringify(updated) });
+      queryClient.invalidateQueries({ queryKey: ["geomap-map", selectedMapId] });
+      toast.success("خال محفوظ ہو گیا");
+    } catch (e) {
+      toast.error("خال محفوظ نہیں ہوا");
+    }
+  }, [selectedMapId, selectedMap, queryClient]);
+
+  // Update an existing khal's points (vertex drag in edit mode)
+  const handleKhalUpdated = useCallback(async (khalId, newPoints) => {
+    if (!selectedMapId || !selectedMap) return;
+    const currentObjs = selectedMap.drawing_data ? DrawingStateManager.deserialize(selectedMap.drawing_data) : [];
+    const updated = currentObjs.map(o => o.id === khalId ? { ...o, points: newPoints } : o);
+    try {
+      await base44.entities.LandMap.update(selectedMapId, { drawing_data: JSON.stringify(updated) });
+      queryClient.invalidateQueries({ queryKey: ["geomap-map", selectedMapId] });
+    } catch (e) {
+      toast.error("خال اپڈیٹ نہیں ہوا");
+    }
+  }, [selectedMapId, selectedMap, queryClient]);
+
+  // Delete a khal from the map's drawing_data
+  const handleKhalDeleted = useCallback(async (khalId) => {
+    if (!selectedMapId || !selectedMap) return;
+    const currentObjs = selectedMap.drawing_data ? DrawingStateManager.deserialize(selectedMap.drawing_data) : [];
+    const updated = currentObjs.filter(o => o.id !== khalId);
+    try {
+      await base44.entities.LandMap.update(selectedMapId, { drawing_data: JSON.stringify(updated) });
+      queryClient.invalidateQueries({ queryKey: ["geomap-map", selectedMapId] });
+      toast.success("خال حذف ہو گیا");
+    } catch (e) {
+      toast.error("خال حذف نہیں ہوا");
+    }
+  }, [selectedMapId, selectedMap, queryClient]);
+
   const registerTotals = useMemo(() => {
     const kanal = allocations.reduce((s, a) => s + (a.kanal || 0), 0);
     return { kanal, acres: kanal / 8 };
@@ -442,6 +487,7 @@ export default function GeoMap() {
   // ─── MAP CLICK HANDLER ───────────────────────────────────────
   const handleMapClick = useCallback((latlng) => {
     if (allocTool) return; // allocation tools handle their own clicks
+    if (khalTool) return;  // khal draw/edit handles its own clicks
     // 1. One-click placement — anchor upper-left corner, rotation 0° (straight), fixed scale (10-acre mustateel)
     if (placingStep === 1 && selectedMapId) {
       setPlacementPoint(latlng);
@@ -511,7 +557,7 @@ export default function GeoMap() {
         return null;
       });
     }
-  }, [placingStep, selectedMapId, activeTool, placementPoint, mapObjects, allocTool]);
+  }, [placingStep, selectedMapId, activeTool, placementPoint, mapObjects, allocTool, khalTool]);
 
   // ─── LIVE MEASUREMENT (mouse move) ─────────────────────────────
   const handleMouseMove = useCallback((latlng) => {
@@ -916,6 +962,19 @@ export default function GeoMap() {
           />
         )}
 
+        {/* Khal draw/edit layer — watercourse drawing & vertex editing on satellite */}
+        {overlay?.transform && !capturing && (
+          <KhalDrawLayer
+            drawMode={khalTool === "draw"}
+            editMode={khalTool === "edit"}
+            overlay={overlay}
+            objects={mapObjects}
+            onKhalDrawn={handleKhalDrawn}
+            onKhalUpdated={handleKhalUpdated}
+            onKhalDeleted={handleKhalDeleted}
+          />
+        )}
+
         {/* Corner placement marker — shows where the map corner is placed + coordinates */}
         {placementPoint && !capturing && (
           <Marker position={[placementPoint.lat, placementPoint.lng]} icon={cornerPlaceIcon()}>
@@ -1117,6 +1176,18 @@ export default function GeoMap() {
         </div>
       )}
 
+      {khalTool === "draw" && overlay && (
+        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-blue-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
+          <Waves className="w-3 h-3" /> نقشے پر کلک کر کے خال بنائیں — ڈبل کلک سے مکمل کریں
+        </div>
+      )}
+
+      {khalTool === "edit" && overlay && (
+        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-orange-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
+          <Pencil className="w-3 h-3" /> کسی خال پر کلک کریں — نوڈس کو کھینچ کر ایڈجسٹ کریں، × سے حذف کریں
+        </div>
+      )}
+
       {/* Click mustateel hint */}
       {overlay && killaVisible && activeMustateelIds.size === 0 && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1000] bg-black/80 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center gap-1.5">
@@ -1127,11 +1198,13 @@ export default function GeoMap() {
 
       <DrawingToolbar
         activeTool={activeTool}
-        onToolChange={setActiveTool}
+        onToolChange={(t) => { setActiveTool(t); if (t) setKhalTool(null); }}
         onClear={handleClearMeasurements}
         onExport={handleExport}
         onLayerToggle={() => setLayerVisible(v => !v)}
         layerVisible={layerVisible}
+        khalTool={khalTool}
+        onKhalToolChange={(t) => { setKhalTool(t); if (t) setActiveTool(null); }}
       />
 
       {/* Live measurement info */}

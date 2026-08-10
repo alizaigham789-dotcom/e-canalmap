@@ -392,6 +392,34 @@ export function computeTwoPointTransform(upperLeftGeo, lowerLeftGeo, objects) {
   };
 }
 
+// Inverse transform: converts a geo lat/lng point back to canvas coordinates.
+// Uses the same rotation/scale model as computeOneClickTransform / computeTwoPointTransform.
+// rotationDeg: from overlay.rotation (one-click) or transform.rotationDeg (two-point).
+export function inverseTransform(lat, lng, transform, rotationDeg = 0) {
+  const refLat = transform.refLat;
+  const refLng = transform.refLng;
+  const minX = transform.minX;
+  const minY = transform.minY;
+  const cosLat = Math.cos((refLat * Math.PI) / 180);
+  const mPerDegLng = M_PER_DEG_LAT * cosLat;
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cosR = Math.cos(rad), sinR = Math.sin(rad);
+
+  // lat/lng → meters east/north relative to ref
+  const east = (lng - refLng) * mPerDegLng;
+  const north = (lat - refLat) * M_PER_DEG_LAT;
+
+  // inverse rotation
+  const east0 = east * cosR + north * sinR;
+  const north0 = -east * sinR + north * cosR;
+
+  // meters → canvas feet
+  const dx = east0 / FT_TO_M;
+  const dy = -north0 / FT_TO_M;
+
+  return { x: dx + minX, y: dy + minY };
+}
+
 // Convert canvas objects to geo lat/lng using the affine transform
 export function canvasRectToLatLngs(obj, transform) {
   const corners = [
