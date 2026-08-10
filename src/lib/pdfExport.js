@@ -105,32 +105,44 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
     ctx.restore();
   }
 
-  // Create a new canvas with header space at top + footer space at bottom
-  const headerH = Math.max(80, Math.round(srcCanvas.width * 0.09));
-  const footerH = Math.max(70, Math.round(srcCanvas.width * 0.07));
-  const fullCanvas = document.createElement("canvas");
-  fullCanvas.width = srcCanvas.width;
-  fullCanvas.height = srcCanvas.height + headerH + footerH;
-  const fctx = fullCanvas.getContext("2d");
-  fctx.fillStyle = "#ffffff";
-  fctx.fillRect(0, 0, fullCanvas.width, fullCanvas.height);
-  // Draw header text
-  drawHeaderOnCanvas(fctx, mapData, fullCanvas.width, headerH);
-  // Draw map below header
-  fctx.drawImage(srcCanvas, 0, headerH);
-  // Draw footer at the bottom
-  drawFooterOnCanvas(fctx, fullCanvas.width, headerH + srcCanvas.height, footerH);
-
-  const imgData = fullCanvas.toDataURL("image/jpeg", 0.92);
+  // Create a composite canvas that matches the page aspect ratio so it fills the
+  // entire page: header at top, footer at bottom, map centered in between.
   const orientation = pageOrientation === "portrait" ? "p" : "l";
   const pdf = new jsPDF(orientation, "mm", pageSize.toLowerCase());
   const pw = pdf.internal.pageSize.getWidth();
   const ph = pdf.internal.pageSize.getHeight();
-  const ratio = Math.min(pw / fullCanvas.width, ph / fullCanvas.height);
-  const iw = fullCanvas.width * ratio;
-  const ih = fullCanvas.height * ratio;
+  const pageAspect = pw / ph;
+
+  const headerH = Math.max(80, Math.round(srcCanvas.width * 0.09));
+  const footerH = Math.max(70, Math.round(srcCanvas.width * 0.07));
+  const minContentH = headerH + srcCanvas.height + footerH;
+
+  // Composite width = source canvas width; height adjusted to match page aspect ratio
+  const compositeW = srcCanvas.width;
+  const compositeH = Math.max(minContentH, Math.round(compositeW / pageAspect));
+
+  const fullCanvas = document.createElement("canvas");
+  fullCanvas.width = compositeW;
+  fullCanvas.height = compositeH;
+  const fctx = fullCanvas.getContext("2d");
+  fctx.fillStyle = "#ffffff";
+  fctx.fillRect(0, 0, compositeW, compositeH);
+  // Header at the very top
+  drawHeaderOnCanvas(fctx, mapData, compositeW, headerH);
+  // Footer at the very bottom
+  drawFooterOnCanvas(fctx, mapData, compositeW, compositeH - footerH, footerH);
+  // Map centered between header and footer (both horizontally & vertically)
+  const availH = compositeH - headerH - footerH;
+  const mapY = headerH + Math.max(0, (availH - srcCanvas.height) / 2);
+  const mapX = Math.max(0, (compositeW - srcCanvas.width) / 2);
+  fctx.drawImage(srcCanvas, mapX, mapY);
+
+  const imgData = fullCanvas.toDataURL("image/jpeg", 0.92);
+  const ratio = Math.min(pw / compositeW, ph / compositeH);
+  const iw = compositeW * ratio;
+  const ih = compositeH * ratio;
   const ix = (pw - iw) / 2;
-  const iy = (ph - ih) / 2; // center vertically in the page
+  const iy = (ph - ih) / 2;
   pdf.addImage(imgData, "JPEG", ix, iy, iw, ih);
   return pdf.output("blob");
 }
