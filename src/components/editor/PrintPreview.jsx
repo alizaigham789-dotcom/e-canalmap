@@ -663,7 +663,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         * { margin:0; padding:0; box-sizing:border-box; }
         html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; }
         body { display: flex; flex-direction: column;${showPageBorder ? ` border:2px solid #3b82f6;` : ""} }
-        .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: flex-start; justify-content: center; }
+        .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .map-wrap svg { width:100%; height:100%; display:block; }
         @media print {
           @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
@@ -676,8 +676,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       <div class="map-wrap">
         <svg xmlns="http://www.w3.org/2000/svg"
              viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
-             preserveAspectRatio="xMidYMin meet"
-             style="width:100%;height:100%;display:block;">
+             preserveAspectRatio="xMidYMid meet"
+              style="width:100%;height:100%;display:block;">
           <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
           ${printSvgData.svgBody}
           ${gcaLabels}
@@ -896,12 +896,12 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
           >
             <PrintHeaderBox mapData={mapData} />
             {/* SVG Map — pure inline vector, fills remaining space between header & footer */}
-            <div className="flex-1 min-h-0 overflow-hidden flex items-start justify-center">
+            <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-center">
               {inlineSvgMarkup ? (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox={`${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}`}
-                  preserveAspectRatio="xMidYMin meet"
+                  preserveAspectRatio="xMidYMid meet"
                   style={{ width:"100%", height:"100%", display:"block" }}
                   dangerouslySetInnerHTML={{ __html: inlineSvgMarkup }}
                 />

@@ -64,11 +64,34 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
     srcCanvas = scaled;
   }
 
-  // Create a new canvas with header space at top
+  // Draw the Urdu footer (مرتب کنندہ / ضلعدار) at the bottom of the canvas
+  function drawFooterOnCanvas(ctx, canvasWidth, footerY, footerHeight) {
+    ctx.save();
+    // Top border above footer
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, footerY);
+    ctx.lineTo(canvasWidth, footerY);
+    ctx.stroke();
+    let footerFont = Math.max(22, canvasWidth / 28);
+    ctx.font = `bold ${footerFont}px "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif`;
+    ctx.fillStyle = "#000000";
+    ctx.direction = "rtl";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "center";
+    // مرتب کنندہ on RIGHT (first in RTL), ضلعدار on LEFT (second in RTL)
+    ctx.fillText("مرتب کنندہ _______________", canvasWidth * 0.75, footerY + footerHeight / 2);
+    ctx.fillText("ضلعدار _______________", canvasWidth * 0.25, footerY + footerHeight / 2);
+    ctx.restore();
+  }
+
+  // Create a new canvas with header space at top + footer space at bottom
   const headerH = Math.max(80, Math.round(srcCanvas.width * 0.09));
+  const footerH = Math.max(70, Math.round(srcCanvas.width * 0.07));
   const fullCanvas = document.createElement("canvas");
   fullCanvas.width = srcCanvas.width;
-  fullCanvas.height = srcCanvas.height + headerH;
+  fullCanvas.height = srcCanvas.height + headerH + footerH;
   const fctx = fullCanvas.getContext("2d");
   fctx.fillStyle = "#ffffff";
   fctx.fillRect(0, 0, fullCanvas.width, fullCanvas.height);
@@ -76,6 +99,8 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
   drawHeaderOnCanvas(fctx, mapData, fullCanvas.width, headerH);
   // Draw map below header
   fctx.drawImage(srcCanvas, 0, headerH);
+  // Draw footer at the bottom
+  drawFooterOnCanvas(fctx, fullCanvas.width, headerH + srcCanvas.height, footerH);
 
   const imgData = fullCanvas.toDataURL("image/jpeg", 0.92);
   const orientation = pageOrientation === "portrait" ? "p" : "l";
@@ -86,7 +111,7 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
   const iw = fullCanvas.width * ratio;
   const ih = fullCanvas.height * ratio;
   const ix = (pw - iw) / 2;
-  const iy = 0; // top-align — no space above header
+  const iy = (ph - ih) / 2; // center vertically in the page
   pdf.addImage(imgData, "JPEG", ix, iy, iw, ih);
   return pdf.output("blob");
 }
@@ -144,7 +169,7 @@ export async function canvasToPdfBlobRaw(canvas, pageOrientation = "landscape", 
   const iw = src.width * ratio;
   const ih = src.height * ratio;
   const ix = (pw - iw) / 2;
-  const iy = 0; // top-align — no space above
+  const iy = (ph - ih) / 2; // center vertically in the page
   pdf.addImage(imgData, "JPEG", ix, iy, iw, ih);
   return pdf.output("blob");
 }

@@ -160,8 +160,8 @@ export default function GeoMapExportDialog({
     ctx.direction = "rtl";
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
-    ctx.fillText("مرتب کنندہ _______________", fullW * 0.25, footerBaseY + footerH / 2);
-    ctx.fillText("ضلعدار _______________", fullW * 0.75, footerBaseY + footerH / 2);
+    ctx.fillText("مرتب کنندہ _______________", fullW * 0.75, footerBaseY + footerH / 2);
+    ctx.fillText("ضلعدار _______________", fullW * 0.25, footerBaseY + footerH / 2);
     ctx.restore();
   }
 
