@@ -46,7 +46,7 @@ function drawHeaderOnCanvas(ctx, mapData, canvasWidth, headerHeight) {
 }
 
 // Generate a PDF blob from a canvas (map render) with Urdu header on top
-export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landscape", pageSize = "A4") {
+export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landscape", pageSize = "A4", marginCm = 0) {
   await ensureFont();
 
   // Cap source canvas to avoid black/blank output on large maps
@@ -138,10 +138,12 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
   fctx.drawImage(srcCanvas, mapX, mapY);
 
   const imgData = fullCanvas.toDataURL("image/jpeg", 0.92);
-  const ratio = Math.min(pw / compositeW, ph / compositeH);
+  const marginMm = (marginCm || 0) * 10;
+  const availW = pw - 2 * marginMm;
+  const ratio = Math.min(availW / compositeW, ph / compositeH);
   const iw = compositeW * ratio;
   const ih = compositeH * ratio;
-  const ix = (pw - iw) / 2;
+  const ix = marginMm + (availW - iw) / 2;
   const iy = (ph - ih) / 2;
   pdf.addImage(imgData, "JPEG", ix, iy, iw, ih);
   return pdf.output("blob");
