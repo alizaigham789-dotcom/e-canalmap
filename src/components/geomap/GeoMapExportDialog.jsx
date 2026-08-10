@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useRef, useCallback } from "react";
-import { X, Download, FileImage, FileText, FileType2, Loader2 } from "lucide-react";
+import { X, Download, FileImage, FileText, FileType2, Loader2, Printer, Share2 } from "lucide-react";
 import { buildSVG } from "@/lib/svgMapBuilder";
+import { buildPrintHeaderHTML, buildPrintFooterHTML, buildMapHeaderText } from "@/lib/gisEngine";
+import { canvasToPdfBlob, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdfExport";
 
 // ─── SVG → Canvas renderer (for PNG / PDF) ─────────────────────────
 function renderSVGtoCanvas(svgString, width, height) {
@@ -42,7 +44,7 @@ export default function GeoMapExportDialog({
   overlayReady,
   onCaptureSatellite,
 }) {
-  const [format, setFormat] = useState("png");
+  const [format, setFormat] = useState("print");
   const [bwMode, setBwMode] = useState(false);
   const [satellite, setSatellite] = useState(false);
   const [showKilla, setShowKilla] = useState(true);
@@ -98,6 +100,67 @@ export default function GeoMapExportDialog({
 
   const baseName = (mapData?.title || "geomap").replace(/[^a-zA-Z0-9_-]/g, "_");
 
+  // ─── Header + Footer canvas helper (matches Map Editor format) ─────
+  // Draws the Urdu header line at top and muratab-kuninda / zilladar footer at bottom
+  async function ensureFont() {
+    try {
+      if (document.fonts && document.fonts.load) {
+        await document.fonts.load('bold 48px "Jameel Noori Nastaleeq"');
+        await document.fonts.load('bold 48px "Noto Nastaliq Urdu"');
+      }
+    } catch {}
+  }
+
+  function drawHeaderFooterOnCanvas(ctx, mapCanvas, headerH, footerH) {
+    const fullW = mapCanvas.width;
+    const fullH = headerH + mapCanvas.height + footerH;
+    // White background already set by caller
+    // Header text
+    const text = buildMapHeaderText(mapData);
+    if (text) {
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      let fontSize = Math.min(48, fullW / 20);
+      ctx.font = `bold ${fontSize}px "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif`;
+      const maxWidth = fullW - 40;
+      while (ctx.measureText(text).width > maxWidth && fontSize > 10) {
+        fontSize -= 1;
+        ctx.font = `bold ${fontSize}px "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif`;
+      }
+      ctx.fillStyle = "#000000";
+      ctx.direction = "rtl";
+      ctx.fillText(text, fullW / 2, 8);
+      ctx.restore();
+    }
+    // Footer text — muratab kuninda / zilladar
+    const footerY = headerH + mapCanvas.height + 12;
+    ctx.save();
+    ctx.font = `bold 16px "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif`;
+    ctx.fillStyle = "#000000";
+    ctx.direction = "rtl";
+    ctx.textBaseline = "top";
+    ctx.textAlign = "center";
+    ctx.fillText("مرتب کنندہ _______________", fullW * 0.25, footerY);
+    ctx.fillText("ضلعدار _______________", fullW * 0.75, footerY);
+    ctx.restore();
+  }
+
+  async function buildFullCanvas(mapCanvas) {
+    await ensureFont();
+    const headerH = Math.max(60, Math.round(mapCanvas.width * 0.06));
+    const footerH = Math.max(50, Math.round(mapCanvas.width * 0.05));
+    const fullCanvas = document.createElement("canvas");
+    fullCanvas.width = mapCanvas.width;
+    fullCanvas.height = mapCanvas.height + headerH + footerH;
+    const fctx = fullCanvas.getContext("2d");
+    fctx.fillStyle = "#ffffff";
+    fctx.fillRect(0, 0, fullCanvas.width, fullCanvas.height);
+    drawHeaderFooterOnCanvas(fctx, mapCanvas, headerH, footerH);
+    fctx.drawImage(mapCanvas, 0, headerH);
+    return fullCanvas;
+  }
+
   // ─── Download handlers ──────────────────────────────────────────
   const handleDownloadSVG = () => {
     if (!svgString) return;
@@ -124,7 +187,8 @@ export default function GeoMapExportDialog({
         const h = Math.round(svgData.viewH * scale);
         canvas = await renderSVGtoCanvas(svgString, w, h);
       }
-      const url = canvas.toDataURL("image/png");
+      const fullCanvas = await buildFullCanvas(canvas);
+      const url = fullCanvas.toDataURL("image/png");
       const a = document.createElement("a");
       a.href = url;
       a.download = `${baseName}${mogaFilter ? `_moga_${mogaFilter}` : ""}${satellite ? "_satellite" : ""}.png`;
@@ -139,52 +203,65 @@ export default function GeoMapExportDialog({
   const handleDownloadPDF = async () => {
     setExporting(true);
     try {
-      const { jsPDF } = await import("jspdf");
-      const page = PAGE_SIZES[pageSize] || PAGE_SIZES.a4;
-      const isLandscape = orientation === "landscape";
-      const pageW = isLandscape ? page.h : page.w;
-      const pageH = isLandscape ? page.w : page.h;
-      const margin = 24;
-      const availW = pageW - margin * 2;
-      const availH = pageH - margin * 2 - 40; // space for title
-
       let canvas;
-      let drawW, drawH;
       if (satellite && overlayReady && onCaptureSatellite) {
         canvas = await onCaptureSatellite({ bw: bwMode });
-        const aspect = canvas.width / canvas.height;
-        drawW = availW; drawH = availW / aspect;
-        if (drawH > availH) { drawH = availH; drawW = availH * aspect; }
       } else {
         if (!svgData) { setExporting(false); return; }
-        const aspect = svgData.viewW / svgData.viewH;
-        drawW = availW; drawH = availW / aspect;
-        if (drawH > availH) { drawH = availH; drawW = availH * aspect; }
-        const renderW = Math.round(drawW * 3);
-        const renderH = Math.round(drawH * 3);
-        canvas = await renderSVGtoCanvas(svgString, renderW, renderH);
+        const targetW = 2400;
+        const scale = targetW / svgData.viewW;
+        const w = Math.round(svgData.viewW * scale);
+        const h = Math.round(svgData.viewH * scale);
+        canvas = await renderSVGtoCanvas(svgString, w, h);
       }
-      const imgData = canvas.toDataURL("image/png");
-
-      const doc = new jsPDF({ orientation, unit: "pt", format: pageSize });
-      const x = (pageW - drawW) / 2;
-      const y = 30;
-      // Title
-      doc.setFontSize(12);
-      doc.setTextColor(30);
-      doc.text(mapData?.title || "GeoMap Export", pageW / 2, 18, { align: "center" });
-      // Village / moga info
-      if (mapData?.village || mogaFilter) {
-        doc.setFontSize(9);
-        doc.setTextColor(100);
-        const info = [mapData?.village, mogaFilter ? `Moga ${mogaFilter}` : ""].filter(Boolean).join(" · ");
-        doc.text(info, pageW / 2, 28, { align: "center" });
-      }
-      doc.addImage(imgData, "PNG", x, y, drawW, drawH);
-      doc.save(`${baseName}${mogaFilter ? `_moga_${mogaFilter}` : ""}${satellite ? "_satellite" : ""}.pdf`);
+      // Use Map Editor's canvasToPdfBlob — draws Urdu header on canvas + fits to page
+      const fullCanvas = await buildFullCanvas(canvas);
+      const orientationMap = orientation === "portrait" ? "portrait" : "landscape";
+      const pageSizeMap = pageSize === "a4" ? "A4" : pageSize === "a3" ? "A3" : pageSize === "legal" ? "Legal" : "Letter";
+      const blob = await canvasToPdfBlob(fullCanvas, mapData, orientationMap, pageSizeMap);
+      downloadBlob(blob, `${baseName}${mogaFilter ? `_moga_${mogaFilter}` : ""}${satellite ? "_satellite" : ""}.pdf`);
     } catch (e) {
       alert("PDF export failed: " + (e.message || "unknown error"));
     } finally {
+      setExporting(false);
+    }
+  };
+
+  // Print / Vector PDF — opens a print window with Urdu header + SVG map + footer
+  // (same format as Map Editor's Vector PDF export)
+  const handlePrintVectorPDF = () => {
+    if (!svgData) return;
+    setExporting(true);
+    try {
+      const headerHTML = buildPrintHeaderHTML(mapData);
+      const footerHTML = buildPrintFooterHTML(mapData);
+      const svgContent = `<svg xmlns="http://www.w3.org/2000/svg"
+        viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
+        width="${svgData.viewW}" height="${svgData.viewH}" style="max-width:100%;max-height:75vh;width:auto;height:auto;display:block;margin:0 auto;">
+        <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
+        ${svgData.svgBody}
+      </svg>`;
+      const win = window.open("", "_blank");
+      if (!win) { alert("Popup blocked — allow popups for this site"); setExporting(false); return; }
+      win.document.write(`<!DOCTYPE html><html dir="rtl"><head><title>${mapData?.title || "GeoMap Print"}</title>
+        <style>
+          @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
+          @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+          @page { size: ${pageSize === "a4" ? "A4" : pageSize === "a3" ? "A3" : "A4"} ${orientation}; margin: 6mm; }
+          * { margin:0; padding:0; box-sizing:border-box; }
+          html, body { width:100%; background:white; font-family:Rajdhani,Arial,sans-serif; }
+          body { display:flex; flex-direction:column; min-height:100vh; }
+          .map-wrap { flex:1; min-height:0; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:4px; }
+          @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+        </style></head><body>
+        ${headerHTML}
+        <div class="map-wrap">${svgContent}</div>
+        ${footerHTML}
+        </body></html>`);
+      win.document.close();
+      win.onload = () => { setTimeout(() => { win.print(); setExporting(false); }, 600); };
+    } catch (e) {
+      alert("Print failed: " + (e.message || "unknown error"));
       setExporting(false);
     }
   };
@@ -193,6 +270,7 @@ export default function GeoMapExportDialog({
     if (format === "svg") handleDownloadSVG();
     else if (format === "png") handleDownloadPNG();
     else if (format === "pdf") handleDownloadPDF();
+    else if (format === "print") handlePrintVectorPDF();
   };
 
   if (!open) return null;
@@ -244,14 +322,18 @@ export default function GeoMapExportDialog({
             {/* Format */}
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">Download Format</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                <button onClick={() => setFormat("png")} className={`h-16 rounded-lg flex flex-col items-center justify-center gap-1 border-2 transition-all ${format === "png" ? "border-blue-500 bg-blue-50" : "border-slate-200 hover:border-slate-300"}`}>
-                  <FileImage className="w-5 h-5 text-blue-500" />
-                  <span className="text-[10px] font-bold text-slate-600">PNG</span>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button onClick={() => setFormat("print")} className={`h-16 rounded-lg flex flex-col items-center justify-center gap-1 border-2 transition-all ${format === "print" ? "border-purple-500 bg-purple-50" : "border-slate-200 hover:border-slate-300"}`}>
+                  <Printer className="w-5 h-5 text-purple-500" />
+                  <span className="text-[10px] font-bold text-slate-600">Print PDF</span>
                 </button>
                 <button onClick={() => setFormat("pdf")} className={`h-16 rounded-lg flex flex-col items-center justify-center gap-1 border-2 transition-all ${format === "pdf" ? "border-red-500 bg-red-50" : "border-slate-200 hover:border-slate-300"}`}>
                   <FileText className="w-5 h-5 text-red-500" />
                   <span className="text-[10px] font-bold text-slate-600">PDF</span>
+                </button>
+                <button onClick={() => setFormat("png")} className={`h-16 rounded-lg flex flex-col items-center justify-center gap-1 border-2 transition-all ${format === "png" ? "border-blue-500 bg-blue-50" : "border-slate-200 hover:border-slate-300"}`}>
+                  <FileImage className="w-5 h-5 text-blue-500" />
+                  <span className="text-[10px] font-bold text-slate-600">PNG</span>
                 </button>
                 <button onClick={() => setFormat("svg")} className={`h-16 rounded-lg flex flex-col items-center justify-center gap-1 border-2 transition-all ${format === "svg" ? "border-emerald-500 bg-emerald-50" : "border-slate-200 hover:border-slate-300"}`}>
                   <FileType2 className="w-5 h-5 text-emerald-500" />
@@ -296,8 +378,8 @@ export default function GeoMapExportDialog({
               </div>
             )}
 
-            {/* Page size (PDF only) */}
-            {format === "pdf" && (
+            {/* Page size (PDF / Print) */}
+            {(format === "pdf" || format === "print") && (
               <>
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Page Size</label>
@@ -324,7 +406,10 @@ export default function GeoMapExportDialog({
 
             {/* Info */}
             <div className="text-[10px] text-slate-400 leading-relaxed pt-1 border-t border-slate-100">
-              Includes: mustateel/muraba boundaries, killa grid & numbers, canals, watercourse, moga outlets, chakbandi lines, mouza boundaries, roads.
+              <div className="font-bold text-slate-500 mb-0.5">Map Editor format:</div>
+              <div>• Header: مoga number, rajbah, village, zilladar section, sub-division, division</div>
+              <div>• Footer: مرتب کنندہ / ضلعدار signatures</div>
+              <div className="mt-1">Layers: mustateel/muraba, killa grid, canals, watercourses (incl. GeoMap-drawn), outlets, chakbandi, mouza, roads.</div>
             </div>
 
             {/* Download button */}
@@ -333,8 +418,8 @@ export default function GeoMapExportDialog({
               disabled={exporting || !svgData}
               className={`w-full h-10 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${exporting ? "bg-slate-300" : "bg-blue-600 hover:bg-blue-700"} text-white`}
             >
-              {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              {exporting ? "Generating…" : `Download ${format.toUpperCase()}`}
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : (format === "print" ? <Printer className="w-4 h-4" /> : <Download className="w-4 h-4" />)}
+              {exporting ? "Generating…" : (format === "print" ? "Print / PDF" : `Download ${format.toUpperCase()}`)}
             </button>
           </div>
         </div>
