@@ -130,7 +130,7 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
   // Header at the very top
   drawHeaderOnCanvas(fctx, mapData, compositeW, headerH);
   // Footer at the very bottom
-  drawFooterOnCanvas(fctx, mapData, compositeW, compositeH - footerH, footerH);
+  drawFooterOnCanvas(fctx, compositeW, compositeH - footerH, footerH);
   // Map centered between header and footer (both horizontally & vertically)
   const availH = compositeH - headerH - footerH;
   const mapY = headerH + Math.max(0, (availH - srcCanvas.height) / 2);
