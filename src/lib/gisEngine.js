@@ -487,13 +487,13 @@ export function createRoad(points, name = "") {
   };
 }
 
-export function createOutlet(canalId, startPt, endPt, label = "") {
+export function createOutlet(canalId, startPt, endPt, label = "", canalWidth = 100) {
   return {
     id: `outlet_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "outlet", canalId,
     start: { ...startPt }, end: { ...endPt },
     label, mogha_name: "", mogha_number: "", mogha_side: "",
-    arrowScale: 1, blockSize: 20,
+    arrowScale: 1, blockSize: 20, canalWidth,
   };
 }
 
@@ -521,6 +521,7 @@ export function createMouza(points, name = "") {
   return {
     id: `mouza_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "mouza", points: points.map(p => ({ ...p })), name,
+    lineWidth: 3, lineStyle: "dashed", label1: "", label2: "",
   };
 }
 
@@ -1133,14 +1134,14 @@ export function canalLength(points) {
   return Math.round(len);
 }
 
-// Moga number font size — 3× larger for print/export legibility
+// Moga number font size — 4× larger for print/export legibility
 export function mogaNumberFont() {
-  return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 2;
+  return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 4;
 }
 
-// Canal name font — 2 points larger than mustateel label font (for print/export)
+// Canal name font — 4× larger for print/export legibility
 export function canalNameFont() {
-  return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30 + 2;
+  return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 1.20;
 }
 
 // ============================================================

@@ -684,7 +684,10 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
 // ============================================================
 export function drawOutlet(ctx, obj, isSelected, zoom, C) {
   const scale = obj.arrowScale || 1;
-  const blockSize = obj.blockSize || 20;
+  // Arrow width matches the canal width — the moga arrow is proportional to the canal
+  const canalW = obj.canalWidth || 100;
+  const arrowW = Math.max(4, canalW);
+  const blockSize = Math.max(8, arrowW * 0.3);
   const { x: sx, y: sy } = obj.start;
   const { x: ex, y: ey } = obj.end;
   const angle = Math.atan2(ey - sy, ex - sx);
@@ -704,18 +707,20 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
   ctx.stroke();
   ctx.restore();
 
-  // Arrow shaft — prominent, beautiful alongside canal
+  // Arrow shaft — width matches canal width
   ctx.save(); ctx.translate(sx, sy); ctx.rotate(angle);
-  ctx.strokeStyle = color; ctx.lineWidth = (4 * scale) / zoom;
+  ctx.strokeStyle = color; ctx.lineWidth = arrowW / zoom;
   ctx.lineCap = "round";
   ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
-  // Elegant arrowhead
+  // Arrowhead — proportional to arrow width
+  const headLen = arrowW * 1.5 * scale;
+  const headW = arrowW * 0.7 * scale;
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(len, 0);
-  ctx.lineTo(len - (24*scale)/zoom, -(15*scale)/zoom);
-  ctx.lineTo(len - (18*scale)/zoom, 0);
-  ctx.lineTo(len - (24*scale)/zoom, (15*scale)/zoom);
+  ctx.lineTo(len - headLen/zoom, -headW/zoom);
+  ctx.lineTo(len - headLen * 0.7/zoom, 0);
+  ctx.lineTo(len - headLen/zoom, headW/zoom);
   ctx.closePath(); ctx.fill();
   ctx.restore();
 
@@ -841,30 +846,52 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false)
 }
 
 // ============================================================
-// LAYER 2: Mouza boundary
+// LAYER 2: Mouza boundary — custom width, dotted/dashed/solid, 2 labels
 // ============================================================
 export function drawMouza(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const color = C.mouzaStroke || "#000000";
+  const lw = obj.lineWidth || 3;
   ctx.strokeStyle = isSelected ? "#6366f1" : color;
-  ctx.lineWidth = (isSelected ? 0.67 : 0.4) / zoom; // 3× thinner than before
-  ctx.setLineDash([3/zoom, 4/zoom]); ctx.lineCap = "round";
+  ctx.lineWidth = (isSelected ? lw + 1 : lw) / zoom;
+  // Line style: dashed (default), dotted, or solid
+  if (obj.lineStyle === "solid") ctx.setLineDash([]);
+  else if (obj.lineStyle === "dotted") ctx.setLineDash([2/zoom, 5/zoom]);
+  else ctx.setLineDash([6/zoom, 5/zoom]); // dashed
+  ctx.lineCap = "round";
   ctx.beginPath();
   ctx.moveTo(obj.points[0].x, obj.points[0].y);
   for (const p of obj.points) ctx.lineTo(p.x, p.y);
   ctx.stroke(); ctx.setLineDash([]);
 
-  if (obj.name && zoom > 0.2) {
+  // Labels — label1 above the line, label2 below the line (mouza names on each side)
+  if (zoom > 0.15) {
     const mid = Math.floor(obj.points.length / 2);
-    const p = obj.points[mid], p2 = obj.points[Math.min(mid+1, obj.points.length-1)];
+    const p = obj.points[mid], p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
     const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
-    ctx.save();
-    ctx.translate(p.x, p.y); ctx.rotate(angle);
-    ctx.fillStyle = color;
-    ctx.font = `bold ${scaledFont(10, zoom, 9)}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-    ctx.fillText(obj.name, 0, -6/zoom);
-    ctx.restore();
+    const labelFont = Math.max(14, Math.min(40, lw * 4)) / zoom;
+    const offset = (lw / 2 + labelFont * 0.6) / zoom;
+    // label1 — above the line (one side)
+    const text1 = obj.label1 || obj.name || "";
+    if (text1) {
+      ctx.save();
+      ctx.translate(p.x, p.y); ctx.rotate(angle);
+      ctx.fillStyle = color;
+      ctx.font = `bold ${labelFont}px Rajdhani, sans-serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillText(text1, 0, -offset);
+      ctx.restore();
+    }
+    // label2 — below the line (other side)
+    if (obj.label2) {
+      ctx.save();
+      ctx.translate(p.x, p.y); ctx.rotate(angle);
+      ctx.fillStyle = color;
+      ctx.font = `bold ${labelFont}px Rajdhani, sans-serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillText(obj.label2, 0, offset);
+      ctx.restore();
+    }
   }
 }
 

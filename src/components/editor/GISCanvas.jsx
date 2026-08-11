@@ -35,6 +35,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     orthoMode, // CAD-style H/V angle constraint while drawing line tools
     onBoxSelect, // callback(selectedObjects[]) when box-select completes
     pageBorderStyle, // "none"|"dashed"|"solid"|"dotted" — page border guide
+    deleteVertexMode, // when true: clicking a vertex deletes it (explicit node removal)
   },
   ref
 ) {
@@ -161,7 +162,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     // Canal start & end show square anchor handles (matching shape on both ends);
     // intermediate vertices stay circular. Edit-only — never drawn in print/preview.
     const selObj = objects.find(o => o.id === selectedId);
-    if (selObj && ["chakbandi", "canal", "khal", "road"].includes(selObj.type) && selObj.points) {
+    if (selObj && ["chakbandi", "canal", "khal", "road", "mouza"].includes(selObj.type) && selObj.points) {
       const pts = selObj.points;
       const squareEnds = selObj.type === "canal" || selObj.type === "road";
       for (let i = 0; i < pts.length; i++) {
@@ -389,7 +390,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         ctx.fillText(`${ang.toFixed(0)}°`, sx + 18, sy - 15);
       }
     }
-  }, [objects, zoom, pan, layers, selectedId, activeTool, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measurePoly, measureResult, endpointSnap, orthoMode, pageBorderStyle]);
+  }, [objects, zoom, pan, layers, selectedId, activeTool, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measurePoly, measureResult, endpointSnap, orthoMode, pageBorderStyle, deleteVertexMode]);
 
   useEffect(() => {
     const loop = () => { render(); animRef.current = requestAnimationFrame(loop); };
@@ -679,12 +680,18 @@ const GISCanvas = forwardRef(function GISCanvas(
       boxSelectStart.current = { x: worldRaw.x, y: worldRaw.y };
       setBoxSelectDraft({ x1: worldRaw.x, y1: worldRaw.y, x2: worldRaw.x, y2: worldRaw.y });
     } else if (activeTool === "select") {
-      // Check for a vertex handle on the currently selected chakbandi/canal first
+      // Check for a vertex handle on the currently selected chakbandi/canal/mouza first
       const selectedObj = selectedId ? objects.find(o => o.id === selectedId) : null;
-      if (selectedObj && ["chakbandi", "canal", "khal", "road"].includes(selectedObj.type) && selectedObj.points) {
+      if (selectedObj && ["chakbandi", "canal", "khal", "road", "mouza"].includes(selectedObj.type) && selectedObj.points) {
         const vThresh = 10 / zoom;
         const vIdx = selectedObj.points.findIndex(p => Math.hypot(p.x - worldRaw.x, p.y - worldRaw.y) < vThresh);
         if (vIdx !== -1) {
+          // Delete-vertex mode: clicking a vertex removes it (keep ≥ 2 points)
+          if (deleteVertexMode && selectedObj.points.length > 2) {
+            const newPoints = selectedObj.points.filter((_, i) => i !== vIdx);
+            onUpdateObject(selectedObj.id, { points: newPoints });
+            return;
+          }
           vertexDrag.current = { id: selectedObj.id, index: vIdx };
           return;
         }
@@ -698,7 +705,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       const hit = hitTest(worldRaw.x, worldRaw.y, objects, true); // true = eraser mode (boundary-aware)
       if (hit) onAddObject("__delete__", { id: hit.id });
     }
-  }, [activeTool, pan, zoom, objects, selectedId, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd, onMouzaPointAdd, onDamageMarkerClick]);
+  }, [activeTool, pan, zoom, objects, selectedId, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd, onMouzaPointAdd, onDamageMarkerClick, deleteVertexMode]);
 
   const handleMouseUp = useCallback((e) => {
     // Finish box-select
@@ -763,7 +770,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       // Double-click on a line of the selected chakbandi/canal (not on an existing vertex)
       // auto-inserts a new draggable anchor point right there — no need to redraw.
       const selectedObj = selectedId ? objectsRef.current.find(o => o.id === selectedId) : null;
-      if (selectedObj && ["chakbandi", "canal", "khal", "road"].includes(selectedObj.type) && selectedObj.points) {
+      if (selectedObj && ["chakbandi", "canal", "khal", "road", "mouza"].includes(selectedObj.type) && selectedObj.points) {
         const vThresh = 10 / zoom;
         const vIdx = selectedObj.points.findIndex(p => Math.hypot(p.x - worldRaw.x, p.y - worldRaw.y) < vThresh);
         if (vIdx !== -1) {

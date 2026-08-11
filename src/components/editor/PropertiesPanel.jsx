@@ -3,14 +3,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator, Ban } from "lucide-react";
+import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator, Ban, MousePointerClick } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { calculateChakbandiGCA } from "@/lib/gisEngine";
 
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
 const KILLA_STROKE_STYLES = ["solid", "dashed", "dotted"];
 
-export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate, onDelete, onClose }) {
+export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate, onDelete, onClose, deleteVertexMode = false, onToggleDeleteVertexMode = null }) {
   const [local, setLocal] = useState({});
   const [collapsed, setCollapsed] = useState(true);
 
@@ -65,6 +65,14 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
           <span className={`text-[11px] font-bold font-heading tracking-wider uppercase truncate ${typeColor}`}>{typeLabel}</span>
         </div>
         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+          {["canal", "khal", "road", "chakbandi", "mouza"].includes(selectedObj.type) && onToggleDeleteVertexMode && (
+            <Button variant="ghost" size="icon"
+              className={`w-6 h-6 ${deleteVertexMode ? "bg-red-600 text-white hover:bg-red-500" : "text-red-400 hover:text-red-600 hover:bg-red-50"}`}
+              onClick={() => onToggleDeleteVertexMode()}
+              title="Delete Vertex Mode — click nodes on the map to remove them">
+              <MousePointerClick className="w-3.5 h-3.5" />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" className="w-6 h-6 text-red-400 hover:text-red-600 hover:bg-red-50"
             onClick={() => onDelete(selectedObj.id)}>
             <Trash2 className="w-3.5 h-3.5" />

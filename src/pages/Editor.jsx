@@ -109,6 +109,7 @@ export default function Editor() {
   const [colorSettings, setColorSettings] = useState(DEFAULT_COLORS);
   const [bgColor, setBgColor] = useState("#ffffff");
   const [pageBorderStyle, setPageBorderStyle] = useState("none");
+  const [deleteVertexMode, setDeleteVertexMode] = useState(false);
   const [legendPos, setLegendPos] = useState(null); // null = default position; {x, y} when dragged
   const legendDragRef = useRef(null); // { offsetX, offsetY }
 
@@ -725,14 +726,17 @@ export default function Editor() {
   }, []);
 
   const handleOutletStart = useCallback((pt, canalId) => {
-    setOutletDraft({ x: pt.x, y: pt.y, canalId });
+    // Find the canal width to size the moga arrow proportionally
+    const canal = canalId ? dsmRef.current.objects.find(o => o.id === canalId) : null;
+    const cw = canal?.width || 100;
+    setOutletDraft({ x: pt.x, y: pt.y, canalId, canalWidth: cw });
   }, []);
 
   const handleOutletFinish = useCallback((endPt) => {
     const draft = outletDraftRef.current;
     setOutletDraft(null);
     if (draft) {
-      const outlet = createOutlet(draft.canalId, { x: draft.x, y: draft.y }, endPt);
+      const outlet = createOutlet(draft.canalId, { x: draft.x, y: draft.y }, endPt, "", draft.canalWidth || 100);
       dsmRef.current.add(outlet);
       setSelectedId(outlet.id);
       syncObjects();
@@ -1229,6 +1233,7 @@ export default function Editor() {
             }}
             onBoxSelect={handleBoxSelect}
             pageBorderStyle={pageBorderStyle}
+            deleteVertexMode={deleteVertexMode}
           />
 
           {/* Map preview — bottom-right corner so a lost map can be located */}
@@ -1455,6 +1460,8 @@ export default function Editor() {
               onUpdate={handleUpdateObject}
               onDelete={handleDeleteObject}
               onClose={() => setSelectedId(null)}
+              deleteVertexMode={deleteVertexMode}
+              onToggleDeleteVertexMode={() => setDeleteVertexMode(v => !v)}
             />
           </div>
         )}
