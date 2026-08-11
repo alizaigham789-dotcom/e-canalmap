@@ -1139,6 +1139,22 @@ export function mogaNumberFont() {
   return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38;
 }
 
+// Outlet / Moga dimensions — shared between editor canvas, print preview, and export.
+// Proportional to canal width, scaled by user-adjustable arrowScale.
+// This ensures the moga looks IDENTICAL in editor, print preview, and all export formats.
+export function getOutletDimensions(obj) {
+  const scale = obj.arrowScale || 1;
+  const canalW = obj.canalWidth || 100;
+  const size = canalW * 1.26 * scale; // 100 * 1.26 = 126 (matches original print default)
+  return {
+    size,                   // block size (square at start point)
+    shaftWidth: size * 0.3,  // shaft line width
+    headLen: size * 1.6,     // arrowhead length (from tip to back)
+    headW: size,             // arrowhead half-width (total = 2 × headW)
+    radius: size * 0.2,      // block corner radius
+  };
+}
+
 // Canal name font — proportional to canal width so text fits INSIDE the canal banks
 export function canalNameFont(width = 100) {
   return Math.max(10, Math.min((width || 100) * 0.4, 40));

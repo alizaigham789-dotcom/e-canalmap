@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
 import { drawMogaFractionBoxOnCanvas, getOutletLabelPos, isUrduText } from "@/lib/printRenderHelpers";
 
 // ---- Anti-aliased zoom-clamped font size ----
@@ -683,46 +683,44 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
 // LAYER 4: Outlet / Moga
 // ============================================================
 export function drawOutlet(ctx, obj, isSelected, zoom, C) {
-  const scale = obj.arrowScale || 1;
-  // Arrow width matches the canal width — the moga arrow is proportional to the canal
-  const canalW = obj.canalWidth || 100;
-  const arrowW = Math.max(4, canalW);
-  const blockSize = Math.max(8, arrowW * 0.3);
+  // Shared dimensions — identical to print preview & export (getOutletDimensions)
+  const { size, shaftWidth, headLen, headW, radius } = getOutletDimensions(obj);
   const { x: sx, y: sy } = obj.start;
   const { x: ex, y: ey } = obj.end;
   const angle = Math.atan2(ey - sy, ex - sx);
-  const len = Math.hypot(ex - sx, ey - sy);
   const color = isSelected ? "#67e8f9" : (obj.outletColor || C.outletStroke || "#06b6d4");
-  const half = blockSize / 2;
-  const r = blockSize * 0.2;
+  const half = size / 2;
 
-  // Rounded block at canal junction
-  ctx.save();
+  // Block at start — rounded square (matches print exactly)
   ctx.fillStyle = color;
   ctx.beginPath();
-  if (ctx.roundRect) { ctx.roundRect(sx - half, sy - half, blockSize, blockSize, r); }
-  else { ctx.rect(sx - half, sy - half, blockSize, blockSize); }
+  if (ctx.roundRect) { ctx.roundRect(sx - half, sy - half, size, size, radius); }
+  else { ctx.rect(sx - half, sy - half, size, size); }
   ctx.fill();
-  ctx.strokeStyle = "#0e7490"; ctx.lineWidth = 2/zoom;
+  ctx.strokeStyle = "#0e7490"; ctx.lineWidth = 2 / zoom;
   ctx.stroke();
-  ctx.restore();
 
-  // Arrow shaft — width matches canal width
-  ctx.save(); ctx.translate(sx, sy); ctx.rotate(angle);
-  ctx.strokeStyle = color; ctx.lineWidth = arrowW / zoom;
+  // Shaft — from start to end (world-unit width, scales with zoom like print)
+  ctx.strokeStyle = color;
+  ctx.lineWidth = shaftWidth;
   ctx.lineCap = "round";
-  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
-  // Arrowhead — proportional to arrow width
-  const headLen = arrowW * 1.5 * scale;
-  const headW = arrowW * 0.7 * scale;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(ex, ey);
+  ctx.stroke();
+
+  // Arrowhead — triangle at end (matches print exactly)
+  const h1x = ex - headLen * Math.cos(angle) - headW * Math.sin(angle);
+  const h1y = ey - headLen * Math.sin(angle) + headW * Math.cos(angle);
+  const h2x = ex - headLen * Math.cos(angle) + headW * Math.sin(angle);
+  const h2y = ey - headLen * Math.sin(angle) - headW * Math.cos(angle);
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.moveTo(len, 0);
-  ctx.lineTo(len - headLen/zoom, -headW/zoom);
-  ctx.lineTo(len - headLen * 0.7/zoom, 0);
-  ctx.lineTo(len - headLen/zoom, headW/zoom);
-  ctx.closePath(); ctx.fill();
-  ctx.restore();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(h1x, h1y);
+  ctx.lineTo(h2x, h2y);
+  ctx.closePath();
+  ctx.fill();
 
   // Moga number — fraction inside a rounded box at labelPos (draggable)
   const moghaNum = obj.mogha_number || "";

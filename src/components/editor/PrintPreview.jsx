@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
 import { Move, Download, Share2, Loader2 } from "lucide-react";
@@ -372,12 +372,12 @@ function svgRoad(obj, C, idx) {
 function svgOutlet(obj, C, idx, mogaScale = 1) {
   if (!obj.start || !obj.end) return "";
   const color = obj.outletColor || C.outletStroke || "#06b6d4";
-  const size = DIMENSIONS.CANAL_WIDTH * 9;
+  // Shared dimensions — identical to editor canvas & all export formats
+  const { size, shaftWidth, headLen, headW, radius } = getOutletDimensions(obj);
   const half = size / 2;
   const { x: sx, y: sy } = obj.start;
   const { x: ex, y: ey } = obj.end;
   const angle = Math.atan2(ey - sy, ex - sx);
-  const headLen = size * 1.6, headW = size;
   const h1x = (ex - headLen * Math.cos(angle) - headW * Math.sin(angle)).toFixed(1);
   const h1y = (ey - headLen * Math.sin(angle) + headW * Math.cos(angle)).toFixed(1);
   const h2x = (ex - headLen * Math.cos(angle) + headW * Math.sin(angle)).toFixed(1);
@@ -385,10 +385,9 @@ function svgOutlet(obj, C, idx, mogaScale = 1) {
   const numFont = mogaNumberFont();
   const lp = getOutletLabelPos(obj);
   const numLabel = svgMogaFractionBox(obj.mogha_number, obj.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#0891b2", mogaScale);
-  const r = size * 0.2;
   return `<g key="outlet_${idx}">
-    <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size}" height="${size}" rx="${r.toFixed(1)}" fill="${color}" stroke="#0e7490" stroke-width="2"/>
-    <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size * 0.3).toFixed(1)}" stroke-linecap="round"/>
+    <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" rx="${radius.toFixed(1)}" fill="${color}" stroke="#0e7490" stroke-width="2"/>
+    <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${shaftWidth.toFixed(1)}" stroke-linecap="round"/>
     <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
     ${numLabel}
   </g>`;

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Share2 } from "lucide-react";
 import { toast } from "sonner";
-import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES, getOutletDimensions } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas } from "@/lib/printRenderHelpers";
 import { drawExclusionHatchOnCanvas } from "@/components/editor/GISRenderer";
 import { canvasToPdfBlob, downloadBlob, shareBlob } from "@/lib/pdfExport";
@@ -274,17 +274,19 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke(); ctx.setLineDash([]);
     }
     if (o.type === "outlet" && o.start && o.end) {
-      // Moga — size 10× canal width for print/export legibility
+      // Moga — shared dimensions (identical to editor & print preview)
       const color = o.outletColor || C.outletStroke || "#06b6d4";
-      const size = DIMENSIONS.CANAL_WIDTH * 9;
+      const { size, shaftWidth, headLen, headW, radius } = getOutletDimensions(o);
       const half = size / 2;
       const { x: sx, y: sy } = o.start;
       const { x: ex, y: ey } = o.end;
       const ang = Math.atan2(ey - sy, ex - sx);
-      const headLen = size * 1.6, headW = size;
-      ctx.fillStyle = color; ctx.fillRect(sx - half, sy - half, size, size);
-      ctx.strokeStyle = "#0e7490"; ctx.lineWidth = 1; ctx.strokeRect(sx - half, sy - half, size, size);
-      ctx.strokeStyle = color; ctx.lineWidth = size * 0.25; ctx.lineCap = "round";
+      ctx.fillStyle = color; ctx.beginPath();
+      if (ctx.roundRect) { ctx.roundRect(sx - half, sy - half, size, size, radius); }
+      else { ctx.rect(sx - half, sy - half, size, size); }
+      ctx.fill();
+      ctx.strokeStyle = "#0e7490"; ctx.lineWidth = 1; ctx.stroke();
+      ctx.strokeStyle = color; ctx.lineWidth = shaftWidth; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
       ctx.fillStyle = color; ctx.beginPath();
       ctx.moveTo(ex, ey);
@@ -569,12 +571,11 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }
     if (o.type==="outlet" && o.start && o.end) {
       const color = o.outletColor || C.outletStroke || "#06b6d4";
-      const size = DIMENSIONS.CANAL_WIDTH * 9;
+      const { size, shaftWidth, headLen, headW, radius } = getOutletDimensions(o);
       const half = size / 2;
       const { x: sx, y: sy } = o.start;
       const { x: ex, y: ey } = o.end;
       const ang = Math.atan2(ey - sy, ex - sx);
-      const headLen = size * 1.6, headW = size;
       const h1x=(ex - headLen*Math.cos(ang) - headW*Math.sin(ang)).toFixed(1);
       const h1y=(ey - headLen*Math.sin(ang) + headW*Math.cos(ang)).toFixed(1);
       const h2x=(ex - headLen*Math.cos(ang) + headW*Math.sin(ang)).toFixed(1);
@@ -584,8 +585,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const _lp = getOutletLabelPos(o);
       const numLbl = svgMogaFractionBox(o.mogha_number, o.mogha_side, _lp.x, _lp.y, numFont, "rgba(120,225,245,0.92)", "#0891b2");
       return `<g>
-        <rect x="${(sx-half).toFixed(1)}" y="${(sy-half).toFixed(1)}" width="${size}" height="${size}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
-        <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${(size*0.25).toFixed(1)}" stroke-linecap="round"/>
+        <rect x="${(sx-half).toFixed(1)}" y="${(sy-half).toFixed(1)}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" rx="${radius.toFixed(1)}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
+        <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${shaftWidth.toFixed(1)}" stroke-linecap="round"/>
         <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
         ${numLbl}
       </g>`;

@@ -1301,6 +1301,12 @@ export default function Editor() {
               <Printer className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-violet-600 border border-violet-500 text-white hover:bg-violet-500 shadow-md"
+              onClick={() => { saveRef.current(); setShowMerge(true); }}
+              title="Merge all Mogas into one Mouza map">
+              <Network className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${pageBorderStyle !== "none" ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
               onClick={() => setPageBorderStyle(prev => {
                 const styles = ["none", "dashed", "solid", "dotted"];
@@ -1326,12 +1332,6 @@ export default function Editor() {
               onClick={() => { setGroupName(mapData?.title || ""); setShowGroupDialog(true); }}
               title="Name / Group this map as a Moga">
               <Group className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon"
-              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-violet-600 hover:bg-violet-50 shadow-md"
-              onClick={() => { saveRef.current(); setShowMerge(true); }}
-              title="Merge all Mogas into one Mouza map">
-              <Network className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
               className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shadow-md"
