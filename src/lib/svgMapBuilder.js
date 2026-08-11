@@ -348,7 +348,24 @@ function svgMouza(obj, C, idx) {
   const lw = obj.lineWidth || 3;
   const isDashed = obj.lineStyle !== "solid";
   const dashAttr = isDashed ? ` stroke-dasharray="25,12"` : "";
-  return `<polyline key="mouza_${idx}" points="${pts}" fill="none" stroke="${C.mouzaStroke || '#000'}" stroke-width="${lw}" stroke-linecap="round"${dashAttr}/>`;
+  const color = C.mouzaStroke || '#000';
+  // Labels — label1 above the line, label2 below the line (mouza names on each side)
+  const mid = Math.floor(obj.points.length / 2);
+  const p = obj.points[mid];
+  const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
+  const angleDeg = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
+  const labelFont = Math.max(14, Math.min(40, lw * 4));
+  const offset = lw / 2 + labelFont * 0.6;
+  const text1 = obj.label1 || obj.name || "";
+  const text2 = obj.label2 || "";
+  let labels = "";
+  if (text1) {
+    labels += `<text transform="translate(${p.x},${p.y}) rotate(${angleDeg.toFixed(1)})" x="0" y="${(-offset).toFixed(1)}" text-anchor="middle" dominant-baseline="bottom" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${labelFont}" fill="${color}">${text1}</text>`;
+  }
+  if (text2) {
+    labels += `<text transform="translate(${p.x},${p.y}) rotate(${angleDeg.toFixed(1)})" x="0" y="${offset.toFixed(1)}" text-anchor="middle" dominant-baseline="top" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${labelFont}" fill="${color}">${text2}</text>`;
+  }
+  return `<polyline key="mouza_${idx}" points="${pts}" fill="none" stroke="${color}" stroke-width="${lw}" stroke-linecap="round"${dashAttr}/>${labels}`;
 }
 
 // ─── MAIN SVG GENERATOR ───────────────────────────────────────────────────────

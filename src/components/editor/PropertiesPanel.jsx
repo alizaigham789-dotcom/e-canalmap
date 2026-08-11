@@ -288,7 +288,8 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
           {selectedObj.type === "mouza" && (
             <>
               <Separator className="bg-slate-100" />
-              <Field label="Mouza Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="حد بندی موضع" />
+              <Field label="Mouza Name 1 (Side 1)" value={local.label1 || local.name || ""} onChange={v => commit("label1", v)} placeholder="موضع 1" hint="Shown on one side of the boundary line" />
+              <Field label="Mouza Name 2 (Side 2)" value={local.label2 || ""} onChange={v => commit("label2", v)} placeholder="موضع 2" hint="Shown on the other side of the boundary line" />
               <div className="text-[10px] text-slate-600 font-mono">Dotted boundary • {selectedObj.points?.length || 0} points</div>
             </>
           )}
