@@ -400,7 +400,7 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
 // Jameel Noori Nastaleeq — repeating the same way the English name does.
 function drawCanalNameUrduEditor(ctx, points, text, zoom) {
   const cfWorld = canalNameFont();
-  const cf = screenClampedFont(cfWorld, zoom, 12, 32);
+  const cf = screenClampedFont(cfWorld, zoom, 12, 64);
   const segLens = [];
   let totalLen = 0;
   for (let i = 0; i < points.length - 1; i++) {
@@ -450,7 +450,7 @@ function drawTextOnCanalPath(ctx, points, text, zoom) {
   if (!points || points.length < 2 || !text) return;
   if (isUrduText(text)) { drawCanalNameUrduEditor(ctx, points, text, zoom); return; }
   const cfWorld = canalNameFont();
-  const cf = screenClampedFont(cfWorld, zoom, 12, 32);
+  const cf = screenClampedFont(cfWorld, zoom, 12, 64);
   ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -672,7 +672,7 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
     ctx.save();
     ctx.translate(p.x, p.y); ctx.rotate(angle);
     ctx.fillStyle = "rgba(255,255,255,0.95)";
-    ctx.font = `bold ${scaledFont(14, zoom)}px Rajdhani, sans-serif`;
+    ctx.font = `bold ${scaledFont(42, zoom, 11, 84)}px Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(obj.name, 0, 0);
     ctx.restore();
@@ -867,7 +867,7 @@ export function drawMouza(ctx, obj, isSelected, zoom, C) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid], p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
     const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
-    const labelFont = Math.max(14, Math.min(40, lw * 4)) / zoom;
+    const labelFont = Math.max(14, Math.min(40, lw * 4)) * 5 / zoom;
     const offset = (lw / 2 + labelFont * 0.6) / zoom;
     // label1 — above the line (one side)
     const text1 = obj.label1 || obj.name || "";

@@ -354,7 +354,7 @@ function svgMouza(obj, C, idx) {
   const p = obj.points[mid];
   const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
   const angleDeg = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
-  const labelFont = Math.max(14, Math.min(40, lw * 4));
+  const labelFont = Math.max(14, Math.min(40, lw * 4)) * 5;
   const offset = lw / 2 + labelFont * 0.6;
   const text1 = obj.label1 || obj.name || "";
   const text2 = obj.label2 || "";

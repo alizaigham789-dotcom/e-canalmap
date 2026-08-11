@@ -1145,7 +1145,7 @@ export function mogaNumberFont() {
 export function getOutletDimensions(obj) {
   const scale = obj.arrowScale || 1;
   const canalW = obj.canalWidth || 100;
-  const size = (canalW * 10 / 12) * scale; // decreased 12× from 10× canal width
+  const size = DIMENSIONS.KHAL_WIDTH * 2 * scale; // 2× khal width — prominent but compact
   return {
     size,                   // block size (square at start point)
     shaftWidth: size * 0.3,  // shaft line width
@@ -1157,7 +1157,7 @@ export function getOutletDimensions(obj) {
 
 // Canal name font — proportional to canal width so text fits INSIDE the canal banks
 export function canalNameFont(width = 100) {
-  return Math.max(10, Math.min((width || 100) * 0.4, 40));
+  return Math.max(10, Math.min((width || 100) * 0.8, 80));
 }
 
 // ============================================================
