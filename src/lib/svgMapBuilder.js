@@ -244,7 +244,7 @@ function svgCanal(obj, C, idx) {
   const centerPath = pointsToSmoothPath(obj.points);
   const fillColor = C.canalFill || "rgba(163,218,244,0.70)";
   const strokeColor = C.canalStroke || "#2B7AB8";
-  const cf = canalNameFont();
+  const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH);
   const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf) : "";
   if (obj.canalStyle === "flat") {
     const halfW = w / 2;
@@ -346,8 +346,10 @@ function svgOutlet(obj, C, idx) {
 function svgMouza(obj, C, idx) {
   if (!obj.points || obj.points.length < 2) return "";
   const pts = obj.points.map(p => `${p.x},${p.y}`).join(" ");
-  const mouzaWidth = (CHAKBANDI_SCALE.lineWidth() * 5) / 3;
-  return `<polyline key="mouza_${idx}" points="${pts}" fill="none" stroke="${C.mouzaStroke || '#000'}" stroke-width="${mouzaWidth}" stroke-linecap="round" stroke-dasharray="25,12"/>`;
+  const lw = obj.lineWidth || 3;
+  const isDashed = obj.lineStyle !== "solid";
+  const dashAttr = isDashed ? ` stroke-dasharray="25,12"` : "";
+  return `<polyline key="mouza_${idx}" points="${pts}" fill="none" stroke="${C.mouzaStroke || '#000'}" stroke-width="${lw}" stroke-linecap="round"${dashAttr}/>`;
 }
 
 // ─── MAIN SVG GENERATOR ───────────────────────────────────────────────────────

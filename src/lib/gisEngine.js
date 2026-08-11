@@ -1134,14 +1134,14 @@ export function canalLength(points) {
   return Math.round(len);
 }
 
-// Moga number font size — 4× larger for print/export legibility
+// Moga number font size — proportional to moga box, no artificial inflation
 export function mogaNumberFont() {
-  return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38 * 4;
+  return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.38;
 }
 
-// Canal name font — 4× larger for print/export legibility
-export function canalNameFont() {
-  return Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 1.20;
+// Canal name font — proportional to canal width so text fits INSIDE the canal banks
+export function canalNameFont(width = 100) {
+  return Math.max(10, Math.min((width || 100) * 0.4, 40));
 }
 
 // ============================================================

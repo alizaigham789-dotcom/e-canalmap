@@ -206,7 +206,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         ctx.strokeStyle = "rgba(255,255,255,0.30)"; ctx.lineWidth = Math.max(1, w * 0.12); drawCenter(); ctx.stroke();
       }
       if (o.name) {
-        const cf = canalNameFont();
+        const cf = canalNameFont(o.width || DIMENSIONS.CANAL_WIDTH);
         drawCanalNameOnCanvas(ctx, o.points, o.name, cf);
       }
     } else if (o.type === "khal" && o.points?.length >= 2) {
@@ -490,7 +490,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const centerPts = o.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
       let nameSvg = "";
       if (o.name) {
-        const cf = canalNameFont();
+        const cf = canalNameFont(o.width || DIMENSIONS.CANAL_WIDTH);
         nameSvg = svgCanalNameOnPath(o.points, o.name, cf);
       }
       if (o.canalStyle === "flat") {

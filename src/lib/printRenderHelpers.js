@@ -71,8 +71,8 @@ const MOGA_BOX_W = DIMENSIONS.ACRE.width * 5;     // 1100 (2× bigger)
 const MOGA_BOX_H = DIMENSIONS.ACRE.height * 2.8;   // ~554 (2× taller)
 const MOGA_BOX_FONT = 280;                          // 2× bigger moga number
 
-// Mustateel label font — 4× larger for print/export legibility (for legend font matching)
-const MUSTATEEL_LABEL_FONT = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 1.20; // 528
+// Legend / label font — proportional to mustateel size (no artificial inflation)
+const MUSTATEEL_LABEL_FONT = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30; // 132
 
 // ─── Canal name: total length + segment lengths ──────────────────────────
 function pathSegments(points) {

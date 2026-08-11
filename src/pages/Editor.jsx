@@ -18,13 +18,14 @@ import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
 
 import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
 import PrintPreview from "@/components/editor/PrintPreview";
+import MergeMogasDialog from "@/components/editor/MergeMogasDialog";
 import {
   DrawingStateManager,
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
   saveToClipboard, loadFromClipboard, hasClipboard,
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, Wand2 } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, Wand2, Network } from "lucide-react";
 import { saveBackup, getBackup, setLastMapId } from "@/lib/mapBackup";
 import { saveMaxSnapshot, getMaxSnapshot } from "@/lib/serverSnapshot";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,7 @@ export default function Editor() {
   const [showExport, setShowExport] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
   const [showSnap, setShowSnap] = useState(false);
+  const [showMerge, setShowMerge] = useState(false);
   const [snapSettings, setSnapSettings] = useState({ gridSnap: true, spineSnap: true, mogaSnap: true });
   const [freehandMode, setFreehandMode] = useState(false);
   const [gridFlags, setGridFlags] = useState({ showMustateel: true, showMuraba: false });
@@ -368,6 +370,18 @@ export default function Editor() {
   const syncUndoRedo = () => {
     setCanUndo(dsmRef.current.historyIdx > 0);
     setCanRedo(dsmRef.current.historyIdx < dsmRef.current.history.length - 1);
+  };
+
+  // Merge all moga maps of the same village into this editor session
+  const handleMergeMogas = (mergedObjects) => {
+    dsmRef.current = new DrawingStateManager(mergedObjects);
+    dsmRef.current.snapshot();
+    loadedNonParcelCountRef.current = countNonParcels(mergedObjects);
+    setObjects([...dsmRef.current.objects]);
+    syncUndoRedo();
+    setShowMerge(false);
+    saveRef.current();
+    toast.success("All mogas merged into one mouza map");
   };
 
   const syncObjects = () => {
@@ -1314,6 +1328,12 @@ export default function Editor() {
               <Group className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-violet-600 hover:bg-violet-50 shadow-md"
+              onClick={() => { saveRef.current(); setShowMerge(true); }}
+              title="Merge all Mogas into one Mouza map">
+              <Network className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
               className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shadow-md"
               onClick={() => handleSave()}
               title="Save Map (Ctrl+S)">
@@ -1557,6 +1577,15 @@ export default function Editor() {
             </div>
           </div>
         </div>
+      )}
+
+      {showMerge && mapData && (
+        <MergeMogasDialog
+          mapData={mapData}
+          currentObjects={dsmRef.current.objects}
+          onMerge={handleMergeMogas}
+          onClose={() => setShowMerge(false)}
+        />
       )}
     </div>
   );
