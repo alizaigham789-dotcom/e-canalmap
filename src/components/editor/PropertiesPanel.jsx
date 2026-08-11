@@ -192,7 +192,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
             <>
               <Separator className="bg-slate-100" />
               <Field label="Watercourse Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Watercourse 1" />
-              <KhalWidthControl value={local.width ?? 2} onChange={v => commit("width", v)} />
+              <KhalWidthControl value={local.width ?? 11} onChange={v => commit("width", v)} />
               <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
             </>
           )}
@@ -420,21 +420,26 @@ function SpacingControl({ label, value, min, max, step, onChange, unit }) {
   );
 }
 
-// Watercourse (khal) width — discrete preset sizes 1–3 ft
+// Watercourse (khal) width — continuous range 3–15 ft (default 11 ft)
 function KhalWidthControl({ value, onChange }) {
-  const OPTIONS = [1, 1.5, 2, 2.5, 3];
+  const min = 3, max = 15;
+  const clamped = Math.min(max, Math.max(min, value || 11));
   return (
     <div>
-      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Width (ft)</label>
-      <div className="flex gap-1">
-        {OPTIONS.map(opt => (
-          <button key={opt} onClick={() => onChange(opt)}
-            className={`flex-1 h-7 text-[10px] rounded border font-medium transition-colors ${value === opt ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>
-            {opt}
-          </button>
-        ))}
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-[10px] text-slate-400 uppercase tracking-wider">Width (ft)</label>
+        <span className="text-[9px] text-blue-500 font-medium">Watercourse · 3–15 ft</span>
       </div>
-      <p className="text-[9px] text-slate-400 mt-0.5">Watercourse width preset</p>
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+          onClick={() => onChange(Math.max(min, +(clamped - 0.5).toFixed(1)))}>−</Button>
+        <input type="range" min={min} max={max} step={0.5} value={clamped}
+          onChange={e => onChange(parseFloat(e.target.value))}
+          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+        <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+          onClick={() => onChange(Math.min(max, +(clamped + 0.5).toFixed(1)))}>+</Button>
+        <span className="text-xs text-slate-600 font-mono w-10 text-center">{clamped}ft</span>
+      </div>
     </div>
   );
 }

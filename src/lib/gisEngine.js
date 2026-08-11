@@ -9,7 +9,7 @@ export const DIMENSIONS = {
   MUSTATEEL: { width: 440, height: 990 },
   MURABA: { width: 1100, height: 990 },
   CANAL_WIDTH: 14,
-  KHAL_WIDTH: 8,
+  KHAL_WIDTH: 11,
   ROAD_WIDTH: 28,
 };
 

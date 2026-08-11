@@ -29,6 +29,7 @@ import { remainingKanal, acreAllocations, kanalUsedInAcre, parcelKillaCells } fr
 import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import { inverseTransform } from "@/lib/geoOverlay";
+import { arrangeMogas } from "@/lib/mogaArrange";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
   polygonAreaSqMeters, sqMetersToUnits,
@@ -736,6 +737,39 @@ export default function GeoMap() {
     if (mapRef.current) mapRef.current.flyTo(mapRef.current.getCenter(), 18, { duration: 0.6 });
   };
 
+  // ─── AUTO-ARRANGE MOGAS ──────────────────────────────────────
+  // Uses the currently-selected (placed) map as the anchor, then matches
+  // mustateel Khasra numbers across all other moga maps of the same village
+  // to compute + save their geo placements automatically — merging overlaps
+  // and chaining consecutive numbers into one continuous mouza map.
+  const [arranging, setArranging] = useState(false);
+  const handleAutoArrange = async () => {
+    if (!selectedMap || !maps) return;
+    if (selectedMap.geo_placement_lat == null) {
+      toast.error("پہلے منتخب شدہ موگہ کو نقشے پر پلیس کریں، پھر آٹو آرینج کریں۔");
+      return;
+    }
+    setArranging(true);
+    try {
+      const { results, error } = arrangeMogas(maps, selectedMap);
+      if (error) { toast.error(error); setArranging(false); return; }
+      // Save each computed placement to the server
+      for (const r of results) {
+        await base44.entities.LandMap.update(r.mapId, {
+          geo_placement_lat: r.placement.lat,
+          geo_placement_lng: r.placement.lng,
+          geo_rotation: 0,
+        });
+      }
+      await queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+      toast.success(`${results.length} موگہ خودبخود آرینج ہو گیا — ملتی مستطیل اوورلیپ ہو کر ایک نقشہ بن گئی ہیں۔`);
+    } catch (err) {
+      toast.error("آٹو آرینج میں مسئلہ: " + (err.message || ""));
+    } finally {
+      setArranging(false);
+    }
+  };
+
   // Save overlay placement to server so it persists across sessions
   const handleSaveOverlay = async () => {
     if (!selectedMapId || !placementPoint) return;
@@ -1145,6 +1179,9 @@ export default function GeoMap() {
           onEditUpperCorner={() => setShowCoordDialog(true)}
           onEditLowerCorner={() => setShowLowerLeftDialog(true)}
           onExport={() => setShowExportDialog(true)}
+          onAutoArrange={handleAutoArrange}
+          arranging={arranging}
+          villageMogaCount={(maps || []).filter(m => m.village === selectedMap?.village && m.id !== selectedMap?.id && m.geo_placement_lat == null).length}
           onClose={() => setShowOverlayPanel(false)}
         />
       )}

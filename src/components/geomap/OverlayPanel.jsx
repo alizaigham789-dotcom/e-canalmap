@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle, Save, Loader2 } from "lucide-react";
+import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle, Save, Loader2, Network } from "lucide-react";
 
 export default function OverlayPanel({
   maps,
@@ -19,6 +19,9 @@ export default function OverlayPanel({
   saved,
   mustateelAreas,
   onEditLowerCorner,
+  onAutoArrange,
+  arranging,
+  villageMogaCount,
   onClose,
 }) {
   const mustateels = mustateelAreas || [];
@@ -170,6 +173,20 @@ export default function OverlayPanel({
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
               {saving ? "Saving…" : saved ? "Saved" : "Save Placement"}
             </button>
+            <button
+              onClick={onAutoArrange}
+              disabled={arranging}
+              className={`w-full h-8 rounded-md text-xs font-bold flex items-center justify-center gap-1.5 transition-all bg-violet-600/30 text-violet-300 hover:bg-violet-600/45 ${arranging ? "opacity-60 cursor-wait" : ""}`}
+              title="تمام موگہ جات کو مستطیل نمبر کے مطابق خودبخود ایک نقشے میں ترتیب دیں"
+            >
+              {arranging ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Network className="w-3.5 h-3.5" />}
+              {arranging ? "آرینج ہو رہا ہے…" : "آٹو آرینج موگہ"}
+            </button>
+            {villageMogaCount > 0 && (
+              <p className="text-[9px] text-white/40 text-center -mt-1">
+                {villageMogaCount} اور موگہ اسی گاؤں کے آرینج ہوں گے
+              </p>
+            )}
             <button
               onClick={onEditLowerCorner}
               className="w-full h-8 rounded-md text-xs font-bold bg-green-600/20 text-green-300 hover:bg-green-600/30 flex items-center justify-center gap-1.5 transition-all"
