@@ -15,7 +15,7 @@ const COLOR_FIELDS = [
   { key: "khalStroke", label: "Khal Line", default: "#2563eb" },
   { key: "roadStroke", label: "Road Edge", default: "#b45309" },
   { key: "chakbandiStroke", label: "Chakbandi Line", default: "#22c55e" },
-  { key: "mouzaStroke", label: "Mouza Boundary", default: "#000000" },
+  { key: "mouzaStroke", label: "Mouza Boundary", default: "#dc2626" },
   { key: "outletStroke", label: "Outlet Arrow", default: "#06b6d4" },
 ];
 

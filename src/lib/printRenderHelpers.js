@@ -214,6 +214,25 @@ export function svgCanalNameOnPath(points, text, fontSize) {
   return svg;
 }
 
+// ─── SVG: road name — single label at midpoint, inside the road ─────────
+export function svgRoadName(points, text, roadWidth) {
+  if (!points || points.length < 2 || !text) return "";
+  const mid = Math.floor(points.length / 2);
+  const p = points[mid];
+  const p2 = points[Math.min(mid + 1, points.length - 1)];
+  const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+  let deg = angle * 180 / Math.PI;
+  if (deg > 90 || deg < -90) deg += 180;
+  const w = roadWidth || DIMENSIONS.ROAD_WIDTH;
+  const fontPx = w * 0.75;
+  const isUrdu = isUrduText(text);
+  const fontFamily = isUrdu
+    ? "'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif"
+    : "Rajdhani,Arial,sans-serif";
+  const direction = isUrdu ? ' direction="rtl"' : '';
+  return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="${fontFamily}" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="white" stroke="rgba(0,0,0,0.6)" stroke-width="${(fontPx*0.12).toFixed(1)}" paint-order="stroke"${direction} transform="rotate(${deg.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)})">${text}</text>`;
+}
+
 // ─── SVG: moga number as a fraction (number over line over R/L) ──────────
 // Positioned at (x, y). Returns SVG markup.
 export function svgMogaFraction(num, side, x, y, fontPx, color) {
@@ -469,12 +488,13 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = nu
     { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
     { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
     { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
-    { label: "موضع", color: C.mouzaStroke || "#000000", type: "dashed" },
+    { label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" },
   ];
 
-  // 3× bigger; table style with black header
-  const S = 7.5;
-  const lf = MUSTATEEL_LABEL_FONT;
+  // Proportional to viewBox — smaller when few mustateels, bigger when many
+  const _baseDim = Math.min(viewW, viewH);
+  const lf = Math.max(16, Math.min(80, _baseDim * 0.035));
+  const S = lf / 17.6;
   const colSignW = 34 * S, colNameW = 42 * S, pad = 6 * S;
   const legendW = colSignW + colNameW + pad * 3;
   const headerH = lf * 1.3, colHdrH = lf * 1.1, rowH = lf * 1.4;
@@ -588,7 +608,7 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBound
     { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
     { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
     { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
-    { label: "موضع", color: C.mouzaStroke || "#000", type: "dashed" },
+    { label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" },
   ];
   // 3× bigger; table style with black header
   const S = 7.5;

@@ -12,7 +12,7 @@ import {
 import {
   svgCanalNameOnPath, svgMogaFractionBox,
   svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos,
-  getCCAGCAText, buildLegendSVG,
+  getCCAGCAText, buildLegendSVG, svgRoadName,
 } from "@/lib/printRenderHelpers";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
@@ -309,12 +309,14 @@ function svgRoad(obj, C, idx) {
   const right = getParallelPolyline(obj.points, halfW);
   const color = C.roadStroke || "#b45309";
   const centerDash = pointsToSmoothPath(obj.points);
+  const nameSvg = obj.name ? svgRoadName(obj.points, obj.name, obj.width || DIMENSIONS.ROAD_WIDTH) : "";
   return `
 <g key="road_${idx}">
-  <path d="${fillPath}" fill="#3a3a3a" />
+  <path d="${fillPath}" fill="rgba(58,58,58,0.6)" />
   <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${centerDash}" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="10,6" stroke-linecap="round"/>
+  <path d="${centerDash}" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="14,8" stroke-linecap="round"/>
+  ${nameSvg}
 </g>`;
 }
 
@@ -348,14 +350,14 @@ function svgMouza(obj, C, idx) {
   const lw = obj.lineWidth || 3;
   const isDashed = obj.lineStyle !== "solid";
   const dashAttr = isDashed ? ` stroke-dasharray="25,12"` : "";
-  const color = C.mouzaStroke || '#000';
+  const color = (!C.mouzaStroke || C.mouzaStroke === '#000000') ? '#dc2626' : C.mouzaStroke;
   // Labels — label1 above the line, label2 below the line (mouza names on each side)
   const mid = Math.floor(obj.points.length / 2);
   const p = obj.points[mid];
   const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
   const angleDeg = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
   const labelFont = Math.max(14, Math.min(40, lw * 4)) * 5;
-  const offset = lw / 2 + labelFont * 0.6;
+  const offset = (lw / 2 + labelFont * 0.6) * 2;
   const text1 = obj.label1 || obj.name || "";
   const text2 = obj.label2 || "";
   let labels = "";

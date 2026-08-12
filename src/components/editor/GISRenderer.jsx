@@ -629,7 +629,7 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
   const right = getParallelPolyline(obj.points, halfW);
 
   // Asphalt fill — smooth
-  ctx.fillStyle = "#3a3a3a";
+  ctx.fillStyle = "rgba(58,58,58,0.6)";
   ctx.beginPath();
   drawSmoothPath(ctx, left);
   ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
@@ -656,9 +656,9 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
 
   // Dashed center divider — smooth
   ctx.strokeStyle = "#fbbf24";
-  ctx.lineWidth = 1.5 / zoom;
+  ctx.lineWidth = 3 / zoom;
   ctx.lineCap = "round";
-  ctx.setLineDash([10/zoom, 6/zoom]);
+  ctx.setLineDash([14/zoom, 8/zoom]);
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
@@ -848,7 +848,7 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false)
 // ============================================================
 export function drawMouza(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
-  const color = C.mouzaStroke || "#000000";
+  const color = (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke;
   const lw = obj.lineWidth || 3;
   ctx.strokeStyle = isSelected ? "#6366f1" : color;
   ctx.lineWidth = (isSelected ? lw + 1 : lw) / zoom;
@@ -868,7 +868,7 @@ export function drawMouza(ctx, obj, isSelected, zoom, C) {
     const p = obj.points[mid], p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
     const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
     const labelFont = Math.max(14, Math.min(40, lw * 4)) * 5 / zoom;
-    const offset = (lw / 2 + labelFont * 0.6) / zoom;
+    const offset = (lw / 2 + labelFont * 0.6) * 2 / zoom;
     // label1 — above the line (one side)
     const text1 = obj.label1 || obj.name || "";
     if (text1) {
