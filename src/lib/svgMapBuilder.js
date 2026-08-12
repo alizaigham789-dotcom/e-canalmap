@@ -286,8 +286,8 @@ function svgKhal(obj, C, idx) {
     if (Math.hypot(last.x - p.x, last.y - p.y) > halfW * 2) { prev = p; break; }
   }
   const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
-  const aLen = halfW * 12.5;
-  const aW = halfW * 5;
+  const aLen = halfW * 6.25;
+  const aW = halfW * 2.5;
   const p1x = (last.x - aLen * Math.cos(ang) - aW * Math.sin(ang)).toFixed(1);
   const p1y = (last.y - aLen * Math.sin(ang) + aW * Math.cos(ang)).toFixed(1);
   const p2x = (last.x - aLen * Math.cos(ang) + aW * Math.sin(ang)).toFixed(1);

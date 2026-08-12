@@ -1145,7 +1145,7 @@ export function mogaNumberFont() {
 export function getOutletDimensions(obj) {
   const scale = obj.arrowScale || 1;
   const canalW = obj.canalWidth || 100;
-  const size = DIMENSIONS.KHAL_WIDTH * 2 * scale; // 2× khal width — prominent but compact
+  const size = DIMENSIONS.KHAL_WIDTH * 4 * scale; // 4× khal width — 2× bigger for prominence
   return {
     size,                   // block size (square at start point)
     shaftWidth: size * 0.3,  // shaft line width

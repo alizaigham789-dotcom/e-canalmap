@@ -592,8 +592,8 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
     if (Math.hypot(last.x - p.x, last.y - p.y) > halfW * 2) { prev = p; break; }
   }
   const fAng = Math.atan2(last.y - prev.y, last.x - prev.x);
-  const arrowLen = halfW * 12.5;   // 5× original (2.5 × 5)
-  const arrowWidth = halfW * 5;    // 5× tail width
+  const arrowLen = halfW * 6.25;   // 2.5× original — halved from 5×
+  const arrowWidth = halfW * 2.5;  // 2.5× tail width — halved from 5×
   ctx.save();
   ctx.translate(last.x, last.y); ctx.rotate(fAng);
   ctx.fillStyle = khalColor;
