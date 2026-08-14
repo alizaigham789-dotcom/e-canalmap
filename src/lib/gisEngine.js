@@ -476,6 +476,7 @@ export function createKhal(points, name = "") {
     id: `khal_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "khal", points: points.map(p => ({ ...p })), name,
     width: DIMENSIONS.KHAL_WIDTH,
+    fillColor: "", // empty = use default transparent blue fill
   };
 }
 
@@ -484,6 +485,19 @@ export function createRoad(points, name = "") {
     id: `road_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "road", points: points.map(p => ({ ...p })), name,
     width: DIMENSIONS.ROAD_WIDTH,
+    fillColor: "#1a1a1a",   // asphalt fill — black by default, customizable
+    edgeColor: "#fbbf24",   // side lines — yellow by default
+    edgeWidth: 2,           // side line width in feet
+  };
+}
+
+// Bridge (پل) — red dotted ladder lines representing a bridge under the road
+export function createBridge(points, name = "") {
+  return {
+    id: `bridge_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    type: "bridge", points: points.map(p => ({ ...p })), name,
+    width: 28,              // ladder width (distance between the two side rails)
+    rungSpacing: 20,        // distance between ladder rungs in feet
   };
 }
 

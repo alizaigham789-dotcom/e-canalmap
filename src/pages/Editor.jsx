@@ -104,6 +104,7 @@ export default function Editor() {
   const [outletDraft, setOutletDraft] = useState(null);
   const [khalDraft, setKhalDraft] = useState(null);
   const [roadDraft, setRoadDraft] = useState(null);
+  const [bridgeDraft, setBridgeDraft] = useState(null);
   const [mouzaDraft, setMouzaDraft] = useState(null);
   const [objects, setObjects] = useState([]);
   const [canUndo, setCanUndo] = useState(false);
@@ -134,12 +135,14 @@ export default function Editor() {
   const chakbandiDraftRef = useRef(null);
   const khalDraftRef = useRef(null);
   const roadDraftRef = useRef(null);
+  const bridgeDraftRef = useRef(null);
   const mouzaDraftRef = useRef(null);
   const outletDraftRef = useRef(null);
   canalDraftRef.current = canalDraft;
   chakbandiDraftRef.current = chakbandiDraft;
   khalDraftRef.current = khalDraft;
   roadDraftRef.current = roadDraft;
+  bridgeDraftRef.current = bridgeDraft;
   mouzaDraftRef.current = mouzaDraft;
   outletDraftRef.current = outletDraft;
   zoomRef.current = zoom;

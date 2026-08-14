@@ -53,6 +53,15 @@ const MouzaIcon = ({ className }) => (
   </svg>
 );
 
+// Bridge (پل): red dotted ladder lines representing a bridge
+const BridgeIcon = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 6h16" strokeDasharray="3 2" />
+    <path d="M4 18h16" strokeDasharray="3 2" />
+    <path d="M6 6v12M10 6v12M14 6v12M18 6v12" strokeWidth="1.5" strokeDasharray="2 2" />
+  </svg>
+);
+
 const TOOLS = [
   { id: "select", label: "Select (V)", icon: MousePointer2, group: "nav" },
   { id: "pan", label: "Pan (H)", icon: Hand, group: "nav" },
@@ -68,6 +77,7 @@ const TOOLS = [
   { id: "outlet", label: "Outlet / Moga (O)", icon: MogaIcon, group: "draw", color: "text-cyan-400" },
   { id: "khal", label: "Watercourse (W)", icon: Waves, group: "draw", color: "text-blue-500" },
   { id: "road", label: "Road (R)", icon: RoadIcon, group: "draw", color: "text-amber-400" },
+  { id: "bridge", label: "Bridge / پل (P)", icon: BridgeIcon, group: "draw", color: "text-red-400" },
   { id: "mouza", label: "Mouza Boundary (U)", icon: MouzaIcon, group: "draw", color: "text-slate-700" },
   { id: "damageMarker", label: "Canal Damage Marker (G)", icon: AlertTriangle, group: "draw", color: "text-red-500" },
   { id: "measure", label: "Measure Distance (X)", icon: Ruler, group: "draw", color: "text-purple-500" },

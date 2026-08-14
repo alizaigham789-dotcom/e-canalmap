@@ -40,14 +40,14 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
     acre: "Acre Block", mustateel: "Mustateel Parcel", muraba: "Muraba Block",
     canal: "Canal", chakbandi: "Chakbandi Line", outlet: "Outlet / Moga",
     khal: "Watercourse", road: "Road", mouza: "Mouza Boundary",
-    damageMarker: "Canal Damage Marker",
+    bridge: "Bridge (پل)", damageMarker: "Canal Damage Marker",
   }[selectedObj.type] || selectedObj.type;
 
   const typeColor = {
     acre: "text-amber-600", mustateel: "text-red-600", muraba: "text-red-700",
     canal: "text-blue-600", chakbandi: "text-green-600", outlet: "text-cyan-600",
     khal: "text-blue-500", road: "text-amber-500", mouza: "text-slate-700",
-    damageMarker: "text-red-600",
+    bridge: "text-red-500", damageMarker: "text-red-600",
   }[selectedObj.type] || "text-slate-500";
 
   return (
@@ -65,7 +65,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
           <span className={`text-[11px] font-bold font-heading tracking-wider uppercase truncate ${typeColor}`}>{typeLabel}</span>
         </div>
         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-          {["canal", "khal", "road", "chakbandi", "mouza"].includes(selectedObj.type) && onToggleDeleteVertexMode && (
+          {["canal", "khal", "road", "bridge", "chakbandi", "mouza"].includes(selectedObj.type) && onToggleDeleteVertexMode && (
             <Button variant="ghost" size="icon"
               className={`w-6 h-6 ${deleteVertexMode ? "bg-red-600 text-white hover:bg-red-500" : "text-red-400 hover:text-red-600 hover:bg-red-50"}`}
               onClick={() => onToggleDeleteVertexMode()}
@@ -193,6 +193,18 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               <Separator className="bg-slate-100" />
               <Field label="Watercourse Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Watercourse 1" />
               <KhalWidthControl value={local.width ?? 11} onChange={v => commit("width", v)} />
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Fill Colour</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={local.fillColor || "#3b82f6"}
+                    onChange={e => commit("fillColor", e.target.value)}
+                    className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
+                  <span className="text-xs text-slate-600">Water fill colour</span>
+                  {local.fillColor && (
+                    <button onClick={() => commit("fillColor", "")} className="text-[9px] text-slate-400 hover:text-red-500 ml-auto">Reset</button>
+                  )}
+                </div>
+              </div>
               <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
             </>
           )}
@@ -201,8 +213,37 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
             <>
               <Separator className="bg-slate-100" />
               <Field label="Road Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Main Road" />
-              <SpacingControl label="Line Spacing" value={local.width || 28} min={4} max={150} step={2} onChange={v => commit("width", v)} unit="ft" />
-              <div className="text-[10px] text-amber-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
+              <SpacingControl label="Road Width" value={local.width || 28} min={4} max={150} step={2} onChange={v => commit("width", v)} unit="ft" />
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Asphalt Colour</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={local.fillColor || "#1a1a1a"}
+                    onChange={e => commit("fillColor", e.target.value)}
+                    className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
+                  <span className="text-xs text-slate-600">Road fill</span>
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Side Line Colour</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={local.edgeColor || "#fbbf24"}
+                    onChange={e => commit("edgeColor", e.target.value)}
+                    className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
+                  <span className="text-xs text-slate-600">Boundary lines</span>
+                </div>
+              </div>
+              <SpacingControl label="Side Line Width" value={local.edgeWidth || 2} min={1} max={10} step={1} onChange={v => commit("edgeWidth", v)} unit="ft" />
+              <div className="text-[10px] text-amber-600 font-mono">Black fill • Yellow sides • White center • {selectedObj.points?.length || 0} points</div>
+            </>
+          )}
+
+          {selectedObj.type === "bridge" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <Field label="Bridge Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Bridge 1" />
+              <SpacingControl label="Ladder Width" value={local.width || 28} min={8} max={80} step={2} onChange={v => commit("width", v)} unit="ft" />
+              <SpacingControl label="Rung Spacing" value={local.rungSpacing || 20} min={8} max={60} step={2} onChange={v => commit("rungSpacing", v)} unit="ft" />
+              <div className="text-[10px] text-red-600 font-mono">Red dotted ladder • {selectedObj.points?.length || 0} points</div>
             </>
           )}
 

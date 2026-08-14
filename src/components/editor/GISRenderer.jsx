@@ -556,7 +556,7 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
 
   // Water fill — straight segments (matches print/export exactly, no curve overshoot)
   const khalColor = isSelected ? "#93c5fd" : (C.khalStroke || "#2563eb");
-  ctx.fillStyle = `${khalColor}33`;
+  ctx.fillStyle = obj.fillColor || `${khalColor}33`;
   ctx.beginPath();
   ctx.moveTo(left[0].x, left[0].y);
   for (const p of left) ctx.lineTo(p.x, p.y);
@@ -628,18 +628,20 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
 
-  // Asphalt fill — smooth
-  ctx.fillStyle = "rgba(58,58,58,0.6)";
+  // Asphalt fill — black by default, customizable via fillColor
+  ctx.fillStyle = obj.fillColor || "#1a1a1a";
   ctx.beginPath();
   drawSmoothPath(ctx, left);
   ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
   drawSmoothPath(ctx, [...right].reverse());
   ctx.closePath(); ctx.fill();
 
-  // Casing edges — smooth
-  const edgeColor = isSelected ? "#fcd34d" : (C.roadStroke || "#b45309");
+  // Side lines (casing edges) — yellow by default, customizable via edgeColor
+  // Width in feet (world units) — customizable via edgeWidth
+  const edgeColor = isSelected ? "#fcd34d" : (obj.edgeColor || "#fbbf24");
+  const edgeW = (obj.edgeWidth || 2) / zoom;
   ctx.strokeStyle = edgeColor;
-  ctx.lineWidth = (isSelected ? 3 : 2.5) / zoom;
+  ctx.lineWidth = (isSelected ? edgeW + 1/zoom : edgeW);
   ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const side of [left, right]) {
     ctx.beginPath();
@@ -647,15 +649,15 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
     ctx.stroke();
   }
   // Rectangular end caps
-  ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
+  ctx.lineWidth = edgeW * 0.8;
   ctx.beginPath();
   ctx.moveTo(left[0].x, left[0].y); ctx.lineTo(right[0].x, right[0].y);
   ctx.moveTo(left[left.length-1].x, left[left.length-1].y);
   ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
   ctx.stroke();
 
-  // Dashed center divider — smooth
-  ctx.strokeStyle = "#fbbf24";
+  // White dashed center divider — smooth
+  ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 3 / zoom;
   ctx.lineCap = "round";
   ctx.setLineDash([14/zoom, 8/zoom]);
@@ -676,6 +678,98 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(obj.name, 0, 0);
     ctx.restore();
+  }
+}
+
+// ============================================================
+// LAYER 3b: Bridge (پل) — red dotted ladder lines
+// Two parallel red dotted rails with red dotted rungs between them
+// ============================================================
+export function drawBridge(ctx, obj, isSelected, zoom, C) {
+  if (!obj.points || obj.points.length < 2) return;
+  const halfW = (obj.width || 28) / 2;
+  const left = getParallelPolyline(obj.points, -halfW);
+  const right = getParallelPolyline(obj.points, halfW);
+  const color = isSelected ? "#f87171" : "#dc2626";
+  const lw = (isSelected ? 3 : 2.5) / zoom;
+  const dash = [4/zoom, 3/zoom];
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.lineCap = "round";
+  ctx.setLineDash(dash);
+
+  // Left rail
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (const p of left) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+
+  // Right rail
+  ctx.beginPath();
+  ctx.moveTo(right[0].x, right[0].y);
+  for (const p of right) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+
+  // Rungs (ladder cross bars) — perpendicular lines between rails at regular intervals
+  const rungSpacing = (obj.rungSpacing || 20);
+  for (let i = 0; i < obj.points.length - 1; i++) {
+    const a = obj.points[i], b = obj.points[i + 1];
+    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+    const steps = Math.max(1, Math.floor(segLen / rungSpacing));
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const cx = a.x + (b.x - a.x) * t;
+      const cy = a.y + (b.y - a.y) * t;
+      const li = left[i] ? left[i] : left[left.length - 1];
+      const ri = right[i] ? right[i] : right[right.length - 1];
+      // Interpolate left/right at same t
+      const lIdx = Math.min(i, left.length - 1);
+      const lNext = Math.min(i + 1, left.length - 1);
+      const rIdx = Math.min(i, right.length - 1);
+      const rNext = Math.min(i + 1, right.length - 1);
+      const lx = left[lIdx].x + (left[lNext].x - left[lIdx].x) * t;
+      const ly = left[lIdx].y + (left[lNext].y - left[lIdx].y) * t;
+      const rx = right[rIdx].x + (right[rNext].x - right[rIdx].x) * t;
+      const ry = right[rIdx].y + (right[rNext].y - right[rIdx].y) * t;
+      ctx.beginPath();
+      ctx.moveTo(lx, ly);
+      ctx.lineTo(rx, ry);
+      ctx.stroke();
+    }
+  }
+  ctx.setLineDash([]);
+
+  if (obj.name && zoom > 0.3) {
+    const mid = Math.floor(obj.points.length / 2);
+    const p = obj.points[mid];
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = `bold ${scaledFont(11, zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(obj.name, p.x, p.y - halfW - 3/zoom);
+    ctx.restore();
+  }
+}
+
+export function drawBridgeDraft(ctx, bridgeDraft, snapPos, zoom, C) {
+  if (!bridgeDraft || bridgeDraft.length === 0) return;
+  const draftPts = [...bridgeDraft];
+  if (snapPos) draftPts.push(snapPos);
+  const halfW = 14;
+  const left = getParallelPolyline(draftPts, -halfW);
+  const right = getParallelPolyline(draftPts, halfW);
+  ctx.strokeStyle = "#dc2626";
+  ctx.lineWidth = 2 / zoom;
+  ctx.setLineDash([4/zoom, 3/zoom]);
+  for (const side of [left, right]) {
+    ctx.beginPath(); ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  for (const pt of bridgeDraft) {
+    ctx.fillStyle = "#dc2626";
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 4/zoom, 0, Math.PI*2); ctx.fill();
   }
 }
 

@@ -15,7 +15,7 @@ import {
   getCCAGCAText, buildLegendSVG, svgRoadName,
 } from "@/lib/printRenderHelpers";
 
-const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
+const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
 export function getObjectsBounds(objects) {
   if (!objects || objects.length === 0) return null;
@@ -275,7 +275,7 @@ function svgKhal(obj, C, idx) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
   const color = C.khalStroke || "#2563eb";
-  const khalFill = C.khalFill || `${color}22`;
+  const khalFill = obj.fillColor || C.khalFill || `${color}22`;
   const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
@@ -307,16 +307,53 @@ function svgRoad(obj, C, idx) {
   const fillPath = parallelSmoothClosedPath(obj.points, halfW);
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
-  const color = C.roadStroke || "#b45309";
+  const edgeColor = obj.edgeColor || "#fbbf24";
+  const edgeW = obj.edgeWidth || 2;
+  const fillColor = obj.fillColor || "#1a1a1a";
   const centerDash = pointsToSmoothPath(obj.points);
   const nameSvg = obj.name ? svgRoadName(obj.points, obj.name, obj.width || DIMENSIONS.ROAD_WIDTH) : "";
   return `
 <g key="road_${idx}">
-  <path d="${fillPath}" fill="rgba(58,58,58,0.6)" />
-  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${centerDash}" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="14,8" stroke-linecap="round"/>
+  <path d="${fillPath}" fill="${fillColor}" />
+  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${edgeColor}" stroke-width="${edgeW}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${edgeColor}" stroke-width="${edgeW}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${centerDash}" fill="none" stroke="#ffffff" stroke-width="3" stroke-dasharray="14,8" stroke-linecap="round"/>
   ${nameSvg}
+</g>`;
+}
+
+function svgBridge(obj, C, idx) {
+  if (!obj.points || obj.points.length < 2) return "";
+  const halfW = (obj.width || 28) / 2;
+  const left = getParallelPolyline(obj.points, -halfW);
+  const right = getParallelPolyline(obj.points, halfW);
+  const color = "#dc2626";
+  const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const rungSpacing = obj.rungSpacing || 20;
+  let rungs = "";
+  for (let i = 0; i < obj.points.length - 1; i++) {
+    const a = obj.points[i], b = obj.points[i + 1];
+    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+    const steps = Math.max(1, Math.floor(segLen / rungSpacing));
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const lIdx = Math.min(i, left.length - 1);
+      const lNext = Math.min(i + 1, left.length - 1);
+      const rIdx = Math.min(i, right.length - 1);
+      const rNext = Math.min(i + 1, right.length - 1);
+      const lx = (left[lIdx].x + (left[lNext].x - left[lIdx].x) * t).toFixed(1);
+      const ly = (left[lIdx].y + (left[lNext].y - left[lIdx].y) * t).toFixed(1);
+      const rx = (right[rIdx].x + (right[rNext].x - right[rIdx].x) * t).toFixed(1);
+      const ry = (right[rIdx].y + (right[rNext].y - right[rIdx].y) * t).toFixed(1);
+      rungs += `<line x1="${lx}" y1="${ly}" x2="${rx}" y2="${ry}" stroke="${color}" stroke-width="2" stroke-dasharray="4,3" stroke-linecap="round"/>`;
+    }
+  }
+  return `
+<g key="bridge_${idx}">
+  <polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-dasharray="4,3" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-dasharray="4,3" stroke-linecap="round" stroke-linejoin="round"/>
+  ${rungs}
 </g>`;
 }
 
@@ -406,6 +443,7 @@ export function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {
       case "canal":     svgParts.push(svgCanal(obj, C, idx)); break;
       case "khal":      svgParts.push(svgKhal(obj, C, idx)); break;
       case "road":      svgParts.push(svgRoad(obj, C, idx)); break;
+      case "bridge":    svgParts.push(svgBridge(obj, C, idx)); break;
       case "mouza":     svgParts.push(svgMouza(obj, C, idx)); break;
       case "outlet":    svgParts.push(svgOutlet(obj, C, idx)); break;
       default: break;
