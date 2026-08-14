@@ -484,7 +484,7 @@ export function getCCAGCAText(chakbandi, gcaValue) {
 export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = null, customPos = null) {
   const items = [
     { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
-    { label: "کھال", color: C.khalStroke || "#2563eb", type: "line_thin" },
+    { label: "کھال", color: C.khalStroke || "#000000", type: "line_thin" },
     { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
     { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
     { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
@@ -604,7 +604,7 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
 export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBounds = null) {
   const items = [
     { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
-    { label: "کھال", color: C.khalStroke || "#2563eb", type: "line_thin" },
+    { label: "کھال", color: C.khalStroke || "#000000", type: "line_thin" },
     { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
     { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
     { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },

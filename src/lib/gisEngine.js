@@ -476,7 +476,7 @@ export function createKhal(points, name = "") {
     id: `khal_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "khal", points: points.map(p => ({ ...p })), name,
     width: DIMENSIONS.KHAL_WIDTH,
-    fillColor: "", // empty = use default transparent blue fill
+    fillColor: "", // empty = use default solid blue fill
   };
 }
 

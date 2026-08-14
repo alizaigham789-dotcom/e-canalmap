@@ -555,8 +555,9 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
   const right = getParallelPolyline(obj.points, halfW);
 
   // Water fill — straight segments (matches print/export exactly, no curve overshoot)
-  const khalColor = isSelected ? "#93c5fd" : (C.khalStroke || "#2563eb");
-  ctx.fillStyle = obj.fillColor || `${khalColor}33`;
+  // Default: black border, solid blue inside fill
+  const khalColor = isSelected ? "#6b7280" : (C.khalStroke || "#000000");
+  ctx.fillStyle = obj.fillColor || "rgba(59,130,246,0.80)";
   ctx.beginPath();
   ctx.moveTo(left[0].x, left[0].y);
   for (const p of left) ctx.lineTo(p.x, p.y);

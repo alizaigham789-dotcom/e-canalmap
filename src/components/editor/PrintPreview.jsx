@@ -322,8 +322,8 @@ function svgKhal(obj, C, idx) {
   const halfW = (obj.width || DIMENSIONS.KHAL_WIDTH) / 2;
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
-  const color = C.khalStroke || "#2563eb";
-  const khalFill = obj.fillColor || C.khalFill || `${color}22`;
+  const color = C.khalStroke || "#000000";
+  const khalFill = obj.fillColor || C.khalFill || "rgba(59,130,246,0.80)";
   // Straight polylines (no smooth curve — matches editor exactly)
   const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");

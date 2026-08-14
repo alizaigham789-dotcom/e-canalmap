@@ -212,8 +212,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     } else if (o.type === "khal" && o.points?.length >= 2) {
       const halfW = (o.width || 8)/2;
       const left = getParallelPolyline(o.points,-halfW); const right = getParallelPolyline(o.points,halfW);
-      const kColor = C.khalStroke || "#2563eb";
-      ctx.fillStyle="rgba(37,99,235,0.2)"; ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
+      const kColor = C.khalStroke || "#000000";
+      ctx.fillStyle = o.fillColor || C.khalFill || "rgba(59,130,246,0.80)"; ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
       for(const p of left)ctx.lineTo(p.x,p.y); ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
       for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y); ctx.closePath(); ctx.fill();
       ctx.strokeStyle=kColor; ctx.lineWidth=1.5/zoom;
