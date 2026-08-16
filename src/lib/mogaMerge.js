@@ -156,24 +156,64 @@ export function computeObjectsBounds(objects) {
 // ============================================================
 // MOUA MERGE (GROUPED) — build a fresh mouza map from selected
 // moga maps. Each moga's internal layout (chakbandi, khal, canal,
-// mouza, outlet positions) is preserved EXACTLY; mogas are placed
-// side by side so they don't overlap. Every object is tagged with
-// `mogaGroup` (= source map id) so the whole moga moves as one unit
-// and individual objects can't be moved separately.
+// mouza, outlet positions) is preserved EXACTLY. Mogas are placed
+// based on mustateel (Khasra) numbering — a moga whose mustateel N
+// is consecutive to an already-placed N-1/N+1 is placed immediately
+// adjacent (NO overlay). If no numbering link is found, the moga is
+// kept separate (side by side at the cursor) for the user to drag
+// into place manually. Every object is tagged with `mogaGroup`
+// (= source map id) so the whole moga moves as one unit and
+// individual objects can't be moved separately.
 // Returns { objects, details, bounds }.
 // ============================================================
 export function buildMouzaMerge(maps) {
+  const sorted = [...(maps || [])]
+    .filter(m => m && m.drawing_data)
+    .sort((a, b) => (parseInt(a.moga_number) || 0) - (parseInt(b.moga_number) || 0));
+
+  const placedMust = new Map(); // label → {x, y}
   let cursorX = 0;
   const merged = [];
   const details = [];
-  for (const map of maps || []) {
+
+  for (const map of sorted) {
     let objs;
     try { objs = DrawingStateManager.deserialize(map.drawing_data); } catch { continue; }
     if (!objs.length) continue;
     const bounds = computeObjectsBounds(objs);
     if (!bounds) continue;
-    const dx = cursorX - bounds.minX;
-    const dy = -bounds.minY;
+    const musts = getMustateels(objs);
+
+    let dx, dy, method;
+    let best = null;
+
+    // Try consecutive mustateel-number match → place adjacent (NO overlay)
+    for (const bm of musts) {
+      const n = parseInt(bm.label);
+      if (isNaN(n)) continue;
+      if (placedMust.has(String(n - 1))) {
+        const ref = placedMust.get(String(n - 1));
+        best = { bm, targetX: ref.x + MUST_W, targetY: ref.y, method: "adjacent-right" };
+        break;
+      }
+      if (placedMust.has(String(n + 1))) {
+        const ref = placedMust.get(String(n + 1));
+        best = { bm, targetX: ref.x - MUST_W, targetY: ref.y, method: "adjacent-left" };
+        break;
+      }
+    }
+
+    if (best) {
+      dx = best.targetX - best.bm.x;
+      dy = best.targetY - best.bm.y;
+      method = best.method;
+    } else {
+      // No numbering link — place side by side at the cursor (separate; user drags to arrange)
+      dx = cursorX - bounds.minX;
+      dy = -bounds.minY;
+      method = "separate";
+    }
+
     for (const o of objs) {
       const copy = JSON.parse(JSON.stringify(o));
       copy.id = `${o.type || "obj"}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -190,9 +230,14 @@ export function buildMouzaMerge(maps) {
       }
       merged.push(copy);
     }
-    details.push({ mapTitle: map.title, mogaNumber: map.moga_number || "", count: objs.length });
-    cursorX += (bounds.maxX - bounds.minX) + 2000; // gap between mogas
+
+    for (const bm of musts) {
+      if (!placedMust.has(bm.label)) placedMust.set(bm.label, { x: bm.x + dx, y: bm.y + dy });
+    }
+
+    details.push({ mapTitle: map.title, mogaNumber: map.moga_number || "", method, count: objs.length });
+    cursorX = Math.max(cursorX, bounds.maxX + dx + 2000); // advance past this moga
   }
-  const finalBounds = computeObjectsBounds(merged);
-  return { objects: merged, details, bounds: finalBounds };
+
+  return { objects: merged, details, bounds: computeObjectsBounds(merged) };
 }

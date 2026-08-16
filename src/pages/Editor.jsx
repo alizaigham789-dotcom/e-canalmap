@@ -20,6 +20,7 @@ import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
 import PrintPreview from "@/components/editor/PrintPreview";
 import MergeMogasDialog from "@/components/editor/MergeMogasDialog";
 import { buildMouzaMerge } from "@/lib/mogaMerge";
+import { storeDrawingData, loadDrawingData, isDrawingDataUrl } from "@/lib/drawingDataStorage";
 import {
   DrawingStateManager,
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
@@ -164,7 +165,7 @@ export default function Editor() {
   const NON_PARCEL_TYPES = ["canal", "chakbandi", "khal", "road", "mouza", "outlet", "damageMarker"];
   const countNonParcels = (objs) => objs.filter(o => NON_PARCEL_TYPES.includes(o.type)).length;
 
-  saveRef.current = () => {
+  saveRef.current = async () => {
     if (!mapId) return;
     // DATA-LOSS SAFEGUARD: If non-parcel objects (canals, chakbandis, khals, mouzas, etc.)
     // suddenly dropped to 0 while the server had some, block auto-save to prevent
@@ -185,7 +186,7 @@ export default function Editor() {
     const parcels = dsmRef.current.getByType("mustateel").length +
       dsmRef.current.getByType("muraba").length;
     const payload = {
-      drawing_data: dsmRef.current.serialize(),
+      drawing_data: await storeDrawingData(dsmRef.current.objects),
       total_parcels: parcels,
       viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
       editor_settings: settingsRef.current(),
@@ -267,8 +268,6 @@ export default function Editor() {
     loadedMapIdRef.current = mapData.id;
     setLastMapId(mapData.id);
 
-    const serverObjs = mapData.drawing_data ? DrawingStateManager.deserialize(mapData.drawing_data) : [];
-    const serverNonParcelCount = countNonParcels(serverObjs);
     const applySettings = (settingsJson) => {
       if (!settingsJson) return;
       try {
@@ -287,6 +286,15 @@ export default function Editor() {
 
     (async () => {
       // ── PARALLEL HYDRATION ──────────────────────────────────────────────
+      // Server source may be an inline JSON string OR an uploaded file URL
+      // (large merged maps store drawing_data as a URL to respect field limits).
+      let serverObjs = [];
+      if (mapData.drawing_data) {
+        serverObjs = isDrawingDataUrl(mapData.drawing_data)
+          ? await loadDrawingData(mapData.drawing_data)
+          : DrawingStateManager.deserialize(mapData.drawing_data);
+      }
+      const serverNonParcelCount = countNonParcels(serverObjs);
       // Gather Server + sessionStorage + IndexedDB + Server Peak Snapshot,
       // then pick the version with the MAXIMUM non-parcel object count. This
       // guarantees the map loads with the most complete user data — recovering
@@ -313,7 +321,12 @@ export default function Editor() {
       // Source C: Server peak snapshot (cross-device recovery — survives even
       // if the editing device's browser storage is cleared)
       const maxSnap = await getMaxSnapshot(mapData.id);
-      const snapObjs = maxSnap?.drawing_data ? DrawingStateManager.deserialize(maxSnap.drawing_data) : null;
+      let snapObjs = null;
+      if (maxSnap?.drawing_data) {
+        snapObjs = isDrawingDataUrl(maxSnap.drawing_data)
+          ? await loadDrawingData(maxSnap.drawing_data)
+          : DrawingStateManager.deserialize(maxSnap.drawing_data);
+      }
       const snapViewport = maxSnap?.viewport || null;
       const snapSettings = maxSnap?.editor_settings || null;
 
@@ -349,7 +362,7 @@ export default function Editor() {
       if (best.src !== "server" && best.np > serverNonParcelCount) {
         if (best.clearSession) { try { sessionStorage.removeItem(backupKey); } catch {} }
         const recoveredPayload = {
-          drawing_data: dsmRef.current.serialize(),
+          drawing_data: await storeDrawingData(dsmRef.current.objects),
           total_parcels: dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length,
           viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
           editor_settings: settingsRef.current(),
@@ -398,7 +411,7 @@ export default function Editor() {
         zilladar_section: mapData?.zilladar_section || "",
         rajbah: mapData?.rajbah || "",
         status: "draft",
-        drawing_data: JSON.stringify(merged),
+        drawing_data: await storeDrawingData(merged),
         total_parcels: merged.filter(o => ["mustateel", "muraba"].includes(o.type)).length,
         viewport: JSON.stringify(vp),
         editor_settings: settingsRef.current(),
@@ -580,9 +593,11 @@ export default function Editor() {
         viewport: savedViewport,
         editorSettings: savedSettings,
       });
-      // Async save to server
-      base44.entities.LandMap.update(currentMapId, {
-        drawing_data: savedDrawingData,
+      // Async save to server — upload large drawing_data as a file if needed
+      (async () => {
+        const drawing_data = await storeDrawingData(dsmRef.current.objects);
+        base44.entities.LandMap.update(currentMapId, {
+        drawing_data,
         total_parcels: parcels,
         viewport: savedViewport,
         editor_settings: savedSettings,
@@ -605,6 +620,7 @@ export default function Editor() {
       }).catch(() => {
         queryClient.invalidateQueries({ queryKey: ["maps"] });
       });
+      })();
     };
   }, []);
 
@@ -1046,12 +1062,13 @@ export default function Editor() {
     setColorSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleSave = (extra = {}) => {
+  const handleSave = async (extra = {}) => {
     if (!mapId) return;
     const parcels = dsmRef.current.getByType("mustateel").length +
       dsmRef.current.getByType("muraba").length;
+    const drawing_data = await storeDrawingData(dsmRef.current.objects);
     saveMutation.mutate({
-      drawing_data: dsmRef.current.serialize(),
+      drawing_data,
       total_parcels: parcels,
       viewport: JSON.stringify({ zoom, pan }),
       editor_settings: settingsRef.current(),
@@ -1063,7 +1080,7 @@ export default function Editor() {
   // mouzas + outlets + damage markers) to the server, bypassing the data-loss safeguard.
   // Updates the loaded non-parcel count so future auto-saves use the new baseline.
   const [permSaving, setPermSaving] = useState(false);
-  const handlePermanentSave = () => {
+  const handlePermanentSave = async () => {
     if (!mapId) return;
     const allObjs = dsmRef.current.objects;
     const parcels = dsmRef.current.getByType("mustateel").length +
@@ -1092,8 +1109,9 @@ export default function Editor() {
       viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
       editor_settings: settingsRef.current(),
     } : old);
+    const drawing_data = await storeDrawingData(allObjs);
     base44.entities.LandMap.update(mapId, {
-      drawing_data: dsmRef.current.serialize(),
+      drawing_data,
       total_parcels: parcels,
       viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
       editor_settings: settingsRef.current(),
@@ -1112,11 +1130,12 @@ export default function Editor() {
     });
   };
 
-  const handleStatusChange = (status) => {
+  const handleStatusChange = async (status) => {
     // Always include drawing_data + editor_settings — prevents objects/settings from being wiped on server
+    const drawing_data = await storeDrawingData(dsmRef.current.objects);
     saveMutation.mutate({
       status,
-      drawing_data: dsmRef.current.serialize(),
+      drawing_data,
       total_parcels: dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length,
       viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
       editor_settings: settingsRef.current(),
