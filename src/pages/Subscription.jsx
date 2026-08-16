@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Upload, Loader2, CheckCircle2, Clock, Lock, ArrowLeft, Receipt } from "lucide-react";
+import { Upload, Loader2, CheckCircle2, Clock, Lock, ArrowLeft, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 const PRICE = 2000;
@@ -14,8 +14,6 @@ export default function Subscription() {
   const queryClient = useQueryClient();
   const { data: currentUser } = useQuery({ queryKey: ["me"], queryFn: () => base44.auth.me() });
   const { data: activeSub, isLoading } = useSubscription();
-  const [stripeLoading, setStripeLoading] = useState(false);
-  const [verifying, setVerifying] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
   const [pendingManual, setPendingManual] = useState(null);
@@ -31,47 +29,6 @@ export default function Subscription() {
       .then((res) => setPendingManual(res[0] || null))
       .catch(() => {});
   }, [currentUser]);
-
-  // Stripe success redirect — verify the session and activate
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get("session_id");
-    if (!sessionId) return;
-    setVerifying(true);
-    base44.functions
-      .invoke("verifyStripeSession", { session_id: sessionId })
-      .then((res) => {
-        const data = res.data || res;
-        if (data.success) {
-          toast.success("پیمنٹ کامیاب! 30 دن کی ایکسیس فعال ہو گئی");
-          queryClient.invalidateQueries({ queryKey: ["subscription"] });
-          window.history.replaceState({}, "", "/subscription");
-        } else {
-          toast.error(data.message || "پیمنٹ تصدیق نہیں ہوئی");
-        }
-      })
-      .catch(() => toast.error("تصدیق میں مسئلہ"))
-      .finally(() => setVerifying(false));
-  }, []);
-
-  const handleStripe = async () => {
-    setStripeLoading(true);
-    try {
-      const res = await base44.functions.invoke("createStripeCheckout", {
-        success_url: `${window.location.origin}/subscription`,
-      });
-      const data = res.data || res;
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        toast.error(data.error || "Stripe سیشن نہیں بنا");
-        setStripeLoading(false);
-      }
-    } catch (e) {
-      toast.error("Stripe میں مسئلہ");
-      setStripeLoading(false);
-    }
-  };
 
   const handleManual = async () => {
     if (!receiptFile) {
@@ -140,20 +97,14 @@ export default function Subscription() {
               <p className="text-sm font-bold text-emerald-800">سبسکرپشن فعال</p>
             </div>
             <p className="text-xs text-emerald-700 mt-1">
-              میعاد ختم: <span className="font-bold">{expiry.toLocaleDateString("ur-PK")} </span>
-              ({daysLeft} دن باقی)
+              میعاد ختم: <span className="font-bold">{expiry.toLocaleDateString("ur-PK")}</span> ({daysLeft} دن باقی)
             </p>
-          </div>
-        ) : verifying ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-amber-600 animate-spin" />
-            <p className="text-sm text-amber-800">پیمنٹ تصدیق ہو رہی ہے…</p>
           </div>
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white p-4 flex items-center gap-3">
             <Lock className="w-5 h-5 text-slate-400 shrink-0" />
             <p className="text-sm text-slate-600">
-              Map Editor اور Geo Map استعمال کرنے کے لیے 2000 روپے میں 1 ماہ کی سبسکرپشن لازمی ہے۔
+              Map Editor اور Geo Map استعمال کرنے کے لیے {PRICE} روپے میں 1 ماہ کی سبسکرپشن لازمی ہے۔
             </p>
           </div>
         )}
@@ -174,38 +125,23 @@ export default function Subscription() {
           </div>
 
           <div className="p-5 space-y-4">
-            {/* Stripe */}
+            {/* Payment instructions */}
             <div>
               <p className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-                <CreditCard className="w-4 h-4 text-blue-600" /> طریقہ 1 — آن لائن کارڈ (Stripe)
+                <Receipt className="w-4 h-4 text-emerald-600" /> ادائیگی کے طریقے
               </p>
-              <p className="text-[11px] text-slate-500 mb-2">ڈیبٹ/کریڈٹ کارڈ سے فوری ادائیگی — تصدیق کے ساتھ ایکسیس خود بخود کھل جائے گی۔</p>
-              <Button
-                onClick={handleStripe}
-                disabled={stripeLoading || verifying || isAdmin || !!activeSub}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white gap-2"
-              >
-                {stripeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                {stripeLoading ? "Stripe کھل رہا ہے…" : `Rs ${PRICE} ادا کریں`}
-              </Button>
-            </div>
-
-            <div className="border-t border-slate-100" />
-
-            {/* Manual */}
-            <div>
-              <p className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-                <Receipt className="w-4 h-4 text-emerald-600" /> طریقہ 2 — مینوئل (JazzCash / Easypaisa / بینک)
-              </p>
-              <p className="text-[11px] text-slate-500 mb-2">رقم منتقل کر کے رسید اپلوڈ کریں — ایڈمن تصدیق کے بعد ایکسیس مل جائے گی۔</p>
-
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-3 text-xs text-slate-600 space-y-1">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-1.5">
                 <p><span className="font-bold">JazzCash:</span> 0300-1234567</p>
                 <p><span className="font-bold">Easypaisa:</span> 0345-1234567</p>
-                <p><span className="font-bold">بینک:</span> HBL — اکاؤنٹ نمبر 1234-567890-001</p>
-                <p className="text-[10px] text-slate-400 mt-1">ادائیگی کے بعد سلپ/رسید اپلوڈ کریں۔</p>
+                <p><span className="font-bold">بینک (HBL):</span> 1234-567890-001</p>
+                <p className="text-[10px] text-slate-400 mt-1.5 pt-1.5 border-t border-slate-200">
+                  ادائیگی کے بعد سلپ/رسید اپلوڈ کریں — ایڈمن تصدیق کے بعد 30 دن کی ایکسیس مل جائے گی۔
+                </p>
               </div>
+            </div>
 
+            {/* Receipt upload */}
+            <div>
               <label className="block">
                 <span className="text-[11px] text-slate-500">رسید / سلپ منتخب کریں</span>
                 <input
@@ -219,8 +155,7 @@ export default function Subscription() {
               <Button
                 onClick={handleManual}
                 disabled={uploading || !receiptFile || isAdmin || !!activeSub}
-                variant="outline"
-                className="w-full mt-3 border-emerald-300 text-emerald-700 hover:bg-emerald-50 gap-2"
+                className="w-full mt-3 bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
               >
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                 {uploading ? "اپلوڈ ہو رہا ہے…" : "رسید جمع کریں"}

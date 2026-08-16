@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Shield, LogOut, Globe, Lock, Database } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
+import { useSubscription } from "@/hooks/useSubscription";
 
 const MODULES = [
   {
@@ -139,6 +140,8 @@ export default function Dashboard() {
   });
 
   const isAdmin = currentUser?.role === "admin";
+  const { data: subscription } = useSubscription();
+  const hasAccess = isAdmin || !!subscription;
 
   const recoveryMaps = [
     { id: "6a50caf149f33fc254601cbd", title: "21671R", moga_number: "21671" },
@@ -195,11 +198,17 @@ export default function Dashboard() {
         {/* Module Cards — 2-column grid, responsive on all screens */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {MODULES.map((mod) => {
+            const needsSub = mod.id === "map-editor" || mod.id === "geo-map";
+            const subLocked = needsSub && !hasAccess;
             const isLocked = !isAdmin && mod.locked;
             return (
               <button
                 key={mod.id}
-                onClick={() => !isLocked && navigate(mod.path)}
+                onClick={() => {
+                  if (subLocked) { navigate("/subscription"); return; }
+                  if (isLocked) return;
+                  navigate(mod.path);
+                }}
                 disabled={isLocked}
                 className={`group relative rounded-[20px] sm:rounded-[28px] bg-gradient-to-br ${mod.bg} p-3 sm:p-4 shadow-lg ${mod.shadow} transition-all duration-200 text-center min-h-[130px] sm:min-h-[155px] flex flex-col items-center justify-center overflow-hidden
                   ${isLocked ? "opacity-60 cursor-not-allowed" : "hover:shadow-xl hover:scale-[1.04] active:scale-[0.97] cursor-pointer"}`}
@@ -207,7 +216,7 @@ export default function Dashboard() {
                 {/* Glossy top sheen */}
                 <div className="absolute inset-x-0 top-0 h-1/2 bg-white/15 rounded-t-[22px] pointer-events-none" />
 
-                {isLocked && (
+                {(isLocked || subLocked) && (
                   <div className="absolute top-2.5 right-2.5 bg-black/30 backdrop-blur-sm rounded-full p-1 z-10">
                     <Lock className="w-3 h-3 text-white" />
                   </div>

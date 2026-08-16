@@ -32,6 +32,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Subscription from './pages/Subscription';
+import SubscriptionGate from '@/components/SubscriptionGate';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -64,9 +66,12 @@ const AuthenticatedApp = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/editor" element={<Editor />} />
+        <Route path="/subscription" element={<Subscription />} />
+        <Route element={<SubscriptionGate />}>
+          <Route path="/editor" element={<Editor />} />
+          <Route path="/map-list" element={<MapList />} />
+        </Route>
         <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/map-list" element={<MapList />} />
         <Route path="/canal-forms" element={<CanalForms />} />
         <Route path="/parat-warabandi" element={<ParatWarabandi />} />
         <Route path="/form-settings" element={<FormSettings />} />
@@ -74,7 +79,9 @@ const AuthenticatedApp = () => {
         <Route path="/warashikni" element={<Warashikni />} />
         <Route path="/tawan-case" element={<TawanCase />} />
         <Route path="/ta-form" element={<TAForm />} />
-        <Route path="/geo-map" element={<GeoMap />} />
+        <Route element={<SubscriptionGate />}>
+          <Route path="/geo-map" element={<GeoMap />} />
+        </Route>
         <Route path="/deputy-collector" element={<DeputyCollectorDocs />} />
         <Route path="/deputy-collector/33c" element={<Form33C />} />
 

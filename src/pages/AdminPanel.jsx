@@ -14,7 +14,8 @@ import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Shield, Map, Users, ArrowLeft, Pencil, Globe, Layers, Settings2, Calculator, Save } from "lucide-react";
+import ManualApprovalsTab from "@/components/admin/ManualApprovalsTab";
+import { Shield, Map, Users, ArrowLeft, Pencil, Globe, Layers, Settings2, Calculator, Save, CreditCard } from "lucide-react";
 
 const STATUS_COLORS = {
   draft: "border-slate-500/30 bg-slate-500/10 text-slate-400",
@@ -138,6 +139,9 @@ export default function AdminPanel() {
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-1.5 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400">
               <Settings2 className="w-3.5 h-3.5" /> Settings
+            </TabsTrigger>
+            <TabsTrigger value="subscriptions" className="gap-1.5 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400">
+              <CreditCard className="w-3.5 h-3.5" /> Subscriptions
             </TabsTrigger>
           </TabsList>
 
@@ -281,6 +285,10 @@ export default function AdminPanel() {
                 </Button>
               </Link>
             </div>
+          </TabsContent>
+
+          <TabsContent value="subscriptions">
+            <ManualApprovalsTab />
           </TabsContent>
         </Tabs>
       </main>
