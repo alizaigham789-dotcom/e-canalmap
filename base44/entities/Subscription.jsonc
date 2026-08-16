@@ -1,0 +1,89 @@
+{
+  "name": "Subscription",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User id this subscription belongs to"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number",
+      "default": 2000,
+      "description": "Amount paid in PKR"
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "stripe",
+        "manual"
+      ],
+      "description": "Payment method"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "active",
+        "expired",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Subscription status"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When payment was confirmed"
+    },
+    "expiry_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Access expiry (30 days from payment)"
+    },
+    "receipt_url": {
+      "type": "string",
+      "description": "Uploaded receipt/slip URL (manual method)"
+    },
+    "stripe_session_id": {
+      "type": "string",
+      "description": "Stripe Checkout Session id (stripe method)"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "method"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
