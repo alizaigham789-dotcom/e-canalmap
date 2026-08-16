@@ -136,7 +136,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               </div>
               <ExclusionToggle local={local} commit={commit} />
               <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 5} min={1} max={10} step={1} onChange={v => commit("boundaryThickness", v)} />
-              <FillStyleControl local={local} commit={commit} />
+              <FillControl local={local} commit={commit} />
               <KillaStyleControl local={local} commit={commit} />
               <div className="text-[10px] text-slate-400 font-mono">440 ft × 990 ft • 10 Killas</div>
             </>
@@ -162,7 +162,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               </div>
               <ExclusionToggle local={local} commit={commit} />
               <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 5} min={1} max={10} step={1} onChange={v => commit("boundaryThickness", v)} />
-              <FillStyleControl local={local} commit={commit} />
+              <FillControl local={local} commit={commit} />
               <KillaStyleControl local={local} commit={commit} />
               <div className="text-[10px] text-slate-400 font-mono">1100 ft × 990 ft • 25 Killas</div>
             </>
@@ -390,18 +390,19 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               </div>
               <SpacingControl label="Block Size" value={local.blockSize || 20} min={8} max={80} step={2} onChange={v => commit("blockSize", v)} unit="ft" />
               <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Arrow Scale</label>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Moga Size / Arrow</label>
                 <div className="flex items-center gap-2">
                   <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                    onClick={() => commit("arrowScale", Math.max(0.5, (local.arrowScale || 1) - 0.25))}>−</Button>
-                  <input type="range" min={0.5} max={5} step={0.25} value={local.arrowScale || 1}
+                    onClick={() => commit("arrowScale", Math.max(0, +((local.arrowScale ?? 1) - 0.1).toFixed(1)))}>−</Button>
+                  <input type="range" min={0} max={2} step={0.1} value={local.arrowScale ?? 1}
                     onChange={e => commit("arrowScale", parseFloat(e.target.value))}
                     className="flex-1 h-1 accent-cyan-500 cursor-pointer" />
                   <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                    onClick={() => commit("arrowScale", Math.min(5, (local.arrowScale || 1) + 0.25))}>+</Button>
-                  <span className="text-xs text-slate-600 font-mono w-10 text-center">{(local.arrowScale || 1).toFixed(2)}×</span>
+                    onClick={() => commit("arrowScale", Math.min(2, +((local.arrowScale ?? 1) + 0.1).toFixed(1)))}>+</Button>
+                  <span className="text-xs text-slate-600 font-mono w-10 text-center">{(local.arrowScale ?? 1).toFixed(1)}×</span>
                 </div>
               </div>
+              <OutletLengthControl local={local} commit={commit} />
               <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
                 <ArrowUpDown className="w-3 h-3" /> Block at start → arrow to end
               </div>
@@ -653,5 +654,60 @@ function KillaStyleControl({ local, commit }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Colour Fill + Diagonal (Ikharaj) pattern — solid colour with opacity, plus a
+// single diagonal-lines option representing excluded (ikharaj) mustateels.
+function FillControl({ local, commit }) {
+  const isDiagonal = local.fillStyle === "diagonal";
+  const hexColor = (c) => (c && c.startsWith("#")) ? c : "#ef4444";
+  return (
+    <div>
+      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+        <Palette className="w-3 h-3" /> Colour Fill
+      </label>
+      <div className="flex items-center gap-2 mb-2">
+        <input type="color" value={hexColor(local.fillColor)}
+          onChange={e => commit("fillColor", e.target.value)}
+          className="h-5 w-8 rounded cursor-pointer border border-slate-200" />
+        <label className="text-[9px] text-slate-400 shrink-0">Opacity</label>
+        <input type="range" min={0} max={1} step={0.05} value={local.fillOpacity ?? 0.10}
+          onChange={e => commit("fillOpacity", parseFloat(e.target.value))}
+          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+        <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((local.fillOpacity ?? 0.10) * 100)}%</span>
+      </div>
+      <div className="flex items-center justify-between">
+        <label className="text-[10px] text-slate-600 flex items-center gap-1" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
+          <Ban className="w-3 h-3 text-slate-500" /> اختیاج لائنیں (Diagonal)
+        </label>
+        <Switch checked={isDiagonal} onCheckedChange={v => commit("fillStyle", v ? "diagonal" : "solid")} className="scale-75" />
+      </div>
+      {isDiagonal && (
+        <div className="flex items-center gap-2 mt-1">
+          <label className="text-[9px] text-slate-400 shrink-0">Spacing</label>
+          <input type="range" min={4} max={24} step={2} value={local.fillSpacing || 8}
+            onChange={e => commit("fillSpacing", parseInt(e.target.value))}
+            className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+          <span className="text-[9px] font-mono text-slate-500 w-6">{local.fillSpacing || 8}px</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Outlet / Moga length — sets the shaft length (start→end distance) without
+// changing the direction. Lets the user decide the moga length directly.
+function OutletLengthControl({ local, commit }) {
+  const len = Math.round(Math.hypot(local.end.x - local.start.x, local.end.y - local.start.y));
+  const setLen = (newLen) => {
+    const cur = Math.hypot(local.end.x - local.start.x, local.end.y - local.start.y);
+    const dir = cur > 0
+      ? { x: (local.end.x - local.start.x) / cur, y: (local.end.y - local.start.y) / cur }
+      : { x: 1, y: 0 };
+    commit("end", { x: local.start.x + dir.x * newLen, y: local.start.y + dir.y * newLen });
+  };
+  return (
+    <SpacingControl label="Outlet Length" value={Math.max(10, len)} min={10} max={2000} step={10} onChange={setLen} unit="ft" />
   );
 }

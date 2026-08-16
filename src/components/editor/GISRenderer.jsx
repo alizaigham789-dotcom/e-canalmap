@@ -126,8 +126,13 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
 
   // Layer 1: Fill
   if (fs === "solid") {
+    ctx.save();
+    if (obj.fillColor && obj.fillColor.startsWith("#")) {
+      ctx.globalAlpha = obj.fillOpacity ?? 1;
+    }
     ctx.fillStyle = obj.fillColor || C.mustateelFill || "rgba(245,158,11,0.10)";
     ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+    ctx.restore();
   } else {
     ctx.fillStyle = "rgba(245,158,11,0.05)";
     ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
@@ -238,8 +243,13 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
 
   // Layer 1: Fill
   if (fs === "solid") {
+    ctx.save();
+    if (obj.fillColor && obj.fillColor.startsWith("#")) {
+      ctx.globalAlpha = obj.fillOpacity ?? 1;
+    }
     ctx.fillStyle = obj.fillColor || C.murabaFill || "rgba(249,115,22,0.08)";
     ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+    ctx.restore();
   } else {
     ctx.fillStyle = "rgba(249,115,22,0.05)";
     ctx.fillRect(obj.x, obj.y, obj.w, obj.h);

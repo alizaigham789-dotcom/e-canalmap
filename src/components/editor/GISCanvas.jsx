@@ -948,7 +948,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   }[activeTool] || "cursor-crosshair";
 
   const editingObj = editingLabel ? objects.find(o => o.id === editingLabel.id) : null;
-  const labelPos = editingObj ? worldToScreen(editingObj.x + editingObj.w/2, editingObj.y + editingObj.h/2, pan.x, pan.y, zoom) : null;
+  const labelPos = editingObj ? worldToScreen(editingObj.x, editingObj.y, pan.x, pan.y, zoom) : null;
 
   return (
     <div className="relative w-full h-full">
@@ -1005,7 +1005,7 @@ const GISCanvas = forwardRef(function GISCanvas(
           onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabel(null); }}
           className="absolute z-50 px-2 py-1 text-xs font-bold font-heading text-center bg-white border-2 border-blue-500 rounded shadow-lg outline-none focus:ring-2 focus:ring-blue-300"
           style={{
-            left: labelPos.x, top: labelPos.y, transform: "translate(-50%,-50%)", minWidth: 80,
+            left: labelPos.x, top: labelPos.y, transform: "translate(0, -100%)", minWidth: 80, marginTop: -4,
             color: editingObj?.type === "mustateel" ? "#ef4444" : editingObj?.type === "muraba" ? "#dc2626" : "#b45309",
           }}
           placeholder="Label"

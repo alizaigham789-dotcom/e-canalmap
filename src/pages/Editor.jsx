@@ -23,7 +23,7 @@ import {
   DrawingStateManager,
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
-  saveToClipboard, loadFromClipboard, hasClipboard,
+  saveToClipboard, loadFromClipboard, hasClipboard, worldToScreen,
 } from "@/lib/gisEngine";
 import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, Wand2, Network } from "lucide-react";
 import { saveBackup, getBackup, setLastMapId } from "@/lib/mapBackup";
@@ -1470,24 +1470,46 @@ export default function Editor() {
           )}
         </div>
 
-        {/* Properties Panel — top-right on desktop, bottom-left on mobile */}
-        {selectedObj && (
-          <div className="absolute z-30
-            right-3 top-1/2 -translate-y-1/2
-            sm:right-3 sm:top-1/2 sm:-translate-y-1/2
-            max-sm:right-auto max-sm:left-1.5 max-sm:top-auto max-sm:bottom-2 max-sm:translate-y-0 max-sm:translate-x-0
-            max-sm:max-w-[calc(100vw-70px)]">
-            <PropertiesPanel
-              selectedObj={selectedObj}
-              allObjects={objects}
-              onUpdate={handleUpdateObject}
-              onDelete={handleDeleteObject}
-              onClose={() => setSelectedId(null)}
-              deleteVertexMode={deleteVertexMode}
-              onToggleDeleteVertexMode={() => setDeleteVertexMode(v => !v)}
-            />
-          </div>
-        )}
+        {/* Properties Panel — at the corner of the selected parcel, or right-side for other objects */}
+        {selectedObj && (() => {
+          const isParcel = ["mustateel", "muraba", "acre"].includes(selectedObj.type);
+          if (isParcel) {
+            const cs = worldToScreen(selectedObj.x, selectedObj.y, pan.x, pan.y, zoom);
+            const containerW = canvasRef.current?.getCanvas?.()?.clientWidth || 800;
+            const left = Math.max(4, Math.min(cs.x, containerW - 232));
+            return (
+              <div className="absolute z-30 max-sm:max-w-[calc(100vw-70px)]"
+                style={{ left, top: cs.y, transform: "translate(0, -100%)", marginTop: -4 }}>
+                <PropertiesPanel
+                  selectedObj={selectedObj}
+                  allObjects={objects}
+                  onUpdate={handleUpdateObject}
+                  onDelete={handleDeleteObject}
+                  onClose={() => setSelectedId(null)}
+                  deleteVertexMode={deleteVertexMode}
+                  onToggleDeleteVertexMode={() => setDeleteVertexMode(v => !v)}
+                />
+              </div>
+            );
+          }
+          return (
+            <div className="absolute z-30
+              right-3 top-1/2 -translate-y-1/2
+              sm:right-3 sm:top-1/2 sm:-translate-y-1/2
+              max-sm:right-auto max-sm:left-1.5 max-sm:top-auto max-sm:bottom-2 max-sm:translate-y-0 max-sm:translate-x-0
+              max-sm:max-w-[calc(100vw-70px)]">
+              <PropertiesPanel
+                selectedObj={selectedObj}
+                allObjects={objects}
+                onUpdate={handleUpdateObject}
+                onDelete={handleDeleteObject}
+                onClose={() => setSelectedId(null)}
+                deleteVertexMode={deleteVertexMode}
+                onToggleDeleteVertexMode={() => setDeleteVertexMode(v => !v)}
+              />
+            </div>
+          );
+        })()}
       </div>
 
       <StatusBar
