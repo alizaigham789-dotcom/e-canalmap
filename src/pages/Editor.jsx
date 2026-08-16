@@ -19,6 +19,7 @@ import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
 import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
 import PrintPreview from "@/components/editor/PrintPreview";
 import MergeMogasDialog from "@/components/editor/MergeMogasDialog";
+import { buildMouzaMerge } from "@/lib/mogaMerge";
 import {
   DrawingStateManager,
   createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
@@ -375,16 +376,40 @@ export default function Editor() {
     setCanRedo(dsmRef.current.historyIdx < dsmRef.current.history.length - 1);
   };
 
-  // Merge all moga maps of the same village into this editor session
-  const handleMergeMogas = (mergedObjects) => {
-    dsmRef.current = new DrawingStateManager(mergedObjects);
-    dsmRef.current.snapshot();
-    loadedNonParcelCountRef.current = countNonParcels(mergedObjects);
-    setObjects([...dsmRef.current.objects]);
-    syncUndoRedo();
-    setShowMerge(false);
-    saveRef.current();
-    toast.success("All mogas merged into one mouza map");
+  // Merge selected moga maps into a NEW mouza map. Each moga keeps its exact
+  // internal layout; mogas are placed side by side and tagged as a group so the
+  // whole moga moves together (single objects can't be moved individually).
+  const handleMergeMogas = async (selectedMaps) => {
+    const { objects: merged, bounds } = buildMouzaMerge(selectedMaps);
+    if (!merged.length) { throw new Error("مرج کرنے کے لیے کوئی ڈیٹا نہیں ملا"); }
+    const w = bounds ? bounds.maxX - bounds.minX : 1000;
+    const h = bounds ? bounds.maxY - bounds.minY : 600;
+    const fitZoom = Math.max(0.05, Math.min(0.5, Math.min(900 / (w || 1), 600 / (h || 1)) * 0.85));
+    const vp = bounds
+      ? { zoom: fitZoom, pan: { x: 450 - (bounds.minX + w / 2) * fitZoom, y: 300 - (bounds.minY + h / 2) * fitZoom } }
+      : { zoom: 0.15, pan: { x: 100, y: 80 } };
+    try {
+      const newMap = await base44.entities.LandMap.create({
+        title: `موضع نقشہ - ${mapData?.village || ""}`,
+        village: mapData?.village || "",
+        district: mapData?.district || "",
+        tehsil: mapData?.tehsil || "",
+        section: mapData?.section || "",
+        zilladar_section: mapData?.zilladar_section || "",
+        rajbah: mapData?.rajbah || "",
+        status: "draft",
+        drawing_data: JSON.stringify(merged),
+        total_parcels: merged.filter(o => ["mustateel", "muraba"].includes(o.type)).length,
+        viewport: JSON.stringify(vp),
+        editor_settings: settingsRef.current(),
+      });
+      queryClient.invalidateQueries({ queryKey: ["maps"] });
+      toast.success("نیا موضع نقشہ بن گیا — منتخب موگہ مرج ہو گئے");
+      window.location.href = `/editor?id=${newMap.id}`;
+    } catch (e) {
+      toast.error("نیا نقشہ بنانے میں مسئلہ: " + (e?.message || "unknown"));
+      throw e;
+    }
   };
 
   const syncObjects = () => {
@@ -894,6 +919,12 @@ export default function Editor() {
     }
   };
 
+  // Bulk update multiple objects in ONE history snapshot — used for whole-moga group moves
+  const handleBulkUpdate = (updates) => {
+    dsmRef.current.bulkUpdate(updates);
+    syncObjects();
+  };
+
   const handleDeleteObject = (id) => {
     const obj = dsmRef.current.objects.find(o => o.id === id);
     const wasMustateel = obj?.type === "mustateel";
@@ -1249,6 +1280,7 @@ export default function Editor() {
               muraba: killaVisibility.muraba && killaNumbersGlobal,
             }}
             onBoxSelect={handleBoxSelect}
+            onBulkUpdate={handleBulkUpdate}
             pageBorderStyle={pageBorderStyle}
             deleteVertexMode={deleteVertexMode}
           />
@@ -1607,7 +1639,6 @@ export default function Editor() {
       {showMerge && mapData && (
         <MergeMogasDialog
           mapData={mapData}
-          currentObjects={dsmRef.current.objects}
           onMerge={handleMergeMogas}
           onClose={() => setShowMerge(false)}
         />

@@ -134,3 +134,65 @@ export function mergeMogasInCanvas(anchorObjects, maps, anchorMapId) {
 
   return { objects: merged, details };
 }
+
+// Compute the bounding box of a set of canvas objects (world coordinates)
+export function computeObjectsBounds(objects) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const o of objects) {
+    if (["acre", "mustateel", "muraba"].includes(o.type)) {
+      minX = Math.min(minX, o.x); minY = Math.min(minY, o.y);
+      maxX = Math.max(maxX, o.x + (o.w || 0)); maxY = Math.max(maxY, o.y + (o.h || 0));
+    } else if (o.points && o.points.length) {
+      for (const p of o.points) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
+    } else if (o.start && o.end) {
+      minX = Math.min(minX, o.start.x, o.end.x); minY = Math.min(minY, o.start.y, o.end.y);
+      maxX = Math.max(maxX, o.start.x, o.end.x); maxY = Math.max(maxY, o.start.y, o.end.y);
+    }
+  }
+  if (minX === Infinity) return null;
+  return { minX, minY, maxX, maxY };
+}
+
+// ============================================================
+// MOUA MERGE (GROUPED) — build a fresh mouza map from selected
+// moga maps. Each moga's internal layout (chakbandi, khal, canal,
+// mouza, outlet positions) is preserved EXACTLY; mogas are placed
+// side by side so they don't overlap. Every object is tagged with
+// `mogaGroup` (= source map id) so the whole moga moves as one unit
+// and individual objects can't be moved separately.
+// Returns { objects, details, bounds }.
+// ============================================================
+export function buildMouzaMerge(maps) {
+  let cursorX = 0;
+  const merged = [];
+  const details = [];
+  for (const map of maps || []) {
+    let objs;
+    try { objs = DrawingStateManager.deserialize(map.drawing_data); } catch { continue; }
+    if (!objs.length) continue;
+    const bounds = computeObjectsBounds(objs);
+    if (!bounds) continue;
+    const dx = cursorX - bounds.minX;
+    const dy = -bounds.minY;
+    for (const o of objs) {
+      const copy = JSON.parse(JSON.stringify(o));
+      copy.id = `${o.type || "obj"}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      copy.mogaGroup = map.id;
+      copy.mogaGroupName = map.moga_number || map.title || "";
+      if (["acre", "mustateel", "muraba", "damageMarker"].includes(o.type)) {
+        copy.x = (copy.x || 0) + dx;
+        copy.y = (copy.y || 0) + dy;
+      }
+      if (copy.points) copy.points = copy.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+      if (copy.start && copy.end) {
+        copy.start = { x: copy.start.x + dx, y: copy.start.y + dy };
+        copy.end = { x: copy.end.x + dx, y: copy.end.y + dy };
+      }
+      merged.push(copy);
+    }
+    details.push({ mapTitle: map.title, mogaNumber: map.moga_number || "", count: objs.length });
+    cursorX += (bounds.maxX - bounds.minX) + 2000; // gap between mogas
+  }
+  const finalBounds = computeObjectsBounds(merged);
+  return { objects: merged, details, bounds: finalBounds };
+}

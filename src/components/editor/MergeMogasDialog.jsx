@@ -1,37 +1,61 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { mergeMogasInCanvas } from "@/lib/mogaMerge";
 import { Button } from "@/components/ui/button";
-import { X, Network, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, Network, Loader2, AlertCircle, CheckSquare, Square } from "lucide-react";
 
-export default function MergeMogasDialog({ mapData, currentObjects, onMerge, onClose }) {
+export default function MergeMogasDialog({ mapData, onMerge, onClose }) {
   const [merging, setMerging] = useState(false);
-  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [selected, setSelected] = useState(new Set());
 
   const { data: maps, isLoading } = useQuery({
     queryKey: ["landmaps-all"],
     queryFn: () => base44.entities.LandMap.list(),
   });
 
-  const villageMaps = (maps || []).filter(
-    (m) => m.village === mapData?.village && m.id !== mapData?.id && m.drawing_data
+  // All mogas of the same village (including the current one) — user selects which to merge
+  const villageMaps = useMemo(
+    () => (maps || []).filter((m) => m.village === mapData?.village && m.drawing_data),
+    [maps, mapData]
   );
 
-  const handleMerge = () => {
-    setMerging(true);
-    try {
-      const { objects, details } = mergeMogasInCanvas(currentObjects, villageMaps, mapData.id);
-      if (!details.length) {
-        setResult({ error: "کوئی میچنگ مستطیل نمبر نہیں ملا۔ پہلے مستطیل نمبر درج کریں۔" });
-      } else {
-        onMerge(objects);
-        setResult({ details });
-      }
-    } catch (e) {
-      setResult({ error: "مرج میں مسئلہ: " + (e.message || "unknown") });
+  // Default: select all once maps are loaded
+  const selectedSet = selected.size ? selected : new Set(villageMaps.map((m) => m.id));
+  const allSelected = villageMaps.length > 0 && selectedSet.size === villageMaps.length;
+
+  const toggle = (id) => {
+    setError(null);
+    setSelected((prev) => {
+      const base = prev.size ? prev : new Set(villageMaps.map((m) => m.id));
+      const next = new Set(base);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setError(null);
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(villageMaps.map((m) => m.id)));
+  };
+
+  const handleMerge = async () => {
+    const chosen = villageMaps.filter((m) => selectedSet.has(m.id));
+    if (!chosen.length) {
+      setError("کم از کم ایک موگہ منتخب کریں۔");
+      return;
     }
-    setMerging(false);
+    setMerging(true);
+    setError(null);
+    try {
+      await onMerge(chosen);
+    } catch (e) {
+      setError("مرج میں مسئلہ: " + (e?.message || "unknown"));
+    } finally {
+      setMerging(false);
+    }
   };
 
   return (
@@ -51,7 +75,7 @@ export default function MergeMogasDialog({ mapData, currentObjects, onMerge, onC
         {/* Body */}
         <div className="flex-1 overflow-auto p-5 space-y-3">
           <p className="text-xs text-slate-500 leading-relaxed" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
-            یہ فیچر اسی گاؤں کے تمام موگہ نقشوں کو مستطیل (خسرہ) نمبروں کی بنیاد پر ایک بڑے نقشے میں مرج کر دیتا ہے۔ موجودہ نقشہ بنیاد کے طور پر استعمال ہوگا۔
+            منتخب کردہ موگہ نقشے مرج ہو کر ایک نیا موضع نقشہ بنائیں گے۔ ہر موگہ کا ڈیٹا بالکل ویسے ہی رہے گا، اور پورا موگہ ایک لےئر کی طرح move ہو گا — سنگل آبجیکٹ move نہیں ہوں گے۔
           </p>
 
           {isLoading ? (
@@ -62,43 +86,52 @@ export default function MergeMogasDialog({ mapData, currentObjects, onMerge, onC
             <div className="flex flex-col items-center gap-2 py-6 text-center">
               <AlertCircle className="w-8 h-8 text-amber-400" />
               <p className="text-xs text-slate-500" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
-                اسی گاؤں کا کوئی اور موگہ نقشہ نہیں ملا۔
+                اسی گاؤں کا کوئی موگہ نقشہ نہیں ملا۔
               </p>
             </div>
           ) : (
             <div className="space-y-2">
-              <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">Available Mogas ({villageMaps.length})</span>
-              {villageMaps.map((m) => (
-                <div key={m.id} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-700 truncate">{m.title || "Untitled"}</p>
-                    <p className="text-[10px] text-slate-400">موگہ {m.moga_number || "—"} · {m.village || "—"}</p>
-                  </div>
-                  <span className="text-[10px] text-slate-400 shrink-0">{m.total_parcels || 0} parcels</span>
-                </div>
-              ))}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">
+                  Available Mogas ({villageMaps.length}) · {selectedSet.size} selected
+                </span>
+                <button
+                  onClick={toggleAll}
+                  className="flex items-center gap-1 text-[10px] font-bold text-violet-600 hover:text-violet-700"
+                >
+                  {allSelected ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+                  {allSelected ? "سب ہٹائیں" : "سب چنیں"}
+                </button>
+              </div>
+              {villageMaps.map((m) => {
+                const isSel = selectedSet.has(m.id);
+                const isCurrent = m.id === mapData?.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => toggle(m.id)}
+                    className={`w-full flex items-center gap-2 border rounded-lg px-3 py-2 text-left transition-colors ${
+                      isSel ? "bg-violet-50 border-violet-300" : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    {isSel ? <CheckSquare className="w-4 h-4 text-violet-600 shrink-0" /> : <Square className="w-4 h-4 text-slate-300 shrink-0" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-slate-700 truncate">{m.title || "Untitled"}</p>
+                      <p className="text-[10px] text-slate-400">
+                        موگہ {m.moga_number || "—"} · {m.village || "—"}{isCurrent ? " (موجودہ)" : ""}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-slate-400 shrink-0">{m.total_parcels || 0} parcels</span>
+                  </button>
+                );
+              })}
             </div>
           )}
 
-          {result?.error && (
+          {error && (
             <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg p-3">
               <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-red-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>{result.error}</p>
-            </div>
-          )}
-
-          {result?.details && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-green-600">
-                <CheckCircle2 className="w-4 h-4" />
-                <span className="text-xs font-bold">{result.details.length} mogas merged</span>
-              </div>
-              {result.details.map((d, i) => (
-                <div key={i} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
-                  <span className="text-[11px] text-slate-700">{d.mapTitle}</span>
-                  <span className="text-[10px] text-green-600 font-mono">{d.method} · #{d.matchedLabel}</span>
-                </div>
-              ))}
+              <p className="text-xs text-red-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>{error}</p>
             </div>
           )}
         </div>
@@ -106,10 +139,10 @@ export default function MergeMogasDialog({ mapData, currentObjects, onMerge, onC
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-200">
           <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
-          <Button size="sm" disabled={merging || villageMaps.length === 0 || !!result?.details} onClick={handleMerge}
+          <Button size="sm" disabled={merging || villageMaps.length === 0 || selectedSet.size === 0} onClick={handleMerge}
             className="bg-violet-600 hover:bg-violet-500 text-white gap-1.5">
             {merging ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Network className="w-3.5 h-3.5" />}
-            {merging ? "مرج ہو رہا ہے…" : "مرج کریں"}
+            {merging ? "نیا نقشہ بن رہا ہے…" : "نیا موضع نقشہ بنائیں"}
           </Button>
         </div>
       </div>

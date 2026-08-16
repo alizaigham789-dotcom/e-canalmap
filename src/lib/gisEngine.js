@@ -773,6 +773,22 @@ export class DrawingStateManager {
     this.snapshot();
   }
 
+  // Bulk update multiple objects in ONE history snapshot (used for whole-moga group moves)
+  bulkUpdate(updates) {
+    const map = new Map(updates.map(u => [u.id, u.changes]));
+    this.objects = this.objects.map(o => {
+      const c = map.get(o.id);
+      if (!c) return o;
+      const merged = { ...o, ...c };
+      if (o.locked || isGeometryLocked(o.type)) {
+        const lock = LOCKED_DIMS[o.type];
+        if (lock) { merged.w = lock.w; merged.h = lock.h; }
+      }
+      return merged;
+    });
+    this.snapshot();
+  }
+
   getByType(type) { return this.objects.filter(o => o.type === type); }
 
   serialize() { return JSON.stringify(this.objects); }

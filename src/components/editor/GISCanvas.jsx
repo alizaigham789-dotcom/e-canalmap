@@ -35,6 +35,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     killaVisibility, // { mustateel: bool, muraba: bool }
     orthoMode, // CAD-style H/V angle constraint while drawing line tools
     onBoxSelect, // callback(selectedObjects[]) when box-select completes
+    onBulkUpdate, // bulk update multiple objects in one history snapshot (group move)
     pageBorderStyle, // "none"|"dashed"|"solid"|"dotted" — page border guide
     deleteVertexMode, // when true: clicking a vertex deletes it (explicit node removal)
   },
@@ -47,6 +48,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   const moveOffset = useRef({ x: 0, y: 0 });
   const movingObjOrigPoints = useRef(null);
   const movingObjOrigStartEnd = useRef(null); // { start, end } — for outlet/moga dragging
+  const movingGroupRef = useRef(null); // { groupId, originals } — whole moga group drag (merged maps)
   const vertexDrag = useRef(null); // { id, index } — dragging a single vertex of the selected chakbandi/canal
   const movingLabelType = useRef(null); // "outlet" | "chakbandi" — dragging a label box
   const lastMouse = useRef({ x: 0, y: 0 });
@@ -555,6 +557,20 @@ const GISCanvas = forwardRef(function GISCanvas(
         onUpdateObject(movingObjId.current, { labelPos: { x: nx, y: ny } });
         return;
       }
+      // Whole-moga group drag — move all objects in the group by the same delta
+      if (movingGroupRef.current) {
+        const dx = worldRaw.x - moveOffset.current.x;
+        const dy = worldRaw.y - moveOffset.current.y;
+        const updates = movingGroupRef.current.originals.map(orig => {
+          const changes = {};
+          if (orig.x !== undefined) { changes.x = orig.x + dx; changes.y = orig.y + dy; }
+          if (orig.points) changes.points = orig.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+          if (orig.start) { changes.start = { x: orig.start.x + dx, y: orig.start.y + dy }; changes.end = { x: orig.end.x + dx, y: orig.end.y + dy }; }
+          return { id: orig.id, changes };
+        });
+        onBulkUpdate(updates);
+        return;
+      }
       let newX = worldRaw.x - moveOffset.current.x;
       let newY = worldRaw.y - moveOffset.current.y;
       const movingObj = objectsRef.current.find(o => o.id === movingObjId.current);
@@ -585,7 +601,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       return;
     }
     onSnapPosChange(getSnappedWorld(e));
-  }, [activeTool, pan, zoom, getSnappedWorld, onPanChange, onSnapPosChange, onUpdateObject, ghostPos]);
+  }, [activeTool, pan, zoom, getSnappedWorld, onPanChange, onSnapPosChange, onUpdateObject, onBulkUpdate, ghostPos]);
 
   const handleMouseDown = useCallback((e) => {
     if (e.button === 1 || activeTool === "pan") {
@@ -637,6 +653,24 @@ const GISCanvas = forwardRef(function GISCanvas(
         }
       }
       const hit = hitTest(worldRaw.x, worldRaw.y, objects);
+      if (hit && hit.mogaGroup) {
+        // Whole-moga group move — single objects can't be moved individually
+        const groupObjs = objects.filter(o => o.mogaGroup === hit.mogaGroup);
+        movingGroupRef.current = {
+          groupId: hit.mogaGroup,
+          originals: groupObjs.map(o => ({
+            id: o.id, x: o.x, y: o.y,
+            points: o.points ? o.points.map(p => ({ x: p.x, y: p.y })) : null,
+            start: o.start ? { x: o.start.x, y: o.start.y } : null,
+            end: o.end ? { x: o.end.x, y: o.end.y } : null,
+          })),
+        };
+        isMoving.current = true; movingObjId.current = hit.id;
+        moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
+        movingObjOrigPoints.current = null; movingObjOrigStartEnd.current = null;
+        onSelect(hit.id);
+        return;
+      }
       if (hit && ["mustateel", "muraba"].includes(hit.type)) {
         isMoving.current = true; movingObjId.current = hit.id;
         moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
@@ -727,6 +761,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     vertexDrag.current = null;
     isPanning.current = false; isMoving.current = false; movingObjId.current = null;
     movingLabelType.current = null;
+    movingGroupRef.current = null;
     movingObjOrigPoints.current = null; movingObjOrigStartEnd.current = null;
     edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0;
     // Finish damage marker line on mouse up
@@ -866,6 +901,23 @@ const GISCanvas = forwardRef(function GISCanvas(
         clearLongPress();
         longPressTimer.current = setTimeout(() => {
           if (touchMoved.current) return;
+          if (hit.mogaGroup) {
+            const groupObjs = objectsRef.current.filter(o => o.mogaGroup === hit.mogaGroup);
+            movingGroupRef.current = {
+              groupId: hit.mogaGroup,
+              originals: groupObjs.map(o => ({
+                id: o.id, x: o.x, y: o.y,
+                points: o.points ? o.points.map(p => ({ x: p.x, y: p.y })) : null,
+                start: o.start ? { x: o.start.x, y: o.start.y } : null,
+                end: o.end ? { x: o.end.x, y: o.end.y } : null,
+              })),
+            };
+            isMoving.current = true; movingObjId.current = hit.id;
+            moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
+            onSelect(hit.id);
+            if (navigator.vibrate) navigator.vibrate(30);
+            return;
+          }
           isMoving.current = true;
           movingObjId.current = hit.id;
           moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
