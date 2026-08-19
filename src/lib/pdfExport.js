@@ -144,13 +144,15 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
   const mapX = marginPx + Math.max(0, (mapAvailW - mapDrawW) / 2);
   fctx.drawImage(srcCanvas, mapX, mapY, mapDrawW, mapDrawH);
 
-  const imgData = fullCanvas.toDataURL("image/jpeg", 0.92);
+  // PNG (lossless) preserves thin grid lines crisply — JPEG ringing makes them
+  // appear bold/fuzzy vs the vector Print Preview.
+  const imgData = fullCanvas.toDataURL("image/png");
   const ratio = Math.min(pw / compositeW, ph / compositeH);
   const iw = compositeW * ratio;
   const ih = compositeH * ratio;
   const ix = (pw - iw) / 2;
   const iy = (ph - ih) / 2;
-  pdf.addImage(imgData, "JPEG", ix, iy, iw, ih);
+  pdf.addImage(imgData, "PNG", ix, iy, iw, ih);
   return pdf.output("blob");
 }
 
@@ -198,7 +200,9 @@ export async function canvasToPdfBlobRaw(canvas, pageOrientation = "landscape", 
     sctx.drawImage(canvas, 0, 0, scaled.width, scaled.height);
     src = scaled;
   }
-  const imgData = src.toDataURL("image/jpeg", 0.92);
+  // PNG (lossless) preserves thin grid lines crisply — JPEG ringing makes them
+  // appear bold/fuzzy vs the vector Print Preview.
+  const imgData = src.toDataURL("image/png");
   const orientation = pageOrientation === "portrait" ? "p" : "l";
   const pdf = new jsPDF(orientation, "mm", pageSize.toLowerCase());
   const pw = pdf.internal.pageSize.getWidth();
@@ -208,7 +212,7 @@ export async function canvasToPdfBlobRaw(canvas, pageOrientation = "landscape", 
   const ih = src.height * ratio;
   const ix = (pw - iw) / 2;
   const iy = (ph - ih) / 2; // center vertically in the page
-  pdf.addImage(imgData, "JPEG", ix, iy, iw, ih);
+  pdf.addImage(imgData, "PNG", ix, iy, iw, ih);
   return pdf.output("blob");
 }
 

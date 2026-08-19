@@ -112,9 +112,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       // No shade fill — white background
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(o.x, o.y, o.w, o.h);
-      // Killa grid — solid lines, slightly thinner than boundary
+      // Killa grid — fine lines, matches Print Preview (0.7 world units)
       const cellW = o.w / 2, cellH = o.h / 5;
-      ctx.strokeStyle = "#000000"; ctx.lineWidth = 1.2;
+      ctx.strokeStyle = "#000000"; ctx.lineWidth = 0.7;
       ctx.setLineDash([]);
       ctx.beginPath();
       ctx.moveTo(o.x + cellW, o.y); ctx.lineTo(o.x + cellW, o.y + o.h);
@@ -168,7 +168,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(o.x, o.y, o.w, o.h);
       const cellW = o.w/5, cellH = o.h/5;
-      ctx.strokeStyle = "#000000"; ctx.lineWidth = 1.2; ctx.setLineDash([]);
+      ctx.strokeStyle = "#000000"; ctx.lineWidth = 0.7; ctx.setLineDash([]);
       ctx.beginPath();
       for (let c=1;c<5;c++){ctx.moveTo(o.x+c*cellW,o.y);ctx.lineTo(o.x+c*cellW,o.y+o.h);}
       for (let r=1;r<5;r++){ctx.moveTo(o.x,o.y+r*cellH);ctx.lineTo(o.x+o.w,o.y+r*cellH);}
