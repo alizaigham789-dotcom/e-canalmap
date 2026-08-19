@@ -29,6 +29,16 @@ const MODULES = [
     locked: false,
   },
   {
+    id: "moga-merge",
+    label: "MOGA MERGE",
+    labelUrdu: "موجے ملائیں",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/930109477_generated_image.png",
+    path: "/moga-merge",
+    bg: "from-[#8b5cf6] to-[#6d28d9]",
+    shadow: "shadow-violet-400/40",
+    locked: false,
+  },
+  {
     id: "khal-mismari",
     label: "KHAL MISMARI",
     labelUrdu: "کھال مسماری",
@@ -198,7 +208,7 @@ export default function Dashboard() {
         {/* Module Cards — 2-column grid, responsive on all screens */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {MODULES.map((mod) => {
-            const needsSub = mod.id === "map-editor" || mod.id === "geo-map";
+            const needsSub = mod.id === "map-editor" || mod.id === "geo-map" || mod.id === "moga-merge";
             const subLocked = needsSub && !hasAccess;
             const isLocked = !isAdmin && mod.locked;
             return (

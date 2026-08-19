@@ -20,6 +20,7 @@ import Warashikni from './pages/Warashikni';
 import TawanCase from './pages/TawanCase';
 import TAForm from './pages/TAForm';
 import GeoMap from './pages/GeoMap';
+import MogaMerge from './pages/MogaMerge';
 import DeputyCollectorDocs from './pages/DeputyCollectorDocs';
 import Form33C from './pages/Form33C';
 
@@ -81,6 +82,7 @@ const AuthenticatedApp = () => {
         <Route path="/ta-form" element={<TAForm />} />
         <Route element={<SubscriptionGate />}>
           <Route path="/geo-map" element={<GeoMap />} />
+          <Route path="/moga-merge" element={<MogaMerge />} />
         </Route>
         <Route path="/deputy-collector" element={<DeputyCollectorDocs />} />
         <Route path="/deputy-collector/33c" element={<Form33C />} />

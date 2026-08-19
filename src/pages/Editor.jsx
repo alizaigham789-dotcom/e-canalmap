@@ -18,9 +18,7 @@ import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
 
 import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
 import PrintPreview from "@/components/editor/PrintPreview";
-import MergeMogasDialog from "@/components/editor/MergeMogasDialog";
 import { collectLandUses } from "@/lib/landUsePalette";
-import { buildMouzaMerge } from "@/lib/mogaMerge";
 import { storeDrawingData, loadDrawingData, isDrawingDataUrl } from "@/lib/drawingDataStorage";
 import {
   DrawingStateManager,
@@ -28,7 +26,7 @@ import {
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
   saveToClipboard, loadFromClipboard, hasClipboard, worldToScreen,
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, Wand2, Network, Type } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, Wand2, Type } from "lucide-react";
 import { saveBackup, getBackup, setLastMapId } from "@/lib/mapBackup";
 import { saveMaxSnapshot, getMaxSnapshot } from "@/lib/serverSnapshot";
 import { Button } from "@/components/ui/button";
@@ -94,7 +92,7 @@ export default function Editor() {
   const [showExport, setShowExport] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
   const [showSnap, setShowSnap] = useState(false);
-  const [showMerge, setShowMerge] = useState(false);
+
   const [snapSettings, setSnapSettings] = useState({ gridSnap: true, spineSnap: true, mogaSnap: true });
   const [freehandMode, setFreehandMode] = useState(false);
   const [gridFlags, setGridFlags] = useState({ showMustateel: true, showMuraba: false });
@@ -390,42 +388,6 @@ export default function Editor() {
   const syncUndoRedo = () => {
     setCanUndo(dsmRef.current.historyIdx > 0);
     setCanRedo(dsmRef.current.historyIdx < dsmRef.current.history.length - 1);
-  };
-
-  // Merge selected moga maps into a NEW mouza map. Each moga keeps its exact
-  // internal layout; mogas are placed side by side and tagged as a group so the
-  // whole moga moves together (single objects can't be moved individually).
-  const handleMergeMogas = async (selectedMaps) => {
-    const { objects: merged, bounds } = buildMouzaMerge(selectedMaps);
-    if (!merged.length) { throw new Error("مرج کرنے کے لیے کوئی ڈیٹا نہیں ملا"); }
-    const w = bounds ? bounds.maxX - bounds.minX : 1000;
-    const h = bounds ? bounds.maxY - bounds.minY : 600;
-    const fitZoom = Math.max(0.05, Math.min(0.5, Math.min(900 / (w || 1), 600 / (h || 1)) * 0.85));
-    const vp = bounds
-      ? { zoom: fitZoom, pan: { x: 450 - (bounds.minX + w / 2) * fitZoom, y: 300 - (bounds.minY + h / 2) * fitZoom } }
-      : { zoom: 0.15, pan: { x: 100, y: 80 } };
-    try {
-      const newMap = await base44.entities.LandMap.create({
-        title: `موضع نقشہ - ${mapData?.village || ""}`,
-        village: mapData?.village || "",
-        district: mapData?.district || "",
-        tehsil: mapData?.tehsil || "",
-        section: mapData?.section || "",
-        zilladar_section: mapData?.zilladar_section || "",
-        rajbah: mapData?.rajbah || "",
-        status: "draft",
-        drawing_data: await storeDrawingData(merged),
-        total_parcels: merged.filter(o => ["mustateel", "muraba"].includes(o.type)).length,
-        viewport: JSON.stringify(vp),
-        editor_settings: settingsRef.current(),
-      });
-      queryClient.invalidateQueries({ queryKey: ["maps"] });
-      toast.success("نیا موضع نقشہ بن گیا — منتخب موگہ مرج ہو گئے");
-      window.location.href = `/editor?id=${newMap.id}`;
-    } catch (e) {
-      toast.error("نیا نقشہ بنانے میں مسئلہ: " + (e?.message || "unknown"));
-      throw e;
-    }
   };
 
   const syncObjects = () => {
@@ -1396,12 +1358,6 @@ export default function Editor() {
               <Printer className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
-              className="w-9 h-9 bg-violet-600 border border-violet-500 text-white hover:bg-violet-500 shadow-md"
-              onClick={() => { saveRef.current(); setShowMerge(true); }}
-              title="Merge all Mogas into one Mouza map">
-              <Network className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${pageBorderStyle !== "none" ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
               onClick={() => setPageBorderStyle(prev => {
                 const styles = ["none", "dashed", "solid", "dotted"];
@@ -1708,13 +1664,6 @@ export default function Editor() {
         </div>
       )}
 
-      {showMerge && mapData && (
-        <MergeMogasDialog
-          mapData={mapData}
-          onMerge={handleMergeMogas}
-          onClose={() => setShowMerge(false)}
-        />
-      )}
     </div>
   );
 }
