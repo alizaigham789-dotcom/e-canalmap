@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from "react";
+import React, { useRef, useEffect, useLayoutEffect, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import {
   screenToWorld, worldToScreen, hitTest,
   snapToAcreGrid, snapToMustateeelGrid, snapToMurabaGrid,
@@ -141,17 +141,21 @@ const GISCanvas = forwardRef(function GISCanvas(
       else if (obj.type === "damageMarker") drawDamageMarker(ctx, obj, isSelected, zoom);
     }
 
-    // CCA/GCA fraction labels for chakbandis — drawn above all objects in boxes
+    // CCA/GCA fraction labels for chakbandis — drawn above all objects in boxes.
+    // The live GCA calculation is O(parcels × cells × canals) per chakbandi — far too
+    // expensive to run every frame on large merged maps. We skip the live recalculation
+    // while panning/dragging and fall back to each chakbandi's stored cca/gca/centerLabel.
     {
       const _parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
       const _canals = objects.filter(o => o.type === "canal");
       const _chakbandis = objects.filter(o => o.type === "chakbandi");
       const gcaFontWorld = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
       const gcaFont = Math.max(12, Math.min(24, gcaFontWorld * zoom)) / zoom;
+      const interacting = isPanning.current || isMoving.current || !!vertexDrag.current;
       for (const ch of _chakbandis) {
         if (ch.points?.length >= 3) {
-          const gca = calculateChakbandiGCA(ch, _parcels, _canals);
-          if (gca > 0 || ch.centerLabel) {
+          const gca = interacting ? 0 : calculateChakbandiGCA(ch, _parcels, _canals);
+          if (gca > 0 || ch.centerLabel || ch.cca || ch.gca) {
             const lp = getChakbandiLabelPos(ch);
             if (!lp) continue;
             const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
@@ -398,10 +402,12 @@ const GISCanvas = forwardRef(function GISCanvas(
     }
   }, [objects, zoom, pan, layers, selectedId, activeTool, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measurePoly, measureResult, endpointSnap, orthoMode, pageBorderStyle, deleteVertexMode]);
 
-  useEffect(() => {
-    const loop = () => { render(); animRef.current = requestAnimationFrame(loop); };
-    animRef.current = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animRef.current);
+  // Render only when render-relevant state changes (on-demand) — NOT every frame.
+  // The previous continuous RAF loop redrew the ENTIRE map 60×/sec even when idle,
+  // which made large merged maps (hundreds of objects) unbearably slow and laggy.
+  // useLayoutEffect runs before paint so dragging/panning stays responsive.
+  useLayoutEffect(() => {
+    render();
   }, [render]);
 
   useEffect(() => {
@@ -600,7 +606,13 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
       return;
     }
-    onSnapPosChange(getSnappedWorld(e));
+    // Snap is only needed for drawing/measurement tools — skip the expensive
+    // O(objects) snap + endpoint scan for select/move/pan so hovering stays instant
+    // on large merged maps.
+    const SNAP_TOOLS = ["canal","khal","road","bridge","mouza","chakbandi","outlet","acre","mustateel","muraba","damageMarker","measure"];
+    if (SNAP_TOOLS.includes(activeTool)) {
+      onSnapPosChange(getSnappedWorld(e));
+    }
   }, [activeTool, pan, zoom, getSnappedWorld, onPanChange, onSnapPosChange, onUpdateObject, onBulkUpdate, ghostPos]);
 
   const handleMouseDown = useCallback((e) => {
@@ -988,7 +1000,10 @@ const GISCanvas = forwardRef(function GISCanvas(
       setMeasureResult(null);
     }
     edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0;
-  }, [activeTool]);
+    // Clear stale snap indicator for tools that don't use snapping
+    const SNAP_TOOLS = ["canal","khal","road","bridge","mouza","chakbandi","outlet","acre","mustateel","muraba","damageMarker","measure"];
+    if (!SNAP_TOOLS.includes(activeTool)) onSnapPosChange(null);
+  }, [activeTool, onSnapPosChange]);
 
   const cursorClass = {
     select: "cursor-default", pan: "cursor-grab", eraser: "cursor-cell",

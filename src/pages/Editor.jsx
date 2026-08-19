@@ -441,9 +441,12 @@ export default function Editor() {
       // Otherwise track the max — the safeguard uses this baseline to prevent accidental wipe.
       loadedNonParcelCountRef.current = currentNonParcel;
     }
-    // SYNCHRONOUS BACKUP — React Query cache + sessionStorage + IndexedDB, on every
-    // modification, BEFORE any async API call. Ensures data survives navigation/crash.
-    syncBackup();
+    // Debounced backup — serializing thousands of objects (JSON.stringify +
+    // sessionStorage + IndexedDB) on every mouse-move during a drag was the main
+    // cause of the editor freezing on large merged maps. Now it runs once, a short
+    // delay after the user stops actively editing. The unmount + beforeunload
+    // handlers still write synchronously when leaving, so no data is lost.
+    scheduleSyncBackup();
     scheduleAutoSave();
   };
 
@@ -473,9 +476,20 @@ export default function Editor() {
     });
   };
 
+  // Debounced local backup — writes React Query cache + sessionStorage + IndexedDB.
+  // Debounced (not per-change) so dragging/moving objects on a large merged map
+  // doesn't JSON.stringify + write thousands of objects on every single mouse-move.
+  const syncBackupTimer = useRef(null);
+  const scheduleSyncBackup = () => {
+    if (syncBackupTimer.current) clearTimeout(syncBackupTimer.current);
+    // Also refresh undo/redo state — history snapshots are now debounced (400ms),
+    // so the button states only update after the burst settles.
+    syncBackupTimer.current = setTimeout(() => { syncBackup(); syncUndoRedo(); }, 500);
+  };
+
   const scheduleAutoSave = () => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => { saveRef.current(); trySnapshot(); }, 200);
+    autoSaveTimer.current = setTimeout(() => { saveRef.current(); trySnapshot(); }, 1500);
   };
 
   // Track current mapId for unmount save (cleanup has [] deps, can't read fresh mapId)
@@ -526,6 +540,7 @@ export default function Editor() {
   useEffect(() => {
     return () => {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      if (syncBackupTimer.current) clearTimeout(syncBackupTimer.current);
       const currentMapId = mapIdRef.current;
       if (!currentMapId) return;
       // Don't save if map data was never loaded — would overwrite server data with empty

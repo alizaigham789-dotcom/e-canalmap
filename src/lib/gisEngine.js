@@ -726,13 +726,29 @@ export class DrawingStateManager {
   }
 
   snapshot() {
+    // Cancel any pending debounced snapshot so a direct snapshot (add/remove/undo)
+    // doesn't get duplicated by a later timer fire.
+    if (this._snapshotTimer) { clearTimeout(this._snapshotTimer); this._snapshotTimer = null; }
     this.history = this.history.slice(0, this.historyIdx + 1);
     this.history.push(JSON.stringify(this.objects));
     this.historyIdx++;
     this._clampHistory();
   }
 
+  // Debounced snapshot for high-frequency updates (drag/move). Avoids running a
+  // full JSON.stringify(this.objects) on every single mouse-move — which freezes
+  // the editor on large merged maps (thousands of objects). One snapshot is taken
+  // a short delay after the burst of updates settles, so undo steps are per
+  // interaction (one step per drag) rather than per pixel.
+  _scheduleSnapshot() {
+    if (this._snapshotTimer) clearTimeout(this._snapshotTimer);
+    this._snapshotTimer = setTimeout(() => { this._snapshotTimer = null; this.snapshot(); }, 400);
+  }
+
   undo() {
+    // Flush any pending debounced snapshot so the latest edits are in history
+    // before reverting — otherwise undo right after a drag would do nothing.
+    if (this._snapshotTimer) { clearTimeout(this._snapshotTimer); this._snapshotTimer = null; this.snapshot(); }
     if (this.historyIdx > 0) {
       this.historyIdx--;
       this.objects = JSON.parse(this.history[this.historyIdx]);
@@ -742,6 +758,7 @@ export class DrawingStateManager {
   }
 
   redo() {
+    if (this._snapshotTimer) { clearTimeout(this._snapshotTimer); this._snapshotTimer = null; this.snapshot(); }
     if (this.historyIdx < this.history.length - 1) {
       this.historyIdx++;
       this.objects = JSON.parse(this.history[this.historyIdx]);
@@ -770,7 +787,7 @@ export class DrawingStateManager {
       }
       return merged;
     });
-    this.snapshot();
+    this._scheduleSnapshot();
   }
 
   // Bulk update multiple objects in ONE history snapshot (used for whole-moga group moves)
@@ -786,7 +803,7 @@ export class DrawingStateManager {
       }
       return merged;
     });
-    this.snapshot();
+    this._scheduleSnapshot();
   }
 
   getByType(type) { return this.objects.filter(o => o.type === type); }
