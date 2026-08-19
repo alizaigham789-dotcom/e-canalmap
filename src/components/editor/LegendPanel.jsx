@@ -12,7 +12,7 @@ const ITEMS = [
   { label: "Outlet / Moga", color: "#06b6d4", style: "arrow", thickness: 2, desc: "Directional water outlet", key: "outletStroke", layerKey: "outlet" },
 ];
 
-export default function LegendPanel({ colorSettings, killaVisibility, onKillaVisibilityChange, layers, onLayerChange, onDragStart, onResetPos }) {
+export default function LegendPanel({ colorSettings, killaVisibility, onKillaVisibilityChange, layers, onLayerChange, onDragStart, onResetPos, landUses = [] }) {
   const C = colorSettings || {};
   const kv = killaVisibility || { mustateel: true, muraba: true };
   const lv = layers || {};
@@ -115,6 +115,20 @@ export default function LegendPanel({ colorSettings, killaVisibility, onKillaVis
       <div className="px-3 pb-3 pt-1 border-t border-slate-100">
         <p className="text-[9px] text-slate-400 font-mono">👁 Eye icon = toggle layer / killa visibility</p>
       </div>
+      {/* Per-acre land-use colours used on the map */}
+      {landUses.length > 0 && (
+        <div className="px-3 pb-3 pt-2 border-t border-slate-100">
+          <p className="text-[10px] font-bold text-slate-700 mb-1.5" style={{ fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif" }}>ایکڑ استعمال (Acre Land-Use)</p>
+          <div className="space-y-1.5">
+            {landUses.map((u, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="w-4 h-4 rounded-sm border border-black/10 shrink-0" style={{ background: u.color }} />
+                <span className="text-[11px] text-slate-700" style={{ fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif" }}>{u.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

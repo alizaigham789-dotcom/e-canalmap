@@ -168,18 +168,56 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Layer 5: Killa numbers — screen-clamped (min 14px), toggled by showKillaNumbers
-    if (showKillaNumbers) {
-      const grid = getMustateeelKillaGrid();
+    // Layer 2b: Acre (killa) land-use fills — coloured per-acre cells (آبادی/قبرستان/فیکٹری/...)
+    const acreUses = obj.acreUses ? obj.acreUses : [];
+    const gridUses = getMustateeelKillaGrid();
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 2; c++) {
+        const use = acreUses[gridUses[r][c] - 1];
+        if (!use || !use.color) continue;
+        const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        ctx.fillStyle = use.color;
+        ctx.fillRect(cx, cy, cellW, cellH);
+        ctx.restore();
+        ctx.strokeStyle = use.color;
+        ctx.lineWidth = 1.5 / zoom;
+        ctx.strokeRect(cx, cy, cellW, cellH);
+      }
+    }
+
+    // Layer 5: Killa numbers + land-use labels
+    if (showKillaNumbers || acreUses.some(u => u && u.label)) {
       ctx.save();
       ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
-      ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.9)";
       const killaFontSize = screenClampedFont(Math.min(cellW, cellH) * 0.30, zoom, 14, 24);
-      ctx.font = `bold ${killaFontSize}px Rajdhani, sans-serif`;
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      const labelFont = screenClampedFont(Math.min(cellW, cellH) * 0.26, zoom, 10, 18);
       for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 2; c++) {
-          ctx.fillText(String(grid[r][c]), obj.x + c * cellW + cellW/2, obj.y + r * cellH + cellH/2);
+          const kn = gridUses[r][c];
+          const use = acreUses[kn - 1];
+          const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
+          if (use && use.label) {
+            try { ctx.direction = "rtl"; } catch {}
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.font = `bold ${labelFont}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif`;
+            ctx.fillStyle = "#0f172a";
+            ctx.fillText(use.label, cx + cellW / 2, cy + cellH / 2);
+            if (showKillaNumbers) {
+              try { ctx.direction = "ltr"; } catch {}
+              ctx.textAlign = "left"; ctx.textBaseline = "top";
+              ctx.font = `bold ${Math.max(9, killaFontSize * 0.7)}px Rajdhani, sans-serif`;
+              ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.9)";
+              ctx.fillText(String(kn), cx + 3 / zoom, cy + 2 / zoom);
+            }
+          } else if (showKillaNumbers) {
+            try { ctx.direction = "ltr"; } catch {}
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.font = `bold ${killaFontSize}px Rajdhani, sans-serif`;
+            ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.9)";
+            ctx.fillText(String(kn), cx + cellW / 2, cy + cellH / 2);
+          }
         }
       }
       ctx.restore();

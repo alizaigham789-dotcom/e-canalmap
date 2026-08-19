@@ -19,6 +19,7 @@ import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
 import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
 import PrintPreview from "@/components/editor/PrintPreview";
 import MergeMogasDialog from "@/components/editor/MergeMogasDialog";
+import { collectLandUses } from "@/lib/landUsePalette";
 import { buildMouzaMerge } from "@/lib/mogaMerge";
 import { storeDrawingData, loadDrawingData, isDrawingDataUrl } from "@/lib/drawingDataStorage";
 import {
@@ -1477,6 +1478,7 @@ export default function Editor() {
                 onLayerChange={handleLayerChange}
                 onDragStart={handleLegendDragStart}
                 onResetPos={() => setLegendPos(null)}
+                landUses={collectLandUses(objects)}
               />
             </div>
           )}

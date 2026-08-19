@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator, Ban, MousePointerClick } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { calculateChakbandiGCA } from "@/lib/gisEngine";
+import AcreUseControl from "@/components/editor/AcreUseControl";
 
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
 const KILLA_STROKE_STYLES = ["solid", "dashed", "dotted"];
@@ -138,6 +139,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 5} min={1} max={10} step={1} onChange={v => commit("boundaryThickness", v)} />
               <FillControl local={local} commit={commit} />
               <KillaStyleControl local={local} commit={commit} />
+              <AcreUseControl local={local} commit={commit} />
               <div className="text-[10px] text-slate-400 font-mono">440 ft × 990 ft • 10 Killas</div>
             </>
           )}
