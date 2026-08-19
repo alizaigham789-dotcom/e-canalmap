@@ -1,23 +1,20 @@
 // ============================================================
-// MOGA MERGE CANVAS — a specialised, read-only-at-object-level
-// canvas for the "Moga merge to one map" module.
+// MOGA MERGE CANVAS — specialised canvas for the merge module.
 //
 // Rules (per user):
 //  • Every object belongs to a moga group (mogaGroup = source map id).
-//  • Individual objects can NOT be moved/edited separately.
-//  • Clicking selects the WHOLE moga group; dragging moves the whole
-//    group together, snapping to the global mustateel grid so all
-//    mustateels / murabas stay aligned across mogas.
-//  • Auto-fit keeps the whole merged map in view.
-//  • Background mustateel + muraba grid is always shown for alignment.
-//
-// Rendering reuses the same GISRenderer draw functions as the editor
-// so the merged map looks identical here and in GeoMap / print.
+//  • Individual objects can NOT be moved separately.
+//  • Two tools only (mirrors the slim MergeToolPanel):
+//      - "move": click a moga → drag the whole group (grid-snapped)
+//      - "pan":  drag anywhere to pan the canvas
+//  • Auto-fit + zoom in/out exposed to parent via ref.
+//  • Background mustateel + muraba grid always shown for alignment.
+// Rendering reuses the same GISRenderer draw functions as the editor.
 // ============================================================
 
-import React, { useRef, useState, useCallback, useEffect, useLayoutEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect, useLayoutEffect, useImperativeHandle, forwardRef } from "react";
 import {
-  DIMENSIONS, screenToWorld, hitTest, snapToMustateeelGrid, isInViewport,
+  DIMENSIONS, screenToWorld, hitTest, isInViewport,
   getMustateelMouzaSplit,
 } from "@/lib/gisEngine";
 import {
@@ -42,7 +39,6 @@ const C = {
   labelColor: "#1e293b",
 };
 
-// World bounds of a set of objects (for auto-fit)
 function objectsBounds(objects) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const o of objects) {
@@ -60,14 +56,36 @@ function objectsBounds(objects) {
   return { minX, minY, maxX, maxY };
 }
 
-export default function MogaMergeCanvas({ objects, selectedGroup, onSelectGroup, onCommitMove, fitSignal }) {
+const MogaMergeCanvas = forwardRef(function MogaMergeCanvas(
+  { objects, selectedGroup, onSelectGroup, onCommitMove, fitSignal, activeTool, onZoomChange },
+  ref
+) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [zoom, setZoom] = useState(0.15);
   const [pan, setPan] = useState({ x: 100, y: 80 });
-  const dragRef = useRef(null); // { mode:'group'|'pan', startScreen, startPan, groupId, snapshot, lastWorld }
+  const dragRef = useRef(null);
 
-  // ---- render ----
+  const fitToObjects = useCallback((objs) => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const b = objectsBounds(objs);
+    if (!b) return;
+    const w = b.maxX - b.minX, h = b.maxY - b.minY;
+    const z = Math.max(0.02, Math.min(0.6, Math.min((canvas.width * 0.9) / (w || 1), (canvas.height * 0.9) / (h || 1))));
+    setZoom(z);
+    setPan({ x: canvas.width / 2 - (b.minX + w / 2) * z, y: canvas.height / 2 - (b.minY + h / 2) * z });
+  }, []);
+
+  // Expose zoom controls + fit to parent (for the slim tool panel)
+  useImperativeHandle(ref, () => ({
+    zoomIn: () => setZoom((z) => Math.min(4, z * 1.2)),
+    zoomOut: () => setZoom((z) => Math.max(0.01, z / 1.2)),
+    fitView: () => fitToObjects(objects),
+  }), [fitToObjects, objects]);
+
+  // Report zoom up so the StatusBar can show it
+  useEffect(() => { onZoomChange?.(zoom); }, [zoom, onZoomChange]);
+
   const render = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -83,16 +101,14 @@ export default function MogaMergeCanvas({ objects, selectedGroup, onSelectGroup,
 
     drawGrid(ctx, W, H, zoom, pan, { showMustateel: true, showMuraba: true });
 
-    const mouzaObjects = objects.filter(o => o.type === "mouza");
+    const mouzaObjects = objects.filter((o) => o.type === "mouza");
     const sorted = [...objects].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
 
-    // Live drag offset applied only to the active group (visual only until commit)
     const off = dragRef.current?.mode === "group" ? dragRef.current.offset : null;
 
     for (const obj of sorted) {
       if (!isInViewport(obj, pan, zoom, W, H)) continue;
       const isSel = obj.mogaGroup === selectedGroup;
-      // shift a dragging group's object by the live offset
       const drawObj = (off && obj.mogaGroup === dragRef.current.groupId) ? applyOffset(obj, off) : obj;
       if (drawObj.type === "acre") drawAcre(ctx, drawObj, isSel, zoom, C);
       else if (drawObj.type === "mustateel") drawMustateel(ctx, drawObj, isSel, zoom, C, true, getMustateelMouzaSplit(drawObj, mouzaObjects), true);
@@ -111,7 +127,6 @@ export default function MogaMergeCanvas({ objects, selectedGroup, onSelectGroup,
 
   useLayoutEffect(() => { render(); }, [render]);
 
-  // ---- resize ----
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
@@ -123,22 +138,10 @@ export default function MogaMergeCanvas({ objects, selectedGroup, onSelectGroup,
     return () => ro.disconnect();
   }, [render]);
 
-  // ---- auto-fit ----
-  const fitToObjects = useCallback((objs) => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    const b = objectsBounds(objs);
-    if (!b) return;
-    const w = b.maxX - b.minX, h = b.maxY - b.minY;
-    const z = Math.max(0.02, Math.min(0.6, Math.min((canvas.width * 0.9) / (w || 1), (canvas.height * 0.9) / (h || 1))));
-    setZoom(z);
-    setPan({ x: canvas.width / 2 - (b.minX + w / 2) * z, y: canvas.height / 2 - (b.minY + h / 2) * z });
-  }, []);
-
   useEffect(() => {
     if (fitSignal) fitToObjects(objects);
   }, [fitSignal]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ---- interaction ----
   const getWorld = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     return screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
@@ -150,13 +153,17 @@ export default function MogaMergeCanvas({ objects, selectedGroup, onSelectGroup,
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
     const nz = Math.max(0.01, Math.min(4, zoom * factor));
-    // keep cursor world point fixed
     const nx = mx - (mx - pan.x) * (nz / zoom);
     const ny = my - (my - pan.y) * (nz / zoom);
     setZoom(nz); setPan({ x: nx, y: ny });
   }, [zoom, pan]);
 
   const onDown = useCallback((e) => {
+    if (activeTool === "pan") {
+      dragRef.current = { mode: "pan", startScreen: { x: e.clientX, y: e.clientY }, startPan: { ...pan } };
+      return;
+    }
+    // move tool
     const world = getWorld(e);
     const hit = hitTest(world.x, world.y, objects);
     if (hit && hit.mogaGroup) {
@@ -164,10 +171,8 @@ export default function MogaMergeCanvas({ objects, selectedGroup, onSelectGroup,
       dragRef.current = { mode: "group", groupId: hit.mogaGroup, startWorld: world, offset: { dx: 0, dy: 0 }, moved: false };
     } else {
       onSelectGroup(null);
-      const rect = canvasRef.current.getBoundingClientRect();
-      dragRef.current = { mode: "pan", startScreen: { x: e.clientX, y: e.clientY }, startPan: { ...pan } };
     }
-  }, [objects, pan, onSelectGroup]);
+  }, [activeTool, objects, pan, onSelectGroup]);
 
   const onMove = useCallback((e) => {
     const d = dragRef.current;
@@ -178,7 +183,6 @@ export default function MogaMergeCanvas({ objects, selectedGroup, onSelectGroup,
       const world = getWorld(e);
       let dx = world.x - d.startWorld.x;
       let dy = world.y - d.startWorld.y;
-      // snap to mustateel grid so mogas align
       dx = Math.round(dx / MUST_W) * MUST_W;
       dy = Math.round(dy / MUST_H) * MUST_H;
       d.offset = { dx, dy };
@@ -196,33 +200,36 @@ export default function MogaMergeCanvas({ objects, selectedGroup, onSelectGroup,
     render();
   }, [onCommitMove, render]);
 
+  const dragging = !!dragRef.current;
+  const cursor =
+    activeTool === "pan" ? (dragging ? "grabbing" : "grab")
+    : (dragging ? "grabbing" : "default");
+
   return (
     <div ref={containerRef} className="relative w-full h-full bg-[#0f1923] overflow-hidden">
       <canvas
         ref={canvasRef}
         className="block w-full h-full"
-        style={{ cursor: dragRef.current?.mode === "pan" ? "grabbing" : "default", touchAction: "none" }}
+        style={{ cursor, touchAction: "none" }}
         onWheel={onWheel}
         onMouseDown={onDown}
         onMouseMove={onMove}
         onMouseUp={onUp}
         onMouseLeave={onUp}
       />
-      <div className="absolute bottom-2 left-2 text-[10px] text-slate-400 font-mono bg-black/40 px-2 py-1 rounded pointer-events-none">
-        Zoom {(zoom * 100).toFixed(0)}% · Drag a moga to move it whole (grid-snapped) · Scroll to zoom
-      </div>
     </div>
   );
-}
+});
 
-// Apply a world offset to one object's geometry (for live drag preview)
+export default MogaMergeCanvas;
+
 function applyOffset(o, off) {
   const dx = off.dx, dy = off.dy;
   const copy = { ...o };
   if (["acre", "mustateel", "muraba", "damageMarker"].includes(o.type)) {
     copy.x = (o.x || 0) + dx; copy.y = (o.y || 0) + dy;
   }
-  if (o.points) copy.points = o.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+  if (o.points) copy.points = o.points.map((p) => ({ x: p.x + dx, y: p.y + dy }));
   if (o.start && o.end) {
     copy.start = { x: o.start.x + dx, y: o.start.y + dy };
     copy.end = { x: o.end.x + dx, y: o.end.y + dy };
