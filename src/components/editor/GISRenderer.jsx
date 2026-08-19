@@ -118,7 +118,7 @@ export function drawAcre(ctx, obj, isSelected, zoom, C) {
   }
 }
 
-export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = true, mouzaSplit = null) {
+export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = true, mouzaSplit = null, showAcreUseLabels = true) {
   // Exclusion hatch — drawn first, above fill, below boundary
   if (obj.excluded) drawExclusionHatchOnCanvas(ctx, obj, zoom);
   const ks = obj.killaStyle || {};
@@ -177,7 +177,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
         if (!use || !use.color) continue;
         const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
         ctx.save();
-        ctx.globalAlpha = 0.55;
+        ctx.globalAlpha = 0.80;
         ctx.fillStyle = use.color;
         ctx.fillRect(cx, cy, cellW, cellH);
         ctx.restore();
@@ -188,7 +188,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     }
 
     // Layer 5: Killa numbers + land-use labels
-    if (showKillaNumbers || acreUses.some(u => u && u.label)) {
+    if (showKillaNumbers || (showAcreUseLabels && acreUses.some(u => u && u.label))) {
       ctx.save();
       ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
       const killaFontSize = screenClampedFont(Math.min(cellW, cellH) * 0.30, zoom, 14, 24);
@@ -198,7 +198,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
           const kn = gridUses[r][c];
           const use = acreUses[kn - 1];
           const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
-          if (use && use.label) {
+          if (use && use.label && showAcreUseLabels) {
             try { ctx.direction = "rtl"; } catch {}
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
             ctx.font = `bold ${labelFont}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif`;

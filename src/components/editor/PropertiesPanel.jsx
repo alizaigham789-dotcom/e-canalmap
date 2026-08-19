@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator, Ban, MousePointerClick } from "lucide-react";
+import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator, Ban, MousePointerClick, RotateCcw } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { calculateChakbandiGCA } from "@/lib/gisEngine";
 import AcreUseControl from "@/components/editor/AcreUseControl";
@@ -11,7 +11,7 @@ import AcreUseControl from "@/components/editor/AcreUseControl";
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
 const KILLA_STROKE_STYLES = ["solid", "dashed", "dotted"];
 
-export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate, onDelete, onClose, deleteVertexMode = false, onToggleDeleteVertexMode = null }) {
+export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate, onDelete, onClose, deleteVertexMode = false, onToggleDeleteVertexMode = null, onUpdateAllMustateels = null, onResetAllMustateels = null }) {
   const [local, setLocal] = useState({});
   const [collapsed, setCollapsed] = useState(true);
 
@@ -127,18 +127,8 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <label className="text-xs text-slate-600">Show Owner</label>
                 <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
               </div>
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-slate-600">Show Killa Numbers</label>
-                <Switch checked={local.showKillaNumbers !== false} onCheckedChange={v => commit("showKillaNumbers", v)} className="scale-75" />
-              </div>
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
-                <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
-              </div>
               <ExclusionToggle local={local} commit={commit} />
-              <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 5} min={1} max={10} step={1} onChange={v => commit("boundaryThickness", v)} />
-              <FillControl local={local} commit={commit} />
-              <KillaStyleControl local={local} commit={commit} />
+              <MustateelStyleControl local={local} onApplyAll={onUpdateAllMustateels} onResetAll={onResetAllMustateels} />
               <AcreUseControl local={local} commit={commit} />
               <div className="text-[10px] text-slate-400 font-mono">440 ft × 990 ft • 10 Killas</div>
             </>
@@ -154,18 +144,9 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <label className="text-xs text-slate-600">Show Owner</label>
                 <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
               </div>
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-slate-600">Show Killa Numbers</label>
-                <Switch checked={local.showKillaNumbers !== false} onCheckedChange={v => commit("showKillaNumbers", v)} className="scale-75" />
-              </div>
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-slate-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Lock Size & Shape</label>
-                <Switch checked={!!local.lockSizeShape} onCheckedChange={v => commit("lockSizeShape", v)} className="scale-75" />
-              </div>
               <ExclusionToggle local={local} commit={commit} />
               <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 5} min={1} max={10} step={1} onChange={v => commit("boundaryThickness", v)} />
               <FillControl local={local} commit={commit} />
-              <KillaStyleControl local={local} commit={commit} />
               <div className="text-[10px] text-slate-400 font-mono">1100 ft × 990 ft • 25 Killas</div>
             </>
           )}
@@ -659,10 +640,41 @@ function KillaStyleControl({ local, commit }) {
   );
 }
 
-// Colour Fill + Diagonal (Ikharaj) pattern — solid colour with opacity, plus a
-// single diagonal-lines option representing excluded (ikharaj) mustateels.
+// Combined Mustateel Style — applies boundary thickness + fill colour/opacity
+// to ALL mustateels at once (not per-mustateel). Includes a Reset button.
+function MustateelStyleControl({ local, onApplyAll, onResetAll }) {
+  const hexColor = (c) => (c && c.startsWith("#")) ? c : "#ef4444";
+  if (!onApplyAll) return null;
+  return (
+    <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Mustateel Style (All)</span>
+        {onResetAll && (
+          <Button size="sm" variant="outline" className="h-5 px-2 text-[9px] border-blue-300 text-blue-700 hover:bg-blue-100"
+            onClick={onResetAll}>
+            <RotateCcw className="w-3 h-3 mr-1" /> Reset
+          </Button>
+        )}
+      </div>
+      <p className="text-[9px] text-blue-500">Changes apply to ALL mustateels</p>
+      <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 5} min={1} max={10} step={1} onChange={v => onApplyAll({ boundaryThickness: v })} />
+      <div className="flex items-center gap-2">
+        <label className="text-[9px] text-slate-400 shrink-0">Fill</label>
+        <input type="color" value={hexColor(local.fillColor)}
+          onChange={e => onApplyAll({ fillColor: e.target.value })}
+          className="h-5 w-8 rounded cursor-pointer border border-slate-200" />
+        <label className="text-[9px] text-slate-400 shrink-0">Opacity</label>
+        <input type="range" min={0} max={1} step={0.05} value={local.fillOpacity ?? 0.10}
+          onChange={e => onApplyAll({ fillOpacity: parseFloat(e.target.value) })}
+          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+        <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((local.fillOpacity ?? 0.10) * 100)}%</span>
+      </div>
+    </div>
+  );
+}
+
+// Colour Fill — solid colour with opacity (per-parcel)
 function FillControl({ local, commit }) {
-  const isDiagonal = local.fillStyle === "diagonal";
   const hexColor = (c) => (c && c.startsWith("#")) ? c : "#ef4444";
   return (
     <div>
@@ -679,21 +691,6 @@ function FillControl({ local, commit }) {
           className="flex-1 h-1 accent-blue-500 cursor-pointer" />
         <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((local.fillOpacity ?? 0.10) * 100)}%</span>
       </div>
-      <div className="flex items-center justify-between">
-        <label className="text-[10px] text-slate-600 flex items-center gap-1" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
-          <Ban className="w-3 h-3 text-slate-500" /> اختیاج لائنیں (Diagonal)
-        </label>
-        <Switch checked={isDiagonal} onCheckedChange={v => commit("fillStyle", v ? "diagonal" : "solid")} className="scale-75" />
-      </div>
-      {isDiagonal && (
-        <div className="flex items-center gap-2 mt-1">
-          <label className="text-[9px] text-slate-400 shrink-0">Spacing</label>
-          <input type="range" min={4} max={24} step={2} value={local.fillSpacing || 8}
-            onChange={e => commit("fillSpacing", parseInt(e.target.value))}
-            className="flex-1 h-1 accent-blue-500 cursor-pointer" />
-          <span className="text-[9px] font-mono text-slate-500 w-6">{local.fillSpacing || 8}px</span>
-        </div>
-      )}
     </div>
   );
 }

@@ -122,7 +122,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.stroke();
       // Acre land-use fills + Urdu labels (per killa) — drawn before killa numbers
       const showKMust = o.excluded || killaVisibility.mustateel !== false;
-      drawAcreUsesOnCanvas(ctx, o, showKMust, C.mustateelStroke || "#000");
+      drawAcreUsesOnCanvas(ctx, o, showKMust, C.mustateelStroke || "#000", killaVisibility.acreUseLabels !== false);
       // Killa numbers — respect killaVisibility (skip cells that have a land-use label)
       if (showKMust) {
         const grid = getMustateeelKillaGrid();
@@ -447,8 +447,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const killaLabels = showKSvg ? grid.flatMap((row,r) =>
         row.map((n,c) => acreUseHasLabel(o, n) ? "" : `<text x="${o.x+c*cellW+cellW/2}" y="${o.y+r*cellH+cellH/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${killaFontSize}" font-weight="bold" fill="rgba(0,0,0,0.70)" text-anchor="middle" dominant-baseline="middle">${n}</text>`)
       ).join("") : "";
-      const gridLines = [`<line x1="${o.x+cellW}" y1="${o.y}" x2="${o.x+cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`];
-      for (let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="1.2"/>`);
+      const gridLines = [`<line x1="${o.x+cellW}" y1="${o.y}" x2="${o.x+cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="0.7"/>`];
+      for (let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="0.7"/>`);
       const strokeColor = C.mustateelStroke || "#000";
       const mSplit = getMustateelMouzaSplit(o, objects.filter(m => m.type === "mouza")) || (o.label2 ? { centerA: { x: o.x + o.w/2, y: o.y + o.h*0.25 }, centerB: { x: o.x + o.w/2, y: o.y + o.h*0.75 }, widthA: o.w, widthB: o.w } : null);
       let lbl;
@@ -471,7 +471,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         lbl = `${o.label ? `<text x="${cx}" y="${cy}" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}`;
       }
       const hatch = o.excluded ? svgExclusionHatchSVG(o, "must") : "";
-      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${svgAcreUses(o, showKSvg, strokeColor)}${killaLabels}${hatch}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${svgAcreUses(o, showKSvg, strokeColor, killaVisibility.acreUseLabels !== false)}${killaLabels}${hatch}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;
     }
     if (o.type === "muraba") {
       const cellW=o.w/5, cellH=o.h/5;
@@ -481,8 +481,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         row.map((n,c) => `<text x="${o.x+c*cellW+cellW/2}" y="${o.y+r*cellH+cellH/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${killaFontSize}" font-weight="bold" fill="rgba(0,0,0,0.65)" text-anchor="middle" dominant-baseline="middle">${n}</text>`)
       ).join("") : "";
       const gridLines=[];
-      for(let c=1;c<5;c++) gridLines.push(`<line x1="${o.x+c*cellW}" y1="${o.y}" x2="${o.x+c*cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`);
-      for(let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="1.2"/>`);
+      for(let c=1;c<5;c++) gridLines.push(`<line x1="${o.x+c*cellW}" y1="${o.y}" x2="${o.x+c*cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="0.7"/>`);
+      for(let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="0.7"/>`);
       const lbl = o.label ? `<text x="${o.x+o.w/2}" y="${o.y+o.h/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${Math.min(o.w,o.h)*0.28}" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : "";
       const hatch = o.excluded ? svgExclusionHatchSVG(o, "murb") : "";
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}${hatch}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#000" stroke-width="4.5" stroke-linejoin="miter"/>${lbl}`;

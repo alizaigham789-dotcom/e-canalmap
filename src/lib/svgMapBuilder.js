@@ -99,7 +99,7 @@ function svgExclusionHatch(obj, idx) {
   return result;
 }
 
-function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
+function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null, showLabels = true) {
   const cellW = obj.w / 2, cellH = obj.h / 5;
   const strokeColor = C.mustateelStroke || "#000000";
   const fontSize = Math.min(obj.w * 0.30, obj.h * 0.30);
@@ -107,9 +107,9 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
 
   const gridColor = C.gridStroke || strokeColor;
   let gridLines = "";
-  gridLines += `<line x1="${obj.x + cellW}" y1="${obj.y}" x2="${obj.x + cellW}" y2="${obj.y + obj.h}" stroke="${gridColor}" stroke-width="1.2"/>`;
+  gridLines += `<line x1="${obj.x + cellW}" y1="${obj.y}" x2="${obj.x + cellW}" y2="${obj.y + obj.h}" stroke="${gridColor}" stroke-width="0.7"/>`;
   for (let r = 1; r < 5; r++) {
-    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${gridColor}" stroke-width="1.2"/>`;
+    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${gridColor}" stroke-width="0.7"/>`;
   }
 
   let killaLabels = "";
@@ -139,7 +139,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
 <g key="must_${idx}">
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
-  ${svgAcreUses(obj, showKilla, strokeColor)}
+  ${svgAcreUses(obj, showKilla, strokeColor, showLabels)}
   ${killaLabels}
   ${obj.excluded ? svgExclusionHatch(obj, `must_${idx}`) : ""}
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness)}" stroke-linejoin="miter"/>
@@ -156,10 +156,10 @@ function svgMuraba(obj, C, idx, showKilla = true) {
   const gridColor = C.gridStroke || strokeColor;
   let gridLines = "";
   for (let c = 1; c < 5; c++) {
-    gridLines += `<line x1="${obj.x + c*cellW}" y1="${obj.y}" x2="${obj.x + c*cellW}" y2="${obj.y + obj.h}" stroke="${gridColor}" stroke-width="1.2"/>`;
+    gridLines += `<line x1="${obj.x + c*cellW}" y1="${obj.y}" x2="${obj.x + c*cellW}" y2="${obj.y + obj.h}" stroke="${gridColor}" stroke-width="0.7"/>`;
   }
   for (let r = 1; r < 5; r++) {
-    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${gridColor}" stroke-width="1.2"/>`;
+    gridLines += `<line x1="${obj.x}" y1="${obj.y + r*cellH}" x2="${obj.x + obj.w}" y2="${obj.y + r*cellH}" stroke="${gridColor}" stroke-width="0.7"/>`;
   }
 
   let killaLabels = "";
@@ -423,6 +423,7 @@ export function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {
 
   const showKillaMustateel = killaVisibility.mustateel !== false;
   const showKillaMuraba = killaVisibility.muraba !== false;
+  const showAcreLabels = killaVisibility.acreUseLabels !== false;
 
   const filtered = filterMoga
     ? objects.filter(o => {
@@ -438,7 +439,7 @@ export function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {
   let svgParts = [];
   sorted.forEach((obj, idx) => {
     switch (obj.type) {
-      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects))); break;
+      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects), showAcreLabels)); break;
       case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba)); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
       case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW)); break;

@@ -28,7 +28,7 @@ import {
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
   saveToClipboard, loadFromClipboard, hasClipboard, worldToScreen,
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, Wand2, Network } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, Wand2, Network, Type } from "lucide-react";
 import { saveBackup, getBackup, setLastMapId } from "@/lib/mapBackup";
 import { saveMaxSnapshot, getMaxSnapshot } from "@/lib/serverSnapshot";
 import { Button } from "@/components/ui/button";
@@ -85,6 +85,7 @@ export default function Editor() {
   const [showLegend, setShowLegend] = useState(false);
   const [killaVisibility, setKillaVisibility] = useState({ mustateel: true, muraba: true });
   const [killaNumbersGlobal, setKillaNumbersGlobal] = useState(true);
+  const [showAcreUseLabels, setShowAcreUseLabels] = useState(true);
   const [mustateelStartNum, setMustateelStartNum] = useState("");
   const [murabaStartNum, setMurabaStartNum] = useState("");
   const [showScan, setShowScan] = useState(false);
@@ -157,7 +158,7 @@ export default function Editor() {
   const settingsRef = useRef(null);
   const buildEditorSettings = () => JSON.stringify({
     layers, colorSettings, bgColor, pageBorderStyle,
-    snapSettings, killaVisibility, killaNumbersGlobal, visibleMogas, gridFlags,
+    snapSettings, killaVisibility, killaNumbersGlobal, showAcreUseLabels, visibleMogas, gridFlags,
   });
   settingsRef.current = buildEditorSettings;
 
@@ -280,6 +281,7 @@ export default function Editor() {
         if (s.snapSettings) setSnapSettings(s.snapSettings);
         if (s.killaVisibility) setKillaVisibility(s.killaVisibility);
         if (typeof s.killaNumbersGlobal === "boolean") setKillaNumbersGlobal(s.killaNumbersGlobal);
+        if (typeof s.showAcreUseLabels === "boolean") setShowAcreUseLabels(s.showAcreUseLabels);
         if (s.visibleMogas) setVisibleMogas(s.visibleMogas);
         if (s.gridFlags) setGridFlags(s.gridFlags);
       } catch {}
@@ -632,7 +634,7 @@ export default function Editor() {
     if (!loadedMapIdRef.current) return;
     if (!settingsAppliedRef.current) { settingsAppliedRef.current = true; return; }
     scheduleAutoSave();
-  }, [layers, colorSettings, bgColor, pageBorderStyle, snapSettings, killaVisibility, killaNumbersGlobal, visibleMogas, gridFlags]);
+  }, [layers, colorSettings, bgColor, pageBorderStyle, snapSettings, killaVisibility, killaNumbersGlobal, showAcreUseLabels, visibleMogas, gridFlags]);
 
   const handleAddObject = useCallback((type, data) => {
     if (type === "__delete__") {
@@ -940,6 +942,28 @@ export default function Editor() {
   const handleBulkUpdate = (updates) => {
     dsmRef.current.bulkUpdate(updates);
     syncObjects();
+  };
+
+  // Apply a style change to ALL mustateels at once (combined mustateel option)
+  const handleUpdateAllMustateels = (changes) => {
+    const updates = dsmRef.current.objects
+      .filter(o => o.type === "mustateel")
+      .map(o => ({ id: o.id, changes }));
+    if (updates.length === 0) return;
+    dsmRef.current.bulkUpdate(updates);
+    syncObjects();
+  };
+
+  // Reset ALL mustateels to default styling
+  const handleResetAllMustateels = () => {
+    const defaults = { boundaryThickness: 5, fillColor: "", fillOpacity: 0.10, fillStyle: "solid" };
+    const updates = dsmRef.current.objects
+      .filter(o => o.type === "mustateel")
+      .map(o => ({ id: o.id, changes: defaults }));
+    if (updates.length === 0) return;
+    dsmRef.current.bulkUpdate(updates);
+    syncObjects();
+    toast.success("All mustateels reset to default");
   };
 
   const handleDeleteObject = (id) => {
@@ -1298,6 +1322,7 @@ export default function Editor() {
             killaVisibility={{
               mustateel: killaVisibility.mustateel && killaNumbersGlobal,
               muraba: killaVisibility.muraba && killaNumbersGlobal,
+              acreUseLabels: showAcreUseLabels,
             }}
             onBoxSelect={handleBoxSelect}
             onBulkUpdate={handleBulkUpdate}
@@ -1447,6 +1472,13 @@ export default function Editor() {
               title={killaNumbersGlobal ? "Hide All Killa Numbers" : "Show All Killa Numbers"}>
               {killaNumbersGlobal ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             </Button>
+            {/* Show / hide acre-use Urdu labels (آبادی/قبرستان/...) on the map */}
+            <Button variant="ghost" size="icon"
+              className={`w-9 h-9 border shadow-md transition-all ${showAcreUseLabels ? "bg-emerald-600 border-emerald-500 text-white" : "bg-white border-slate-200 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50"}`}
+              onClick={() => setShowAcreUseLabels(v => !v)}
+              title={showAcreUseLabels ? "Hide Acre-Use Urdu Labels" : "Show Acre-Use Urdu Labels"}>
+              <Type className="w-4 h-4" />
+            </Button>
             {/* Mustateel / Muraba start number input */}
             {(activeTool === "mustateel" || activeTool === "muraba") && (
               <div className="flex flex-col items-center gap-0.5" title={`${activeTool === "mustateel" ? "Mustateel" : "Muraba"} numbering start`}>
@@ -1541,6 +1573,8 @@ export default function Editor() {
                   onClose={() => setSelectedId(null)}
                   deleteVertexMode={deleteVertexMode}
                   onToggleDeleteVertexMode={() => setDeleteVertexMode(v => !v)}
+                  onUpdateAllMustateels={handleUpdateAllMustateels}
+                  onResetAllMustateels={handleResetAllMustateels}
                 />
               </div>
             );
@@ -1559,6 +1593,8 @@ export default function Editor() {
                 onClose={() => setSelectedId(null)}
                 deleteVertexMode={deleteVertexMode}
                 onToggleDeleteVertexMode={() => setDeleteVertexMode(v => !v)}
+                onUpdateAllMustateels={handleUpdateAllMustateels}
+                onResetAllMustateels={handleResetAllMustateels}
               />
             </div>
           );
@@ -1578,7 +1614,7 @@ export default function Editor() {
         onClose={() => setShowExport(false)}
         mapData={mapData}
         objects={objects}
-        killaVisibility={{ mustateel: killaVisibility.mustateel && killaNumbersGlobal, muraba: killaVisibility.muraba && killaNumbersGlobal }}
+        killaVisibility={{ mustateel: killaVisibility.mustateel && killaNumbersGlobal, muraba: killaVisibility.muraba && killaNumbersGlobal, acreUseLabels: showAcreUseLabels }}
         colorSettings={colorSettings}
         pageBorderStyle={pageBorderStyle}
       />
@@ -1589,7 +1625,7 @@ export default function Editor() {
           objects={objects}
           colorSettings={colorSettings}
           selectedMogaFilter={printMogaFilter}
-          killaVisibility={{ mustateel: killaVisibility.mustateel && killaNumbersGlobal, muraba: killaVisibility.muraba && killaNumbersGlobal }}
+          killaVisibility={{ mustateel: killaVisibility.mustateel && killaNumbersGlobal, muraba: killaVisibility.muraba && killaNumbersGlobal, acreUseLabels: showAcreUseLabels }}
           pageBorderStyle={pageBorderStyle}
           onClose={() => { setShowPrint(false); setPrintMogaFilter(""); }}
         />

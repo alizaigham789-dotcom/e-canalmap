@@ -489,7 +489,7 @@ export function acreUseHasLabel(obj, kn) {
 // ─── SVG: per-acre (killa) land-use fills + Urdu labels for a mustateel ────
 // Coloured cell fills (آبادی/قبرستان/فیکٹری/...), centered Urdu labels, and
 // corner killa numbers (when showKilla) for cells that have a land-use assigned.
-export function svgAcreUses(obj, showKilla, strokeColor) {
+export function svgAcreUses(obj, showKilla, strokeColor, showLabels = true) {
   const uses = obj.acreUses;
   if (!uses || !uses.some(u => u && u.color)) return "";
   const cellW = obj.w / 2, cellH = obj.h / 5;
@@ -503,8 +503,8 @@ export function svgAcreUses(obj, showKilla, strokeColor) {
       const use = uses[kn - 1];
       if (!use || !use.color) continue;
       const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
-      svg += `<rect x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" width="${cellW.toFixed(1)}" height="${cellH.toFixed(1)}" fill="${use.color}" fill-opacity="0.55" stroke="${use.color}" stroke-width="1.2"/>`;
-      if (use.label) {
+      svg += `<rect x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" width="${cellW.toFixed(1)}" height="${cellH.toFixed(1)}" fill="${use.color}" fill-opacity="0.80" stroke="${use.color}" stroke-width="1.2"/>`;
+      if (use.label && showLabels) {
         svg += `<text x="${(cx + cellW/2).toFixed(1)}" y="${(cy + cellH/2).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${labelFont.toFixed(1)}" fill="#0f172a" direction="rtl">${use.label}</text>`;
         if (showKilla) {
           svg += `<text x="${(cx + 2).toFixed(1)}" y="${(cy + 2).toFixed(1)}" text-anchor="start" dominant-baseline="hanging" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cornerFont.toFixed(1)}" fill="${strokeColor}" fill-opacity="0.75">${kn}</text>`;
@@ -516,7 +516,7 @@ export function svgAcreUses(obj, showKilla, strokeColor) {
 }
 
 // ─── CANVAS: per-acre (killa) land-use fills + Urdu labels for a mustateel ─
-export function drawAcreUsesOnCanvas(ctx, obj, showKilla, strokeColor) {
+export function drawAcreUsesOnCanvas(ctx, obj, showKilla, strokeColor, showLabels = true) {
   const uses = obj.acreUses;
   if (!uses || !uses.some(u => u && u.color)) return;
   const cellW = obj.w / 2, cellH = obj.h / 5;
@@ -530,14 +530,14 @@ export function drawAcreUsesOnCanvas(ctx, obj, showKilla, strokeColor) {
       if (!use || !use.color) continue;
       const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
       ctx.save();
-      ctx.globalAlpha = 0.55;
+      ctx.globalAlpha = 0.80;
       ctx.fillStyle = use.color;
       ctx.fillRect(cx, cy, cellW, cellH);
       ctx.restore();
       ctx.strokeStyle = use.color;
       ctx.lineWidth = 1.2;
       ctx.strokeRect(cx, cy, cellW, cellH);
-      if (use.label) {
+      if (use.label && showLabels) {
         ctx.save();
         try { ctx.direction = "rtl"; } catch {}
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -649,7 +649,7 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = nu
     } else if (item.type === "dashed") {
       svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${S}" stroke-dasharray="${3*S},${2*S}"/>`;
     } else if (item.type === "fill") {
-      svg += `<rect x="${symX}" y="${(iy-5*S).toFixed(1)}" width="${symW}" height="${(10*S).toFixed(1)}" fill="${item.color}" fill-opacity="0.55" stroke="${item.color}" stroke-width="${S}"/>`;
+      svg += `<rect x="${symX}" y="${(iy-5*S).toFixed(1)}" width="${symW}" height="${(10*S).toFixed(1)}" fill="${item.color}" fill-opacity="0.80" stroke="${item.color}" stroke-width="${S}"/>`;
     }
     svg += `<text x="${nameColX + colNameW/2}" y="${iy}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#000">${item.label}</text>`;
   });
@@ -792,7 +792,7 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBound
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
       ctx.setLineDash([]);
     } else if (item.type === "fill") {
-      ctx.globalAlpha = 0.55; ctx.fillStyle = item.color;
+      ctx.globalAlpha = 0.80; ctx.fillStyle = item.color;
       ctx.fillRect(symX, iy - 5*S*scale, symW, 10*S*scale);
       ctx.globalAlpha = 1; ctx.strokeStyle = item.color; ctx.lineWidth = S*scale;
       ctx.strokeRect(symX, iy - 5*S*scale, symW, 10*S*scale);
