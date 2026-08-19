@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES, getOutletDimensions } from "@/lib/gisEngine";
-import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas } from "@/lib/printRenderHelpers";
+import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas, svgAcreUses, acreUseHasLabel, drawAcreUsesOnCanvas } from "@/lib/printRenderHelpers";
 import { drawExclusionHatchOnCanvas } from "@/components/editor/GISRenderer";
+import { collectLandUses } from "@/lib/landUsePalette";
 import { canvasToPdfBlob, downloadBlob, shareBlob } from "@/lib/pdfExport";
 
 
@@ -15,6 +16,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
   const [pageSize, setPageSize] = useState("A4");
   const [showLegendInExport, setShowLegendInExport] = useState(true);
   const C = colorSettings || {};
+  const landUses = collectLandUses(objects);
   const previewCanvasRef = useRef(null);
 
   // Live preview — shows exactly how the export will look before downloading
@@ -100,7 +102,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
 
     ctx.restore();
     // Legend + moga details
-    if (showLegendInExport) drawLegendOnCanvas(ctx, canvas.width, canvas.height, C, scale, { minX: 80 * scale, minY: 80 * scale, maxX: canvas.width - 80 * scale, maxY: canvas.height - 80 * scale });
+    if (showLegendInExport) drawLegendOnCanvas(ctx, canvas.width, canvas.height, C, scale, { minX: 80 * scale, minY: 80 * scale, maxX: canvas.width - 80 * scale, maxY: canvas.height - 80 * scale }, landUses);
     return canvas;
   }
 
@@ -118,13 +120,17 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.moveTo(o.x + cellW, o.y); ctx.lineTo(o.x + cellW, o.y + o.h);
       for (let r = 1; r < 5; r++) { ctx.moveTo(o.x, o.y + r*cellH); ctx.lineTo(o.x + o.w, o.y + r*cellH); }
       ctx.stroke();
-      // Killa numbers — respect killaVisibility
-      if (o.excluded || killaVisibility.mustateel !== false) {
+      // Acre land-use fills + Urdu labels (per killa) — drawn before killa numbers
+      const showKMust = o.excluded || killaVisibility.mustateel !== false;
+      drawAcreUsesOnCanvas(ctx, o, showKMust, C.mustateelStroke || "#000");
+      // Killa numbers — respect killaVisibility (skip cells that have a land-use label)
+      if (showKMust) {
         const grid = getMustateeelKillaGrid();
         ctx.fillStyle = "rgba(0,0,0,0.70)";
         ctx.font = `bold ${Math.max(8, Math.min(cellW, cellH) * 0.28)}px Rajdhani, sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         for (let r = 0; r < 5; r++) for (let c = 0; c < 2; c++) {
+          if (acreUseHasLabel(o, grid[r][c])) continue;
           ctx.fillText(String(grid[r][c]), o.x + c*cellW + cellW/2, o.y + r*cellH + cellH/2);
         }
       }
@@ -401,7 +407,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       return order.indexOf(a.type)-order.indexOf(b.type);
     }).map(o => objToSVG(o, bbox)).filter(Boolean).join("\n");
 
-    const legendSvg = showLegendInExport ? buildLegendSVG(bbox.minX, bbox.minY, W, H, C, { minX: bbox.minX + 80, minY: bbox.minY + 80, maxX: bbox.maxX - 80, maxY: bbox.maxY - 80 }) : "";
+    const legendSvg = showLegendInExport ? buildLegendSVG(bbox.minX, bbox.minY, W, H, C, { minX: bbox.minX + 80, minY: bbox.minY + 80, maxX: bbox.maxX - 80, maxY: bbox.maxY - 80 }, null, landUses) : "";
     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
       <rect width="${W}" height="${H}" fill="white"/>
       <g transform="translate(${-bbox.minX},${-bbox.minY})">
@@ -437,8 +443,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const cellW = o.w/2, cellH = o.h/5;
       const grid = getMustateeelKillaGrid();
       const killaFontSize = Math.max(6, Math.min(cellW, cellH) * 0.28);
-      const killaLabels = (o.excluded || killaVisibility.mustateel !== false) ? grid.flatMap((row,r) =>
-        row.map((n,c) => `<text x="${o.x+c*cellW+cellW/2}" y="${o.y+r*cellH+cellH/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${killaFontSize}" font-weight="bold" fill="rgba(0,0,0,0.70)" text-anchor="middle" dominant-baseline="middle">${n}</text>`)
+      const showKSvg = o.excluded || killaVisibility.mustateel !== false;
+      const killaLabels = showKSvg ? grid.flatMap((row,r) =>
+        row.map((n,c) => acreUseHasLabel(o, n) ? "" : `<text x="${o.x+c*cellW+cellW/2}" y="${o.y+r*cellH+cellH/2}" font-family="Rajdhani,Arial,sans-serif" font-size="${killaFontSize}" font-weight="bold" fill="rgba(0,0,0,0.70)" text-anchor="middle" dominant-baseline="middle">${n}</text>`)
       ).join("") : "";
       const gridLines = [`<line x1="${o.x+cellW}" y1="${o.y}" x2="${o.x+cellW}" y2="${o.y+o.h}" stroke="#000" stroke-width="1.2"/>`];
       for (let r=1;r<5;r++) gridLines.push(`<line x1="${o.x}" y1="${o.y+r*cellH}" x2="${o.x+o.w}" y2="${o.y+r*cellH}" stroke="#000" stroke-width="1.2"/>`);
@@ -464,7 +471,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         lbl = `${o.label ? `<text x="${cx}" y="${cy}" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx}" font-weight="900" fill="${C.labelColor || '#1e293b'}" text-anchor="middle" dominant-baseline="middle">${o.label}</text>` : ""}`;
       }
       const hatch = o.excluded ? svgExclusionHatchSVG(o, "must") : "";
-      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${killaLabels}${hatch}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;
+      return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="white"/>${gridLines.join("")}${svgAcreUses(o, showKSvg, strokeColor)}${killaLabels}${hatch}<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(o.boundaryThickness)}" stroke-linejoin="miter"/>${lbl}`;
     }
     if (o.type === "muraba") {
       const cellW=o.w/5, cellH=o.h/5;

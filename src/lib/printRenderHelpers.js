@@ -4,7 +4,7 @@
 // and canal name text-on-path — used by PrintPreview & ExportDialog
 // ============================================================
 
-import { getParallelPolyline, DIMENSIONS, acresToAcreKanalText } from "@/lib/gisEngine";
+import { getParallelPolyline, DIMENSIONS, acresToAcreKanalText, getMustateeelKillaGrid } from "@/lib/gisEngine";
 
 // Detect Urdu/Arabic script — switches canal name rendering to a connected
 // RTL label in Jameel Noori Nastaleeq (char-by-char on-path breaks the joins).
@@ -480,8 +480,88 @@ export function getCCAGCAText(chakbandi, gcaValue) {
     return { cca: "", gca: gcaText };
 }
 
+// ─── Helper: does killa number `kn` on this mustateel have a land-use label? ─
+export function acreUseHasLabel(obj, kn) {
+  const u = obj && obj.acreUses && obj.acreUses[kn - 1];
+  return !!(u && u.label);
+}
+
+// ─── SVG: per-acre (killa) land-use fills + Urdu labels for a mustateel ────
+// Coloured cell fills (آبادی/قبرستان/فیکٹری/...), centered Urdu labels, and
+// corner killa numbers (when showKilla) for cells that have a land-use assigned.
+export function svgAcreUses(obj, showKilla, strokeColor) {
+  const uses = obj.acreUses;
+  if (!uses || !uses.some(u => u && u.color)) return "";
+  const cellW = obj.w / 2, cellH = obj.h / 5;
+  const grid = getMustateeelKillaGrid();
+  const labelFont = Math.max(7, Math.min(cellW, cellH) * 0.24);
+  const cornerFont = Math.max(6, labelFont * 0.7);
+  let svg = "";
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 2; c++) {
+      const kn = grid[r][c];
+      const use = uses[kn - 1];
+      if (!use || !use.color) continue;
+      const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
+      svg += `<rect x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" width="${cellW.toFixed(1)}" height="${cellH.toFixed(1)}" fill="${use.color}" fill-opacity="0.55" stroke="${use.color}" stroke-width="1.2"/>`;
+      if (use.label) {
+        svg += `<text x="${(cx + cellW/2).toFixed(1)}" y="${(cy + cellH/2).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${labelFont.toFixed(1)}" fill="#0f172a" direction="rtl">${use.label}</text>`;
+        if (showKilla) {
+          svg += `<text x="${(cx + 2).toFixed(1)}" y="${(cy + 2).toFixed(1)}" text-anchor="start" dominant-baseline="hanging" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cornerFont.toFixed(1)}" fill="${strokeColor}" fill-opacity="0.75">${kn}</text>`;
+        }
+      }
+    }
+  }
+  return svg;
+}
+
+// ─── CANVAS: per-acre (killa) land-use fills + Urdu labels for a mustateel ─
+export function drawAcreUsesOnCanvas(ctx, obj, showKilla, strokeColor) {
+  const uses = obj.acreUses;
+  if (!uses || !uses.some(u => u && u.color)) return;
+  const cellW = obj.w / 2, cellH = obj.h / 5;
+  const grid = getMustateeelKillaGrid();
+  const labelFont = Math.max(7, Math.min(cellW, cellH) * 0.24);
+  const cornerFont = Math.max(6, labelFont * 0.7);
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 2; c++) {
+      const kn = grid[r][c];
+      const use = uses[kn - 1];
+      if (!use || !use.color) continue;
+      const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = use.color;
+      ctx.fillRect(cx, cy, cellW, cellH);
+      ctx.restore();
+      ctx.strokeStyle = use.color;
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(cx, cy, cellW, cellH);
+      if (use.label) {
+        ctx.save();
+        try { ctx.direction = "rtl"; } catch {}
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.font = `bold ${labelFont}px 'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,sans-serif`;
+        ctx.fillStyle = "#0f172a";
+        ctx.fillText(use.label, cx + cellW/2, cy + cellH/2);
+        ctx.restore();
+        if (showKilla) {
+          ctx.save();
+          try { ctx.direction = "ltr"; } catch {}
+          ctx.textAlign = "left"; ctx.textBaseline = "top";
+          ctx.font = `bold ${cornerFont}px Rajdhani, sans-serif`;
+          ctx.fillStyle = strokeColor;
+          ctx.globalAlpha = 0.75;
+          ctx.fillText(String(kn), cx + 2, cy + 2);
+          ctx.restore();
+        }
+      }
+    }
+  }
+}
+
 // ─── Legend SVG: 2-column table (sign | name), 3× bigger ────────────────
-export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = null, customPos = null) {
+export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = null, customPos = null, landUses = []) {
   const items = [
     { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
     { label: "کھال", color: C.khalStroke || "#000000", type: "line_thin" },
@@ -490,6 +570,10 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = nu
     { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
     { label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" },
   ];
+  // Per-acre land-use entries (آبادی/قبرستان/فیکٹری/...) — shown in the legend
+  for (const u of (landUses || [])) {
+    if (u && u.color && u.label) items.push({ label: u.label, color: u.color, type: "fill" });
+  }
 
   // Proportional to viewBox — smaller when few mustateels, bigger when many
   const _baseDim = Math.min(viewW, viewH);
@@ -564,6 +648,8 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = nu
       svg += `<polygon points="${symX+symW},${iy} ${symX+symW-4*S},${iy-2.5*S} ${symX+symW-4*S},${iy+2.5*S}" fill="${item.color}"/>`;
     } else if (item.type === "dashed") {
       svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${S}" stroke-dasharray="${3*S},${2*S}"/>`;
+    } else if (item.type === "fill") {
+      svg += `<rect x="${symX}" y="${(iy-5*S).toFixed(1)}" width="${symW}" height="${(10*S).toFixed(1)}" fill="${item.color}" fill-opacity="0.55" stroke="${item.color}" stroke-width="${S}"/>`;
     }
     svg += `<text x="${nameColX + colNameW/2}" y="${iy}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#000">${item.label}</text>`;
   });
@@ -601,7 +687,7 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
 }
 
 // ─── CANVAS: draw legend — 2-column table (sign | name), 3× bigger ───────
-export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBounds = null) {
+export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBounds = null, landUses = []) {
   const items = [
     { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
     { label: "کھال", color: C.khalStroke || "#000000", type: "line_thin" },
@@ -610,6 +696,9 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBound
     { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
     { label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" },
   ];
+  for (const u of (landUses || [])) {
+    if (u && u.color && u.label) items.push({ label: u.label, color: u.color, type: "fill" });
+  }
   // 3× bigger; table style with black header
   const S = 7.5;
   const lf = MUSTATEEL_LABEL_FONT * scale;
@@ -702,6 +791,11 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBound
       ctx.lineWidth = S*scale; ctx.setLineDash([3*S*scale, 2*S*scale]);
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
       ctx.setLineDash([]);
+    } else if (item.type === "fill") {
+      ctx.globalAlpha = 0.55; ctx.fillStyle = item.color;
+      ctx.fillRect(symX, iy - 5*S*scale, symW, 10*S*scale);
+      ctx.globalAlpha = 1; ctx.strokeStyle = item.color; ctx.lineWidth = S*scale;
+      ctx.strokeRect(symX, iy - 5*S*scale, symW, 10*S*scale);
     }
     ctx.fillStyle = "#000"; ctx.font = `${lf}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";

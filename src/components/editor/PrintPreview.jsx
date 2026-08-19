@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
-import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName } from "@/lib/printRenderHelpers";
+import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel } from "@/lib/printRenderHelpers";
+import { collectLandUses } from "@/lib/landUsePalette";
 import { Move, Download, Share2, Loader2 } from "lucide-react";
 import { canvasToPdfBlob, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdfExport";
 import { toast } from "sonner";
@@ -101,6 +102,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
     const killaFontSize = Math.max(6, Math.min(cellW, cellH) * 0.28);
     for (let r = 0; r < 5; r++) {
       for (let c = 0; c < 2; c++) {
+        if (acreUseHasLabel(obj, killaGrid[r][c])) continue; // corner number drawn by svgAcreUses
         killaLabels += `<text x="${obj.x + c*cellW + cellW/2}" y="${obj.y + r*cellH + cellH/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${killaFontSize}" fill="${strokeColor}" fill-opacity="0.75">${killaGrid[r][c]}</text>`;
       }
     }
@@ -132,6 +134,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
 <g key="must_${idx}">
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
+  ${svgAcreUses(obj, showKilla, strokeColor)}
   ${killaLabels}
   ${obj.excluded ? svgExclusionHatch(obj, `must_${idx}`) : ""}
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness)}" stroke-linejoin="miter"/>
@@ -602,6 +605,17 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     [objects, effectiveColors, mogaFilter, killaVisibility]
   );
 
+  // Per-acre land-uses actually shown (respecting the moga filter) — for the legend
+  const landUses = useMemo(() => {
+    if (!mogaFilter) return collectLandUses(objects);
+    const filtered = objects.filter(o => {
+      if (o.type === "chakbandi") return o.mogaNumber === mogaFilter;
+      if (o.type === "mustateel") return o.mogaNumber === mogaFilter || !o.mogaNumber;
+      return true;
+    });
+    return collectLandUses(filtered);
+  }, [objects, mogaFilter]);
+
   // Full-scale SVG for actual print / SVG download — moga at 100%
   const printSvgData = useMemo(
     () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 1),
@@ -662,7 +676,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     ).join("");
   }, [gcaData, effectiveColors]);
 
-  const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos) : "";
+  const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses) : "";
 
   const svgString = printSvgData
     ? `<?xml version="1.0" encoding="UTF-8"?>
@@ -714,7 +728,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
     const win = window.open("", "_blank");
     if (!win) { return; }
-    const printLegendSVG = showLegendInPrint ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos) : "";
+    const printLegendSVG = showLegendInPrint ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses) : "";
     win.document.write(`<!DOCTYPE html><html><head>
       <title>Khaka Dasti</title>
       <style>

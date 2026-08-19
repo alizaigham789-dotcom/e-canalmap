@@ -12,7 +12,7 @@ import {
 import {
   svgCanalNameOnPath, svgMogaFractionBox,
   svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos,
-  getCCAGCAText, buildLegendSVG, svgRoadName,
+  getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel,
 } from "@/lib/printRenderHelpers";
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
@@ -117,6 +117,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
     const killaFontSize = Math.max(6, Math.min(cellW, cellH) * 0.28);
     for (let r = 0; r < 5; r++) {
       for (let c = 0; c < 2; c++) {
+        if (acreUseHasLabel(obj, killaGrid[r][c])) continue; // corner number drawn by svgAcreUses
         killaLabels += `<text x="${obj.x + c*cellW + cellW/2}" y="${obj.y + r*cellH + cellH/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${killaFontSize}" fill="${strokeColor}" fill-opacity="0.75">${killaGrid[r][c]}</text>`;
       }
     }
@@ -138,6 +139,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null) {
 <g key="must_${idx}">
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
+  ${svgAcreUses(obj, showKilla, strokeColor)}
   ${killaLabels}
   ${obj.excluded ? svgExclusionHatch(obj, `must_${idx}`) : ""}
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness)}" stroke-linejoin="miter"/>
