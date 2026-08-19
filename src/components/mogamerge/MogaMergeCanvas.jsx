@@ -92,7 +92,7 @@ const MogaMergeCanvas = forwardRef(function MogaMergeCanvas(
     const ctx = canvas.getContext("2d");
     const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = "#0f1923";
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, W, H);
 
     ctx.save();
@@ -206,7 +206,7 @@ const MogaMergeCanvas = forwardRef(function MogaMergeCanvas(
     : (dragging ? "grabbing" : "default");
 
   return (
-    <div ref={containerRef} className="relative w-full h-full bg-[#0f1923] overflow-hidden">
+    <div ref={containerRef} className="relative w-full h-full bg-white overflow-hidden">
       <canvas
         ref={canvasRef}
         className="block w-full h-full"

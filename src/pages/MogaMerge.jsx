@@ -278,7 +278,7 @@ export default function MogaMerge() {
               onZoomChange={setZoom}
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#0f1923]">
+            <div className="absolute inset-0 flex items-center justify-center bg-white">
               <p className="text-sm text-slate-400">کوئی ڈیٹا نہیں — واپس جا کر مرج کریں</p>
             </div>
           )}
