@@ -13,7 +13,7 @@ import MapHeaderLine from "@/components/editor/MapHeaderLine";
 import ExportDialog from "@/components/editor/ExportDialog";
 import UnifiedLayersPanel from "@/components/editor/UnifiedLayersPanel";
 import MapScanDialog from "@/components/editor/MapScanDialog";
-import AICommandPanel from "@/components/editor/AICommandPanel";
+import MustateelGridDialog from "@/components/editor/MustateelGridDialog";
 import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
 
 import ColorSettingsPanel from "@/components/editor/ColorSettingsPanel";
@@ -26,7 +26,7 @@ import {
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
   saveToClipboard, loadFromClipboard, hasClipboard, worldToScreen,
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, Wand2, Type } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, LayoutGrid, Type } from "lucide-react";
 import { saveBackup, getBackup, setLastMapId } from "@/lib/mapBackup";
 import { saveMaxSnapshot, getMaxSnapshot } from "@/lib/serverSnapshot";
 import { Button } from "@/components/ui/button";
@@ -87,7 +87,7 @@ export default function Editor() {
   const [mustateelStartNum, setMustateelStartNum] = useState("");
   const [murabaStartNum, setMurabaStartNum] = useState("");
   const [showScan, setShowScan] = useState(false);
-  const [showAICommand, setShowAICommand] = useState(false);
+  const [showGridBuilder, setShowGridBuilder] = useState(false);
   const [showColors, setShowColors] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
@@ -786,38 +786,28 @@ export default function Editor() {
 
   const handleDamageMarkerClick = () => {}; // no-op: line-based, no dialog
 
-  const handleAICommand = (newObjects, updates = []) => {
-    newObjects.forEach(o => dsmRef.current.add(o));
-    updates.forEach(u => dsmRef.current.update(u.id, u.changes));
+  const handleAddMustateels = (objs) => {
+    if (!objs || objs.length === 0) return;
+    objs.forEach(o => dsmRef.current.add(o));
     syncObjects();
-    // Auto-fit the view to the generated objects so they are visible on screen
-    const targets = newObjects.length > 0 ? newObjects : dsmRef.current.objects;
-    const pts = [];
-    for (const o of targets) {
-      if (o.x !== undefined && o.w !== undefined) {
-        pts.push({ x: o.x, y: o.y }, { x: o.x + o.w, y: o.y + o.h });
-      } else if (Array.isArray(o.points) && o.points.length) {
-        pts.push(...o.points);
-      } else if (o.start && o.end) {
-        pts.push(o.start, o.end);
-      }
-    }
-    if (pts.length) {
-      const minX = Math.min(...pts.map(p => p.x));
-      const minY = Math.min(...pts.map(p => p.y));
-      const maxX = Math.max(...pts.map(p => p.x));
-      const maxY = Math.max(...pts.map(p => p.y));
-      const canvas = canvasRef.current?.getCanvas?.();
-      const cw = canvas?.clientWidth || (typeof window !== "undefined" ? window.innerWidth - 160 : 1000);
-      const ch = canvas?.clientHeight || (typeof window !== "undefined" ? window.innerHeight - 200 : 700);
-      const w = Math.max(1, maxX - minX);
-      const h = Math.max(1, maxY - minY);
-      const pad = 140;
-      const fitZoom = Math.min(20, Math.max(0.05, Math.min((cw - pad * 2) / w, (ch - pad * 2) / h)));
-      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-      setZoom(fitZoom);
-      setPan({ x: cw / 2 - cx * fitZoom, y: ch / 2 - cy * fitZoom });
-    }
+    // Auto-fit the view to the generated mustateels so they're visible on screen
+    const pts = objs.flatMap(o => [{ x: o.x, y: o.y }, { x: o.x + o.w, y: o.y + o.h }]);
+    const minX = Math.min(...pts.map(p => p.x));
+    const minY = Math.min(...pts.map(p => p.y));
+    const maxX = Math.max(...pts.map(p => p.x));
+    const maxY = Math.max(...pts.map(p => p.y));
+    const canvas = canvasRef.current?.getCanvas?.();
+    const cw = canvas?.clientWidth || (typeof window !== "undefined" ? window.innerWidth - 160 : 1000);
+    const ch = canvas?.clientHeight || (typeof window !== "undefined" ? window.innerHeight - 200 : 700);
+    const w = Math.max(1, maxX - minX);
+    const h = Math.max(1, maxY - minY);
+    const pad = 120;
+    const fitZoom = Math.min(20, Math.max(0.05, Math.min((cw - pad * 2) / w, (ch - pad * 2) / h)));
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    setZoom(fitZoom);
+    setPan({ x: cw / 2 - cx * fitZoom, y: ch / 2 - cy * fitZoom });
+    setShowGridBuilder(false);
+    toast.success(`${objs.length} mustateels drawn`);
   };
 
   const handleToolChange = (tool) => {
@@ -1364,10 +1354,10 @@ export default function Editor() {
               <Save className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
-              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-purple-600 hover:bg-purple-50 shadow-md"
-              onClick={() => setShowAICommand(true)}
-              title="AI Command — type to draw map">
-              <Wand2 className="w-4 h-4" />
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-md"
+              onClick={() => setShowGridBuilder(true)}
+              title="Mustateel Grid Builder">
+              <LayoutGrid className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
               className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-amber-600 hover:bg-amber-50 shadow-md"
@@ -1523,12 +1513,14 @@ export default function Editor() {
         />
       )}
 
-      {/* AI Command Panel */}
-      {showAICommand && (
-        <AICommandPanel
-          objects={objects}
-          onApply={handleAICommand}
-          onClose={() => setShowAICommand(false)}
+      {/* Mustateel Grid Builder */}
+      {showGridBuilder && (
+        <MustateelGridDialog
+          zoom={zoom}
+          pan={pan}
+          canvasRef={canvasRef}
+          onAddObjects={handleAddMustateels}
+          onClose={() => setShowGridBuilder(false)}
         />
       )}
 
