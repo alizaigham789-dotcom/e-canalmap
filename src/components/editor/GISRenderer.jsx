@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawMogaFractionBoxOnCanvas, getOutletLabelPos, isUrduText } from "@/lib/printRenderHelpers";
 
 // ---- Anti-aliased zoom-clamped font size ----
@@ -149,10 +149,11 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
   ctx.lineWidth = (MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness) * 0.2 + (isSelected ? 2 : 0)) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
-  // Filled mustateel (colour or acre-use/ikhraj fill) hides acre numbers by default;
-  // user can opt in per-parcel via the "Show Acre Numbers" toggle.
-  const _hasMustateelFill = !!(obj.fillColor && obj.fillColor.trim()) || (obj.acreUses && obj.acreUses.some(u => u && u.color));
-  const effectiveShowKilla = obj.excluded ? true : (_hasMustateelFill ? obj.showKillaWhenFilled === true : showKillaNumbers);
+  // Filled mustateel (explicit solid colour or acre-use/ikhraj fill) hides acre
+  // numbers by default; user can opt in per-parcel via the "Show Acre Numbers" toggle.
+  // The default translucent rgba fill does NOT count as "filled" — so default
+  // mustateels show killa numbers whenever the eye toggle is on.
+  const effectiveShowKilla = effectiveKillaVisible(obj, showKillaNumbers);
 
   // Layer 2: Killa grid — always visible, subtle ink
   {

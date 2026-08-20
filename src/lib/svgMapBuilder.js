@@ -6,7 +6,7 @@
 import {
   getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid,
   DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE,
-  getMustateelMouzaSplit, getMogaColor,
+  getMustateelMouzaSplit, getMogaColor, effectiveKillaVisible,
   mogaNumberFont, canalNameFont, getOutletDimensions,
 } from "@/lib/gisEngine";
 import {
@@ -439,7 +439,7 @@ export function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {
   let svgParts = [];
   sorted.forEach((obj, idx) => {
     switch (obj.type) {
-      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects), showAcreLabels)); break;
+      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, effectiveKillaVisible(obj, showKillaMustateel), getMustateelMouzaSplit(obj, mouzaObjects), showAcreLabels)); break;
       case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba)); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
       case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW)); break;

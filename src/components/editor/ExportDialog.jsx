@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Share2 } from "lucide-react";
 import { toast } from "sonner";
-import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES, getOutletDimensions } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas, svgAcreUses, acreUseHasLabel, drawAcreUsesOnCanvas } from "@/lib/printRenderHelpers";
 import { drawExclusionHatchOnCanvas } from "@/components/editor/GISRenderer";
 import { collectLandUses } from "@/lib/landUsePalette";
@@ -121,7 +121,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       for (let r = 1; r < 5; r++) { ctx.moveTo(o.x, o.y + r*cellH); ctx.lineTo(o.x + o.w, o.y + r*cellH); }
       ctx.stroke();
       // Acre land-use fills + Urdu labels (per killa) — drawn before killa numbers
-      const showKMust = o.excluded || killaVisibility.mustateel !== false;
+      const showKMust = effectiveKillaVisible(o, killaVisibility.mustateel !== false);
       drawAcreUsesOnCanvas(ctx, o, showKMust, C.mustateelStroke || "#000", killaVisibility.acreUseLabels !== false);
       // Killa numbers — respect killaVisibility (skip cells that have a land-use label)
       if (showKMust) {
@@ -173,6 +173,16 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       for (let c=1;c<5;c++){ctx.moveTo(o.x+c*cellW,o.y);ctx.lineTo(o.x+c*cellW,o.y+o.h);}
       for (let r=1;r<5;r++){ctx.moveTo(o.x,o.y+r*cellH);ctx.lineTo(o.x+o.w,o.y+r*cellH);}
       ctx.stroke();
+      // Killa numbers — respect killaVisibility (eye toggle), matches editor & print
+      if (killaVisibility.muraba !== false) {
+        const grid = getMurabaKillaGrid();
+        ctx.fillStyle = "rgba(0,0,0,0.70)";
+        ctx.font = `bold ${Math.max(8, Math.min(cellW, cellH) * 0.24)}px Rajdhani, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
+          ctx.fillText(String(grid[r][c]), o.x + c*cellW + cellW/2, o.y + r*cellH + cellH/2);
+        }
+      }
       // Bold outer boundary (thicker than mustateel)
       if (o.excluded) drawExclusionHatchOnCanvas(ctx, o, zoom);
       ctx.strokeStyle = C.murabaStroke || "#000000"; ctx.lineWidth = 4.5; ctx.strokeRect(o.x, o.y, o.w, o.h);

@@ -332,6 +332,20 @@ export function getMurabaKillaGrid() {
   ];
 }
 
+// Effective killa-number visibility for a mustateel — shared by editor canvas,
+// print SVG and export canvas so all three stay consistent.
+// `baseShow` is the global toggle (eye button × per-type visibility).
+// A mustateel counts as "filled" only with an explicit solid (hex) fill colour or
+// per-acre land-use colours — NOT the default translucent rgba baseline — so default
+// mustateels always show killa numbers when the eye is on. When filled, killa numbers
+// are hidden unless the per-parcel showKillaWhenFilled flag is set.
+export function effectiveKillaVisible(obj, baseShow) {
+  if (obj.excluded) return true;
+  const hasFill = !!(obj.fillColor && obj.fillColor.trim() && obj.fillColor.startsWith("#")) ||
+    (obj.acreUses && obj.acreUses.some(u => u && u.color));
+  return hasFill ? obj.showKillaWhenFilled === true : baseShow;
+}
+
 // ============================================================
 // VECTOR PATCH FILL ENGINE
 // Supports: solid, diagonal, crosshatch, dots, horizontal, vertical

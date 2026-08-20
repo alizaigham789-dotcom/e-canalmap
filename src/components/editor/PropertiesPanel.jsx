@@ -131,7 +131,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               <MustateelStyleControl local={local} onApplyAll={onUpdateAllMustateels} onResetAll={onResetAllMustateels} />
               <AcreUseControl local={local} commit={commit} />
               {(() => {
-                const hasMustateelFill = !!(local.fillColor && local.fillColor.trim()) || (local.acreUses && local.acreUses.some(u => u && u.color));
+                const hasMustateelFill = !!(local.fillColor && local.fillColor.trim() && local.fillColor.startsWith("#")) || (local.acreUses && local.acreUses.some(u => u && u.color));
                 return hasMustateelFill ? (
                   <div className="flex items-center justify-between">
                     <label className="text-xs text-slate-600">Show Acre Numbers</label>
