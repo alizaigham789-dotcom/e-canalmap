@@ -777,6 +777,11 @@ export class DrawingStateManager {
     this.snapshot();
   }
 
+  clearAll() {
+    this.objects = [];
+    this.snapshot();
+  }
+
   update(id, changes) {
     this.objects = this.objects.map(o => {
       if (o.id !== id) return o;

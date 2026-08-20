@@ -26,7 +26,7 @@ import {
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
   saveToClipboard, loadFromClipboard, hasClipboard, worldToScreen,
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, LayoutGrid, Type } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, LayoutGrid, Type, Trash2 } from "lucide-react";
 import { saveBackup, getBackup, setLastMapId } from "@/lib/mapBackup";
 import { saveMaxSnapshot, getMaxSnapshot } from "@/lib/serverSnapshot";
 import { Button } from "@/components/ui/button";
@@ -1122,6 +1122,21 @@ export default function Editor() {
     });
   };
 
+  // CLEAR ALL — remove every object from the canvas so a fresh map can be drawn.
+  // Single click (with one confirm safety net). Undo restores everything.
+  const handleClearAll = () => {
+    if (dsmRef.current.objects.length === 0) { toast.info("Map is already empty"); return; }
+    if (!window.confirm("Clear ALL objects from this map? Use Undo to restore them.")) return;
+    explicitDeleteRef.current = true;
+    dsmRef.current.clearAll();
+    setSelectedId(null);
+    setMustateelStartNum("");
+    setMurabaStartNum("");
+    syncObjects();
+    saveRef.current();
+    toast.success("All objects cleared — map is now empty");
+  };
+
   const handleStatusChange = async (status) => {
     // Always include drawing_data + editor_settings — prevents objects/settings from being wiped on server
     const drawing_data = await storeDrawingData(dsmRef.current.objects);
@@ -1352,6 +1367,12 @@ export default function Editor() {
               onClick={() => handleSave()}
               title="Save Map (Ctrl+S)">
               <Save className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-md"
+              onClick={handleClearAll}
+              title="Clear All Objects (start fresh)">
+              <Trash2 className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
               className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-md"
