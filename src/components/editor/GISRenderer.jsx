@@ -416,9 +416,14 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
       midX - perpX * halfW, midY - perpY * halfW,
       midX + perpX * halfW, midY + perpY * halfW
     );
-    grad.addColorStop(0, "#1e3a8a");    // deep blue edge
-    grad.addColorStop(0.5, "#3b82f6");  // bright full-blue center
-    grad.addColorStop(1, "#1e3a8a");    // deep blue edge
+    grad.addColorStop(0, "#2563eb");    // vivid blue edge
+    grad.addColorStop(0.5, "#93c5fd");  // bright shiny blue center
+    grad.addColorStop(1, "#2563eb");    // vivid blue edge
+    // Light-yellow soft shadow/glow around the canal (drawn under the water fill)
+    ctx.strokeStyle = "rgba(253,230,138,0.6)";
+    ctx.lineWidth = w + 10;
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
     ctx.fillStyle = grad;
     ctx.beginPath();
     drawSmoothPath(ctx, left);
@@ -447,11 +452,10 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   } else {
     // 3D ribbon — soft glow halo + darker outline + body + inner highlight
     ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.strokeStyle = strokeC;
-    ctx.globalAlpha = 0.18;
+    // Light-yellow soft shadow/glow around the canal
+    ctx.strokeStyle = "rgba(253,230,138,0.55)";
     ctx.lineWidth = w + 8;
     ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
-    ctx.globalAlpha = 1;
     ctx.strokeStyle = strokeC;
     ctx.lineWidth = w + 3;
     ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();

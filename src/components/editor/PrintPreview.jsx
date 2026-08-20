@@ -304,10 +304,11 @@ function svgCanal(obj, C, idx) {
     const gx1 = (midX - perpX * halfW).toFixed(1), gy1 = (midY - perpY * halfW).toFixed(1);
     const gx2 = (midX + perpX * halfW).toFixed(1), gy2 = (midY + perpY * halfW).toFixed(1);
     const gradId = `canalWater_${idx}`;
-    const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="#1e3a8a"/><stop offset="0.5" stop-color="#3b82f6"/><stop offset="1" stop-color="#1e3a8a"/></linearGradient></defs>`;
+    const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="#2563eb"/><stop offset="0.5" stop-color="#93c5fd"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs>`;
     return `
 <g key="canal_${idx}">
   ${gradDef}
+  <path d="${centerPath}" fill="none" stroke="rgba(253,230,138,0.6)" stroke-width="${w + 10}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${fillPath}" fill="url(#${gradId})" />
   <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
   <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
@@ -316,7 +317,7 @@ function svgCanal(obj, C, idx) {
   }
   return `
 <g key="canal_${idx}">
-  <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 8}" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"/>
+  <path d="${centerPath}" fill="none" stroke="rgba(253,230,138,0.55)" stroke-width="${w + 8}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${centerPath}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="${Math.max(1, w * 0.12).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>

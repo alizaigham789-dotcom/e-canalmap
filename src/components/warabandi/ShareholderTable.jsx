@@ -249,7 +249,7 @@ Return ONLY a JSON array of objects, no extra text.`,
           </div>
           <Button size="sm" variant="outline" onClick={calculateWaterTime}
             className="h-7 text-xs border-blue-200 bg-white text-blue-600 hover:bg-blue-50 gap-1"
-            title={`فارمولہ: (${totalWeekMinutes} − وزگی − زائد وصولی) ÷ CCA = ${minutesPerAcre.toFixed(2)} منٹ/ایکڑ`}>
+            title="خالص واری فی ایکڑ کا حساب">
             <Calculator className="w-3 h-3" /> حساب ({minutesPerAcre.toFixed(2)}m/ac)
           </Button>
           <Button size="sm" onClick={() => scanRef.current?.click()} disabled={scanning}

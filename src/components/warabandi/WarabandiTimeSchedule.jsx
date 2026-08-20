@@ -45,13 +45,8 @@ export default function WarabandiTimeSchedule({ rows }) {
   const [zaidWasoli, setZaidWasoli] = useState("");
   const [startHour, setStartHour] = useState(6); // default 6 AM
 
-  // Formula: time per acre = 168 * 7 * 60 / CCA  (min/acre per week)
-  // Wait — formula given: 1 acre time = 168*7*60/cca  → that's (168×7×60)/cca = 70560/cca min per acre
-  // But 7 days = 168 hrs per week, so 7*24*60 = 10080 min/week total
-  // 168 hrs in a week is also 7 days → 168*60 = 10080 → formula: 10080/cca min/acre
-  // User's formula: 168*7*60/cca = 70560/cca which would be ~7 weeks — likely intended as:
-  // 1 week = 7 days = 7*24=168 hrs = 168*60=10080 min
-  // so min/acre = 10080 / cca
+  // وارہ بندی: خالص واری فی ایکڑ = (7 دن × 24 × 60 − وزگی − زائد وصولی) ÷ CCA
+  // 7 دن = 10080 منٹ؛ CCA ایکڑ میں۔ باقی وقت کو CCA پر تقسیم کر کے خالص واری ملتی ہے۔
   const ccaNum = parseFloat(cca) || 0;
   const wazgiNum = parseFloat(wazgi) || 0;
   const zaidNum = parseFloat(zaidWasoli) || 0;
@@ -142,7 +137,6 @@ export default function WarabandiTimeSchedule({ rows }) {
         <div className="text-center py-8 text-slate-400">
           <Calculator className="w-8 h-8 mx-auto mb-2 opacity-40" />
           <p className="text-xs">CCA درج کریں تا کہ جدول بنے</p>
-          <p className="text-[10px] mt-1 text-slate-300">فارمولہ: وقت = (10080 − وزگی − زائد وصولی) ÷ CCA منٹ فی ایکڑ</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
