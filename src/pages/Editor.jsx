@@ -1358,15 +1358,6 @@ export default function Editor() {
               <Printer className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
-              className={`w-9 h-9 border shadow-md transition-all ${pageBorderStyle !== "none" ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
-              onClick={() => setPageBorderStyle(prev => {
-                const styles = ["none", "dashed", "solid", "dotted"];
-                return styles[(styles.indexOf(prev) + 1) % styles.length];
-              })}
-              title={`Page Border: ${pageBorderStyle !== "none" ? pageBorderStyle : "off"} (click to cycle)`}>
-              <Frame className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${gridFlags.showMustateel ? "bg-red-500 border-red-400 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-red-500 hover:bg-red-50"}`}
               onClick={() => setGridFlags(f => ({ ...f, showMustateel: !f.showMustateel }))}
               title="Toggle Mustateel Grid">
@@ -1379,51 +1370,11 @@ export default function Editor() {
               <Grid3x3 className="w-4 h-4 opacity-70" />
             </Button>
             <Button variant="ghost" size="icon"
-              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-green-600 hover:bg-green-50 shadow-md"
-              onClick={() => { setGroupName(mapData?.title || ""); setShowGroupDialog(true); }}
-              title="Name / Group this map as a Moga">
-              <Group className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon"
               className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shadow-md"
               onClick={() => handleSave()}
               title="Save Map (Ctrl+S)">
               <Save className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon"
-              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shadow-md"
-              onClick={handleSelectAll}
-              title="Select All (Ctrl+A)">
-              <SquareStack className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon"
-              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shadow-md"
-              onClick={handleCopy}
-              title="Copy (Ctrl+C)">
-              <Copy className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon"
-              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shadow-md"
-              onClick={handlePaste}
-              title="Paste (Ctrl+V)">
-              <Clipboard className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon"
-              className={`w-9 h-9 border shadow-md transition-all ${activeTool === "boxSelect" ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
-              onClick={() => handleToolChange("boxSelect")}
-              title="Box Select (Q) — drag to select area, then paste">
-              <BoxSelect className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon"
-              className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 shadow-md"
-              onClick={handleDownloadJSON}
-              title="Download Map (.json)">
-              <FileDown className="w-4 h-4" />
-            </Button>
-            <label className="w-9 h-9 bg-white border border-slate-200 rounded-md flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 shadow-md cursor-pointer transition-all" title="Upload Map (.json)">
-              <Upload className="w-4 h-4" />
-              <input type="file" accept=".json,.chakbandi.json" onChange={handleUploadJSON} className="hidden" />
-            </label>
             <Button variant="ghost" size="icon"
               className="w-9 h-9 bg-white border border-slate-200 text-slate-500 hover:text-purple-600 hover:bg-purple-50 shadow-md"
               onClick={() => setShowAICommand(true)}
