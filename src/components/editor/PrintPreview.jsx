@@ -10,23 +10,21 @@ import { canvasToPdfBlob, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdf
 import { toast } from "sonner";
 
 // Lead-pencil print mode — dim grey lines like a hand-drawn sketch, red mouza
+// Lead-pencil print mode — mustateel/muraba boundaries + killa grid lines render in
+// solid black (like a hand-drawn survey pencil sketch), while canals, roads, khals
+// and chakbandi lines keep their real assigned colours (no override → fall through to
+// the user's colorSettings). Mouza stays red and outlet keeps its grey pencil tone.
 const PENCIL_COLORS = {
-  mustateelStroke: "#555555",
+  mustateelStroke: "#000000",
   mustateelFill: "none",
-  murabaStroke: "#555555",
+  murabaStroke: "#000000",
   murabaFill: "none",
   acreStroke: "#888888",
   acreFill: "none",
-  canalStroke: "#222222",
-  canalFill: "rgba(0,0,0,0.30)",
-  khalStroke: "#1a1a1a",
-  khalFill: "rgba(0,0,0,0.38)",
-  roadStroke: "#555555",
-  chakbandiStroke: "#333333",
   mouzaStroke: "#dc2626",
-  labelColor: "#333333",
+  labelColor: "#000000",
   outletStroke: "#555555",
-  gridStroke: "#999999",
+  gridStroke: "#000000",
 };
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];

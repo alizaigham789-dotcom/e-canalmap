@@ -401,17 +401,39 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#2B7AB8");
 
   if (obj.canalStyle === "flat") {
-    // Flat style — squared ends, two parallel blue boundary lines, blue water center
+    // Flat style — squared ends, two parallel blue boundary lines, beautiful full-blue water
     const halfW = w / 2;
     const left = getParallelPolyline(obj.points, -halfW);
     const right = getParallelPolyline(obj.points, halfW);
-    ctx.fillStyle = fillC;
+    // Beautiful blue water — linear gradient across the canal width (deep edges → bright full-blue center)
+    const p0 = obj.points[0], p1 = obj.points[obj.points.length - 1];
+    const dirAng = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+    const perpX = Math.cos(dirAng + Math.PI / 2), perpY = Math.sin(dirAng + Math.PI / 2);
+    const midX = (p0.x + p1.x) / 2, midY = (p0.y + p1.y) / 2;
+    const grad = ctx.createLinearGradient(
+      midX - perpX * halfW, midY - perpY * halfW,
+      midX + perpX * halfW, midY + perpY * halfW
+    );
+    grad.addColorStop(0, "#1e3a8a");    // deep blue edge
+    grad.addColorStop(0.5, "#3b82f6");  // bright full-blue center
+    grad.addColorStop(1, "#1e3a8a");    // deep blue edge
+    ctx.fillStyle = grad;
     ctx.beginPath();
     drawSmoothPath(ctx, left);
     ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
     drawSmoothPath(ctx, [...right].reverse());
     ctx.closePath();
     ctx.fill();
+    // Subtle white shimmer down the centerline — gives the water a lively, beautiful feel
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth = Math.max(1, w * 0.10);
+    ctx.lineCap = "round";
+    ctx.setLineDash([14 / zoom, 10 / zoom]);
+    ctx.beginPath();
+    drawSmoothPath(ctx, obj.points);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Blue boundary lines
     ctx.strokeStyle = strokeC;
     ctx.lineWidth = Math.max(2, 3 / zoom);
     ctx.lineCap = "butt"; ctx.lineJoin = "round";
