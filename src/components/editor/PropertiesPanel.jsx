@@ -135,7 +135,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 return hasMustateelFill ? (
                   <div className="flex items-center justify-between">
                     <label className="text-xs text-slate-600">Show Acre Numbers</label>
-                    <Switch checked={!!local.showKillaWhenFilled} onCheckedChange={v => commit("showKillaWhenFilled", v)} className="scale-75" />
+                    <Switch checked={local.showKillaWhenFilled !== false} onCheckedChange={v => commit("showKillaWhenFilled", v)} className="scale-75" />
                   </div>
                 ) : null;
               })()}

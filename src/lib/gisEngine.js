@@ -341,9 +341,11 @@ export function getMurabaKillaGrid() {
 // are hidden unless the per-parcel showKillaWhenFilled flag is set.
 export function effectiveKillaVisible(obj, baseShow) {
   if (obj.excluded) return true;
-  const hasFill = !!(obj.fillColor && obj.fillColor.trim() && obj.fillColor.startsWith("#")) ||
-    (obj.acreUses && obj.acreUses.some(u => u && u.color));
-  return hasFill ? obj.showKillaWhenFilled === true : baseShow;
+  if (!baseShow) return false;
+  // Eye toggle ON → show killa numbers by default (including filled mustateels).
+  // A filled mustateel can opt out per-parcel by setting showKillaWhenFilled = false.
+  if (obj.showKillaWhenFilled === false) return false;
+  return true;
 }
 
 // ============================================================
