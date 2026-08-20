@@ -59,6 +59,9 @@ const emptyRow = (sr) => ({
 export default function ShareholderTable({ rows, onChange }) {
   const [isUrduMode, setIsUrduMode] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [cca, setCca] = useState("");
+  const [wazgi, setWazgi] = useState("");
+  const [zaidWasoli, setZaidWasoli] = useState("");
   const scanRef = useRef();
   const { data: configs = [] } = useQuery({
     queryKey: ["form-field-configs", "parat_warabandi_table"],
@@ -76,7 +79,13 @@ export default function ShareholderTable({ rows, onChange }) {
   // Fallback: 6 min/acre (classic Punjab standard)
   const totalWeekMinutes = 7 * 24 * 60; // 10080
 
+  // وارہ بندی: منٹ فی ایکڑ = (7*24*60 − وزگی − زائد وصولی) ÷ CCA
+  // CCA / وزگی / زائد وصولی صارف ان پٹ کرتا ہے — فیل ہون پر FormulaConfig fallback
   const minutesPerAcre = (() => {
+    const ccaNum = parseFloat(cca) || 0;
+    const wazgiNum = parseFloat(wazgi) || 0;
+    const zaidNum = parseFloat(zaidWasoli) || 0;
+    if (ccaNum > 0) return Math.max(0, (totalWeekMinutes - wazgiNum - zaidNum) / ccaNum);
     const f = formulas.find(f => f.formula_key === "water_time_per_acre" && f.enabled);
     if (f) return Number(f.value);
     // Auto-calculate from total_area config if available
@@ -226,9 +235,21 @@ Return ONLY a JSON array of objects, no extra text.`,
               ) : "English"}
             </span>
           </label>
+          <div className="flex items-center gap-1">
+            <label className="text-[10px] text-slate-500 font-semibold">CCA</label>
+            <input type="number" value={cca} onChange={e => setCca(e.target.value)} placeholder="ایکڑ" className="w-16 border border-blue-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-500 bg-white" />
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-[10px] text-slate-500 font-semibold" style={{ fontFamily: "serif" }}>وزگی</label>
+            <input type="number" value={wazgi} onChange={e => setWazgi(e.target.value)} placeholder="0" className="w-14 border border-blue-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-500 bg-white" />
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-[10px] text-slate-500 font-semibold" style={{ fontFamily: "serif" }}>زائد وصولی</label>
+            <input type="number" value={zaidWasoli} onChange={e => setZaidWasoli(e.target.value)} placeholder="0" className="w-14 border border-blue-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-500 bg-white" />
+          </div>
           <Button size="sm" variant="outline" onClick={calculateWaterTime}
             className="h-7 text-xs border-blue-200 bg-white text-blue-600 hover:bg-blue-50 gap-1"
-            title={`Formula: 7×24×60=${totalWeekMinutes} min/week ÷ total area = ${minutesPerAcre.toFixed(2)} min/acre`}>
+            title={`فارمولہ: (${totalWeekMinutes} − وزگی − زائد وصولی) ÷ CCA = ${minutesPerAcre.toFixed(2)} منٹ/ایکڑ`}>
             <Calculator className="w-3 h-3" /> حساب ({minutesPerAcre.toFixed(2)}m/ac)
           </Button>
           <Button size="sm" onClick={() => scanRef.current?.click()} disabled={scanning}
