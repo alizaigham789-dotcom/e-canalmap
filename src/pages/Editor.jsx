@@ -1167,7 +1167,7 @@ export default function Editor() {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedId) { e.preventDefault(); handleDeleteObject(selectedId); }
       }
-      const shortcuts = { v: "select", h: "pan", d: "move", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", u: "mouza", g: "damageMarker", x: "measure", e: "eraser", f: "fitView", q: "boxSelect" };
+      const shortcuts = { v: "select", h: "pan", d: "select", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", u: "mouza", g: "damageMarker", x: "measure", e: "eraser", f: "fitView", q: "boxSelect" };
       if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) {
         if (e.key === "f") handleFitView();
         else handleToolChange(shortcuts[e.key]);

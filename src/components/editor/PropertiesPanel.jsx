@@ -130,6 +130,15 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               <ExclusionToggle local={local} commit={commit} />
               <MustateelStyleControl local={local} onApplyAll={onUpdateAllMustateels} onResetAll={onResetAllMustateels} />
               <AcreUseControl local={local} commit={commit} />
+              {(() => {
+                const hasMustateelFill = !!(local.fillColor && local.fillColor.trim()) || (local.acreUses && local.acreUses.some(u => u && u.color));
+                return hasMustateelFill ? (
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-600">Show Acre Numbers</label>
+                    <Switch checked={!!local.showKillaWhenFilled} onCheckedChange={v => commit("showKillaWhenFilled", v)} className="scale-75" />
+                  </div>
+                ) : null;
+              })()}
               <div className="text-[10px] text-slate-400 font-mono">440 ft × 990 ft • 10 Killas</div>
             </>
           )}

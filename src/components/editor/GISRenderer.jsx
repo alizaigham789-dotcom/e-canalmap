@@ -149,6 +149,11 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
   ctx.lineWidth = (MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness) * 0.2 + (isSelected ? 2 : 0)) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
+  // Filled mustateel (colour or acre-use/ikhraj fill) hides acre numbers by default;
+  // user can opt in per-parcel via the "Show Acre Numbers" toggle.
+  const _hasMustateelFill = !!(obj.fillColor && obj.fillColor.trim()) || (obj.acreUses && obj.acreUses.some(u => u && u.color));
+  const effectiveShowKilla = obj.excluded ? true : (_hasMustateelFill ? obj.showKillaWhenFilled === true : showKillaNumbers);
+
   // Layer 2: Killa grid — always visible, subtle ink
   {
     const alpha = ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.18;
@@ -188,7 +193,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     }
 
     // Layer 5: Killa numbers + land-use labels
-    if (showKillaNumbers || (showAcreUseLabels && acreUses.some(u => u && u.label))) {
+    if (effectiveShowKilla || (showAcreUseLabels && acreUses.some(u => u && u.label))) {
       ctx.save();
       ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
       const killaFontSize = screenClampedFont(Math.min(cellW, cellH) * 0.30, zoom, 14, 24);
@@ -204,14 +209,14 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
             ctx.font = `bold ${labelFont}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif`;
             ctx.fillStyle = "#0f172a";
             ctx.fillText(use.label, cx + cellW / 2, cy + cellH / 2);
-            if (showKillaNumbers) {
+            if (effectiveShowKilla) {
               try { ctx.direction = "ltr"; } catch {}
               ctx.textAlign = "left"; ctx.textBaseline = "top";
               ctx.font = `bold ${Math.max(9, killaFontSize * 0.7)}px Rajdhani, sans-serif`;
               ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.9)";
               ctx.fillText(String(kn), cx + 3 / zoom, cy + 2 / zoom);
             }
-          } else if (showKillaNumbers) {
+            } else if (effectiveShowKilla) {
             try { ctx.direction = "ltr"; } catch {}
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
             ctx.font = `bold ${killaFontSize}px Rajdhani, sans-serif`;

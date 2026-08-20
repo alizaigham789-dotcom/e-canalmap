@@ -79,6 +79,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   // Double-tap detection (mobile) — finishes line-tool drawing like desktop double-click
   const lastTapRef = useRef({ time: 0, x: 0, y: 0 });
   const justFinishedRef = useRef(false);
+  const isTouchRef = useRef(false);
   // 1 world unit = 1 foot (DIMENSIONS.ACRE.width = 220ft, etc.)
   const FT_PER_UNIT = 1;
 
@@ -552,7 +553,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       setBoxSelectDraft({ x1: boxSelectStart.current.x, y1: boxSelectStart.current.y, x2: worldRaw.x, y2: worldRaw.y });
       return;
     }
-    if (isMoving.current && movingObjId.current && activeTool === "move") {
+    if (isMoving.current && movingObjId.current && (activeTool === "move" || activeTool === "select")) {
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
@@ -731,7 +732,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       boxSelectStart.current = { x: worldRaw.x, y: worldRaw.y };
       setBoxSelectDraft({ x1: worldRaw.x, y1: worldRaw.y, x2: worldRaw.x, y2: worldRaw.y });
     } else if (activeTool === "select") {
-      // Check for a vertex handle on the currently selected chakbandi/canal/mouza first
+      // 1. Vertex handle on the selected line object (drag a single anchor point)
       const selectedObj = selectedId ? objects.find(o => o.id === selectedId) : null;
       if (selectedObj && ["chakbandi", "canal", "khal", "road", "bridge", "mouza"].includes(selectedObj.type) && selectedObj.points) {
         const vThresh = 10 / zoom;
@@ -747,11 +748,86 @@ const GISCanvas = forwardRef(function GISCanvas(
           return;
         }
       }
-      const hit = hitTest(worldRaw.x, worldRaw.y, objects);
-      if (hit?.type === "damageMarker" && onDamageMarkerClick) {
-        onDamageMarkerClick(hit);
+      // On touch, keep the long-press-to-move pattern (no move on tap-drag);
+      // on mouse, click-drag moves the object (select + move merged into one tool).
+      if (isTouchRef.current) {
+        const hit = hitTest(worldRaw.x, worldRaw.y, objects);
+        if (hit?.type === "damageMarker" && onDamageMarkerClick) onDamageMarkerClick(hit);
+        onSelect(hit ? hit.id : null);
+      } else {
+        // 2. Outlet moga label box drag
+        for (const o of objects) {
+          if (o.type === "outlet" && (o.mogha_number || o.mogha_side)) {
+            const lp = getOutletLabelPos(o);
+            const _halfDiag = Math.max(DIMENSIONS.ACRE.width, DIMENSIONS.ACRE.height / 2);
+            if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _halfDiag) {
+              isMoving.current = true; movingObjId.current = o.id;
+              movingLabelType.current = "outlet";
+              moveOffset.current = { x: worldRaw.x - lp.x, y: worldRaw.y - lp.y };
+              onSelect(o.id);
+              return;
+            }
+          }
+        }
+        // 3. Chakbandi GCA label box drag
+        for (const o of objects) {
+          if (o.type === "chakbandi" && o.points?.length >= 3) {
+            const lp = getChakbandiLabelPos(o);
+            if (!lp) continue;
+            const _gf = Math.max(12, Math.min(24, Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30 * zoom)) / zoom;
+            if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _gf * 3) {
+              isMoving.current = true; movingObjId.current = o.id;
+              movingLabelType.current = "chakbandi";
+              moveOffset.current = { x: worldRaw.x - lp.x, y: worldRaw.y - lp.y };
+              onSelect(o.id);
+              return;
+            }
+          }
+        }
+        // 4. Hit test → select + start a move drag (merged select/move tool)
+        const hit = hitTest(worldRaw.x, worldRaw.y, objects);
+        if (hit?.type === "damageMarker" && onDamageMarkerClick) {
+          onDamageMarkerClick(hit);
+          onSelect(hit.id);
+          return;
+        }
+        if (hit && hit.mogaGroup) {
+          const groupObjs = objects.filter(o => o.mogaGroup === hit.mogaGroup);
+          movingGroupRef.current = {
+            groupId: hit.mogaGroup,
+            originals: groupObjs.map(o => ({
+              id: o.id, x: o.x, y: o.y,
+              points: o.points ? o.points.map(p => ({ x: p.x, y: p.y })) : null,
+              start: o.start ? { x: o.start.x, y: o.start.y } : null,
+              end: o.end ? { x: o.end.x, y: o.end.y } : null,
+            })),
+          };
+          isMoving.current = true; movingObjId.current = hit.id;
+          moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
+          movingObjOrigPoints.current = null; movingObjOrigStartEnd.current = null;
+          onSelect(hit.id);
+          return;
+        }
+        if (hit && ["mustateel", "muraba"].includes(hit.type)) {
+          isMoving.current = true; movingObjId.current = hit.id;
+          moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
+          movingObjOrigPoints.current = null;
+          onSelect(hit.id);
+        } else if (hit && ["chakbandi", "canal", "khal", "road", "bridge", "mouza"].includes(hit.type) && hit.points) {
+          isMoving.current = true; movingObjId.current = hit.id;
+          moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
+          movingObjOrigPoints.current = hit.points.map(p => ({ ...p }));
+          onSelect(hit.id);
+        } else if (hit && hit.type === "outlet" && hit.start && hit.end) {
+          isMoving.current = true; movingObjId.current = hit.id;
+          moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
+          movingObjOrigPoints.current = null;
+          movingObjOrigStartEnd.current = { start: { ...hit.start }, end: { ...hit.end } };
+          onSelect(hit.id);
+        } else {
+          onSelect(hit ? hit.id : null);
+        }
       }
-      onSelect(hit ? hit.id : null);
     } else if (activeTool === "eraser") {
       const hit = hitTest(worldRaw.x, worldRaw.y, objects, true); // true = eraser mode (boundary-aware)
       if (hit) onAddObject("__delete__", { id: hit.id });
@@ -872,6 +948,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   };
 
   const handleTouchStart = useCallback((e) => {
+    isTouchRef.current = true;
     // Pinch-to-zoom: two fingers → start pinch
     if (e.touches.length === 2) {
       clearLongPress();
@@ -971,6 +1048,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       pinchRef.current = null;
       return;
     }
+    isTouchRef.current = false;
     pinchRef.current = null;
     clearLongPress();
     const touch = getTouchPoint(e) || lastMouse.current;

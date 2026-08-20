@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   RectangleVertical, RectangleHorizontal,
   MousePointer2, Hand, Eraser,
-  RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Move, Waves, AlertTriangle, Ruler
+  RotateCcw, RotateCw, ZoomIn, ZoomOut,   Maximize2, Waves, AlertTriangle, Ruler
 } from "lucide-react";
 
 // ---- Custom SVG Icons matching technical tool names ----
@@ -63,10 +63,8 @@ const BridgeIcon = ({ className }) => (
 );
 
 const TOOLS = [
-  { id: "select", label: "Select (V)", icon: MousePointer2, group: "nav" },
+  { id: "select", label: "Select / Move (V) — click to select, drag to move", icon: MousePointer2, group: "nav" },
   { id: "pan", label: "Pan (H)", icon: Hand, group: "nav" },
-  null,
-  { id: "move", label: "Move (D) — drag parcels", icon: Move, group: "edit", color: "text-orange-400" },
   null,
   { id: "eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
   { id: "mustateel", label: "Mustateel 440×990 ft (M)", icon: RectangleVertical, group: "draw", color: "text-red-400" },
