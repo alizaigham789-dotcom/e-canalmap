@@ -1519,6 +1519,7 @@ export default function Editor() {
           zoom={zoom}
           pan={pan}
           canvasRef={canvasRef}
+          objects={objects}
           onAddObjects={handleAddMustateels}
           onClose={() => setShowGridBuilder(false)}
         />
