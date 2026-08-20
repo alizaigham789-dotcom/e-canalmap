@@ -11,7 +11,7 @@ import StatusBar from "@/components/editor/StatusBar";
 import EditorHeader from "@/components/editor/EditorHeader";
 import MapHeaderLine from "@/components/editor/MapHeaderLine";
 import ExportDialog from "@/components/editor/ExportDialog";
-import LegendPanel from "@/components/editor/LegendPanel";
+import UnifiedLayersPanel from "@/components/editor/UnifiedLayersPanel";
 import MapScanDialog from "@/components/editor/MapScanDialog";
 import AICommandPanel from "@/components/editor/AICommandPanel";
 import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
@@ -1320,22 +1320,10 @@ export default function Editor() {
           {/* Top-right toolbar buttons */}
           <div className="absolute top-3 right-1.5 sm:right-3 flex flex-col gap-1.5 z-20 max-h-[calc(100%-100px)] overflow-y-auto">
             <Button variant="ghost" size="icon"
-              className={`w-9 h-9 border shadow-md transition-all ${showLegend ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
-              onClick={() => { setShowLegend(v => !v); setShowLayers(false); setShowColors(false); setShowSnap(false); }}
-              title="Legend">
-              <BookOpen className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${showLayers ? "bg-blue-600 border-blue-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}
-              onClick={() => { setShowLayers(v => !v); setShowLegend(false); setShowColors(false); setShowSnap(false); }}
-              title="Layers">
+              onClick={() => { setShowLayers(v => !v); setShowSnap(false); }}
+              title="Layers, Legend & Colours">
               <Layers className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon"
-              className={`w-9 h-9 border shadow-md transition-all ${showColors ? "bg-purple-600 border-purple-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-purple-600 hover:bg-purple-50"}`}
-              onClick={() => { setShowColors(v => !v); setShowLayers(false); setShowLegend(false); setShowSnap(false); }}
-              title="Colour Settings">
-              <Palette className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon"
               className={`w-9 h-9 border shadow-md transition-all ${showSnap ? "bg-violet-600 border-violet-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-violet-600 hover:bg-violet-50"}`}
@@ -1417,31 +1405,23 @@ export default function Editor() {
           </div>
 
           {/* Panels */}
-          {showLegend && (
+          {showLayers && (
             <div
               className="absolute z-30 max-sm:left-1.5 max-sm:right-auto max-sm:max-w-[calc(100vw-70px)]"
               style={legendPos
                 ? { left: legendPos.x, top: legendPos.y, right: "auto" }
-                : { top: "200px", right: "12px" }}
+                : { top: "120px", right: "12px" }}
             >
-              <LegendPanel
+              <UnifiedLayersPanel
                 colorSettings={colorSettings}
+                onColorChange={handleColorChange}
+                bgColor={bgColor}
+                onBgColorChange={setBgColor}
+                layers={layers}
+                onLayerChange={handleLayerChange}
                 killaVisibility={killaVisibility}
                 onKillaVisibilityChange={(type, val) => setKillaVisibility(prev => ({ ...prev, [type]: val }))}
-                layers={layers}
-                onLayerChange={handleLayerChange}
-                onDragStart={handleLegendDragStart}
-                onResetPos={() => setLegendPos(null)}
-                landUses={collectLandUses(objects)}
-              />
-            </div>
-          )}
-          {showLayers && (
-            <div className="absolute top-[200px] right-3 z-30 max-sm:left-1.5 max-sm:right-auto max-sm:max-w-[calc(100vw-70px)]">
-              <MogaFilterPanel
                 objects={objects}
-                layers={layers}
-                onLayerChange={handleLayerChange}
                 visibleMogas={visibleMogas}
                 onMogaVisibilityChange={(moga, vis) => setVisibleMogas(prev => ({ ...prev, [moga]: vis }))}
                 onZoomToMoga={(moga) => {
@@ -1453,20 +1433,10 @@ export default function Editor() {
                   setPan({ x: -cx * zoom + 400, y: -cy * zoom + 300 });
                 }}
                 onPrintMoga={(moga) => { setPrintMogaFilter(moga); setShowPrint(true); }}
+                landUses={collectLandUses(objects)}
+                onDragStart={handleLegendDragStart}
+                onResetPos={() => setLegendPos(null)}
                 onClose={() => setShowLayers(false)}
-                killaVisibility={killaVisibility}
-                onKillaVisibilityChange={(type, val) => setKillaVisibility(prev => ({ ...prev, [type]: val }))}
-              />
-            </div>
-          )}
-          {showColors && (
-            <div className="absolute top-[200px] right-3 z-30 max-sm:left-1.5 max-sm:right-auto max-sm:max-w-[calc(100vw-70px)]">
-              <ColorSettingsPanel
-                colorSettings={colorSettings}
-                onColorChange={handleColorChange}
-                bgColor={bgColor}
-                onBgColorChange={setBgColor}
-                onClose={() => setShowColors(false)}
               />
             </div>
           )}
