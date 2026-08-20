@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
@@ -10,21 +10,16 @@ import { canvasToPdfBlob, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdf
 import { toast } from "sonner";
 
 // Lead-pencil print mode — dim grey lines like a hand-drawn sketch, red mouza
-// Lead-pencil print mode — mustateel/muraba boundaries + killa grid lines render in
-// solid black (like a hand-drawn survey pencil sketch), while canals, roads, khals
-// and chakbandi lines keep their real assigned colours (no override → fall through to
-// the user's colorSettings). Mouza stays red and outlet keeps its grey pencil tone.
+// Lead-pencil print mode — ONLY mustateel/muraba boundaries, their killa grid lines
+// and parcel labels render in solid black (hand-drawn survey sketch). Everything
+// else — canals, khals, roads, chakbandis, mouzas, outlets, acres — keeps its real
+// assigned colour (no override → falls through to the user's colorSettings), so the
+// pencil toggle never turns the canal/khal black & white.
 const PENCIL_COLORS = {
   mustateelStroke: "#000000",
-  mustateelFill: "none",
   murabaStroke: "#000000",
-  murabaFill: "none",
-  acreStroke: "#888888",
-  acreFill: "none",
-  mouzaStroke: "#dc2626",
-  labelColor: "#000000",
-  outletStroke: "#555555",
   gridStroke: "#000000",
+  labelColor: "#000000",
 };
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
@@ -291,7 +286,8 @@ function svgCanal(obj, C, idx) {
   if (!obj.points || obj.points.length < 2) return "";
   const w = (obj.width || DIMENSIONS.CANAL_WIDTH);
   const centerPath = pointsToSmoothPath(obj.points);
-  const fillColor = C.canalFill || "rgba(163,218,244,0.70)";
+  // Vivid full-blue water (opaque, saturated, bright) — replaces the old translucent powder blue
+  const fillColor = C.canalFill || "#3b82f6";
   const strokeColor = C.canalStroke || "#2B7AB8";
   const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH);
   const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf) : "";
@@ -300,9 +296,19 @@ function svgCanal(obj, C, idx) {
     const fillPath = parallelSmoothClosedPath(obj.points, halfW);
     const left = getParallelPolyline(obj.points, -halfW);
     const right = getParallelPolyline(obj.points, halfW);
+    // Beautiful blue water gradient across the canal width (deep edges → vivid bright center)
+    const p0 = obj.points[0], p1 = obj.points[obj.points.length - 1];
+    const dirAng = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+    const perpX = Math.cos(dirAng + Math.PI / 2), perpY = Math.sin(dirAng + Math.PI / 2);
+    const midX = (p0.x + p1.x) / 2, midY = (p0.y + p1.y) / 2;
+    const gx1 = (midX - perpX * halfW).toFixed(1), gy1 = (midY - perpY * halfW).toFixed(1);
+    const gx2 = (midX + perpX * halfW).toFixed(1), gy2 = (midY + perpY * halfW).toFixed(1);
+    const gradId = `canalWater_${idx}`;
+    const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="#1e3a8a"/><stop offset="0.5" stop-color="#3b82f6"/><stop offset="1" stop-color="#1e3a8a"/></linearGradient></defs>`;
     return `
 <g key="canal_${idx}">
-  <path d="${fillPath}" fill="${fillColor}" />
+  ${gradDef}
+  <path d="${fillPath}" fill="url(#${gradId})" />
   <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
   <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
   ${nameSvg}
@@ -551,6 +557,22 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [showPageBorder, setShowPageBorder] = useState(false);
   const [legendMoveMode, setLegendMoveMode] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+
+  // Auto-fit: on first load, pick the page orientation that matches the object bounds
+  // aspect ratio so the map fills the whole page (minimal letterbox) instead of leaving
+  // large empty bands. Runs once; the user can still toggle orientation afterwards.
+  const autoFitDone = useRef(false);
+  useEffect(() => {
+    if (autoFitDone.current) return;
+    const bounds = getObjectsBounds(objects);
+    if (!bounds) return;
+    const bw = bounds.maxX - bounds.minX;
+    const bh = bounds.maxY - bounds.minY;
+    if (bw > 0 && bh > 0) {
+      autoFitDone.current = true;
+      setPageOrientation(bw >= bh ? "landscape" : "portrait");
+    }
+  }, [objects]);
   const svgWrapRef = useRef(null);
 
   // Persist legend position per-map in localStorage so it survives close/reopen

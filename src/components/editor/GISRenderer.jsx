@@ -397,7 +397,9 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
 export function drawCanal(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const w = Math.max(2, obj.width);
-  const fillC = C.canalFill || "rgba(163,218,244,0.70)";
+  // Vivid full-blue water (opaque, saturated, bright) — replaces the old translucent powder blue.
+  // Used by the 3D ribbon body; the flat style renders its own blue gradient below.
+  const fillC = C.canalFill || "#3b82f6";
   const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#2B7AB8");
 
   if (obj.canalStyle === "flat") {
