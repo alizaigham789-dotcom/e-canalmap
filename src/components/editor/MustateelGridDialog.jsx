@@ -36,6 +36,11 @@ export default function MustateelGridDialog({ zoom, pan, canvasRef, objects = []
 
   const removeRow = (id) => setRows(rs => rs.length > 1 ? rs.filter(r => r.id !== id) : rs);
 
+  // Direction auto-alternates (snake): only the first row is user-selectable;
+  // every later row is the opposite of the one before it.
+  const firstDir = rows[0]?.direction || "ltr";
+  const effDir = (ri) => ri % 2 === 0 ? firstDir : (firstDir === "ltr" ? "rtl" : "ltr");
+
   const findAnchor = (labelStr, generated) => {
     if (labelStr === "" || labelStr === undefined || labelStr === null) return null;
     const key = String(labelStr);
@@ -57,20 +62,20 @@ export default function MustateelGridDialog({ zoom, pan, canvasRef, objects = []
       oy = Math.round(worldTop / mustH) * mustH + mustH;
     }
     const generated = [];
-    for (const row of rows) {
+    rows.forEach((row, idx) => {
       const start = Number(row.start) || 0;
       const count = Math.max(1, Number(row.count) || 1);
       const anchor = findAnchor(row.below, generated);
       let x = anchor ? anchor.x : ox;
       let y = anchor ? anchor.y + mustH : oy;
-      const dir = row.direction === "rtl" ? -1 : 1;
+      const dir = effDir(idx) === "rtl" ? -1 : 1;
       for (let i = 0; i < count; i++) {
         const obj = createMustateel(x, y);
         obj.label = String(start + i);
         generated.push(obj);
         x += dir * mustW;
       }
-    }
+    });
     if (generated.length === 0) return;
     onAddObjects(generated);
   };
@@ -112,16 +117,22 @@ export default function MustateelGridDialog({ zoom, pan, canvasRef, objects = []
                   <Input type="number" value={row.below} onChange={e => updateRow(row.id, "below", e.target.value)} placeholder="origin" className="h-7 text-xs font-mono" />
                 </div>
               </div>
-              <div className="flex gap-1.5">
-                <button onClick={() => updateRow(row.id, "direction", "ltr")}
-                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md border text-[11px] font-medium transition-colors ${row.direction === "ltr" ? "bg-blue-600 text-white border-blue-500" : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"}`}>
-                  <ArrowRight className="w-3.5 h-3.5" /> Left → Right
-                </button>
-                <button onClick={() => updateRow(row.id, "direction", "rtl")}
-                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md border text-[11px] font-medium transition-colors ${row.direction === "rtl" ? "bg-blue-600 text-white border-blue-500" : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"}`}>
-                  <ArrowLeft className="w-3.5 h-3.5" /> Right → Left
-                </button>
-              </div>
+              {idx === 0 ? (
+                <div className="flex gap-1.5">
+                  <button onClick={() => updateRow(row.id, "direction", "ltr")}
+                    className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md border text-[11px] font-medium transition-colors ${row.direction === "ltr" ? "bg-blue-600 text-white border-blue-500" : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+                    <ArrowRight className="w-3.5 h-3.5" /> Left → Right
+                  </button>
+                  <button onClick={() => updateRow(row.id, "direction", "rtl")}
+                    className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md border text-[11px] font-medium transition-colors ${row.direction === "rtl" ? "bg-blue-600 text-white border-blue-500" : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+                    <ArrowLeft className="w-3.5 h-3.5" /> Right → Left
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-1.5 rounded-md border text-[11px] font-medium bg-blue-50 text-blue-600 border-blue-200">
+                  {effDir(idx) === "ltr" ? "→ Left → Right (auto)" : "← Right → Left (auto)"}
+                </div>
+              )}
             </div>
           ))}
         </div>
