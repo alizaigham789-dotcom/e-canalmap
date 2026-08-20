@@ -41,6 +41,8 @@ function formatUrduRange(startMins, endMins, startOfDay = 6 * 60) {
 
 export default function WarabandiTimeSchedule({ rows }) {
   const [cca, setCca] = useState("");
+  const [wazgi, setWazgi] = useState("");
+  const [zaidWasoli, setZaidWasoli] = useState("");
   const [startHour, setStartHour] = useState(6); // default 6 AM
 
   // Formula: time per acre = 168 * 7 * 60 / CCA  (min/acre per week)
@@ -51,7 +53,10 @@ export default function WarabandiTimeSchedule({ rows }) {
   // 1 week = 7 days = 7*24=168 hrs = 168*60=10080 min
   // so min/acre = 10080 / cca
   const ccaNum = parseFloat(cca) || 0;
-  const minPerAcre = ccaNum > 0 ? (10080 / ccaNum) : 0;
+  const wazgiNum = parseFloat(wazgi) || 0;
+  const zaidNum = parseFloat(zaidWasoli) || 0;
+  // وارہ بندی: وقت فی ایکڑ = (7*24*60 − وزگی − زائد وصولی) / CCA
+  const minPerAcre = ccaNum > 0 ? Math.max(0, (10080 - wazgiNum - zaidNum) / ccaNum) : 0;
 
   const schedule = useMemo(() => {
     if (!minPerAcre || !rows.length) return [];
@@ -96,6 +101,26 @@ export default function WarabandiTimeSchedule({ rows }) {
             />
           </div>
           <div className="flex items-center gap-1.5">
+            <label className="text-[10px] text-slate-500 font-semibold">وزگی (منٹ)</label>
+            <input
+              type="number"
+              value={wazgi}
+              onChange={e => setWazgi(e.target.value)}
+              placeholder="0"
+              className="w-20 border border-emerald-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-emerald-500 bg-white"
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-[10px] text-slate-500 font-semibold">زائد وصولی (منٹ)</label>
+            <input
+              type="number"
+              value={zaidWasoli}
+              onChange={e => setZaidWasoli(e.target.value)}
+              placeholder="0"
+              className="w-20 border border-emerald-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-emerald-500 bg-white"
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
             <label className="text-[10px] text-slate-500 font-semibold">شروع (بجے)</label>
             <input
               type="number"
@@ -117,7 +142,7 @@ export default function WarabandiTimeSchedule({ rows }) {
         <div className="text-center py-8 text-slate-400">
           <Calculator className="w-8 h-8 mx-auto mb-2 opacity-40" />
           <p className="text-xs">CCA درج کریں تا کہ جدول بنے</p>
-          <p className="text-[10px] mt-1 text-slate-300">فارمولہ: وقت = 10080 ÷ CCA منٹ فی ایکڑ</p>
+          <p className="text-[10px] mt-1 text-slate-300">فارمولہ: وقت = (10080 − وزگی − زائد وصولی) ÷ CCA منٹ فی ایکڑ</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
