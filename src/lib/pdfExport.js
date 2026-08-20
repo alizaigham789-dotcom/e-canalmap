@@ -137,7 +137,10 @@ export async function canvasToPdfBlob(canvas, mapData, pageOrientation = "landsc
   const marginMm = (marginCm || 0) * 10;
   const marginPx = Math.round(marginMm * (compositeW / pw));
   const mapAvailW = compositeW - 2 * marginPx;
-  const mapScale = Math.min(1, mapAvailW / srcCanvas.width);
+  // Auto-zoom (uniform scale, no distortion): small maps zoom IN to fill the page,
+  // large maps zoom OUT to fit. Uses the limiting dimension so the map always fills
+  // as much of the available area as possible. Page size stays as selected.
+  const mapScale = Math.min(mapAvailW / srcCanvas.width, availH / srcCanvas.height);
   const mapDrawW = srcCanvas.width * mapScale;
   const mapDrawH = srcCanvas.height * mapScale;
   const mapY = headerH + Math.max(0, (availH - mapDrawH) / 2);

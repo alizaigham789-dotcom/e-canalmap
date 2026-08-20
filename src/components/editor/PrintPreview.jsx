@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
@@ -557,22 +557,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [showPageBorder, setShowPageBorder] = useState(false);
   const [legendMoveMode, setLegendMoveMode] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
-
-  // Auto-fit: on first load, pick the page orientation that matches the object bounds
-  // aspect ratio so the map fills the whole page (minimal letterbox) instead of leaving
-  // large empty bands. Runs once; the user can still toggle orientation afterwards.
-  const autoFitDone = useRef(false);
-  useEffect(() => {
-    if (autoFitDone.current) return;
-    const bounds = getObjectsBounds(objects);
-    if (!bounds) return;
-    const bw = bounds.maxX - bounds.minX;
-    const bh = bounds.maxY - bounds.minY;
-    if (bw > 0 && bh > 0) {
-      autoFitDone.current = true;
-      setPageOrientation(bw >= bh ? "landscape" : "portrait");
-    }
-  }, [objects]);
   const svgWrapRef = useRef(null);
 
   // Persist legend position per-map in localStorage so it survives close/reopen
