@@ -23,6 +23,14 @@ function formatPhone(phone) {
   return phone || "";
 }
 
+// Total area as "X ایکر Y کنال"
+function fmtArea(kanal, marla) {
+  let totalKanal = (kanal || 0) + (marla || 0) / 20;
+  const acres = Math.floor(totalKanal / 8);
+  const remK = Math.round(totalKanal % 8);
+  return `${acres} ایکر ${remK} کنال`;
+}
+
 function parseRows(rows_json) {
   try { return JSON.parse(rows_json || "[]"); } catch { return []; }
 }
@@ -34,11 +42,12 @@ function groupAllocations(rows) {
   for (const a of rows) {
     const key = a.cnic ? `cnic:${a.cnic}` : `name:${a.farmer_name || ""}||${a.father || ""}`;
     if (!map.has(key)) {
-      map.set(key, { key, serial: serial++, farmer_name: a.farmer_name || "", father: a.father || "", cnic: a.cnic || "", khata_no: a.khata_no || "", phone: a.phone || "", tenure: a.tenure || "", land_type: a.land_type || "", crop_name: a.crop_name || "", items: [] });
+      map.set(key, { key, serial: serial++, farmer_name: a.farmer_name || "", father: a.father || "", cnic: a.cnic || "", khata_no: a.khata_no || "", phone: a.phone || "", tenure: a.tenure || "", land_type: a.land_type || "", crop_name: a.crop_name || "", moga_number: "", channel_name: "", outlet_side: "", items: [] });
     }
     const g = map.get(key);
     const pick = (k) => { if (!g[k] && a[k]) g[k] = a[k]; };
     pick("father"); pick("cnic"); pick("khata_no"); pick("phone"); pick("tenure"); pick("land_type"); pick("crop_name");
+    pick("moga_number"); pick("channel_name"); pick("outlet_side");
     if (!g.farmer_name && a.farmer_name) g.farmer_name = a.farmer_name;
     g.items.push(a);
   }
@@ -80,8 +89,6 @@ function farmerAcres(items) {
 
 // ─── PDF print (exact PDF format — RTL Urdu table) ───────────────────────────
 function buildPrintHTML(meta, groups, mode = "moga") {
-  const rajbah = esc(meta.channel_name || meta.rajbah || "");
-  const mogaRD = esc(`${meta.moga_number || ""}${meta.outlet_side ? `-${meta.outlet_side}` : ""}`);
   const village = esc(meta.mouza || meta.village || "");
   const tehsil = esc(meta.tehsil || "");
   const district = esc(meta.district || "");
@@ -93,11 +100,15 @@ function buildPrintHTML(meta, groups, mode = "moga") {
     const acres = farmerAcres(g.items);
     const cnicFmt = formatCNIC(g.cnic);
     const phoneFmt = formatPhone(g.phone);
+    const areaStr = fmtArea(tot.kanal, tot.marla);
+    const gMoga = `${g.moga_number || meta.moga_number || ""}${g.outlet_side || meta.outlet_side ? `-${g.outlet_side || meta.outlet_side}` : ""}`;
+    const gRajbah = g.channel_name || meta.channel_name || "";
     const nameCell = `
       <div class="fname">${esc(g.farmer_name)}</div>
       <div class="fsub">ولد: ${esc(g.father)}</div>
       <div class="fcnic">شناختی کارڈ: ${esc(cnicFmt)}</div>
-      <div class="fphone">فون نمبر: ${esc(phoneFmt)}</div>`;
+      <div class="fphone">فون نمبر: ${esc(phoneFmt)}</div>
+      <div class="ftot">کل رقبہ: ${esc(areaStr)}</div>`;
 
     const rowCount = Math.max(acres.length, 1);
 
@@ -107,8 +118,8 @@ function buildPrintHTML(meta, groups, mode = "moga") {
       bodyRows += `<tr>`;
       if (isFirst) {
         bodyRows += `<td class="sr" rowspan="${rowCount}">${g.serial}</td>`;
-        bodyRows += `<td rowspan="${rowCount}" class="rajbah">${rajbah}</td>`;
-        bodyRows += `<td rowspan="${rowCount}" class="moga">${mogaRD}</td>`;
+        bodyRows += `<td rowspan="${rowCount}" class="rajbah">${esc(gRajbah)}</td>`;
+        bodyRows += `<td rowspan="${rowCount}" class="moga">${esc(gMoga)}</td>`;
         bodyRows += `<td rowspan="${rowCount}" class="dawami"></td><td rowspan="${rowCount}" class="dawami"></td>`;
         bodyRows += `<td rowspan="${rowCount}" class="dawami"></td><td rowspan="${rowCount}" class="dawami"></td>`;
         bodyRows += `<td rowspan="${rowCount}" class="khata">${esc(g.khata_no)}</td>`;
@@ -134,35 +145,36 @@ function buildPrintHTML(meta, groups, mode = "moga") {
   @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
   @page { size: A3 landscape; margin: 8mm; }
   * { box-sizing: border-box; }
-  body { font-family: 'Noto Nastaliq Urdu', Arial, sans-serif; direction: rtl; font-size: 8px; color: #1a1a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  h2 { text-align: center; font-size: 24px; margin: 0 0 4px; color: #4c1d95; }
-  .meta { text-align: center; font-size: 14px; margin-bottom: 8px; color: #5b21b6; font-weight: 700; }
+  body { font-family: 'Noto Nastaliq Urdu', Arial, sans-serif; direction: rtl; font-size: 8px; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  h2 { text-align: center; font-size: 24px; margin: 0 0 4px; color: #000; }
+  .meta { text-align: center; font-size: 14px; margin-bottom: 8px; color: #000; font-weight: 700; }
   table { width: 100%; border-collapse: collapse; }
-  th, td { border: 1px solid #000; padding: 3px 4px; vertical-align: middle; text-align: center; word-break: break-word; }
-  thead th { background: #a78bfa; color: #1e1b4b; font-size: 24px; font-weight: 700; }
-  .group-head th { background: #c4b5fd; color: #312e81; font-size: 20px; }
-  .sr { font-weight: 700; font-size: 16px; background: #f1f5f9 !important; min-width: 28px; }
-  .name { text-align: right; padding: 3px 5px; min-width: 120px; }
-  .fname { font-size: 16px; font-weight: 700; color: #1e1b4b; }
-  .fsub { font-size: 9px; color: #444; margin-top: 1px; }
-  .fcnic { font-size: 9px; color: #1d4ed8; margin-top: 1px; font-family: monospace; }
-  .fphone { font-size: 9px; color: #047857; margin-top: 1px; font-family: monospace; }
-  .rajbah { min-width: 60px; font-size: 16px; font-weight: 700; color: #6d28d9; }
-  .moga { min-width: 56px; font-size: 16px; font-weight: 700; color: #6d28d9; }
-  .khata { min-width: 34px; font-size: 12px; }
-  .murba, .killa { min-width: 24px; font-size: 11px; }
-  .raqba { min-width: 22px; font-size: 11px; }
+  th, td { border: 1px solid #000; padding: 3px 4px; vertical-align: middle; text-align: center; word-break: break-word; color: #000; }
+  thead th { background: #e1ebff; color: #000; font-size: 24px; font-weight: 700; }
+  .group-head th { background: #dbe5ff; color: #000; font-size: 20px; }
+  .sr { font-weight: 700; font-size: 16px; background: #f1f5f9 !important; min-width: 28px; color: #000; }
+  .name { text-align: right; padding: 3px 5px; min-width: 130px; }
+  .fname { font-size: 16px; font-weight: 700; color: #000; }
+  .fsub { font-size: 16px; color: #000; margin-top: 2px; }
+  .fcnic { font-size: 16px; color: #000; margin-top: 2px; font-family: monospace; }
+  .fphone { font-size: 16px; color: #000; margin-top: 2px; font-family: monospace; }
+  .ftot { font-size: 16px; color: #000; font-weight: 700; margin-top: 2px; }
+  .rajbah { min-width: 60px; font-size: 16px; font-weight: 700; color: #000; }
+  .moga { min-width: 56px; font-size: 16px; font-weight: 700; color: #000; }
+  .khata { min-width: 34px; font-size: 12px; color: #000; }
+  .murba, .killa { min-width: 24px; font-size: 11px; color: #000; }
+  .raqba { min-width: 22px; font-size: 11px; color: #000; }
   .fishfarm, .bagh, .paddy { min-width: 22px; }
-  .kaifiyat { min-width: 40px; font-size: 10px; }
+  .kaifiyat { min-width: 40px; font-size: 10px; color: #000; }
   .dawami { min-width: 22px; }
   tr:nth-child(even) td { background: #f8fafc; }
-  .totals { margin-top: 8px; text-align: right; font-size: 14px; font-weight: bold; color: #4c1d95; }
-  .foot { margin-top: 16px; display: flex; justify-content: space-between; font-size: 12px; }
+  .totals { margin-top: 8px; text-align: right; font-size: 14px; font-weight: bold; color: #000; }
+  .foot { margin-top: 16px; display: flex; justify-content: space-between; font-size: 12px; color: #000; }
 </style>
 </head><body>
 <h2>${title}</h2>
 <div class="meta">
-  راجباہ/مائنر: ${rajbah} &nbsp;|&nbsp; موگہ/آر ڈی: ${mogaRD} &nbsp;|&nbsp; موضع: ${village} &nbsp;|&nbsp; تحصیل: ${tehsil} &nbsp;|&nbsp; ضلع: ${district}
+  موضع: ${village} &nbsp;|&nbsp; تحصیل: ${tehsil} &nbsp;|&nbsp; ضلع: ${district}
 </div>
 <table>
   <thead>
@@ -214,17 +226,18 @@ export default function Form1Register() {
     queryFn: () => base44.entities.Form1Register.list("-updated_date", 200),
   });
 
-  // Mouza-wise: group registers by village/mouza, combine their rows
+  // Mouza-wise: group registers by village/mouza, combine their rows (tagged with moga)
   const mouzaGroups = useMemo(() => {
     const map = new Map();
     for (const r of registers) {
       const key = r.mouza || r.village || "بے نام";
       if (!map.has(key)) {
-        map.set(key, { key, mouza: key, village: r.village || "", tehsil: r.tehsil || "", district: r.district || "", channel_name: r.channel_name || "", registers: [], allRows: [] });
+        map.set(key, { key, mouza: key, village: r.village || "", tehsil: r.tehsil || "", district: r.district || "", registers: [], allRows: [] });
       }
       const g = map.get(key);
       g.registers.push(r);
-      g.allRows.push(...parseRows(r.rows_json));
+      const rows = parseRows(r.rows_json).map(row => ({ ...row, moga_number: r.moga_number || "", channel_name: r.channel_name || "", outlet_side: r.outlet_side || "" }));
+      g.allRows.push(...rows);
     }
     return [...map.values()];
   }, [registers]);
@@ -245,13 +258,12 @@ export default function Form1Register() {
     const s = search.toLowerCase();
     return mouzaGroups.filter(g =>
       g.mouza.toLowerCase().includes(s) ||
-      g.tehsil.toLowerCase().includes(s) ||
-      g.channel_name.toLowerCase().includes(s)
+      g.tehsil.toLowerCase().includes(s)
     );
   }, [mouzaGroups, search]);
 
   const handlePrintMoga = (reg) => {
-    const rows = parseRows(reg.rows_json);
+    const rows = parseRows(reg.rows_json).map(row => ({ ...row, moga_number: reg.moga_number || "", channel_name: reg.channel_name || "", outlet_side: reg.outlet_side || "" }));
     const groups = groupAllocations(rows);
     if (groups.length === 0) { alert("اس رجسٹر میں کوئی ڈیٹا نہیں"); return; }
     const html = buildPrintHTML(reg, groups, "moga");
@@ -265,7 +277,7 @@ export default function Form1Register() {
   const handlePrintMouza = (mg) => {
     const groups = groupAllocations(mg.allRows);
     if (groups.length === 0) { alert("اس موضع میں کوئی ڈیٹا نہیں"); return; }
-    const meta = { mouza: mg.mouza, village: mg.village, tehsil: mg.tehsil, district: mg.district, channel_name: mg.channel_name, moga_number: "تمام موگے", outlet_side: "" };
+    const meta = { mouza: mg.mouza, village: mg.village, tehsil: mg.tehsil, district: mg.district };
     const html = buildPrintHTML(meta, groups, "mouza");
     const win = window.open("", "_blank");
     if (!win) { alert("پاپ اپ بلاک ہے — اجازت دیں"); return; }
@@ -274,20 +286,19 @@ export default function Form1Register() {
     setTimeout(() => win.print(), 800);
   };
 
-  // Shared table renderer (on-screen) for a set of groups + meta
-  const renderTable = (meta, groups) => {
-    const mogaRD = `${meta.moga_number || ""}${meta.outlet_side ? `-${meta.outlet_side}` : ""}`;
+  // Shared table renderer (on-screen)
+  const renderTable = (groups) => {
     return (
       <table className="w-full text-[9px] border-collapse min-w-[900px]" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', Arial, sans-serif" }}>
         <thead>
-          <tr className="bg-[#a78bfa] text-[#1e1b4b]">
+          <tr className="bg-[#e1ebff] text-black">
             <th rowSpan={2} className="border border-slate-500 px-1 py-1.5 min-w-[28px] text-base">نمبر شمار<br/><span className="text-[8px]">1</span></th>
             <th rowSpan={2} className="border border-slate-500 px-1 py-1.5 min-w-[64px] text-base">راجباہ/مائنر<br/><span className="text-[8px]">2</span></th>
             <th rowSpan={2} className="border border-slate-500 px-1 py-1.5 min-w-[60px] text-base">نمبر موگہ RD<br/><span className="text-[8px]">3</span></th>
             <th colSpan={2} className="border border-slate-500 px-1 py-1 text-base">دوامی<br/><span className="text-[8px]">4</span></th>
             <th colSpan={2} className="border border-slate-500 px-1 py-1 text-base">غیر دوامی<br/><span className="text-[8px]">5</span></th>
             <th rowSpan={2} className="border border-slate-500 px-1 py-1.5 min-w-[34px] text-base">نمبر کھاتہ<br/><span className="text-[8px]">6</span></th>
-            <th rowSpan={2} className="border border-slate-500 px-1 py-1.5 min-w-[130px] text-base">نام مالک/معہ ولدیت/قومیت/سکونت<br/><span className="text-[8px]">7</span></th>
+            <th rowSpan={2} className="border border-slate-500 px-1 py-1.5 min-w-[150px] text-base">نام مالک/معہ ولدیت/قومیت/سکونت<br/><span className="text-[8px]">7</span></th>
             <th colSpan={2} className="border border-slate-500 px-1 py-1 text-base">نمبر خسرہ بندوبست<br/><span className="text-[8px]">8</span></th>
             <th colSpan={2} className="border border-slate-500 px-1 py-1 text-base">رقبہ<br/><span className="text-[8px]">9</span></th>
             <th colSpan={2} className="border border-slate-500 px-1 py-1 text-base">فش فارم<br/><span className="text-[8px]">10</span></th>
@@ -295,7 +306,7 @@ export default function Form1Register() {
             <th colSpan={2} className="border border-slate-500 px-1 py-1 text-base">پیڈک ایریا<br/><span className="text-[8px]">12</span></th>
             <th rowSpan={2} className="border border-slate-500 px-1 py-1.5 min-w-[44px] text-base">کیفیت<br/><span className="text-[8px]">13</span></th>
           </tr>
-          <tr className="bg-[#c4b5fd] text-[#312e81] text-[10px]">
+          <tr className="bg-[#dbe5ff] text-black text-[10px]">
             <th className="border border-slate-400 px-1 py-0.5">کنال</th><th className="border border-slate-400 px-1 py-0.5">مرلہ</th>
             <th className="border border-slate-400 px-1 py-0.5">کنال</th><th className="border border-slate-400 px-1 py-0.5">مرلہ</th>
             <th className="border border-slate-400 px-1 py-0.5">مربع</th><th className="border border-slate-400 px-1 py-0.5">کیلہ</th>
@@ -310,6 +321,7 @@ export default function Form1Register() {
             const tot = groupTotals(g.items);
             const acres = farmerAcres(g.items);
             const rowCount = Math.max(acres.length, 1);
+            const gMoga = `${g.moga_number || ""}${g.outlet_side ? `-${g.outlet_side}` : ""}`;
             return Array.from({ length: rowCount }).map((_, ai) => {
               const acre = acres[ai] || {};
               const isFirst = ai === 0;
@@ -317,24 +329,25 @@ export default function Form1Register() {
                 <tr key={`${g.key}-${ai}`} className={ai % 2 === 0 ? "bg-white" : "bg-slate-50"}>
                   {isFirst && (
                     <>
-                      <td rowSpan={rowCount} className="border border-slate-300 text-center font-bold text-slate-700 bg-slate-100 text-base">{g.serial}</td>
-                      <td rowSpan={rowCount} className="border border-slate-300 text-center text-sm font-bold text-purple-700">{meta.channel_name || ""}</td>
-                      <td rowSpan={rowCount} className="border border-slate-300 text-center text-sm font-bold text-purple-700 font-mono">{mogaRD}</td>
+                      <td rowSpan={rowCount} className="border border-slate-300 text-center font-bold text-slate-700 bg-slate-100 text-base text-black">{g.serial}</td>
+                      <td rowSpan={rowCount} className="border border-slate-300 text-center text-sm font-bold text-black">{g.channel_name || ""}</td>
+                      <td rowSpan={rowCount} className="border border-slate-300 text-center text-sm font-bold text-black font-mono">{gMoga}</td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center"></td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center"></td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center"></td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center"></td>
-                      <td rowSpan={rowCount} className="border border-slate-300 text-center font-mono text-xs">{g.khata_no}</td>
+                      <td rowSpan={rowCount} className="border border-slate-300 text-center font-mono text-xs text-black">{g.khata_no}</td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-right px-2">
-                        <div className="text-lg font-bold text-[#1e1b4b]">{g.farmer_name}</div>
-                        <div className="text-[9px] text-slate-500">ولد: {g.father}</div>
-                        <div className="text-[9px] text-blue-700 font-mono">شناختی کارڈ: {formatCNIC(g.cnic)}</div>
-                        <div className="text-[9px] text-emerald-700 font-mono">فون نمبر: {formatPhone(g.phone)}</div>
+                        <div className="text-lg font-bold text-black">{g.farmer_name}</div>
+                        <div className="text-lg text-black mt-0.5">ولد: {g.father}</div>
+                        <div className="text-lg text-black font-mono mt-0.5">شناختی کارڈ: {formatCNIC(g.cnic)}</div>
+                        <div className="text-lg text-black font-mono mt-0.5">فون نمبر: {formatPhone(g.phone)}</div>
+                        <div className="text-lg font-bold text-black mt-0.5">کل رقبہ: {fmtArea(tot.kanal, tot.marla)}</div>
                       </td>
                     </>
                   )}
-                  <td className="border border-slate-300 text-center font-mono">{acre.murba || ""}</td>
-                  <td className="border border-slate-300 text-center font-mono">{acre.killa || ""}</td>
+                  <td className="border border-slate-300 text-center font-mono text-black">{acre.murba || ""}</td>
+                  <td className="border border-slate-300 text-center font-mono text-black">{acre.killa || ""}</td>
                   <td className="border border-slate-300 text-center font-bold text-blue-700">{acre.kanal || ""}</td>
                   <td className="border border-slate-300 text-center text-blue-600">{isFirst ? (tot.marla || "0") : ""}</td>
                   <td className="border border-slate-300"></td><td className="border border-slate-300"></td>
@@ -412,7 +425,7 @@ export default function Form1Register() {
           ) : (
             <div className="space-y-3">
               {filteredMoga.map(reg => {
-                const rows = parseRows(reg.rows_json);
+                const rows = parseRows(reg.rows_json).map(row => ({ ...row, moga_number: reg.moga_number || "", channel_name: reg.channel_name || "", outlet_side: reg.outlet_side || "" }));
                 const groups = groupAllocations(rows);
                 const isOpen = expandedId === reg.id;
                 return (
@@ -450,7 +463,7 @@ export default function Form1Register() {
                       <div className="border-t border-slate-200 overflow-x-auto">
                         {groups.length === 0 ? (
                           <div className="py-6 text-center text-slate-400 text-sm">ابھی کوئی ڈیٹا نہیں</div>
-                        ) : renderTable(reg, groups)}
+                        ) : renderTable(groups)}
                       </div>
                     )}
                   </div>
@@ -470,7 +483,6 @@ export default function Form1Register() {
               {filteredMouza.map(mg => {
                 const groups = groupAllocations(mg.allRows);
                 const isOpen = expandedId === `mouza-${mg.key}`;
-                const meta = { mouza: mg.mouza, village: mg.village, tehsil: mg.tehsil, district: mg.district, channel_name: mg.channel_name, moga_number: "تمام موگے", outlet_side: "" };
                 return (
                   <div key={mg.key} className="bg-white rounded-2xl shadow border border-purple-200 overflow-hidden">
                     <div
@@ -506,7 +518,7 @@ export default function Form1Register() {
                       <div className="border-t border-slate-200 overflow-x-auto">
                         {groups.length === 0 ? (
                           <div className="py-6 text-center text-slate-400 text-sm">ابھی کوئی ڈیٹا نہیں</div>
-                        ) : renderTable(meta, groups)}
+                        ) : renderTable(groups)}
                       </div>
                     )}
                   </div>
