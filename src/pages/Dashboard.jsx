@@ -39,6 +39,16 @@ const MODULES = [
     locked: false,
   },
   {
+    id: "form1-register",
+    label: "FORM 1 REGISTER",
+    labelUrdu: "فارم نمبر 1 رجسٹر",
+    icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/07b58d3d1_generated_image.png",
+    path: "/form1-register",
+    bg: "from-[#d97706] to-[#b45309]",
+    shadow: "shadow-amber-500/40",
+    locked: false,
+  },
+  {
     id: "khal-mismari",
     label: "KHAL MISMARI",
     labelUrdu: "کھال مسماری",
