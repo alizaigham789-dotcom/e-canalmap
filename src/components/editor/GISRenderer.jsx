@@ -630,7 +630,7 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
   // Water fill — straight segments (matches print/export exactly, no curve overshoot)
   // Default: black border, solid blue inside fill
   const khalColor = isSelected ? "#6b7280" : (C.khalStroke || "#0D47A1");
-  ctx.fillStyle = obj.fillColor || "#1565C0";
+  ctx.fillStyle = obj.fillColor || C.khalStroke || "#1565C0";
   ctx.beginPath();
   ctx.moveTo(left[0].x, left[0].y);
   for (const p of left) ctx.lineTo(p.x, p.y);
@@ -656,27 +656,29 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
   ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
   ctx.stroke();
 
-  // Flow-direction arrowhead at the khal's ending point — 5× size
-  // Head (tip) at end point, tail behind toward start, tail width = 5× khal width
+  // Flow-direction arrowhead at the khal's ending point — hidden when this khal
+  // continues forward into another khal (noArrow flag set on merge).
   // Use the last segment with meaningful length to avoid double-click noise (two near-identical points)
-  const last = obj.points[obj.points.length - 1];
-  let prev = obj.points[0]; // fallback: overall direction
-  for (let i = obj.points.length - 2; i >= 0; i--) {
-    const p = obj.points[i];
-    if (Math.hypot(last.x - p.x, last.y - p.y) > halfW * 2) { prev = p; break; }
+  if (!obj.noArrow) {
+    const last = obj.points[obj.points.length - 1];
+    let prev = obj.points[0]; // fallback: overall direction
+    for (let i = obj.points.length - 2; i >= 0; i--) {
+      const p = obj.points[i];
+      if (Math.hypot(last.x - p.x, last.y - p.y) > halfW * 2) { prev = p; break; }
+    }
+    const fAng = Math.atan2(last.y - prev.y, last.x - prev.x);
+    const arrowLen = halfW * 6.25;   // 2.5× original — halved from 5×
+    const arrowWidth = halfW * 2.5;  // 2.5× tail width — halved from 5×
+    ctx.save();
+    ctx.translate(last.x, last.y); ctx.rotate(fAng);
+    ctx.fillStyle = khalColor;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-arrowLen, -arrowWidth);
+    ctx.lineTo(-arrowLen, arrowWidth);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
   }
-  const fAng = Math.atan2(last.y - prev.y, last.x - prev.x);
-  const arrowLen = halfW * 6.25;   // 2.5× original — halved from 5×
-  const arrowWidth = halfW * 2.5;  // 2.5× tail width — halved from 5×
-  ctx.save();
-  ctx.translate(last.x, last.y); ctx.rotate(fAng);
-  ctx.fillStyle = khalColor;
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(-arrowLen, -arrowWidth);
-  ctx.lineTo(-arrowLen, arrowWidth);
-  ctx.closePath(); ctx.fill();
-  ctx.restore();
 
   if (obj.name && zoom > 0.3) {
     const mid = Math.floor(obj.points.length / 2);
