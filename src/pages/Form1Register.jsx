@@ -28,7 +28,7 @@ function fmtArea(kanal, marla) {
   let totalKanal = (kanal || 0) + (marla || 0) / 20;
   const acres = Math.floor(totalKanal / 8);
   const remK = Math.round(totalKanal % 8);
-  return `${acres} ایکر ${remK} کنال`;
+  return `${acres} ایکڑ ${remK} کنال`;
 }
 
 function parseRows(rows_json) {
@@ -150,15 +150,15 @@ function buildPrintHTML(meta, groups, mode = "moga") {
   .meta { text-align: center; font-size: 14px; margin-bottom: 8px; color: #000; font-weight: 700; }
   table { width: 100%; border-collapse: collapse; }
   th, td { border: 1px solid #000; padding: 3px 4px; vertical-align: middle; text-align: center; word-break: break-word; color: #000; }
-  thead th { background: #e1ebff; color: #000; font-size: 24px; font-weight: 700; }
-  .group-head th { background: #dbe5ff; color: #000; font-size: 20px; }
+  thead th { background: #e1ebff; color: #000; font-size: 20px; font-weight: 700; white-space: nowrap; }
+  .group-head th { background: #dbe5ff; color: #000; font-size: 16px; white-space: nowrap; }
   .sr { font-weight: 700; font-size: 16px; background: #f1f5f9 !important; min-width: 28px; color: #000; }
   .name { text-align: right; padding: 3px 5px; min-width: 130px; }
-  .fname { font-size: 16px; font-weight: 700; color: #000; }
-  .fsub { font-size: 16px; color: #000; margin-top: 2px; }
-  .fcnic { font-size: 16px; color: #000; margin-top: 2px; font-family: monospace; }
-  .fphone { font-size: 16px; color: #000; margin-top: 2px; font-family: monospace; }
-  .ftot { font-size: 16px; color: #000; font-weight: 700; margin-top: 2px; }
+  .fname { font-size: 16px; font-weight: 700; color: #000; white-space: nowrap; }
+  .fsub { font-size: 16px; color: #000; margin-top: 2px; font-weight: 700; white-space: nowrap; }
+  .fcnic { font-size: 16px; color: #000; margin-top: 2px; }
+  .fphone { font-size: 16px; color: #000; margin-top: 2px; }
+  .ftot { font-size: 12px; color: #000; font-weight: 700; margin-top: 2px; }
   .rajbah { min-width: 60px; font-size: 16px; font-weight: 700; color: #000; }
   .moga { min-width: 56px; font-size: 16px; font-weight: 700; color: #000; }
   .khata { min-width: 34px; font-size: 12px; color: #000; }
@@ -289,7 +289,7 @@ export default function Form1Register() {
   // Shared table renderer (on-screen)
   const renderTable = (groups) => {
     return (
-      <table className="w-full text-[9px] border-collapse min-w-[900px]" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', Arial, sans-serif" }}>
+      <table className="w-full text-[9px] border-collapse min-w-[900px] [&_th]:whitespace-nowrap" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', Arial, sans-serif" }}>
         <thead>
           <tr className="bg-[#e1ebff] text-black">
             <th rowSpan={2} className="border border-slate-500 px-1 py-1.5 min-w-[28px] text-base">نمبر شمار<br/><span className="text-[8px]">1</span></th>
@@ -338,11 +338,11 @@ export default function Form1Register() {
                       <td rowSpan={rowCount} className="border border-slate-300 text-center"></td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center font-mono text-xs text-black">{g.khata_no}</td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-right px-2">
-                        <div className="text-lg font-bold text-black">{g.farmer_name}</div>
-                        <div className="text-lg text-black mt-0.5">ولد: {g.father}</div>
-                        <div className="text-lg text-black font-mono mt-0.5">شناختی کارڈ: {formatCNIC(g.cnic)}</div>
-                        <div className="text-lg text-black font-mono mt-0.5">فون نمبر: {formatPhone(g.phone)}</div>
-                        <div className="text-lg font-bold text-black mt-0.5">کل رقبہ: {fmtArea(tot.kanal, tot.marla)}</div>
+                        <div className="text-lg font-bold text-black whitespace-nowrap">{g.farmer_name}</div>
+                        <div className="text-lg font-bold text-black mt-0.5 whitespace-nowrap">ولد: {g.father}</div>
+                        <div className="text-lg text-black mt-0.5">شناختی کارڈ: {formatCNIC(g.cnic)}</div>
+                        <div className="text-lg text-black mt-0.5">فون نمبر: {formatPhone(g.phone)}</div>
+                        <div className="text-sm font-bold text-black mt-0.5">کل رقبہ: {fmtArea(tot.kanal, tot.marla)}</div>
                       </td>
                     </>
                   )}
@@ -388,13 +388,13 @@ export default function Form1Register() {
             onClick={() => setViewMode("moga")}
             className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-bold transition-all ${viewMode === "moga" ? "bg-amber-600 text-white" : "text-slate-500 hover:bg-slate-100"}`}
           >
-            <MapPin className="w-3.5 h-3.5" /> موجے وار
+            <MapPin className="w-3.5 h-3.5" /> موگے وار (Moga-wise)
           </button>
           <button
             onClick={() => setViewMode("mouza")}
             className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-bold transition-all ${viewMode === "mouza" ? "bg-purple-600 text-white" : "text-slate-500 hover:bg-slate-100"}`}
           >
-            <Layers className="w-3.5 h-3.5" /> موضع وار
+            <Layers className="w-3.5 h-3.5" /> موضع وار (Mouza-wise)
           </button>
         </div>
 
