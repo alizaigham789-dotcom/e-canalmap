@@ -1,0 +1,18 @@
+{
+  "name": "E-Canal Patwari",
+  "short_name": "E-Canal Patwari",
+  "description": "E-Canal Patwari — precision cadastral mapping and land management",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f1a",
+  "theme_color": "#0a0f1a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://base44.com/logo_v2.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

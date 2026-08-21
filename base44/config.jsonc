@@ -1,5 +1,5 @@
 {
-  "name": "E Canal Patwari",
+  "name": "E-Canal Patwari",
   "site": {
     "installCommand": "npm install",
     "buildCommand": "npm run build",
