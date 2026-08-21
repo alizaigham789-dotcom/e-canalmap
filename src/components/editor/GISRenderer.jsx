@@ -399,8 +399,8 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   const w = Math.max(2, obj.width);
   // Vivid full-blue water (opaque, saturated, bright) — replaces the old translucent powder blue.
   // Used by the 3D ribbon body; the flat style renders its own blue gradient below.
-  const fillC = C.canalFill || "#3b82f6";
-  const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#2B7AB8");
+  const fillC = C.canalFill || "#29A9E8";
+  const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#1688C7");
 
   if (obj.canalStyle === "flat") {
     // Flat style — squared ends, two parallel blue boundary lines, beautiful full-blue water
@@ -416,14 +416,9 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
       midX - perpX * halfW, midY - perpY * halfW,
       midX + perpX * halfW, midY + perpY * halfW
     );
-    grad.addColorStop(0, "#2563eb");    // vivid blue edge
-    grad.addColorStop(0.5, "#93c5fd");  // bright shiny blue center
-    grad.addColorStop(1, "#2563eb");    // vivid blue edge
-    // Light-yellow soft shadow/glow around the canal (drawn under the water fill)
-    ctx.strokeStyle = "rgba(253,230,138,0.6)";
-    ctx.lineWidth = w + 10;
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+    grad.addColorStop(0, "#1688C7");    // darker blue outline edge
+    grad.addColorStop(0.5, "#29A9E8");  // clean professional blue centre
+    grad.addColorStop(1, "#1688C7");    // darker blue outline edge
     ctx.fillStyle = grad;
     ctx.beginPath();
     drawSmoothPath(ctx, left);
@@ -452,10 +447,6 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   } else {
     // 3D ribbon — soft glow halo + darker outline + body + inner highlight
     ctx.lineCap = "round"; ctx.lineJoin = "round";
-    // Light-yellow soft shadow/glow around the canal
-    ctx.strokeStyle = "rgba(253,230,138,0.55)";
-    ctx.lineWidth = w + 8;
-    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
     ctx.strokeStyle = strokeC;
     ctx.lineWidth = w + 3;
     ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
@@ -638,8 +629,8 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
 
   // Water fill — straight segments (matches print/export exactly, no curve overshoot)
   // Default: black border, solid blue inside fill
-  const khalColor = isSelected ? "#6b7280" : (C.khalStroke || "#000000");
-  ctx.fillStyle = obj.fillColor || "rgba(59,130,246,0.80)";
+  const khalColor = isSelected ? "#6b7280" : (C.khalStroke || "#0D47A1");
+  ctx.fillStyle = obj.fillColor || "#1565C0";
   ctx.beginPath();
   ctx.moveTo(left[0].x, left[0].y);
   for (const p of left) ctx.lineTo(p.x, p.y);

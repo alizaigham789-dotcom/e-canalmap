@@ -198,8 +198,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     } else if (o.type === "canal" && o.points?.length >= 2) {
       // Canal — 3D ribbon: rounded thick stroke + darker outline + soft halo
       const w = Math.max(2, o.width || DIMENSIONS.CANAL_WIDTH);
-      const fillC = C.canalFill || "rgba(163,218,244,0.70)";
-      const strokeC = C.canalStroke || "#2B7AB8";
+      const fillC = C.canalFill || "#29A9E8";
+      const strokeC = C.canalStroke || "#1688C7";
       const drawCenter = () => { ctx.beginPath(); ctx.moveTo(o.points[0].x, o.points[0].y); for (const p of o.points) ctx.lineTo(p.x, p.y); };
       if (o.canalStyle === "flat") {
         const halfW = w / 2;
@@ -228,8 +228,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     } else if (o.type === "khal" && o.points?.length >= 2) {
       const halfW = (o.width || 8)/2;
       const left = getParallelPolyline(o.points,-halfW); const right = getParallelPolyline(o.points,halfW);
-      const kColor = C.khalStroke || "#000000";
-      ctx.fillStyle = o.fillColor || C.khalFill || "rgba(59,130,246,0.80)"; ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
+      const kColor = C.khalStroke || "#0D47A1";
+      ctx.fillStyle = o.fillColor || C.khalFill || "#1565C0"; ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
       for(const p of left)ctx.lineTo(p.x,p.y); ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
       for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y); ctx.closePath(); ctx.fill();
       ctx.strokeStyle=kColor; ctx.lineWidth=1.5/zoom;
