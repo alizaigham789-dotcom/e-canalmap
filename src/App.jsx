@@ -34,6 +34,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Subscription from './pages/Subscription';
+import Account from './pages/Account';
 import SubscriptionGate from '@/components/SubscriptionGate';
 
 const AuthenticatedApp = () => {
@@ -67,6 +68,7 @@ const AuthenticatedApp = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/account" element={<Account />} />
         <Route path="/subscription" element={<Subscription />} />
         <Route element={<SubscriptionGate />}>
           <Route path="/editor" element={<Editor />} />

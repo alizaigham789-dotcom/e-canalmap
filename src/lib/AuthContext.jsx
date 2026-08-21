@@ -18,6 +18,19 @@ export const AuthProvider = ({ children }) => {
     checkAppState();
   }, []);
 
+  // Sync Tailwind dark-mode class with the system colour-scheme preference
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = (isDark) => {
+      document.documentElement.classList.toggle("dark", isDark);
+    };
+    apply(mq.matches);
+    const handler = (e) => apply(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   const checkAppState = async () => {
     try {
       setIsLoadingPublicSettings(true);

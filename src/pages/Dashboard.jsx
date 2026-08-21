@@ -161,7 +161,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 pb-20 antialiased">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm">
+      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm safe-top">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/30 ring-1 ring-white/30">
@@ -175,21 +175,21 @@ export default function Dashboard() {
           <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setShowRecovery(true)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-slate-100 transition-colors"
+              className="w-11 h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-slate-100 transition-colors"
               title="Backup Recovery"
             >
-              <Database className="w-4 h-4" strokeWidth={2} />
+              <Database className="w-5 h-5" strokeWidth={2} />
             </button>
             {currentUser?.role === "admin" && (
-              <button onClick={() => navigate("/admin")} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors">
-                <Shield className="w-4 h-4" strokeWidth={2} />
+              <button onClick={() => navigate("/admin")} className="w-11 h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors">
+                <Shield className="w-5 h-5" strokeWidth={2} />
               </button>
             )}
-            <div className="w-7 h-7 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-700 text-[10px] font-bold">
+            <button onClick={() => navigate("/account")} className="w-11 h-11 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-700 text-sm font-bold hover:bg-blue-200 transition-colors" title="Account & Settings">
               {currentUser?.full_name?.[0] || "U"}
-            </div>
-            <button onClick={() => base44.auth.logout()} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-slate-100 transition-colors">
-              <LogOut className="w-3.5 h-3.5" strokeWidth={2} />
+            </button>
+            <button onClick={() => base44.auth.logout()} className="w-11 h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-slate-100 transition-colors">
+              <LogOut className="w-5 h-5" strokeWidth={2} />
             </button>
           </div>
         </div>
