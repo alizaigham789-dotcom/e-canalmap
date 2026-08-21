@@ -1124,6 +1124,16 @@ export function getMogaColor(labelColor) {
   return isBlackDefault ? "#2563eb" : "#000000";
 }
 
+// HTML-escape user-supplied strings before interpolating into HTML templates
+export function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Single-line Urdu header text — shared by the editor top bar, print preview and exports
 export function buildMapHeaderText(mapData) {
   const number = mapData?.moga_number || "_____";
@@ -1139,7 +1149,7 @@ export function buildMapHeaderText(mapData) {
 
 // Bordered single-line header box for print/export output — auto-shrinks to fit one line
 export function buildPrintHeaderHTML(mapData) {
-  const text = buildMapHeaderText(mapData);
+  const text = escapeHtml(buildMapHeaderText(mapData));
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
   return `<div style="width:100%;box-sizing:border-box;padding:6px 12px;">
     <div id="print-header-box" style="border-bottom:3px solid #000; padding:10px 18px 12px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box; background:#f1f5f9; border-radius:4px 4px 0 0;">

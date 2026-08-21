@@ -3,6 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, X, Loader2 } from "lucide-react";
 
 // ---- Helpers ----
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function getObjectsBounds(objects) {
   if (!objects || objects.length === 0) return null;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -88,7 +97,11 @@ export default function ExportProDialog({ open, onClose, mapData, objects, canva
       const imgData = hr.toDataURL("image/png");
       const w = window.open("", "_blank", "width=1200,height=900");
       if (!w) { alert("Popup blocked"); return; }
-      w.document.write(`<!DOCTYPE html><html><head><title>${mapData?.title || "Map"} — PDF</title>
+      const escTitle = escapeHtml(mapData?.title || "Cadastral Map");
+      const escVillage = escapeHtml(mapData?.village || "");
+      const escDistrict = escapeHtml(mapData?.district || "");
+      const escStatus = escapeHtml((mapData?.status || "draft").toUpperCase());
+      w.document.write(`<!DOCTYPE html><html><head><title>${escTitle} — PDF</title>
       <style>
         @page { size: A4 landscape; margin: 8mm; }
         *{box-sizing:border-box;margin:0;padding:0;}
@@ -101,10 +114,10 @@ export default function ExportProDialog({ open, onClose, mapData, objects, canva
       </style></head><body>
       <div class="header">
         <div>
-          <div class="title">CHAKBANDI GIS — ${mapData?.title || "Cadastral Map"}</div>
-          <div style="font-size:9px;margin-top:2px;">${mapData?.village ? `Village: ${mapData.village}` : ""} ${mapData?.district ? `| Division: ${mapData.district}` : ""}</div>
+          <div class="title">CHAKBANDI GIS — ${escTitle}</div>
+          <div style="font-size:9px;margin-top:2px;">${escVillage ? `Village: ${escVillage}` : ""} ${escDistrict ? `| Division: ${escDistrict}` : ""}</div>
         </div>
-        <div class="meta"><div>Status: ${(mapData?.status || "draft").toUpperCase()}</div><div>Date: ${new Date().toLocaleDateString()}</div><div>Parcels: ${mapData?.total_parcels || 0}</div></div>
+        <div class="meta"><div>Status: ${escStatus}</div><div>Date: ${new Date().toLocaleDateString()}</div><div>Parcels: ${mapData?.total_parcels || 0}</div></div>
       </div>
       <img src="${imgData}" />
       <div class="footer"><div>Survey-grade Cadastral Map — Chakbandi GIS System</div><div>1 Killa = 220×198 ft | Scale: Survey Grade</div></div>
