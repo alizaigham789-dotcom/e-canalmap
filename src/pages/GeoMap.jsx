@@ -210,6 +210,14 @@ export default function GeoMap() {
   const tehsils = useMemo(() => [...new Set((maps || []).filter(m => !filters.district || m.district === filters.district).map(m => m.tehsil).filter(Boolean))].sort(), [maps, filters.district]);
   const villages = useMemo(() => [...new Set((maps || []).filter(m => (!filters.district || m.district === filters.district) && (!filters.tehsil || m.tehsil === filters.tehsil)).map(m => m.village).filter(Boolean))].sort(), [maps, filters.district, filters.tehsil]);
 
+  // All maps matching the current district/tehsil/village filter — used to show
+  // every moga of the selected mouza together on the satellite map.
+  const villageMaps = useMemo(() => (maps || []).filter(m =>
+    (!filters.district || m.district === filters.district) &&
+    (!filters.tehsil || m.tehsil === filters.tehsil) &&
+    (!filters.village || m.village === filters.village)
+  ), [maps, filters]);
+
   // Moga numbers available across the filtered maps (for the top cascade).
   const filterMogas = useMemo(() => {
     const s = new Set();
@@ -469,6 +477,33 @@ export default function GeoMap() {
       if (mapRef.current) mapRef.current.flyTo(mapRef.current.getCenter(), 18, { duration: 0.6 });
     }
   }, [selectedMap, mapObjects]);
+
+  // When a village (mouza) is selected, automatically show all its maps together
+  // on the satellite so every moga of the mouza is visible at once.
+  useEffect(() => {
+    if (filters.village) setShowAll(true);
+  }, [filters.village]);
+
+  // When a moga is selected and the overlay is placed, fly to just that moga's
+  // bounds (not the full map) so only the selected moga fills the screen.
+  useEffect(() => {
+    if (!selectedMoga || !overlay?.transform || !mapRef.current) return;
+    const mogaObjs = mapObjects.filter(o =>
+      (o.type === "mustateel" || o.type === "muraba") &&
+      String(o.mogaNumber) === String(selectedMoga)
+    );
+    if (mogaObjs.length === 0) return;
+    const allLatLngs = [];
+    for (const o of mogaObjs) {
+      const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
+      for (const [cx, cy] of corners) allLatLngs.push(overlay.transform.transform(cx, cy));
+    }
+    const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+    if (valid.length) {
+      const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
+      mapRef.current.flyToBounds(bounds, { padding: [50, 50], maxZoom: 19, duration: 0.8 });
+    }
+  }, [selectedMoga, overlay, mapObjects]);
 
   // NOTE: Overlay is computed in handleMapClick when placing manually, or in
   // handlePlaceByCoords / handleLowerLeftDrag / handleUpperLeftDrag when coordinates
@@ -864,7 +899,7 @@ export default function GeoMap() {
       const latlngs = corners.map(([cx, cy]) => overlay.transform.transform(cx, cy)).filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
       if (latlngs.length) {
         const bounds = L.latLngBounds(latlngs.map(p => [p.lat, p.lng]));
-        mapRef.current.flyToBounds(bounds, { padding: [30, 30], maxZoom: 19, duration: 0.6 });
+        mapRef.current.flyToBounds(bounds, { padding: [20, 20], maxZoom: 20, duration: 0.6 });
       }
     }
   }, [mapObjects, overlay]);
@@ -953,7 +988,7 @@ export default function GeoMap() {
 
         {/* Show all saved maps together */}
         {showAll && (
-          <AllOverlaysLayer maps={maps || []} excludeId={selectedMapId} zoom={zoom} />
+          <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} />
         )}
 
         {/* Overlay layer — all map details */}
