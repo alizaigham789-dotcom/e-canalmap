@@ -136,7 +136,7 @@ export default function GeoMap() {
   const [zoom, setZoom] = useState(13);
   const [hybrid, setHybrid] = useState(true);
   const [activeTool, setActiveTool] = useState(null);
-  const [filters, setFilters] = useState({ district: "", tehsil: "", village: "" });
+  const [filters, setFilters] = useState({ district: "", tehsil: "", village: "", rajbah: "" });
 
   // GPS
   const [gpsActive, setGpsActive] = useState(false);
@@ -209,12 +209,21 @@ export default function GeoMap() {
   const tehsils = useMemo(() => [...new Set((maps || []).filter(m => !filters.district || m.district === filters.district).map(m => m.tehsil).filter(Boolean))].sort(), [maps, filters.district]);
   const villages = useMemo(() => [...new Set((maps || []).filter(m => (!filters.district || m.district === filters.district) && (!filters.tehsil || m.tehsil === filters.tehsil)).map(m => m.village).filter(Boolean))].sort(), [maps, filters.district, filters.tehsil]);
 
-  // All maps matching the current district/tehsil/village filter — used to show
-  // every moga of the selected mouza together on the satellite map.
-  const villageMaps = useMemo(() => (maps || []).filter(m =>
+  // Rajbahs (canal minors) available for the selected mouza — each rajbah feeds
+  // multiple mogas; selecting one shows all its mogas' maps together.
+  const rajbahs = useMemo(() => [...new Set((maps || []).filter(m =>
     (!filters.district || m.district === filters.district) &&
     (!filters.tehsil || m.tehsil === filters.tehsil) &&
     (!filters.village || m.village === filters.village)
+  ).map(m => m.rajbah).filter(Boolean))].sort(), [maps, filters]);
+
+  // All maps matching the current district/tehsil/village/rajbah filter — used to show
+  // every moga of the selected mouza (or rajbah) together on the satellite map.
+  const villageMaps = useMemo(() => (maps || []).filter(m =>
+    (!filters.district || m.district === filters.district) &&
+    (!filters.tehsil || m.tehsil === filters.tehsil) &&
+    (!filters.village || m.village === filters.village) &&
+    (!filters.rajbah || m.rajbah === filters.rajbah)
   ), [maps, filters]);
 
   // Moga numbers available across the filtered maps (for the top cascade).
@@ -224,6 +233,7 @@ export default function GeoMap() {
       if (filters.district && m.district !== filters.district) continue;
       if (filters.tehsil && m.tehsil !== filters.tehsil) continue;
       if (filters.village && m.village !== filters.village) continue;
+      if (filters.rajbah && m.rajbah !== filters.rajbah) continue;
       if (m.moga_number) s.add(String(m.moga_number));
     }
     return [...s].sort((a, b) => +a - +b);
@@ -722,8 +732,9 @@ export default function GeoMap() {
   const handleFilterSelect = (field, value) => {
     setFilters(prev => {
       const next = { ...prev, [field]: value };
-      if (field === "district") { next.tehsil = ""; next.village = ""; }
-      if (field === "tehsil") { next.village = ""; }
+      if (field === "district") { next.tehsil = ""; next.village = ""; next.rajbah = ""; }
+      if (field === "tehsil") { next.village = ""; next.rajbah = ""; }
+      if (field === "village") { next.rajbah = ""; }
       return next;
     });
   };
@@ -1147,6 +1158,8 @@ export default function GeoMap() {
         village={filters.village}
         onSelect={handleFilterSelect}
         onMenu={() => navigate("/")}
+        rajbahs={rajbahs}
+        rajbah={filters.rajbah}
         mogas={filterMogas}
         selectedMoga={selectedMoga}
         onSelectMoga={handleSelectMogaTop}

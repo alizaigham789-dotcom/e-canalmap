@@ -16,6 +16,8 @@ export default function MapHeader({
   murabas,
   selectedMuraba,
   onSelectMuraba,
+  rajbahs,
+  rajbah,
 }) {
   const Select = ({ placeholder, value, options, field, onChange }) => (
     <div className="relative shrink-0">
@@ -42,6 +44,7 @@ export default function MapHeader({
         <Select placeholder="District" value={district} options={districts} field="district" />
         <Select placeholder="Tehsil" value={tehsil} options={tehsils} field="tehsil" />
         <Select placeholder="Mouza" value={village} options={villages} field="village" />
+        <Select placeholder="Rajbah" value={rajbah} options={rajbahs || []} field="rajbah" />
         <Select placeholder="Moga" value={selectedMoga} options={mogas || []} onChange={onSelectMoga} />
         <Select placeholder="Select Muraba" value={selectedMuraba} options={murabas || []} onChange={onSelectMuraba} />
       </div>
