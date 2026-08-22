@@ -26,7 +26,7 @@ import {
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
   saveToClipboard, loadFromClipboard, hasClipboard, worldToScreen,
 } from "@/lib/gisEngine";
-import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, LayoutGrid, Type, Trash2, GitMerge } from "lucide-react";
+import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, LayoutGrid, Type, Trash2 } from "lucide-react";
 import { saveBackup, getBackup, setLastMapId } from "@/lib/mapBackup";
 import { saveMaxSnapshot, getMaxSnapshot } from "@/lib/serverSnapshot";
 import { Button } from "@/components/ui/button";
@@ -66,24 +66,6 @@ const DEFAULT_COLORS = {
   outletStroke: "#06b6d4",
 };
 
-// Find the nearest canal endpoint (start/end) within tolerance — used by the
-// canal "twitch" snap mode so new canal endpoints merge into existing canals
-// and inherit the existing canal's name.
-function findNearestCanalEndpoint(pt, objects, tol) {
-  let best = null;
-  for (const o of objects) {
-    if (o.type !== "canal" || !o.points || o.points.length < 2) continue;
-    const endpoints = [o.points[0], o.points[o.points.length - 1]];
-    for (const p of endpoints) {
-      const d = Math.hypot(pt.x - p.x, pt.y - p.y);
-      if (d < tol && (!best || d < best.dist)) {
-        best = { point: { x: p.x, y: p.y }, dist: d, name: o.name || "" };
-      }
-    }
-  }
-  return best;
-}
-
 export default function Editor() {
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
@@ -113,7 +95,6 @@ export default function Editor() {
 
   const [snapSettings, setSnapSettings] = useState({ gridSnap: true, spineSnap: true, mogaSnap: true });
   const [freehandMode, setFreehandMode] = useState(false);
-  const [canalTwitch, setCanalTwitch] = useState(false);
   const [gridFlags, setGridFlags] = useState({ showMustateel: true, showMuraba: false });
   const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [groupName, setGroupName] = useState("");
@@ -153,7 +134,6 @@ export default function Editor() {
   const murabaStartNumRef = useRef(murabaStartNum);
   // Draft refs — allow finish handlers to read current draft without side-effects in state updaters
   const canalDraftRef = useRef(null);
-  const canalTwitchRef = useRef(false);
   const chakbandiDraftRef = useRef(null);
   const khalDraftRef = useRef(null);
   const roadDraftRef = useRef(null);
@@ -161,7 +141,6 @@ export default function Editor() {
   const mouzaDraftRef = useRef(null);
   const outletDraftRef = useRef(null);
   canalDraftRef.current = canalDraft;
-  canalTwitchRef.current = canalTwitch;
   chakbandiDraftRef.current = chakbandiDraft;
   khalDraftRef.current = khalDraft;
   roadDraftRef.current = roadDraft;
@@ -712,19 +691,7 @@ export default function Editor() {
     const draft = canalDraftRef.current;
     setCanalDraft(null);
     if (draft && draft.length >= 2) {
-      let pts = draft.map(p => ({ ...p }));
-      let inheritedName = "";
-      // Twitch / snap mode — canal endpoints snap to the nearest existing canal
-      // endpoint and inherit its name so connected canals stay one named network.
-      if (canalTwitchRef.current) {
-        const snapTol = 20;
-        const startCand = findNearestCanalEndpoint(pts[0], dsmRef.current.objects, snapTol);
-        if (startCand) { pts[0] = startCand.point; if (startCand.name) inheritedName = startCand.name; }
-        const endCand = findNearestCanalEndpoint(pts[pts.length - 1], dsmRef.current.objects, snapTol);
-        if (endCand) pts[pts.length - 1] = endCand.point;
-      }
-      const canal = createCanal(pts);
-      if (inheritedName) canal.name = inheritedName;
+      const canal = createCanal(draft);
       dsmRef.current.add(canal);
       setSelectedId(canal.id);
       syncObjects();
@@ -757,22 +724,6 @@ export default function Editor() {
     setKhalDraft(null);
     if (draft && draft.length >= 2) {
       const khal = createKhal(draft);
-      // Arrow-merge: if this khal starts at the END of an existing khal and
-      // continues forward (same direction), hide the existing khal's flow arrow.
-      // If the new khal goes backward (opposite), the arrow stays.
-      const newStart = draft[0];
-      const newDir = Math.atan2(draft[1].y - draft[0].y, draft[1].x - draft[0].x);
-      const angTol = 35 * Math.PI / 180;
-      const snapTol = 15;
-      for (const ex of dsmRef.current.objects) {
-        if (ex.type !== "khal" || !ex.points || ex.points.length < 2) continue;
-        const exEnd = ex.points[ex.points.length - 1];
-        if (Math.hypot(newStart.x - exEnd.x, newStart.y - exEnd.y) > snapTol) continue;
-        const exDir = Math.atan2(exEnd.y - ex.points[ex.points.length - 2].y, exEnd.x - ex.points[ex.points.length - 2].x);
-        let diff = Math.abs(newDir - exDir);
-        while (diff > Math.PI) diff = Math.abs(diff - 2 * Math.PI);
-        if (diff < angTol) dsmRef.current.update(ex.id, { noArrow: true });
-      }
       dsmRef.current.add(khal);
       setSelectedId(khal.id);
       syncObjects();
@@ -1391,14 +1342,6 @@ export default function Editor() {
                 onClick={() => setFreehandMode(v => !v)}
                 title="Freehand Mode (drag to draw)">
                 <Pen className="w-4 h-4" />
-              </Button>
-            )}
-            {activeTool === "canal" && (
-              <Button variant="ghost" size="icon"
-                className={`w-9 h-9 border shadow-md transition-all ${canalTwitch ? "bg-cyan-600 border-cyan-500 text-white" : "bg-white border-slate-200 text-slate-500 hover:text-cyan-600 hover:bg-cyan-50"}`}
-                onClick={() => setCanalTwitch(v => !v)}
-                title="Twitch / Snap — canal endpoints merge into other canals, name inherited">
-                <GitMerge className="w-4 h-4" />
               </Button>
             )}
             <Button variant="ghost" size="icon"

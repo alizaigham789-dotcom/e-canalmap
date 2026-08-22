@@ -329,7 +329,7 @@ function svgKhal(obj, C, idx) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
   const color = C.khalStroke || "#0D47A1";
-  const khalFill = obj.fillColor || C.khalStroke || C.khalFill || "#1565C0";
+  const khalFill = obj.fillColor || C.khalFill || "#1565C0";
   // Straight polylines (no smooth curve — matches editor exactly)
   const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
@@ -354,7 +354,7 @@ function svgKhal(obj, C, idx) {
   <polygon points="${fillPts}" fill="${khalFill}" />
   <polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  ${obj.noArrow ? "" : `<polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>`}
+  <polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>
 </g>`;
 }
 
@@ -471,7 +471,7 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
   const bounds = getObjectsBounds(objects);
   if (!bounds) return null;
 
-  const pad = 40;
+  const pad = 80;
   const viewX = bounds.minX - pad;
   const viewY = bounds.minY - pad;
   const viewW = (bounds.maxX - bounds.minX) + pad * 2;
