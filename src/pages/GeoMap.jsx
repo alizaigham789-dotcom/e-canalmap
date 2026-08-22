@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Eye, Waves } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -159,7 +159,6 @@ export default function GeoMap() {
   const [killaVisible, setKillaVisible] = useState(true);
   const [layerVisible, setLayerVisible] = useState(true);
   const [activeMustateelIds, setActiveMustateelIds] = useState(() => new Set());
-  const [showAll, setShowAll] = useState(false);
   const autoPlacedRef = useRef(null);
   const [savingOverlay, setSavingOverlay] = useState(false);
   const [overlaySaved, setOverlaySaved] = useState(false);
@@ -477,12 +476,6 @@ export default function GeoMap() {
       if (mapRef.current) mapRef.current.flyTo(mapRef.current.getCenter(), 18, { duration: 0.6 });
     }
   }, [selectedMap, mapObjects]);
-
-  // When a village (mouza) is selected, automatically show all its maps together
-  // on the satellite so every moga of the mouza is visible at once.
-  useEffect(() => {
-    if (filters.village) setShowAll(true);
-  }, [filters.village]);
 
   // When a moga is selected and the overlay is placed, fly to just that moga's
   // bounds (not the full map) so only the selected moga fills the screen.
@@ -986,8 +979,8 @@ export default function GeoMap() {
         {gpsAccuracyCircle}
         {gpsPosition && <Marker position={[gpsPosition.lat, gpsPosition.lng]} icon={GPS_ICON} />}
 
-        {/* Show all saved maps together */}
-        {showAll && (
+        {/* Show all maps of the selected mouza automatically */}
+        {filters.village && (
           <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} />
         )}
 
@@ -1174,24 +1167,14 @@ export default function GeoMap() {
       />
       <Compass />
 
-      {/* Overlay toggle + Show All */}
-      <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-1.5">
-        <button
-          onClick={() => setShowOverlayPanel(v => !v)}
-          className={`flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          GIS Overlay
-        </button>
-        <button
-          onClick={() => setShowAll(v => !v)}
-          className={`flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showAll ? "bg-purple-600 text-white" : "bg-white text-slate-600"}`}
-          title="Show all saved maps together"
-        >
-          <Eye className="w-3.5 h-3.5" />
-          Show All
-        </button>
-      </div>
+      {/* Overlay toggle — left side */}
+      <button
+        onClick={() => setShowOverlayPanel(v => !v)}
+        className={`absolute top-14 left-3 z-[1000] flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
+      >
+        <Layers className="w-3.5 h-3.5" />
+        GIS Overlay
+      </button>
 
       {showOverlayPanel && (
         <OverlayPanel
