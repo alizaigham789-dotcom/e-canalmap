@@ -692,6 +692,18 @@ export default function Editor() {
     setCanalDraft(null);
     if (draft && draft.length >= 2) {
       const canal = createCanal(draft);
+      // Canal merge: if this canal starts from the END of an existing canal,
+      // inherit the existing canal's name so the flow reads as one continuous canal.
+      const startPt = draft[0];
+      const THRESH = 15;
+      for (const o of dsmRef.current.objects) {
+        if (o.type === "canal" && o.points && o.points.length >= 2 && o.id !== canal.id) {
+          const endPt = o.points[o.points.length - 1];
+          if (Math.hypot(endPt.x - startPt.x, endPt.y - startPt.y) < THRESH) {
+            if (o.name) canal.name = o.name;
+          }
+        }
+      }
       dsmRef.current.add(canal);
       setSelectedId(canal.id);
       syncObjects();
@@ -724,6 +736,19 @@ export default function Editor() {
     setKhalDraft(null);
     if (draft && draft.length >= 2) {
       const khal = createKhal(draft);
+      // Arrow-merge: if this khal starts from the END (arrow tip) of an existing
+      // khal, hide that khal's arrow — the flow continues into this new khal.
+      // Only the arrow-end triggers this; starting from the back (start point) does NOT.
+      const startPt = draft[0];
+      const THRESH = 15;
+      for (const o of dsmRef.current.objects) {
+        if (o.type === "khal" && o.points && o.points.length >= 2 && o.id !== khal.id) {
+          const endPt = o.points[o.points.length - 1];
+          if (Math.hypot(endPt.x - startPt.x, endPt.y - startPt.y) < THRESH) {
+            dsmRef.current.update(o.id, { noArrow: true });
+          }
+        }
+      }
       dsmRef.current.add(khal);
       setSelectedId(khal.id);
       syncObjects();
