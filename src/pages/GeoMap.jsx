@@ -508,6 +508,24 @@ export default function GeoMap() {
     }
   }, [selectedMoga, overlay, mapObjects]);
 
+  // Auto-save the overlay placement (debounced) so it persists at the exact
+  // coordinate it was placed — only an explicit delete removes it. No data loss.
+  useEffect(() => {
+    if (!selectedMapId || !placementPoint || !overlay?.transform) return;
+    const timer = setTimeout(() => {
+      base44.entities.LandMap.update(selectedMapId, {
+        geo_placement_lat: placementPoint.lat,
+        geo_placement_lng: placementPoint.lng,
+        geo_rotation: overlay.rotation || 0,
+        geo_moga_filter: selectedMoga || "",
+      }).then(() => {
+        setOverlaySaved(true);
+        queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+      }).catch(() => {});
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [selectedMapId, placementPoint, overlay?.rotation, selectedMoga]);
+
   // NOTE: Overlay is computed in handleMapClick when placing manually, or in
   // handlePlaceByCoords / handleLowerLeftDrag / handleUpperLeftDrag when coordinates
   // are adjusted. Saved placements are auto-restored on map selection (above).
@@ -825,6 +843,31 @@ export default function GeoMap() {
       alert("Save failed: " + (err.message || "unknown error"));
     } finally {
       setSavingOverlay(false);
+    }
+  };
+
+  // Save all moga placements of the selected mouza — persists every placed moga
+  // so none is lost; only an explicit delete removes a map's placement.
+  const [savingAllMogas, setSavingAllMogas] = useState(false);
+  const handleSaveAllMogas = async () => {
+    setSavingAllMogas(true);
+    try {
+      if (selectedMapId && placementPoint) {
+        await base44.entities.LandMap.update(selectedMapId, {
+          geo_placement_lat: placementPoint.lat,
+          geo_placement_lng: placementPoint.lng,
+          geo_rotation: overlay?.rotation || 0,
+          geo_moga_filter: selectedMoga || "",
+        });
+        setOverlaySaved(true);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+      const placedCount = villageMaps.filter(m => m.geo_placement_lat != null).length;
+      toast.success(`${placedCount} موگہ محفوظ ہیں — صرف ڈیلیٹ سے ہٹیں گے`);
+    } catch (e) {
+      toast.error("محفوظ کرنے میں مسئلہ");
+    } finally {
+      setSavingAllMogas(false);
     }
   };
 
@@ -1212,6 +1255,8 @@ export default function GeoMap() {
           onExport={() => setShowExportDialog(true)}
           onAutoArrange={handleAutoArrange}
           arranging={arranging}
+          onSaveAllMogas={handleSaveAllMogas}
+          savingAllMogas={savingAllMogas}
           villageMogaCount={(maps || []).filter(m => m.village === selectedMap?.village && m.id !== selectedMap?.id && m.geo_placement_lat == null).length}
           onClose={() => setShowOverlayPanel(false)}
         />

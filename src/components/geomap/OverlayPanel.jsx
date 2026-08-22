@@ -22,6 +22,8 @@ export default function OverlayPanel({
   onAutoArrange,
   arranging,
   villageMogaCount,
+  onSaveAllMogas,
+  savingAllMogas,
   onClose,
 }) {
   const mustateels = mustateelAreas || [];
@@ -172,6 +174,15 @@ export default function OverlayPanel({
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
               {saving ? "Saving…" : saved ? "Saved" : "Save Placement"}
+            </button>
+            <button
+              onClick={onSaveAllMogas}
+              disabled={savingAllMogas}
+              className={`w-full h-8 rounded-md text-xs font-bold flex items-center justify-center gap-1.5 transition-all bg-cyan-600/30 text-cyan-300 hover:bg-cyan-600/45 ${savingAllMogas ? "opacity-60 cursor-wait" : ""}`}
+              title="تمام موگہ جات کے نقشے محفوظ کریں — صرف ڈیلیٹ سے ہٹیں گے"
+            >
+              {savingAllMogas ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              {savingAllMogas ? "محفوظ ہو رہے ہیں…" : "تمام موگہ محفوظ کریں"}
             </button>
             <button
               onClick={onAutoArrange}
