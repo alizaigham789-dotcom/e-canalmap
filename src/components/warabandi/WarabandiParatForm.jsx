@@ -8,6 +8,7 @@ import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
 import MogaSearchSelect from "./MogaSearchSelect";
 import BandubastPicker from "./BandubastPicker";
+import FractionCell from "./FractionCell";
 
 // ====== Area format helpers ======
 function formatAreaMB(totalAcres) {
@@ -135,7 +136,7 @@ const PRINT_CSS = `
   .total-row td { font-weight: bold; }
   tr { page-break-inside: avoid; }
   .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 7px; }
-  .frac .num { border-bottom: 1px solid #000; padding-bottom: 1px; }
+  .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
   .tashreeh-table th { font-size: 7px; padding: 2px; }
   .tashreeh-table td { font-size: 7px; padding: 2px; }
 `;
@@ -972,8 +973,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   </td>
                   <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls}><input value={row.nikha2_lega} onChange={e => updateRow(i, "nikha2_lega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} /></td>
-                  <td className={tdCls}><input value={row.nikha2_dega} onChange={e => updateRow(i, "nikha2_dega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} /></td>
+                  <td className={tdCls}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} /></td>
+                  <td className={tdCls}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} /></td>
                   </>}
                   <td className={tdCls}><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
                   <td className={tdCls} style={{ minWidth: 80 }}>
@@ -982,28 +983,26 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                       style={{ fontFamily: isUrduMode ? "'Noto Nastaliq Urdu', serif" : undefined, textAlign: isUrduMode ? "right" : "left" }} />
                   </td>
                   <td className={tdCls} style={{ minWidth: 90 }}>
-                    <div className="flex items-center gap-0.5">
-                      <input value={row.bandubast} onChange={e => updateRow(i, "bandubast", e.target.value)} className={inp} placeholder="87/3" dir="ltr" style={{ fontFamily: "serif" }} />
-                      <button onClick={() => setPicker({ row: i, field: "bandubast" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے مستطیل/ایکڑ منتخب کریں">
-                        <LayoutGrid className="w-3 h-3" />
-                      </button>
-                    </div>
+                    <FractionCell
+                      value={row.bandubast}
+                      onChange={(v) => updateRow(i, "bandubast", v)}
+                      onPicker={() => setPicker({ row: i, field: "bandubast" })}
+                      placeholder="555/5-10"
+                    />
                   </td>
                   <td className={tdCls}>
-                    <div className="flex items-center gap-0.5">
-                      <input value={row.nikha_lega} onChange={e => updateRow(i, "nikha_lega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} />
-                      <button onClick={() => setPicker({ row: i, field: "nikha_lega" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے نکہ منتخب کریں">
-                        <LayoutGrid className="w-3 h-3" />
-                      </button>
-                    </div>
+                    <FractionCell
+                      value={row.nikha_lega}
+                      onChange={(v) => updateRow(i, "nikha_lega", v)}
+                      onPicker={() => setPicker({ row: i, field: "nikha_lega" })}
+                    />
                   </td>
                   <td className={tdCls}>
-                    <div className="flex items-center gap-0.5">
-                      <input value={row.nikha_dega} onChange={e => updateRow(i, "nikha_dega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} />
-                      <button onClick={() => setPicker({ row: i, field: "nikha_dega" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے نکہ منتخب کریں">
-                        <LayoutGrid className="w-3 h-3" />
-                      </button>
-                    </div>
+                    <FractionCell
+                      value={row.nikha_dega}
+                      onChange={(v) => updateRow(i, "nikha_dega", v)}
+                      onPicker={() => setPicker({ row: i, field: "nikha_dega" })}
+                    />
                   </td>
                   <td className={tdCls} style={{ position: "relative" }}>
                     <input value={row.total_area} onChange={e => updateRow(i, "total_area", e.target.value)} className={inp} dir="ltr" />
