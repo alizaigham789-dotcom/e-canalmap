@@ -699,10 +699,11 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
     </>
   );
 
-  const inp = "w-full bg-transparent outline-none text-[10px] text-slate-800 text-center px-0.5 py-0.5 placeholder:text-slate-300";
+  const inp = "w-full bg-transparent outline-none text-[8px] text-slate-800 text-center px-0.5 py-0.5 placeholder:text-slate-300";
   const thCls = "border border-slate-500 text-center bg-blue-100 px-1.5 py-1.5 text-[12px] font-bold leading-snug text-blue-900";
-  const tdCls = "border border-slate-300 text-center px-0 py-0 text-[10px]";
-  const totalCls = "border border-slate-400 text-center px-0.5 py-1 text-[10px] font-bold bg-amber-50";
+  const thSubCls = "border border-slate-500 text-center bg-[#eff6ff] px-1 py-1 text-[9px] font-bold leading-snug text-blue-900";
+  const tdCls = "border border-slate-300 text-center px-0 py-0 text-[8px]";
+  const totalCls = "border border-slate-400 text-center px-0.5 py-1 text-[8px] font-bold bg-amber-50";
 
   const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, variant: isJadeed ? "jadeed" : "tarmeem" };
 
@@ -806,8 +807,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         </div>
 
 
-        <div dir="rtl" className="mt-3 text-center text-[14px] text-blue-700 font-bold whitespace-nowrap"
-          style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 1.5, letterSpacing: "0.1px" }}>
+        <div dir="rtl" className="mt-3 text-center text-[16px] text-blue-700 font-bold whitespace-nowrap"
+          style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 1.5, letterSpacing: "0.5px", wordSpacing: "0.3em" }}>
           {headerLine}
         </div>
       </div>
@@ -884,19 +885,19 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               </tr>
               <tr style={{ backgroundColor: "#eff6ff" }}>
                 {showSummary && <>
-                <th className={thCls}>ایکڑ</th>
-                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
-                <th className={thCls}>لیگا</th><th className={thCls}>دیگا</th>
+                <th className={thSubCls}>ایکڑ</th>
+                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
+                <th className={thSubCls}>لیگا</th><th className={thSubCls}>دیگا</th>
                 </>}
-                <th className={thCls}>لیگا</th><th className={thCls}>دیگا</th>
-                <th className={thCls}>ایکڑ</th>
-                <th className={thCls}>ایکڑ</th>
-                <th className={thCls}>ایکڑ</th>
-                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
-                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
-                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
-                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
-                <th className={thCls} style={{ width: 28 }}></th>
+                <th className={thSubCls}>لیگا</th><th className={thSubCls}>دیگا</th>
+                <th className={thSubCls}>ایکڑ</th>
+                <th className={thSubCls}>ایکڑ</th>
+                <th className={thSubCls}>ایکڑ</th>
+                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
+                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
+                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
+                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
+                <th className={thSubCls} style={{ width: 28 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -1042,7 +1043,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             <div key={i} className="flex items-start gap-2">
               <span className="text-[10px] text-slate-600 mt-1.5 shrink-0" style={{ fontFamily: "serif" }}>{i + 1}-</span>
               <textarea value={note} onChange={e => updateNote(i, e.target.value)} rows={2} dir="rtl"
-                className="flex-1 border border-slate-200 rounded px-2 py-1 text-[10px] text-slate-800 bg-white focus:outline-none focus:border-blue-400 resize-none"
+                className="flex-1 border border-slate-200 rounded px-2 py-1 text-[14px] text-slate-800 bg-white focus:outline-none focus:border-blue-400 resize-none"
                 style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 1.8 }} />
               {notes.length > 1 && (
                 <button onClick={() => removeNote(i)} className="text-slate-300 hover:text-red-500 mt-1.5 shrink-0">
@@ -1092,7 +1093,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
   const showSummary = !isJadeed;
   const thP = { border: "1.5px solid #1e3a5f", padding: "4px 5px", textAlign: "center", backgroundColor: "#dbeafe", fontSize: "12px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" };
   const thLetters = { ...thP, backgroundColor: "#f0f4ff" };
-  const thSub = { ...thP, backgroundColor: "#eff6ff", fontSize: "6px", padding: "2px 3px" };
+  const thSub = { ...thP, backgroundColor: "#eff6ff", fontSize: "9px", padding: "2px 3px" };
   const tdP = { border: "1.5px solid #555", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontFamily: "'Noto Nastaliq Urdu', serif" };
   const tdTotal = { border: "1.5px solid #333", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontWeight: "bold", backgroundColor: "#fef9e7", fontFamily: "'Noto Nastaliq Urdu', serif" };
 
@@ -1263,7 +1264,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
 
         <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
           {/* Header line — first page only (borderless div outside the table so it doesn't repeat) */}
-          <div style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold", marginTop: "10px", marginBottom: "22px", paddingBottom: "10px", borderBottom: "1.5px solid #1e3a5f", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.2px", whiteSpace: "nowrap" }}>
+          <div style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold", marginTop: "10px", marginBottom: "22px", paddingBottom: "10px", borderBottom: "1.5px solid #1e3a5f", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.5px", wordSpacing: "0.3em", whiteSpace: "nowrap" }}>
             {headerLine}
           </div>
 
@@ -1281,7 +1282,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
           {/* جناب عالیٰ + Notes */}
           <div style={{ marginTop: "20px", direction: "rtl" }}>
             <div style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
-            <div style={{ fontSize: "7px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+            <div style={{ fontSize: "14px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
               {notes.filter(n => n.trim()).map((note, i) => (
                 <div key={i} style={{ marginBottom: "2px" }}>{i + 1}- {note}</div>
               ))}
