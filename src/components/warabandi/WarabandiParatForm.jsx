@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste } from "lucide-react";
 import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
+import MogaSearchSelect from "./MogaSearchSelect";
 
 // ====== Area format helpers ======
 function formatAreaMB(totalAcres) {
@@ -166,6 +167,22 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const pdfRef = useRef();
 
   const updateHeader = (key, val) => setHeader(prev => ({ ...prev, [key]: val }));
+
+  // موگہ منتخب کرنے پر راجبہ، موضع، سیکشن، سب ڈویژن، ڈویژن میپ سے خود بخود بھر دیں
+  const handleMogaSelect = (map) => {
+    if (!map) return;
+    if (map._sideOnly) { updateHeader("mogha_side", map.mogha_side); return; }
+    setHeader(prev => ({
+      ...prev,
+      mogha_number: String(map.moga_number || ""),
+      mogha_side: map.mogha_side || prev.mogha_side,
+      rajbaha: map.rajbah || "",
+      mouza: map.village || "",
+      section: map.section || "",
+      sub_division: map.zilladar_section || map.section || "",
+      canal_division: map.district || "",
+    }));
+  };
 
   // جب CCA / لیڈ / وضگی بدلیں تو تمام قطاروں کی خالص واری خود بخود دوبارہ حساب ہو
   useEffect(() => {
@@ -623,16 +640,11 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         <div dir="rtl" className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
           <div className="flex flex-col gap-0.5">
             <label className="text-[9px] text-slate-500 font-semibold" style={{ fontFamily: "serif" }}>موگہ نمبری</label>
-            <div className="flex gap-1" dir="ltr">
-              <input value={header.mogha_number} onChange={e => updateHeader("mogha_number", e.target.value)}
-                placeholder="18650" dir="ltr"
-                className="border border-slate-300 rounded px-2 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:border-blue-400 flex-1 min-w-0" />
-              <select value={header.mogha_side} onChange={e => updateHeader("mogha_side", e.target.value)}
-                className="border border-slate-300 rounded px-1 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:border-blue-400 w-14">
-                <option value="R">R</option>
-                <option value="L">L</option>
-              </select>
-            </div>
+            <MogaSearchSelect
+              value={header.mogha_number}
+              sideValue={header.mogha_side}
+              onSelect={handleMogaSelect}
+            />
           </div>
           {[
             { key: "rajbaha", label: "راجباہ", placeholder: "پیلو مائنر" },
