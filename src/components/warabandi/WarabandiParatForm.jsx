@@ -787,28 +787,18 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         <div className="flex items-center gap-3 mb-3 p-2 bg-purple-50 rounded border border-purple-200 flex-wrap" dir="rtl">
           <span className="text-[10px] font-bold text-purple-800" style={{ fontFamily: "serif" }}>تشریح اوقات</span>
           <div className="flex items-center gap-1">
-            <label className="text-[10px] text-purple-700 font-semibold" style={{ fontFamily: "serif" }}>دن شروع</label>
-            <input type="number" min="1" max="12" value={tashreehDayHour} onChange={e => setTashreehDayHour(e.target.value)} placeholder="گھنٹے" dir="ltr"
-              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
+            <label className="text-[10px] text-purple-700 font-semibold" style={{ fontFamily: "serif" }}>تشریح اوقات دن شروع</label>
             <input type="number" min="0" max="59" value={tashreehDayMin} onChange={e => setTashreehDayMin(e.target.value)} placeholder="منٹ" dir="ltr"
               className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
-            <select value={tashreehDayMeridian} onChange={e => setTashreehDayMeridian(e.target.value)}
-              className="border border-purple-300 rounded px-1 py-1 text-xs bg-white focus:outline-none focus:border-purple-500" style={{ fontFamily: "serif" }}>
-              <option value="صبح">صبح</option>
-              <option value="شام">شام</option>
-            </select>
+            <input type="number" min="1" max="12" value={tashreehDayHour} onChange={e => setTashreehDayHour(e.target.value)} placeholder="گھنٹے" dir="ltr"
+              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
           </div>
           <div className="flex items-center gap-1">
-            <label className="text-[10px] text-purple-700 font-semibold" style={{ fontFamily: "serif" }}>رات شروع</label>
-            <input type="number" min="1" max="12" value={tashreehNightHour} onChange={e => setTashreehNightHour(e.target.value)} placeholder="گھنٹے" dir="ltr"
-              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
+            <label className="text-[10px] text-purple-700 font-semibold" style={{ fontFamily: "serif" }}>تشریح اوقات رات شروع</label>
             <input type="number" min="0" max="59" value={tashreehNightMin} onChange={e => setTashreehNightMin(e.target.value)} placeholder="منٹ" dir="ltr"
               className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
-            <select value={tashreehNightMeridian} onChange={e => setTashreehNightMeridian(e.target.value)}
-              className="border border-purple-300 rounded px-1 py-1 text-xs bg-white focus:outline-none focus:border-purple-500" style={{ fontFamily: "serif" }}>
-              <option value="صبح">صبح</option>
-              <option value="شام">شام</option>
-            </select>
+            <input type="number" min="1" max="12" value={tashreehNightHour} onChange={e => setTashreehNightHour(e.target.value)} placeholder="گھنٹے" dir="ltr"
+              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
           </div>
           {(tashreehDayHour || tashreehNightHour) && (
             <span className="text-[9px] text-purple-600" style={{ fontFamily: "serif" }}>خالص واری کا وقت خود بخود جمع ہو کر تشریح اوقات میں آئے گا</span>
