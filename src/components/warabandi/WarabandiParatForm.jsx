@@ -179,7 +179,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       rajbaha: map.rajbah || "",
       mouza: map.village || "",
       section: map.section || "",
-      sub_division: map.zilladar_section || map.section || "",
+      sub_division: map.tehsil || "",
       canal_division: map.district || "",
     }));
   };
