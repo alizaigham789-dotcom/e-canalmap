@@ -53,16 +53,7 @@ export default function MogaSearchSelect({ value, sideValue, onSelect, onTextCha
   };
 
   return (
-    <div className="flex gap-1 flex-1 min-w-0 items-center" dir="ltr" ref={containerRef}>
-      <select
-        value={sideValue || "R"}
-        onChange={e => onSelect && onSelect({ mogha_side: e.target.value, _sideOnly: true })}
-        className="border border-slate-300 rounded px-1 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:border-blue-400 w-14 shrink-0"
-      >
-        <option value="R">R</option>
-        <option value="L">L</option>
-      </select>
-      <span className="text-slate-400 text-sm shrink-0">/</span>
+    <div className="flex gap-1 flex-1 min-w-0" dir="ltr" ref={containerRef}>
       <div className="relative flex-1 min-w-0">
         <input
           value={usingSearch ? query : (value || "")}
@@ -101,6 +92,15 @@ export default function MogaSearchSelect({ value, sideValue, onSelect, onTextCha
           </div>
         )}
       </div>
+
+      <select
+        value={sideValue || "R"}
+        onChange={e => onSelect && onSelect({ mogha_side: e.target.value, _sideOnly: true })}
+        className="border border-slate-300 rounded px-1 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:border-blue-400 w-14"
+      >
+        <option value="R">R</option>
+        <option value="L">L</option>
+      </select>
     </div>
   );
 }
