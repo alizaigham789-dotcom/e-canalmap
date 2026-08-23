@@ -142,11 +142,15 @@ const PRINT_CSS = `
 
 function fracHtml(val) {
   if (!val) return "-";
-  const parts = val.split("/");
-  if (parts.length >= 2) {
-    return `<span class="frac"><span class="num">${parts[0]}</span><span>${parts.slice(1).join("/")}</span></span>`;
-  }
-  return val;
+  // Comma-separated mustateel/killa pairs → multiple stacked fractions
+  const entries = val.split(",").map(e => e.trim()).filter(Boolean);
+  return entries.map(entry => {
+    const parts = entry.split("/");
+    if (parts.length >= 2) {
+      return `<span class="frac"><span class="num">${parts[0]}</span><span>${parts.slice(1).join("/")}</span></span>`;
+    }
+    return `<span>${entry}</span>`;
+  }).join("، ");
 }
 
 // ====== تشریح اوقات helpers ======
@@ -696,7 +700,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const addNote = () => setNotes(prev => [...prev, ""]);
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
-  const moghaFull = `${header.mogha_side}/${header.mogha_number}`;
+  const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
   const headerParts = [`موگہ نمبری ${moghaFull}`];
   if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
