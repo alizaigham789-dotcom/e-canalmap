@@ -139,6 +139,42 @@ function fracHtml(val) {
   return val;
 }
 
+// ====== تشریح اوقات helpers ======
+const URDU_DAYS = ["سوموار", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ", "اتوار"];
+function periodFor(h) {
+  if (h >= 5 && h < 12) return "صبح";
+  if (h >= 12 && h < 17) return "دوپہر";
+  if (h >= 17 && h < 20) return "شام";
+  return "رات";
+}
+function fmtTashreeh(totalMin, startMinuteOfDay) {
+  const weekMins = 7 * 24 * 60;
+  const clipped = ((totalMin % weekMins) + weekMins) % weekMins;
+  const dayIndex = Math.floor(clipped / (24 * 60));
+  const minuteInDay = clipped % (24 * 60);
+  const actualMinInDay = (minuteInDay + startMinuteOfDay) % (24 * 60);
+  const h = Math.floor(actualMinInDay / 60);
+  const m = actualMinInDay % 60;
+  const hh = h % 12 === 0 ? 12 : h % 12;
+  const mm = String(m).padStart(2, "0");
+  return `${URDU_DAYS[dayIndex % 7]} ${periodFor(h)} ${hh}:${mm} بجے`;
+}
+function fmtTashreehRange(from, to, startMinuteOfDay) {
+  return `${fmtTashreeh(from, startMinuteOfDay)} سے ${fmtTashreeh(to, startMinuteOfDay)} تک`;
+}
+// "6:30" + صبح/شام → minutes from midnight
+function parseHM12(hhmm, meridian) {
+  if (!hhmm) return null;
+  const parts = String(hhmm).split(":");
+  let h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return null;
+  if (h < 1 || h > 12) h = ((h % 12) + 12) % 12;
+  if (meridian === "شام" && h < 12) h += 12;
+  if (meridian === "صبح" && h === 12) h = 0;
+  return h * 60 + m;
+}
+
 export default function WarabandiParatForm({ defaultDocType = "پرت وارہ بندی" }) {
   const [isUrduMode, setIsUrduMode] = useState(true);
   const [docType, setDocType] = useState(defaultDocType);
@@ -165,6 +201,11 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const zaidWasoliMins = useMemo(() => rows.reduce((s, r) => s + ((parseFloat(r.zaidah_ghante) || 0) * 60 + (parseFloat(r.zaidah_minute) || 0)), 0), [rows]);
   const wazgiMins = useMemo(() => rows.reduce((s, r) => s + ((parseFloat(r.wazgi_ghante) || 0) * 60 + (parseFloat(r.wazgi_minute) || 0)), 0), [rows]);
   const minutesPerAcre = ccaNum > 0 ? Math.max(0, (10080 - wazgiMins - zaidWasoliMins) / ccaNum) : 0;
+  // تشریح اوقات: دن/رات شروع وقت (12 گھنٹے + صبح/شام)
+  const [tashreehDayStart, setTashreehDayStart] = useState("");
+  const [tashreehDayMeridian, setTashreehDayMeridian] = useState("صبح");
+  const [tashreehNightStart, setTashreehNightStart] = useState("");
+  const [tashreehNightMeridian, setTashreehNightMeridian] = useState("شام");
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfPreview, setPdfPreview] = useState(null);
   const [showPaste, setShowPaste] = useState(false);
@@ -210,6 +251,10 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       if (data.docType !== undefined) setDocType(data.docType);
       if (data.cca !== undefined) setCca(data.cca);
       if (data.autoOn !== undefined) setAutoOn(data.autoOn);
+      if (data.tashreehDayStart !== undefined) setTashreehDayStart(data.tashreehDayStart);
+      if (data.tashreehDayMeridian !== undefined) setTashreehDayMeridian(data.tashreehDayMeridian);
+      if (data.tashreehNightStart !== undefined) setTashreehNightStart(data.tashreehNightStart);
+      if (data.tashreehNightMeridian !== undefined) setTashreehNightMeridian(data.tashreehNightMeridian);
       if (data.header) setHeader((prev) => ({ ...prev, ...data.header }));
     } catch {}
   }, [existingRecord?.id]);
@@ -221,6 +266,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
     const data_json = JSON.stringify({
       header, rows, notes, docType, cca, autoOn,
       showRowSr, showColSr, printRowSr, printColSr, isUrduMode,
+      tashreehDayStart, tashreehDayMeridian, tashreehNightStart, tashreehNightMeridian,
     });
     const payload = {
       mogha_number: header.mogha_number,
@@ -259,6 +305,28 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       return { ...row, khalis_waari_minute: m, khalis_waari_ghante: h, khalis_waari2_minute: m, khalis_waari2_ghante: h };
     }));
   }, [cca, zaidWasoliMins, wazgiMins, autoOn, ccaNum, minutesPerAcre]);
+
+  // تشریح اوقات: خالص واری کا وقت جمع کر کے دن/رات شیڈول خود بخود بنائیں
+  const khalisSig = rows.map(r => `${r.khalis_waari_ghante}|${r.khalis_waari_minute}`).join(",");
+  useEffect(() => {
+    const dayStart = parseHM12(tashreehDayStart, tashreehDayMeridian);
+    const nightStart = parseHM12(tashreehNightStart, tashreehNightMeridian);
+    if (dayStart === null && nightStart === null) return;
+    setRows(prev => {
+      let dayCur = 0, nightCur = 0;
+      return prev.map(row => {
+        const k = (parseFloat(row.khalis_waari_ghante) || 0) * 60 + (parseFloat(row.khalis_waari_minute) || 0);
+        const dFrom = dayCur, dTo = dayCur + k;
+        const nFrom = nightCur, nTo = nightCur + k;
+        dayCur = dTo; nightCur = nTo;
+        return {
+          ...row,
+          tashreeh_din: dayStart !== null ? fmtTashreehRange(dFrom, dTo, dayStart) : row.tashreeh_din,
+          tashreeh_raat: nightStart !== null ? fmtTashreehRange(nFrom, nTo, nightStart) : row.tashreeh_raat,
+        };
+      });
+    });
+  }, [khalisSig, tashreehDayStart, tashreehDayMeridian, tashreehNightStart, tashreehNightMeridian]);
 
   const updateRow = (i, key, val) => {
     setRows(prev => {
@@ -703,6 +771,34 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           )}
         </div>
 
+        {/* تشریح اوقات: دن/رات شروع وقت + خالص واری سے خود بخود شیڈول */}
+        <div className="flex items-center gap-3 mb-3 p-2 bg-purple-50 rounded border border-purple-200 flex-wrap" dir="rtl">
+          <span className="text-[10px] font-bold text-purple-800" style={{ fontFamily: "serif" }}>تشریح اوقات</span>
+          <div className="flex items-center gap-1">
+            <label className="text-[10px] text-purple-700 font-semibold" style={{ fontFamily: "serif" }}>دن شروع</label>
+            <select value={tashreehDayMeridian} onChange={e => setTashreehDayMeridian(e.target.value)}
+              className="border border-purple-300 rounded px-1 py-1 text-xs bg-white focus:outline-none focus:border-purple-500" style={{ fontFamily: "serif" }}>
+              <option value="صبح">صبح</option>
+              <option value="شام">شام</option>
+            </select>
+            <input type="text" value={tashreehDayStart} onChange={e => setTashreehDayStart(e.target.value)} placeholder="6:30" dir="ltr"
+              className="w-16 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-[10px] text-purple-700 font-semibold" style={{ fontFamily: "serif" }}>رات شروع</label>
+            <select value={tashreehNightMeridian} onChange={e => setTashreehNightMeridian(e.target.value)}
+              className="border border-purple-300 rounded px-1 py-1 text-xs bg-white focus:outline-none focus:border-purple-500" style={{ fontFamily: "serif" }}>
+              <option value="صبح">صبح</option>
+              <option value="شام">شام</option>
+            </select>
+            <input type="text" value={tashreehNightStart} onChange={e => setTashreehNightStart(e.target.value)} placeholder="6:30" dir="ltr"
+              className="w-16 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
+          </div>
+          {(tashreehDayStart || tashreehNightStart) && (
+            <span className="text-[9px] text-purple-600" style={{ fontFamily: "serif" }}>خالص واری کا وقت خود بخود جمع ہو کر تشریح اوقات میں آئے گا</span>
+          )}
+        </div>
+
 
         <div dir="rtl" className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
           <div className="flex flex-col gap-0.5">
@@ -916,8 +1012,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                       </button>
                     </div>
                   </td>
-                  <td className={tdCls} style={{ minWidth: 80 }}><input value={row.tashreeh_din} onChange={e => updateRow(i, "tashreeh_din", e.target.value)} className={inp} /></td>
-                  <td className={tdCls} style={{ minWidth: 80 }}><input value={row.tashreeh_raat} onChange={e => updateRow(i, "tashreeh_raat", e.target.value)} className={inp} /></td>
+                  <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_din} onChange={e => updateRow(i, "tashreeh_din", e.target.value)} className={inp} style={{ fontSize: "8px", fontFamily: "serif" }} dir="rtl" /></td>
+                  <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_raat} onChange={e => updateRow(i, "tashreeh_raat", e.target.value)} className={inp} style={{ fontSize: "8px", fontFamily: "serif" }} dir="rtl" /></td>
                   <td className={tdCls} style={{ width: 28 }}>
                     <button onClick={() => removeRow(i)} className="text-slate-300 hover:text-red-500 p-0.5">
                       <Trash2 className="w-3 h-3" />
