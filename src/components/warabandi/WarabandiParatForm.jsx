@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste, LayoutGrid, Save } from "lucide-react";
 import { toast } from "sonner";
 import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
-import MogaSearchSelect from "./MogaSearchSelect";
 import BandubastPicker from "./BandubastPicker";
 import FractionCell from "./FractionCell";
 
@@ -188,15 +187,25 @@ function parseStart(hh, mm, meridian) {
   return h * 60 + m;
 }
 
-export default function WarabandiParatForm({ defaultDocType = "پرت وارہ بندی" }) {
+export default function WarabandiParatForm({ defaultDocType = "پرت وارہ بندی", record }) {
   const [isUrduMode, setIsUrduMode] = useState(true);
-  const [docType, setDocType] = useState(defaultDocType);
+  const [docType, setDocType] = useState(record?.doc_type || defaultDocType);
   const isJadeed = docType === "پرت وارہ بندی";
   const showSummary = !isJadeed;
-  const [header, setHeader] = useState({
-    mogha_number: "", mogha_side: "R", rajbaha: "",
-    mouza: "", section: "", sub_division: "", canal_division: "",
-    map_id: "",
+  const [header, setHeader] = useState(() => {
+    let data = {};
+    try { data = JSON.parse(record?.data_json || "{}"); } catch {}
+    const h = data.header || {};
+    return {
+      mogha_number: record?.mogha_number || h.mogha_number || "",
+      mogha_side: record?.mogha_side || h.mogha_side || "R",
+      rajbaha: h.rajbaha || "",
+      mouza: record?.mouza || h.mouza || "",
+      section: h.section || "",
+      sub_division: h.sub_division || "",
+      canal_division: h.canal_division || "",
+      map_id: h.map_id || "",
+    };
   });
   const [rows, setRows] = useState(() => Array.from({ length: 5 }, emptyRow));
   const [notes, setNotes] = useState([...DEFAULT_NOTES]);
@@ -226,42 +235,17 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [pdfPreview, setPdfPreview] = useState(null);
   const [showPaste, setShowPaste] = useState(false);
   const [picker, setPicker] = useState(null); // { row, field }
-  const [recordId, setRecordId] = useState(null);
+  const [recordId, setRecordId] = useState(record?.id || null);
   const [saving, setSaving] = useState(false);
   const pdfRef = useRef();
   const queryClient = useQueryClient();
 
-  const updateHeader = (key, val) => setHeader(prev => ({ ...prev, [key]: val }));
-
-  // موگہ منتخب کرنے پر راجبہ، موضع، سیکشن، سب ڈویژن، ڈویژن میپ سے خود بخود بھر دیں
-  const handleMogaSelect = (map) => {
-    if (!map) return;
-    if (map._sideOnly) { updateHeader("mogha_side", map.mogha_side); return; }
-    setHeader(prev => ({
-      ...prev,
-      mogha_number: String(map.moga_number || ""),
-      mogha_side: map.mogha_side || prev.mogha_side,
-      rajbaha: map.rajbah || "",
-      mouza: map.village || "",
-      section: map.section || "",
-      sub_division: map.tehsil || "",
-      canal_division: map.district || "",
-      map_id: map.id || "",
-    }));
-  };
-
-  // منتخب موگہ کا محفوظ شدہ پرت ڈیٹا خود بخود لوڈ کریں
-  const { data: existingRecord } = useQuery({
-    queryKey: ["parat-record", header.mogha_number],
-    queryFn: () => base44.entities.ParatWarabandiRecord.filter({ mogha_number: header.mogha_number }).then((r) => r[0]),
-    enabled: !!header.mogha_number,
-  });
-
+  // ریکارڈ سے ڈیٹا لوڈ کریں
   useEffect(() => {
-    if (!existingRecord) { setRecordId(null); return; }
-    setRecordId(existingRecord.id);
+    if (!record?.id) return;
+    setRecordId(record.id);
     try {
-      const data = JSON.parse(existingRecord.data_json || "{}");
+      const data = JSON.parse(record.data_json || "{}");
       if (data.rows) setRows(data.rows.map(normalizeRowDigits));
       if (data.notes) setNotes(data.notes);
       if (data.docType !== undefined) setDocType(data.docType);
@@ -276,11 +260,11 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       if (data.sameTime !== undefined) setSameTime(data.sameTime);
       if (data.header) setHeader((prev) => ({ ...prev, ...data.header }));
     } catch {}
-  }, [existingRecord?.id]);
+  }, [record?.id]);
 
-  // مستقل محفوظ — پرت وارہ بندی ریکارڈ (موگہ وار)
+  // مستقل محفوظ — پرت وارہ بندی ریکارڈ
   const handleSave = async () => {
-    if (!header.mogha_number) { toast.error("پہلے موگہ منتخب کریں"); return; }
+    if (!recordId) { toast.error("ریکارڈ محفوظ نہیں ہے"); return; }
     setSaving(true);
     const data_json = JSON.stringify({
       header, rows, notes, docType, cca, autoOn,
@@ -296,16 +280,8 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       status: "draft",
     };
     try {
-      let rec;
-      if (recordId) {
-        rec = await base44.entities.ParatWarabandiRecord.update(recordId, payload);
-      } else {
-        const found = await base44.entities.ParatWarabandiRecord.filter({ mogha_number: header.mogha_number }).then((r) => r[0]);
-        if (found) rec = await base44.entities.ParatWarabandiRecord.update(found.id, payload);
-        else rec = await base44.entities.ParatWarabandiRecord.create(payload);
-      }
-      if (rec?.id) setRecordId(rec.id);
-      queryClient.invalidateQueries({ queryKey: ["parat-record"] });
+      await base44.entities.ParatWarabandiRecord.update(recordId, payload);
+      queryClient.invalidateQueries({ queryKey: ["parat-records"] });
       toast.success("مستقل محفوظ ہو گیا");
     } catch (e) {
       toast.error("محفوظ نہیں ہوا");
@@ -817,32 +793,6 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         </div>
 
 
-        <div dir="rtl" className="grid grid-cols-2 gap-2 lg:grid-cols-3">
-          <div className="flex flex-col gap-0.5">
-            <label className="text-[9px] text-slate-500 font-semibold" style={{ fontFamily: "serif" }}>موگہ نمبری</label>
-            <MogaSearchSelect
-              value={header.mogha_number}
-              sideValue={header.mogha_side}
-              onSelect={handleMogaSelect}
-            />
-          </div>
-          {[
-            { key: "rajbaha", label: "راجباہ", placeholder: "پیلو مائنر" },
-            { key: "mouza", label: "موضع", placeholder: "روڈہ" },
-            { key: "section", label: "سیکشن", placeholder: "گنجیال" },
-            { key: "sub_division", label: "سب ڈویژن", placeholder: "قائد آباد" },
-            { key: "canal_division", label: "کینال ڈویژن", placeholder: "خوشاب" },
-          ].map(f => (
-            <div key={f.key} className="flex flex-col gap-0.5">
-              <label className="text-[9px] text-slate-500 font-semibold" style={{ fontFamily: "serif" }}>{f.label}</label>
-              <input value={header[f.key]} onChange={e => updateHeader(f.key, e.target.value)}
-                placeholder={f.placeholder} dir="rtl"
-                className="w-full border border-slate-300 rounded px-2 py-1 text-[11px] text-slate-800 bg-white focus:outline-none focus:border-blue-400"
-                style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }} />
-            </div>
-          ))}
-        </div>
-
         <div dir="rtl" className="mt-3 p-2 bg-white border border-dashed border-slate-300 rounded text-center text-[11px] text-blue-700 font-bold"
           style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 2.6, letterSpacing: "0.3px" }}>
           {headerLine}
@@ -1136,9 +1086,10 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
     const w = window.open("", "_blank", "width=1300,height=900");
     const content = document.getElementById("parat-print-content").innerHTML;
     const css = PRINT_CSS.replace("A4 landscape", `A4 ${orientation}`);
-    w.document.write(`<!DOCTYPE html><html dir="rtl"><head><title></title>
+    w.document.write(`<!DOCTYPE html><html dir="rtl"><head><title>پرت وارابندی</title>
       <style>${css}</style>
     </head><body>${content}</body></html>`);
+    w.document.title = "پرت وارابندی";
     w.document.close();
     setTimeout(() => { w.print(); w.close(); }, 800);
   };

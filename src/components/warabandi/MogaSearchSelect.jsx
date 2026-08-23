@@ -6,7 +6,7 @@ import { Search, ChevronDown } from "lucide-react";
 // سرچ ایبل موگہ ڈراپ ڈاؤن — LandMap ریکارڈز سے موگہ نمبرز لوڈ کرتا ہے
 // جو GeoMap پر بھی دکھائی دیتے ہیں۔ منتخب کرنے پر پورا میپ ڈیٹا onSelect میں بھیجتا ہے
 // تاکہ راجبہ، موضع، سیکشن، سب ڈویژن، ڈویژن خود بخود بھر جائیں۔
-export default function MogaSearchSelect({ value, sideValue, onSelect, placeholder = "18650" }) {
+export default function MogaSearchSelect({ value, sideValue, onSelect, onTextChange, placeholder = "18650" }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [usingSearch, setUsingSearch] = useState(false);
@@ -57,7 +57,7 @@ export default function MogaSearchSelect({ value, sideValue, onSelect, placehold
       <div className="relative flex-1 min-w-0">
         <input
           value={usingSearch ? query : (value || "")}
-          onChange={e => { setUsingSearch(true); setQuery(e.target.value); if (!open) setOpen(true); }}
+          onChange={e => { setUsingSearch(true); setQuery(e.target.value); if (!open) setOpen(true); onTextChange?.(e.target.value); }}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           dir="ltr"
