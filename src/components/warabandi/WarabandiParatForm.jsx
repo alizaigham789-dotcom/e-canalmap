@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste } from "lucide-react";
@@ -153,14 +153,13 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [printColSr, setPrintColSr] = useState(false);
   // Automation toggle
   const [autoOn, setAutoOn] = useState(true);
-  // واری حساب: 1 ایکڑ کا وقت = (7*24*60 − وضگی − لیڈ) ÷ CCA
+  // واری حساب: 1 ایکڑ کا وقت = (7*24*60 − وضگی − زائد وصولی) ÷ CCA
+  // زائد وصولی اور وضگی قطاروں سے خود بخود جمع ہو کر اوپرے خانوں میں آتے ہیں
   const [cca, setCca] = useState("");
-  const [lead, setLead] = useState("");
-  const [wazgi, setWazgi] = useState("");
   const ccaNum = parseFloat(cca) || 0;
-  const leadNum = parseFloat(lead) || 0;
-  const wazgiNum = parseFloat(wazgi) || 0;
-  const minutesPerAcre = ccaNum > 0 ? Math.max(0, (10080 - wazgiNum - leadNum) / ccaNum) : 0;
+  const zaidWasoliMins = useMemo(() => rows.reduce((s, r) => s + ((parseFloat(r.zaidah_ghante) || 0) * 60 + (parseFloat(r.zaidah_minute) || 0)), 0), [rows]);
+  const wazgiMins = useMemo(() => rows.reduce((s, r) => s + ((parseFloat(r.wazgi_ghante) || 0) * 60 + (parseFloat(r.wazgi_minute) || 0)), 0), [rows]);
+  const minutesPerAcre = ccaNum > 0 ? Math.max(0, (10080 - wazgiMins - zaidWasoliMins) / ccaNum) : 0;
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfPreview, setPdfPreview] = useState(null);
   const [showPaste, setShowPaste] = useState(false);
@@ -177,7 +176,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       const { h, m } = minsToStr(acres * minutesPerAcre);
       return { ...row, khalis_waari_minute: m, khalis_waari_ghante: h, khalis_waari2_minute: m, khalis_waari2_ghante: h };
     }));
-  }, [cca, lead, wazgi, autoOn, ccaNum, minutesPerAcre]);
+  }, [cca, zaidWasoliMins, wazgiMins, autoOn, ccaNum, minutesPerAcre]);
 
   const updateRow = (i, key, val) => {
     setRows(prev => {
@@ -598,7 +597,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           </span>
         </div>
 
-        {/* واری حساب: CCA / لیڈ / وضگی — 1 ایکڑ کا وقت خود بخود (not printed) */}
+        {/* واری حساب: CCA / زائد وصولی / وضگی — 1 ایکڑ کا وقت خود بخود (not printed) */}
         <div className="flex items-center gap-3 mb-3 p-2 bg-amber-50 rounded border border-amber-200 flex-wrap" dir="rtl">
           <div className="flex items-center gap-1">
             <label className="text-[10px] text-amber-700 font-semibold">CCA (ایکڑ)</label>
@@ -606,14 +605,12 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               className="w-20 border border-amber-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-amber-500" />
           </div>
           <div className="flex items-center gap-1">
-            <label className="text-[10px] text-amber-700 font-semibold" style={{ fontFamily: "serif" }}>لیڈ (منٹ)</label>
-            <input type="number" value={lead} onChange={e => setLead(e.target.value)} placeholder="0"
-              className="w-20 border border-amber-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-amber-500" />
+            <label className="text-[10px] text-amber-700 font-semibold" style={{ fontFamily: "serif" }}>زائد وصولی (منٹ)</label>
+            <div className="w-20 border border-amber-300 rounded px-1.5 py-1 text-xs text-center bg-amber-100 text-amber-900 font-mono">{zaidWasoliMins}</div>
           </div>
           <div className="flex items-center gap-1">
             <label className="text-[10px] text-amber-700 font-semibold" style={{ fontFamily: "serif" }}>وضگی (منٹ)</label>
-            <input type="number" value={wazgi} onChange={e => setWazgi(e.target.value)} placeholder="0"
-              className="w-20 border border-amber-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-amber-500" />
+            <div className="w-20 border border-amber-300 rounded px-1.5 py-1 text-xs text-center bg-amber-100 text-amber-900 font-mono">{wazgiMins}</div>
           </div>
           {ccaNum > 0 && (
             <div className="text-[10px] bg-amber-100 border border-amber-200 rounded-lg px-2 py-1 text-amber-800 font-mono">
