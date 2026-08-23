@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste } from "lucide-react";
+import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste, LayoutGrid } from "lucide-react";
 import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
 import MogaSearchSelect from "./MogaSearchSelect";
+import BandubastPicker from "./BandubastPicker";
 
 // ====== Area format helpers ======
 function formatAreaMB(totalAcres) {
@@ -144,6 +145,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [header, setHeader] = useState({
     mogha_number: "", mogha_side: "R", rajbaha: "",
     mouza: "", section: "", sub_division: "", canal_division: "",
+    map_id: "",
   });
   const [rows, setRows] = useState(() => Array.from({ length: 5 }, emptyRow));
   const [notes, setNotes] = useState([...DEFAULT_NOTES]);
@@ -164,6 +166,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfPreview, setPdfPreview] = useState(null);
   const [showPaste, setShowPaste] = useState(false);
+  const [bandubastRow, setBandubastRow] = useState(null);
   const pdfRef = useRef();
 
   const updateHeader = (key, val) => setHeader(prev => ({ ...prev, [key]: val }));
@@ -181,6 +184,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       section: map.section || "",
       sub_division: map.tehsil || "",
       canal_division: map.district || "",
+      map_id: map.id || "",
     }));
   };
 
@@ -802,7 +806,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                       dir={isUrduMode ? "rtl" : "ltr"}
                       style={{ fontFamily: isUrduMode ? "'Noto Nastaliq Urdu', serif" : undefined, textAlign: isUrduMode ? "right" : "left" }} />
                   </td>
-                  <td className={tdCls} style={{ minWidth: 90 }}><input value={row.bandubast} onChange={e => updateRow(i, "bandubast", e.target.value)} className={inp} placeholder="87/(3-4)" dir="ltr" style={{ fontFamily: "serif" }} /></td>
+                  <td className={tdCls} style={{ minWidth: 90 }}>
+                    <div className="flex items-center gap-0.5">
+                      <input value={row.bandubast} onChange={e => updateRow(i, "bandubast", e.target.value)} className={inp} placeholder="87/3" dir="ltr" style={{ fontFamily: "serif" }} />
+                      <button onClick={() => setBandubastRow(i)} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے منتخب کریں">
+                        <LayoutGrid className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </td>
                   <td className={tdCls} style={{ position: "relative" }}>
                     <input value={row.total_area} onChange={e => updateRow(i, "total_area", e.target.value)} className={inp} dir="ltr" />
                     {!isUrduMode && row.total_area && isEnglishOrDigit(row.total_area) && (
@@ -915,6 +926,15 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           onApply={applyPastedData}
         />
       )}
+
+      <BandubastPicker
+        open={bandubastRow !== null}
+        value={bandubastRow !== null ? (rows[bandubastRow]?.bandubast || "") : ""}
+        onChange={(v) => { if (bandubastRow !== null) updateRow(bandubastRow, "bandubast", v); }}
+        mogaNumber={header.mogha_number}
+        mapId={header.map_id}
+        onClose={() => setBandubastRow(null)}
+      />
 
       {showPrint && <PrintModal {...printData} onClose={() => setShowPrint(false)} />}
     </div>
