@@ -5,10 +5,11 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, FileText, Trash2, Loader2, MapPin, Pencil, Check, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Trash2, Loader2, MapPin, Pencil, Check, AlertTriangle, Printer } from "lucide-react";
 import WarabandiParatForm from "@/components/warabandi/WarabandiParatForm";
 import MogaSearchSelect from "@/components/warabandi/MogaSearchSelect";
 import BottomNav from "@/components/BottomNav";
+import { printParatBatch } from "@/lib/paratPrint";
 
 const EMPTY_HEADER = {
   mogha_number: "", mogha_side: "R", rajbaha: "",
@@ -212,6 +213,9 @@ export default function ParatWarabandi() {
                 }}>
                   {selectedIds.size === records.length ? "غیر منتخب" : "سب منتخب کریں"}
                 </Button>
+                <Button size="sm" variant="ghost" className="text-xs h-7 text-blue-700 hover:bg-blue-100 gap-1 font-semibold" onClick={() => printParatBatch(records.filter(r => selectedIds.has(r.id)))}>
+                  <Printer className="w-3 h-3" /> PDF & Print
+                </Button>
                 <Button size="sm" variant="ghost" className="text-xs h-7 text-red-600 hover:bg-red-50 gap-1" onClick={() => bulkDeleteMutation.mutate([...selectedIds])} disabled={bulkDeleteMutation.isPending}>
                   {bulkDeleteMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} حذف
                 </Button>
@@ -253,15 +257,16 @@ export default function ParatWarabandi() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-lg font-bold text-blue-700 font-mono tracking-tight leading-none" dir="ltr">{moghaDisplay}</span>
+                          <span className="text-[13px] font-bold text-blue-700 font-mono tracking-tight leading-none" dir="ltr">{moghaDisplay}</span>
                           <span className="text-[9px] px-2 py-0.5 rounded-full border font-medium bg-slate-100 text-slate-600 border-slate-300 shrink-0" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
                             {rec.doc_type || "پرت وارہ بندی"}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-slate-500" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-                          <span className="truncate">راجباہ {hdr.rajbaha || "—"}</span>
-                          <span className="text-slate-300 shrink-0">•</span>
-                          <span className="truncate">موضع {hdr.mouza || rec.mouza || "—"}</span>
+                        <div className="mt-1 text-[15px] font-bold text-slate-800 truncate" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                          موضع {hdr.mouza || rec.mouza || "—"}
+                        </div>
+                        <div className="mt-0.5 text-[12px] text-slate-600 truncate" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                          راجباہ {hdr.rajbaha || "—"}
                         </div>
                         <div className="flex items-center gap-1 mt-1">
                           <span className={`w-1.5 h-1.5 rounded-full ${rec.status === "completed" ? "bg-emerald-500" : "bg-amber-400"}`}></span>
