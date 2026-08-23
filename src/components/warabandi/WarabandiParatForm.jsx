@@ -138,6 +138,8 @@ const PRINT_CSS = `
   .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
   .tashreeh-table th { font-size: 7px; padding: 2px; }
   .tashreeh-table td { font-size: 7px; padding: 2px; }
+  #parat-print-content { display: flex; flex-direction: column; min-height: calc(100vh - 20px); }
+  .signatures { margin-top: auto !important; }
 `;
 
 function fracHtml(val) {
@@ -1279,7 +1281,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
           {/* جناب عالیٰ + Notes */}
           <div style={{ marginTop: "20px", direction: "rtl" }}>
             <div style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
-            <div style={{ fontSize: "6px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+            <div style={{ fontSize: "7px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
               {notes.filter(n => n.trim()).map((note, i) => (
                 <div key={i} style={{ marginBottom: "2px" }}>{i + 1}- {note}</div>
               ))}
@@ -1287,7 +1289,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
           </div>
 
           {/* Signatures */}
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+          <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "28px", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
             <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "140px" }}>دستخط نہری پٹواری</div>
             <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "140px" }}>دستخط ضلعدار</div>
             <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "200px" }}>دستخط سب ڈویژنل کینال آفیسر</div>
