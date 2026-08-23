@@ -216,6 +216,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [tashreehNightHour, setTashreehNightHour] = useState("");
   const [tashreehNightMin, setTashreehNightMin] = useState("");
   const [tashreehNightMeridian, setTashreehNightMeridian] = useState("شام");
+  const [sameTime, setSameTime] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfPreview, setPdfPreview] = useState(null);
   const [showPaste, setShowPaste] = useState(false);
@@ -267,6 +268,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       if (data.tashreehNightHour !== undefined) setTashreehNightHour(data.tashreehNightHour);
       if (data.tashreehNightMin !== undefined) setTashreehNightMin(data.tashreehNightMin);
       if (data.tashreehNightMeridian !== undefined) setTashreehNightMeridian(data.tashreehNightMeridian);
+      if (data.sameTime !== undefined) setSameTime(data.sameTime);
       if (data.header) setHeader((prev) => ({ ...prev, ...data.header }));
     } catch {}
   }, [existingRecord?.id]);
@@ -278,7 +280,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
     const data_json = JSON.stringify({
       header, rows, notes, docType, cca, autoOn,
       showRowSr, showColSr, printRowSr, printColSr, isUrduMode,
-      tashreehDayHour, tashreehDayMin, tashreehDayMeridian, tashreehNightHour, tashreehNightMin, tashreehNightMeridian,
+      tashreehDayHour, tashreehDayMin, tashreehDayMeridian, tashreehNightHour, tashreehNightMin, tashreehNightMeridian, sameTime,
     });
     const payload = {
       mogha_number: header.mogha_number,
@@ -317,6 +319,14 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       return { ...row, khalis_waari_minute: m, khalis_waari_ghante: h, khalis_waari2_minute: m, khalis_waari2_ghante: h };
     }));
   }, [cca, zaidWasoliMins, wazgiMins, autoOn, ccaNum, minutesPerAcre]);
+
+  // وقت یکساں چیک ہو تو رات کا وقت دن کے برابر رکھیں
+  useEffect(() => {
+    if (sameTime) {
+      setTashreehNightHour(tashreehDayHour);
+      setTashreehNightMin(tashreehDayMin);
+    }
+  }, [sameTime, tashreehDayHour, tashreehDayMin]);
 
   // تشریح اوقات: خالص واری کا وقت جمع کر کے دن/رات شیڈول خود بخود بنائیں
   const khalisSig = rows.map(r => `${r.khalis_waari_ghante}|${r.khalis_waari_minute}`).join(",");
@@ -687,7 +697,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
   const moghaFull = `${header.mogha_side}/${header.mogha_number}`;
-  const headerParts = [docType, `موگہ نمبری ${moghaFull}`];
+  const headerParts = [`موگہ نمبری ${moghaFull}`];
   if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
   if (header.section) headerParts.push(`سیکشن ${header.section}`);
@@ -793,12 +803,16 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             <input type="number" min="1" max="12" value={tashreehDayHour} onChange={e => setTashreehDayHour(e.target.value)} placeholder="گھنٹے" dir="ltr"
               className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
           </div>
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input type="checkbox" checked={sameTime} onChange={e => setSameTime(e.target.checked)} className="w-3.5 h-3.5 accent-purple-600" />
+            <span className="text-[10px] text-purple-700 font-semibold" style={{ fontFamily: "serif" }}>وقت یکساں</span>
+          </label>
           <div className="flex items-center gap-1">
             <label className="text-[10px] text-purple-700 font-semibold" style={{ fontFamily: "serif" }}>تشریح اوقات رات شروع</label>
-            <input type="number" min="0" max="59" value={tashreehNightMin} onChange={e => setTashreehNightMin(e.target.value)} placeholder="منٹ" dir="ltr"
-              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
-            <input type="number" min="1" max="12" value={tashreehNightHour} onChange={e => setTashreehNightHour(e.target.value)} placeholder="گھنٹے" dir="ltr"
-              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
+            <input type="number" min="0" max="59" value={tashreehNightMin} onChange={e => setTashreehNightMin(e.target.value)} placeholder="منٹ" dir="ltr" disabled={sameTime}
+              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono disabled:opacity-60" />
+            <input type="number" min="1" max="12" value={tashreehNightHour} onChange={e => setTashreehNightHour(e.target.value)} placeholder="گھنٹے" dir="ltr" disabled={sameTime}
+              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono disabled:opacity-60" />
           </div>
           {(tashreehDayHour || tashreehNightHour) && (
             <span className="text-[9px] text-purple-600" style={{ fontFamily: "serif" }}>خالص واری کا وقت خود بخود جمع ہو کر تشریح اوقات میں آئے گا</span>
@@ -1125,7 +1139,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
   const handlePrint = () => {
     const w = window.open("", "_blank", "width=1300,height=900");
     const content = document.getElementById("parat-print-content").innerHTML;
-    w.document.write(`<!DOCTYPE html><html dir="rtl"><head><title>${docType}</title>
+    w.document.write(`<!DOCTYPE html><html dir="rtl"><head><title></title>
       <style>${PRINT_CSS}</style>
     </head><body>${content}</body></html>`);
     w.document.close();
