@@ -59,6 +59,16 @@ function sumCol(rows, key) {
   return s === 0 ? "-" : String(s % 1 === 0 ? s : s.toFixed(2));
 }
 
+// منٹ + گھنٹے کا مجموعہ — 60 منٹ = 1 گھنٹہ carry
+function sumPair(rows, minKey, hrKey) {
+  let total = 0;
+  for (const r of rows) {
+    total += (parseFloat(r[hrKey]) || 0) * 60 + (parseFloat(r[minKey]) || 0);
+  }
+  if (total === 0) return { m: "-", h: "-" };
+  return { m: String(total % 60), h: String(Math.floor(total / 60)) };
+}
+
 function d(val) { return (val === "" || val === null || val === undefined) ? "-" : val; }
 
 // Convert Eastern Arabic / Urdu digits (۱۲۳ ٠١٢) → Western (123) for numeric fields.
@@ -162,12 +172,10 @@ function fmtTashreeh(totalMin, startMinuteOfDay) {
 function fmtTashreehRange(from, to, startMinuteOfDay) {
   return `${fmtTashreeh(from, startMinuteOfDay)} سے ${fmtTashreeh(to, startMinuteOfDay)} تک`;
 }
-// "6:30" + صبح/شام → minutes from midnight
-function parseHM12(hhmm, meridian) {
-  if (!hhmm) return null;
-  const parts = String(hhmm).split(":");
-  let h = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10);
+// گھنٹے + منٹ + صبح/شام → minutes from midnight
+function parseStart(hh, mm, meridian) {
+  let h = parseInt(hh, 10);
+  const m = parseInt(mm, 10);
   if (isNaN(h) || isNaN(m)) return null;
   if (h < 1 || h > 12) h = ((h % 12) + 12) % 12;
   if (meridian === "شام" && h < 12) h += 12;
@@ -201,10 +209,12 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const zaidWasoliMins = useMemo(() => rows.reduce((s, r) => s + ((parseFloat(r.zaidah_ghante) || 0) * 60 + (parseFloat(r.zaidah_minute) || 0)), 0), [rows]);
   const wazgiMins = useMemo(() => rows.reduce((s, r) => s + ((parseFloat(r.wazgi_ghante) || 0) * 60 + (parseFloat(r.wazgi_minute) || 0)), 0), [rows]);
   const minutesPerAcre = ccaNum > 0 ? Math.max(0, (10080 - wazgiMins - zaidWasoliMins) / ccaNum) : 0;
-  // تشریح اوقات: دن/رات شروع وقت (12 گھنٹے + صبح/شام)
-  const [tashreehDayStart, setTashreehDayStart] = useState("");
+  // تشریح اوقات: دن/رات شروع وقت (گھنٹے + منٹ + صبح/شام)
+  const [tashreehDayHour, setTashreehDayHour] = useState("");
+  const [tashreehDayMin, setTashreehDayMin] = useState("");
   const [tashreehDayMeridian, setTashreehDayMeridian] = useState("صبح");
-  const [tashreehNightStart, setTashreehNightStart] = useState("");
+  const [tashreehNightHour, setTashreehNightHour] = useState("");
+  const [tashreehNightMin, setTashreehNightMin] = useState("");
   const [tashreehNightMeridian, setTashreehNightMeridian] = useState("شام");
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfPreview, setPdfPreview] = useState(null);
@@ -251,9 +261,11 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       if (data.docType !== undefined) setDocType(data.docType);
       if (data.cca !== undefined) setCca(data.cca);
       if (data.autoOn !== undefined) setAutoOn(data.autoOn);
-      if (data.tashreehDayStart !== undefined) setTashreehDayStart(data.tashreehDayStart);
+      if (data.tashreehDayHour !== undefined) setTashreehDayHour(data.tashreehDayHour);
+      if (data.tashreehDayMin !== undefined) setTashreehDayMin(data.tashreehDayMin);
       if (data.tashreehDayMeridian !== undefined) setTashreehDayMeridian(data.tashreehDayMeridian);
-      if (data.tashreehNightStart !== undefined) setTashreehNightStart(data.tashreehNightStart);
+      if (data.tashreehNightHour !== undefined) setTashreehNightHour(data.tashreehNightHour);
+      if (data.tashreehNightMin !== undefined) setTashreehNightMin(data.tashreehNightMin);
       if (data.tashreehNightMeridian !== undefined) setTashreehNightMeridian(data.tashreehNightMeridian);
       if (data.header) setHeader((prev) => ({ ...prev, ...data.header }));
     } catch {}
@@ -266,7 +278,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
     const data_json = JSON.stringify({
       header, rows, notes, docType, cca, autoOn,
       showRowSr, showColSr, printRowSr, printColSr, isUrduMode,
-      tashreehDayStart, tashreehDayMeridian, tashreehNightStart, tashreehNightMeridian,
+      tashreehDayHour, tashreehDayMin, tashreehDayMeridian, tashreehNightHour, tashreehNightMin, tashreehNightMeridian,
     });
     const payload = {
       mogha_number: header.mogha_number,
@@ -309,8 +321,8 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   // تشریح اوقات: خالص واری کا وقت جمع کر کے دن/رات شیڈول خود بخود بنائیں
   const khalisSig = rows.map(r => `${r.khalis_waari_ghante}|${r.khalis_waari_minute}`).join(",");
   useEffect(() => {
-    const dayStart = parseHM12(tashreehDayStart, tashreehDayMeridian);
-    const nightStart = parseHM12(tashreehNightStart, tashreehNightMeridian);
+    const dayStart = parseStart(tashreehDayHour, tashreehDayMin, tashreehDayMeridian);
+    const nightStart = parseStart(tashreehNightHour, tashreehNightMin, tashreehNightMeridian);
     if (dayStart === null && nightStart === null) return;
     setRows(prev => {
       let dayCur = 0, nightCur = 0;
@@ -326,7 +338,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
         };
       });
     });
-  }, [khalisSig, tashreehDayStart, tashreehDayMeridian, tashreehNightStart, tashreehNightMeridian]);
+  }, [khalisSig, tashreehDayHour, tashreehDayMin, tashreehDayMeridian, tashreehNightHour, tashreehNightMin, tashreehNightMeridian]);
 
   const updateRow = (i, key, val) => {
     setRows(prev => {
@@ -776,25 +788,29 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           <span className="text-[10px] font-bold text-purple-800" style={{ fontFamily: "serif" }}>تشریح اوقات</span>
           <div className="flex items-center gap-1">
             <label className="text-[10px] text-purple-700 font-semibold" style={{ fontFamily: "serif" }}>دن شروع</label>
+            <input type="number" min="1" max="12" value={tashreehDayHour} onChange={e => setTashreehDayHour(e.target.value)} placeholder="گھنٹے" dir="ltr"
+              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
+            <input type="number" min="0" max="59" value={tashreehDayMin} onChange={e => setTashreehDayMin(e.target.value)} placeholder="منٹ" dir="ltr"
+              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
             <select value={tashreehDayMeridian} onChange={e => setTashreehDayMeridian(e.target.value)}
               className="border border-purple-300 rounded px-1 py-1 text-xs bg-white focus:outline-none focus:border-purple-500" style={{ fontFamily: "serif" }}>
               <option value="صبح">صبح</option>
               <option value="شام">شام</option>
             </select>
-            <input type="text" value={tashreehDayStart} onChange={e => setTashreehDayStart(e.target.value)} placeholder="6:30" dir="ltr"
-              className="w-16 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
           </div>
           <div className="flex items-center gap-1">
             <label className="text-[10px] text-purple-700 font-semibold" style={{ fontFamily: "serif" }}>رات شروع</label>
+            <input type="number" min="1" max="12" value={tashreehNightHour} onChange={e => setTashreehNightHour(e.target.value)} placeholder="گھنٹے" dir="ltr"
+              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
+            <input type="number" min="0" max="59" value={tashreehNightMin} onChange={e => setTashreehNightMin(e.target.value)} placeholder="منٹ" dir="ltr"
+              className="w-14 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
             <select value={tashreehNightMeridian} onChange={e => setTashreehNightMeridian(e.target.value)}
               className="border border-purple-300 rounded px-1 py-1 text-xs bg-white focus:outline-none focus:border-purple-500" style={{ fontFamily: "serif" }}>
               <option value="صبح">صبح</option>
               <option value="شام">شام</option>
             </select>
-            <input type="text" value={tashreehNightStart} onChange={e => setTashreehNightStart(e.target.value)} placeholder="6:30" dir="ltr"
-              className="w-16 border border-purple-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-purple-500 font-mono" />
           </div>
-          {(tashreehDayStart || tashreehNightStart) && (
+          {(tashreehDayHour || tashreehNightHour) && (
             <span className="text-[9px] text-purple-600" style={{ fontFamily: "serif" }}>خالص واری کا وقت خود بخود جمع ہو کر تشریح اوقات میں آئے گا</span>
           )}
         </div>
@@ -864,9 +880,9 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
       {/* Table + action column (number-shumar side) */}
       <div className="flex">
         {/* Scrollable table */}
-        <div ref={scrollRef} className="overflow-x-auto flex-1">
+        <div ref={scrollRef} className="overflow-auto flex-1" style={{ maxHeight: "70vh" }}>
           <table style={{ borderCollapse: "collapse", minWidth: "1700px", width: "100%", direction: "rtl" }}>
-            <thead>
+            <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
               {showColSr && (
                 <tr style={{ backgroundColor: "#f0f4ff" }}>
                   <th className={thCls} style={{ fontSize: "8px", width: 32 }}></th>
@@ -894,6 +910,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 80 }}>نام مالک معہ والدیت</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 90 }}>نمبران بندوبست</th>
+                <th className={thCls} colSpan={2}>نکہ جات</th>
                 <th className={thCls} rowSpan={2}>
                   <div>کل رقبہ</div>
                   <div style={{ fontSize: "8px", fontWeight: "normal", color: "#555", borderTop: "1px solid #aaa", marginTop: "2px", paddingTop: "2px" }}>ایکڑ</div>
@@ -910,7 +927,6 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <th className={thCls} colSpan={2}>زائدہ وصولی</th>
                 <th className={thCls} colSpan={2}>وضگی</th>
                 <th className={thCls} colSpan={2}>خالص واری</th>
-                <th className={thCls} colSpan={2}>نکہ جات</th>
                 <th className={thCls} rowSpan={2}>تشریح اوقات دن</th>
                 <th className={thCls} rowSpan={2}>تشریح اوقات رات</th>
                 <th className={thCls} rowSpan={2} style={{ width: 28 }}></th>
@@ -920,11 +936,11 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
                 <th className={thCls}>لیگا</th><th className={thCls}>دیگا</th>
                 </>}
-                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
-                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
-                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
-                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
                 <th className={thCls}>لیگا</th><th className={thCls}>دیگا</th>
+                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
+                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
+                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
+                <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
                 <th className={thCls} style={{ width: 28 }}></th>
               </tr>
             </thead>
@@ -974,6 +990,22 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                       </button>
                     </div>
                   </td>
+                  <td className={tdCls}>
+                    <div className="flex items-center gap-0.5">
+                      <input value={row.nikha_lega} onChange={e => updateRow(i, "nikha_lega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} />
+                      <button onClick={() => setPicker({ row: i, field: "nikha_lega" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے نکہ منتخب کریں">
+                        <LayoutGrid className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </td>
+                  <td className={tdCls}>
+                    <div className="flex items-center gap-0.5">
+                      <input value={row.nikha_dega} onChange={e => updateRow(i, "nikha_dega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} />
+                      <button onClick={() => setPicker({ row: i, field: "nikha_dega" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے نکہ منتخب کریں">
+                        <LayoutGrid className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </td>
                   <td className={tdCls} style={{ position: "relative" }}>
                     <input value={row.total_area} onChange={e => updateRow(i, "total_area", e.target.value)} className={inp} dir="ltr" />
                     {!isUrduMode && row.total_area && isEnglishOrDigit(row.total_area) && (
@@ -996,22 +1028,6 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   {/* خالص واری — auto-calculated, shown in green */}
                   <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_minute} onChange={e => updateRow(i, "khalis_waari_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_ghante} onChange={e => updateRow(i, "khalis_waari_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls}>
-                    <div className="flex items-center gap-0.5">
-                      <input value={row.nikha_lega} onChange={e => updateRow(i, "nikha_lega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} />
-                      <button onClick={() => setPicker({ row: i, field: "nikha_lega" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے نکہ منتخب کریں">
-                        <LayoutGrid className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </td>
-                  <td className={tdCls}>
-                    <div className="flex items-center gap-0.5">
-                      <input value={row.nikha_dega} onChange={e => updateRow(i, "nikha_dega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} />
-                      <button onClick={() => setPicker({ row: i, field: "nikha_dega" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے نکہ منتخب کریں">
-                        <LayoutGrid className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </td>
                   <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_din} onChange={e => updateRow(i, "tashreeh_din", e.target.value)} className={inp} style={{ fontSize: "8px", fontFamily: "serif" }} dir="rtl" /></td>
                   <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_raat} onChange={e => updateRow(i, "tashreeh_raat", e.target.value)} className={inp} style={{ fontSize: "8px", fontFamily: "serif" }} dir="rtl" /></td>
                   <td className={tdCls} style={{ width: 28 }}>
@@ -1029,25 +1045,25 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <td className={totalCls}>—</td>
                 <td className={totalCls} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>میزان</td>
                 <td className={totalCls}>{sumCol(rows, "total_area2")}</td>
-                <td className={totalCls}>{sumCol(rows, "khalis_waari2_minute")}</td>
-                <td className={totalCls}>{sumCol(rows, "khalis_waari2_ghante")}</td>
+                <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").m}</td>
+                <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
                 <td className={totalCls}>—</td><td className={totalCls}>—</td>
                 </>}
                 <td className={totalCls}>—</td>
                 <td className={totalCls} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>میزان</td>
                 <td className={totalCls}>—</td>
+                <td className={totalCls}>—</td><td className={totalCls}>—</td>
                 <td className={totalCls}>{sumCol(rows, "total_area")}</td>
                 <td className={totalCls}>{sumCol(rows, "ghair_mumkin")}</td>
                 <td className={totalCls}>{sumCol(rows, "khalis_raqba")}</td>
-                <td className={totalCls}>{sumCol(rows, "waari_minute")}</td>
-                <td className={totalCls}>{sumCol(rows, "waari_ghante")}</td>
-                <td className={totalCls}>{sumCol(rows, "zaidah_minute")}</td>
-                <td className={totalCls}>{sumCol(rows, "zaidah_ghante")}</td>
-                <td className={totalCls}>{sumCol(rows, "wazgi_minute")}</td>
-                <td className={totalCls}>{sumCol(rows, "wazgi_ghante")}</td>
-                <td className={totalCls}>{sumCol(rows, "khalis_waari_minute")}</td>
-                <td className={totalCls}>{sumCol(rows, "khalis_waari_ghante")}</td>
-                <td className={totalCls}>—</td><td className={totalCls}>—</td>
+                <td className={totalCls}>{sumPair(rows, "waari_minute", "waari_ghante").m}</td>
+                <td className={totalCls}>{sumPair(rows, "waari_minute", "waari_ghante").h}</td>
+                <td className={totalCls}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").m}</td>
+                <td className={totalCls}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").h}</td>
+                <td className={totalCls}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").m}</td>
+                <td className={totalCls}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").h}</td>
+                <td className={totalCls}>{sumPair(rows, "khalis_waari_minute", "khalis_waari_ghante").m}</td>
+                <td className={totalCls}>{sumPair(rows, "khalis_waari_minute", "khalis_waari_ghante").h}</td>
                 <td className={totalCls}>—</td><td className={totalCls}>—</td>
                 <td className={totalCls} style={{ width: 28 }}></td>
               </tr>
@@ -1238,8 +1254,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <td style={tdTotal}>—</td>
       <td style={{ ...tdTotal, textAlign: "right" }}>میزان</td>
       <td style={tdTotal}>{sumCol(rows, "total_area2")}</td>
-      <td style={tdTotal}>{sumCol(rows, "khalis_waari2_minute")}</td>
-      <td style={tdTotal}>{sumCol(rows, "khalis_waari2_ghante")}</td>
+      <td style={tdTotal}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").m}</td>
+      <td style={tdTotal}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
       <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
       </>}
       <td style={tdTotal}>—</td>
@@ -1248,14 +1264,14 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <td style={tdTotal}>{sumCol(rows, "total_area")}</td>
       <td style={tdTotal}>{sumCol(rows, "ghair_mumkin")}</td>
       <td style={tdTotal}>{sumCol(rows, "khalis_raqba")}</td>
-      <td style={tdTotal}>{sumCol(rows, "waari_minute")}</td>
-      <td style={tdTotal}>{sumCol(rows, "waari_ghante")}</td>
-      <td style={tdTotal}>{sumCol(rows, "zaidah_minute")}</td>
-      <td style={tdTotal}>{sumCol(rows, "zaidah_ghante")}</td>
-      <td style={tdTotal}>{sumCol(rows, "wazgi_minute")}</td>
-      <td style={tdTotal}>{sumCol(rows, "wazgi_ghante")}</td>
-      <td style={tdTotal}>{sumCol(rows, "khalis_waari_minute")}</td>
-      <td style={tdTotal}>{sumCol(rows, "khalis_waari_ghante")}</td>
+      <td style={tdTotal}>{sumPair(rows, "waari_minute", "waari_ghante").m}</td>
+      <td style={tdTotal}>{sumPair(rows, "waari_minute", "waari_ghante").h}</td>
+      <td style={tdTotal}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").m}</td>
+      <td style={tdTotal}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").h}</td>
+      <td style={tdTotal}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").m}</td>
+      <td style={tdTotal}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").h}</td>
+      <td style={tdTotal}>{sumPair(rows, "khalis_waari_minute", "khalis_waari_ghante").m}</td>
+      <td style={tdTotal}>{sumPair(rows, "khalis_waari_minute", "khalis_waari_ghante").h}</td>
       <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
       <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
     </tr>
