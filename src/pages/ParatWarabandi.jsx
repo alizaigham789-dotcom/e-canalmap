@@ -9,7 +9,7 @@ import { ArrowLeft, Plus, FileText, Trash2, Loader2, MapPin, Pencil, Check, Aler
 import WarabandiParatForm from "@/components/warabandi/WarabandiParatForm";
 import MogaSearchSelect from "@/components/warabandi/MogaSearchSelect";
 import BottomNav from "@/components/BottomNav";
-import { printParatBatch } from "@/lib/paratPrint";
+import BatchPrintModal from "@/components/warabandi/BatchPrintModal";
 
 const EMPTY_HEADER = {
   mogha_number: "", mogha_side: "R", rajbaha: "",
@@ -31,6 +31,8 @@ export default function ParatWarabandi() {
   const [editTarget, setEditTarget] = useState(null);
   const [editHeader, setEditHeader] = useState({ ...EMPTY_HEADER });
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showBatchPrint, setShowBatchPrint] = useState(false);
+  const [batchRecords, setBatchRecords] = useState([]);
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["parat-records"],
@@ -213,7 +215,7 @@ export default function ParatWarabandi() {
                 }}>
                   {selectedIds.size === records.length ? "غیر منتخب" : "سب منتخب کریں"}
                 </Button>
-                <Button size="sm" variant="ghost" className="text-xs h-7 text-blue-700 hover:bg-blue-100 gap-1 font-semibold" onClick={() => printParatBatch(records.filter(r => selectedIds.has(r.id)))}>
+                <Button size="sm" variant="ghost" className="text-xs h-7 text-blue-700 hover:bg-blue-100 gap-1 font-semibold" onClick={() => { setBatchRecords(records.filter(r => selectedIds.has(r.id))); setShowBatchPrint(true); }}>
                   <Printer className="w-3 h-3" /> PDF & Print
                 </Button>
                 <Button size="sm" variant="ghost" className="text-xs h-7 text-red-600 hover:bg-red-50 gap-1" onClick={() => bulkDeleteMutation.mutate([...selectedIds])} disabled={bulkDeleteMutation.isPending}>
@@ -257,12 +259,12 @@ export default function ParatWarabandi() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[13px] font-bold text-blue-700 font-mono tracking-tight leading-none" dir="ltr">{moghaDisplay}</span>
+                          <span className="text-base font-bold text-blue-700 font-mono tracking-tight leading-none" dir="ltr">{moghaDisplay}</span>
                           <span className="text-[9px] px-2 py-0.5 rounded-full border font-medium bg-slate-100 text-slate-600 border-slate-300 shrink-0" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
                             {rec.doc_type || "پرت وارہ بندی"}
                           </span>
                         </div>
-                        <div className="mt-1 text-[15px] font-bold text-slate-800 truncate" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                        <div className="mt-1 text-[13px] font-semibold text-slate-700 truncate" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
                           موضع {hdr.mouza || rec.mouza || "—"}
                         </div>
                         <div className="mt-0.5 text-[12px] text-slate-600 truncate" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
@@ -418,6 +420,8 @@ export default function ParatWarabandi() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <BatchPrintModal open={showBatchPrint} records={batchRecords} onClose={() => setShowBatchPrint(false)} />
 
         <BottomNav />
       </div>

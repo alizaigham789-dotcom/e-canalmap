@@ -1,25 +1,8 @@
 // Batch PDF/print builder for Parat Warabandi records.
 // Replicates the PrintModal table structure as HTML strings so multiple
-// selected records can be printed in a single window.
+// selected records can be printed in a single window with a preview.
 
 const COL_LETTERS = ["ا","ب","ج","د","ہ","و","ز","ح","ط","ی","ک","ل","م","ن","س","ع","ف","ص","ق","ر","ش","ت","ث","خ"];
-
-const BATCH_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-  @page { size: A4 landscape; margin: 8mm; }
-  body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:10px; direction:rtl; color:#000; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
-  th { font-weight: bold; }
-  .total-row td { font-weight: bold; }
-  tr { page-break-inside: avoid; }
-  .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 7px; }
-  .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
-  .parat-page { page-break-after: always; }
-  .parat-page:last-child { page-break-after: auto; }
-  .signatures { display:flex; justify-content:space-between; margin-top: 24px; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
-  .sig-item { text-align:center; border-top:1px solid #333; padding-top:4px; width:200px; white-space:nowrap; }
-`;
 
 const S = {
   thP: "border:1.5px solid #1e3a5f;padding:4px 5px;text-align:center;background-color:#dbeafe;font-size:12px;font-weight:bold;font-family:'Noto Nastaliq Urdu',serif;color:#1e3a5f",
@@ -61,7 +44,8 @@ function sumPair(rows, minKey, hrKey) {
 
 export function buildParatRecordHTML(record, opts = {}) {
   const printRowSr = opts.printRowSr !== false;
-  const printColSr = opts.printColSr !== false;
+  // Column number-shumar (column letters) is OFF by default per requirement.
+  const printColSr = opts.printColSr === true;
 
   let data = {};
   try { data = JSON.parse(record.data_json || "{}"); } catch {}
@@ -82,7 +66,6 @@ export function buildParatRecordHTML(record, opts = {}) {
   const showSummary = !isJadeed;
   const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
 
-  // Header line (caption)
   const parts = [isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی", "موگہ نمبری", moghaFull];
   if (header.rajbaha) parts.push(`راجباہ ${header.rajbaha}`);
   if (header.mouza) parts.push(`موضع ${header.mouza}`);
@@ -95,7 +78,6 @@ export function buildParatRecordHTML(record, opts = {}) {
       : esc(p)))
     .join(" ");
 
-  // Column-letters row
   let colLettersRow = "";
   if (printColSr) {
     const cells = (printRowSr ? `<th style="${S.thPL}">#</th>` : "")
@@ -103,7 +85,6 @@ export function buildParatRecordHTML(record, opts = {}) {
     colLettersRow = `<tr>${cells}</tr>`;
   }
 
-  // Main header row
   let mainHeader = "<tr>";
   if (printRowSr) mainHeader += `<th style="${S.thP}" rowspan="2">نمبرشمار</th>`;
   if (showSummary) {
@@ -129,7 +110,6 @@ export function buildParatRecordHTML(record, opts = {}) {
   mainHeader += `<th style="${S.thP}" rowspan="2">تشریح اوقات رات</th>`;
   mainHeader += "</tr>";
 
-  // Sub-header row
   let subHeader = "<tr>";
   if (showSummary) {
     subHeader += `<th style="${S.thSub}">ایکڑ</th>`;
@@ -146,7 +126,6 @@ export function buildParatRecordHTML(record, opts = {}) {
   subHeader += `<th style="${S.thSub}">لیگا</th><th style="${S.thSub}">دیگا</th>`;
   subHeader += "</tr>";
 
-  // Data rows
   const dataRows = rows.map((row, i) => {
     let r = "<tr>";
     if (printRowSr) r += `<td style="${S.td}">${i + 1}</td>`;
@@ -182,7 +161,6 @@ export function buildParatRecordHTML(record, opts = {}) {
     return r;
   }).join("");
 
-  // Total (میزان) row
   const sp = (minKey, hrKey) => sumPair(rows, minKey, hrKey);
   let totalRow = '<tr class="total-row">';
   if (printRowSr) totalRow += `<td style="${S.tt}">—</td>`;
@@ -213,13 +191,11 @@ export function buildParatRecordHTML(record, opts = {}) {
   totalRow += `<td style="${S.tt}">—</td><td style="${S.tt}">—</td>`;
   totalRow += "</tr>";
 
-  // Notes
   const notesHtml = notes
     .filter((n) => n && n.trim())
     .map((n, i) => `<div style="margin-bottom:2px">${i + 1}- ${esc(n)}</div>`)
     .join("");
 
-  // Signatures
   const signaturesHtml = `<div class="signatures">
     <div class="sig-item">دستخط نہری پٹواری</div>
     <div class="sig-item">دستخط ضلعدار</div>
@@ -241,12 +217,42 @@ export function buildParatRecordHTML(record, opts = {}) {
   </div>`;
 }
 
+export function buildBatchHTML(records, opts = {}) {
+  return (records || []).map((r) => buildParatRecordHTML(r, opts)).join("\n");
+}
+
+export function buildPrintCSS(opts = {}) {
+  const pageSize = opts.pageSize || "A4";
+  const orientation = opts.orientation || "landscape";
+  return `
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+    @page { size: ${pageSize} ${orientation}; margin: 8mm; @bottom-right { content: "Page " counter(page); font-size: 9px; color: #555; font-family: sans-serif; } }
+    body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:10px; direction:rtl; color:#000; }
+    .print-date { position: fixed; top: 2mm; right: 6mm; font-size: 9px; color: #555; font-family: sans-serif; z-index: 100; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
+    th { font-weight: bold; }
+    .total-row td { font-weight: bold; }
+    tr { page-break-inside: avoid; }
+    .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 7px; }
+    .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
+    .parat-page { page-break-after: always; }
+    .parat-page:last-child { page-break-after: auto; }
+    .signatures { display:flex; justify-content:space-between; margin-top: 24px; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
+    .sig-item { text-align:center; border-top:1px solid #333; padding-top:4px; width:200px; white-space:nowrap; }
+  `;
+}
+
 export function printParatBatch(records, opts = {}) {
   if (!records || records.length === 0) return;
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   const w = window.open("", "_blank", "width=1300,height=900");
-  const bodies = records.map((r) => buildParatRecordHTML(r, opts)).join("\n");
+  const css = buildPrintCSS(opts);
+  const body = buildBatchHTML(records, opts);
   w.document.write(
-    `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>پرت وارابندی</title><style>${BATCH_CSS}</style></head><body>${bodies}</body></html>`
+    `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>پرت وارابندی</title><style>${css}</style></head><body><div class="print-date">${dateStr}</div>${body}</body></html>`
   );
   w.document.close();
   setTimeout(() => { w.focus(); w.print(); }, 800);
