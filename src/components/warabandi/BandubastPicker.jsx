@@ -51,7 +51,7 @@ function buildValue(selection) {
 // کھسہ وائز ایکڑ سلیکشن پکر — منتخب موگہ کے مستطیل کے ایکڑ سیلز
 // ٹوگل کرتا ہے اور مانول انٹری بھی اجازت دیتا ہے۔ صرف منتخب موگہ
 // (mogaNumber) کے مستطیل ہی دکھائی دیتے ہیں۔
-export default function BandubastPicker({ open, value, onChange, mogaNumber, mapId, onClose }) {
+export default function BandubastPicker({ open, value, onChange, mogaNumber, mapId, onClose, title = "نمبران بندوبست" }) {
   const { data: mapData, isLoading } = useQuery({
     queryKey: ["bandubast-map", mapId],
     queryFn: () => base44.entities.LandMap.filter({ id: mapId }).then((r) => r[0]),
@@ -78,16 +78,12 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
   useEffect(() => { if (open) setDraft(value || ""); }, [open, value]);
 
   const mustateels = useMemo(() => {
-    // اگر نقشے میں mogaNumber ٹیگز موجود ہوں تو صرف منتخب موگہ کے مستطیل
-    // دکھائیں؛ ورنہ (singl-moga map) سب دکھائیں۔
-    const hasMogaTag = objects.some((o) => o.type === "mustateel" && o.mogaNumber);
-    return objects
-      .filter(
-        (o) =>
-          o.type === "mustateel" &&
-          o.label &&
-          (!hasMogaTag || !mogaNumber || String(o.mogaNumber) === String(mogaNumber))
-      )
+    // سنگل موگہ نقشے میں سب مستطیل دکھائیں؛ مرج (ملٹی موگہ) نقشے میں صرف
+    // منتخب موگہ کے مستطیل۔
+    const all = objects.filter((o) => o.type === "mustateel" && o.label);
+    const mogas = new Set(all.map((o) => String(o.mogaNumber || "")).filter(Boolean));
+    return all
+      .filter((o) => mogas.size <= 1 || !mogaNumber || String(o.mogaNumber) === String(mogaNumber))
       .map((o) => ({ mustNo: String(o.label).trim(), acreCount: Math.max(1, parcelKillaCells(o).length) }))
       .sort((a, b) => +a.mustNo - +b.mustNo);
   }, [objects, mogaNumber]);
@@ -122,7 +118,7 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 h-11 bg-gradient-to-r from-emerald-600 to-green-600 text-white shrink-0">
           <span className="text-sm font-bold" dir="rtl" style={{ fontFamily: "serif" }}>
-            نمبران بندوبست{mogaNumber ? ` — موگہ ${mogaNumber}` : ""}
+            {title}{mogaNumber ? ` — موگہ ${mogaNumber}` : ""}
           </span>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded hover:bg-white/20">
             <X className="w-4 h-4" />

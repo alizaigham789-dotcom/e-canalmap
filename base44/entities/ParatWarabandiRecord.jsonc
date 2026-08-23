@@ -1,0 +1,39 @@
+{
+  "name": "ParatWarabandiRecord",
+  "type": "object",
+  "properties": {
+    "mogha_number": {
+      "type": "string",
+      "description": "\u0645\u0648\u06af\u06c1 \u0646\u0645\u0628\u0631\u06cc"
+    },
+    "mogha_side": {
+      "type": "string",
+      "enum": [
+        "L",
+        "R",
+        ""
+      ]
+    },
+    "mouza": {
+      "type": "string"
+    },
+    "doc_type": {
+      "type": "string"
+    },
+    "data_json": {
+      "type": "string",
+      "description": "JSON of full parat form state (header, rows, notes, cca, settings)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "completed"
+      ],
+      "default": "draft"
+    }
+  },
+  "required": [
+    "mogha_number"
+  ]
+}

@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste, LayoutGrid } from "lucide-react";
+import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste, LayoutGrid, Save } from "lucide-react";
+import { toast } from "sonner";
 import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
 import MogaSearchSelect from "./MogaSearchSelect";
@@ -166,8 +168,11 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfPreview, setPdfPreview] = useState(null);
   const [showPaste, setShowPaste] = useState(false);
-  const [bandubastRow, setBandubastRow] = useState(null);
+  const [picker, setPicker] = useState(null); // { row, field }
+  const [recordId, setRecordId] = useState(null);
+  const [saving, setSaving] = useState(false);
   const pdfRef = useRef();
+  const queryClient = useQueryClient();
 
   const updateHeader = (key, val) => setHeader(prev => ({ ...prev, [key]: val }));
 
@@ -186,6 +191,62 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       canal_division: map.district || "",
       map_id: map.id || "",
     }));
+  };
+
+  // منتخب موگہ کا محفوظ شدہ پرت ڈیٹا خود بخود لوڈ کریں
+  const { data: existingRecord } = useQuery({
+    queryKey: ["parat-record", header.mogha_number],
+    queryFn: () => base44.entities.ParatWarabandiRecord.filter({ mogha_number: header.mogha_number }).then((r) => r[0]),
+    enabled: !!header.mogha_number,
+  });
+
+  useEffect(() => {
+    if (!existingRecord) { setRecordId(null); return; }
+    setRecordId(existingRecord.id);
+    try {
+      const data = JSON.parse(existingRecord.data_json || "{}");
+      if (data.rows) setRows(data.rows.map(normalizeRowDigits));
+      if (data.notes) setNotes(data.notes);
+      if (data.docType !== undefined) setDocType(data.docType);
+      if (data.cca !== undefined) setCca(data.cca);
+      if (data.autoOn !== undefined) setAutoOn(data.autoOn);
+      if (data.header) setHeader((prev) => ({ ...prev, ...data.header }));
+    } catch {}
+  }, [existingRecord?.id]);
+
+  // مستقل محفوظ — پرت وارہ بندی ریکارڈ (موگہ وار)
+  const handleSave = async () => {
+    if (!header.mogha_number) { toast.error("پہلے موگہ منتخب کریں"); return; }
+    setSaving(true);
+    const data_json = JSON.stringify({
+      header, rows, notes, docType, cca, autoOn,
+      showRowSr, showColSr, printRowSr, printColSr, isUrduMode,
+    });
+    const payload = {
+      mogha_number: header.mogha_number,
+      mogha_side: header.mogha_side,
+      mouza: header.mouza,
+      doc_type: docType,
+      data_json,
+      status: "draft",
+    };
+    try {
+      let rec;
+      if (recordId) {
+        rec = await base44.entities.ParatWarabandiRecord.update(recordId, payload);
+      } else {
+        const found = await base44.entities.ParatWarabandiRecord.filter({ mogha_number: header.mogha_number }).then((r) => r[0]);
+        if (found) rec = await base44.entities.ParatWarabandiRecord.update(found.id, payload);
+        else rec = await base44.entities.ParatWarabandiRecord.create(payload);
+      }
+      if (rec?.id) setRecordId(rec.id);
+      queryClient.invalidateQueries({ queryKey: ["parat-record"] });
+      toast.success("مستقل محفوظ ہو گیا");
+    } catch (e) {
+      toast.error("محفوظ نہیں ہوا");
+    } finally {
+      setSaving(false);
+    }
   };
 
   // جب CCA / لیڈ / وضگی بدلیں تو تمام قطاروں کی خالص واری خود بخود دوبارہ حساب ہو
@@ -600,6 +661,9 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               <input type="checkbox" checked={printColSr} onChange={e => setPrintColSr(e.target.checked)} className="w-3 h-3" />
               پرنٹ کالم نمبرشمار
             </label>
+            <Button size="sm" onClick={handleSave} disabled={saving} className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1">
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} محفوظ
+            </Button>
             <Button size="sm" onClick={() => setShowPrint(true)} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1">
               <Printer className="w-3 h-3" /> پرنٹ
             </Button>
@@ -809,7 +873,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   <td className={tdCls} style={{ minWidth: 90 }}>
                     <div className="flex items-center gap-0.5">
                       <input value={row.bandubast} onChange={e => updateRow(i, "bandubast", e.target.value)} className={inp} placeholder="87/3" dir="ltr" style={{ fontFamily: "serif" }} />
-                      <button onClick={() => setBandubastRow(i)} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے منتخب کریں">
+                      <button onClick={() => setPicker({ row: i, field: "bandubast" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے مستطیل/ایکڑ منتخب کریں">
                         <LayoutGrid className="w-3 h-3" />
                       </button>
                     </div>
@@ -836,8 +900,22 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   {/* خالص واری — auto-calculated, shown in green */}
                   <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_minute} onChange={e => updateRow(i, "khalis_waari_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_ghante} onChange={e => updateRow(i, "khalis_waari_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls}><input value={row.nikha_lega} onChange={e => updateRow(i, "nikha_lega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} /></td>
-                  <td className={tdCls}><input value={row.nikha_dega} onChange={e => updateRow(i, "nikha_dega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} /></td>
+                  <td className={tdCls}>
+                    <div className="flex items-center gap-0.5">
+                      <input value={row.nikha_lega} onChange={e => updateRow(i, "nikha_lega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} />
+                      <button onClick={() => setPicker({ row: i, field: "nikha_lega" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے نکہ منتخب کریں">
+                        <LayoutGrid className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </td>
+                  <td className={tdCls}>
+                    <div className="flex items-center gap-0.5">
+                      <input value={row.nikha_dega} onChange={e => updateRow(i, "nikha_dega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} />
+                      <button onClick={() => setPicker({ row: i, field: "nikha_dega" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے نکہ منتخب کریں">
+                        <LayoutGrid className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </td>
                   <td className={tdCls} style={{ minWidth: 80 }}><input value={row.tashreeh_din} onChange={e => updateRow(i, "tashreeh_din", e.target.value)} className={inp} /></td>
                   <td className={tdCls} style={{ minWidth: 80 }}><input value={row.tashreeh_raat} onChange={e => updateRow(i, "tashreeh_raat", e.target.value)} className={inp} /></td>
                   <td className={tdCls} style={{ width: 28 }}>
@@ -928,12 +1006,13 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
       )}
 
       <BandubastPicker
-        open={bandubastRow !== null}
-        value={bandubastRow !== null ? (rows[bandubastRow]?.bandubast || "") : ""}
-        onChange={(v) => { if (bandubastRow !== null) updateRow(bandubastRow, "bandubast", v); }}
+        open={!!picker}
+        value={picker ? (rows[picker.row]?.[picker.field] || "") : ""}
+        onChange={(v) => { if (picker) updateRow(picker.row, picker.field, v); }}
         mogaNumber={header.mogha_number}
         mapId={header.map_id}
-        onClose={() => setBandubastRow(null)}
+        title={picker?.field === "nikha_lega" ? "نکہ لیگا" : picker?.field === "nikha_dega" ? "نکہ دیگا" : "نمبران بندوبست"}
+        onClose={() => setPicker(null)}
       />
 
       {showPrint && <PrintModal {...printData} onClose={() => setShowPrint(false)} />}
