@@ -678,13 +678,13 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
   const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
-  const headerParts = [`موگہ نمبری ${moghaFull}`];
+  const headerParts = ["خاکہ دستی", moghaFull, "موگہ نمبری"];
   if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
-  if (header.section) headerParts.push(`سیکشن ${header.section}`);
+  if (header.section) headerParts.push(`ضلعداری سیکشن ${header.section}`);
   if (header.sub_division) headerParts.push(`سب ڈویژن ${header.sub_division}`);
-  if (header.canal_division) headerParts.push(`کینال ڈویژن ${header.canal_division}`);
-  const headerLine = headerParts.join(" ، ");
+  if (header.canal_division) headerParts.push(`ڈویژن ${header.canal_division}`);
+  const headerLine = headerParts.join("  ");
 
   const inp = "w-full bg-transparent outline-none text-[10px] text-slate-800 text-center px-0.5 py-0.5 placeholder:text-slate-300";
   const thCls = "border border-slate-500 text-center bg-blue-100 px-0.5 py-0.5 text-[9px] font-bold leading-tight text-blue-900";
@@ -1074,6 +1074,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
 
 function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, onClose, variant }) {
   const [orientation, setOrientation] = useState("landscape");
+  const [pageSize, setPageSize] = useState("A4");
   const isJadeed = variant === "jadeed";
   const showSummary = !isJadeed;
   const thP = { border: "1.5px solid #1e3a5f", padding: "3px 4px", textAlign: "center", backgroundColor: "#dbeafe", fontSize: "8px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" };
@@ -1085,7 +1086,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
   const handlePrint = () => {
     const w = window.open("", "_blank", "width=1300,height=900");
     const content = document.getElementById("parat-print-content").innerHTML;
-    const css = PRINT_CSS.replace("A4 landscape", `A4 ${orientation}`);
+    const css = PRINT_CSS.replace("A4 landscape", `${pageSize} ${orientation}`);
     w.document.write(`<!DOCTYPE html><html dir="rtl"><head><title>پرت وارابندی</title>
       <style>${css}</style>
     </head><body>${content}</body></html>`);
@@ -1217,6 +1218,16 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         <div className="flex items-center justify-between px-5 py-3 border-b bg-slate-50 rounded-t-xl">
           <h3 className="text-sm font-bold text-slate-800">Print Preview — {docType}</h3>
           <div className="flex gap-3 items-center flex-wrap">
+            <label className="flex items-center gap-1 text-[11px] text-slate-700 font-medium" dir="rtl">
+              صفحہ:
+              <select value={pageSize} onChange={e => setPageSize(e.target.value)} className="border border-slate-300 rounded px-1.5 py-1 text-xs bg-white">
+                <option value="A4">A4</option>
+                <option value="A3">A3</option>
+                <option value="A5">A5</option>
+                <option value="Legal">Legal</option>
+                <option value="Letter">Letter</option>
+              </select>
+            </label>
             <label className="flex items-center gap-1 text-[11px] text-slate-700 font-medium" dir="rtl">
               رخ:
               <select value={orientation} onChange={e => setOrientation(e.target.value)} className="border border-slate-300 rounded px-1.5 py-1 text-xs bg-white">
