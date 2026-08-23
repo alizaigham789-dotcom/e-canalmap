@@ -127,7 +127,7 @@ function calcKhalis(total, ghair) {
 const COL_LETTERS = ["ا","ب","ج","د","ہ","و","ز","ح","ط","ی","ک","ل","م","ن","س","ع","ف","ص","ق","ر","ش","ت","ث","خ"];
 
 const PRINT_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Rajdhani:wght@600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
   @page { size: A4 landscape; margin: 8mm; }
   body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:10px 10px 60px; direction:rtl; color:#000; }
   table { border-collapse: collapse; width: 100%; }
@@ -686,21 +686,23 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
   const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
-  const smallParts = [isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی"];
-  if (header.rajbaha) smallParts.push(`راجباہ ${header.rajbaha}`);
-  if (header.mouza) smallParts.push(`موضع ${header.mouza}`);
-  if (header.section) smallParts.push(`سیکشن ${header.section}`);
-  if (header.sub_division) smallParts.push(`سب ڈویژن ${header.sub_division}`);
-  if (header.canal_division) smallParts.push(`ڈویژن ${header.canal_division}`);
+  const headerParts = [isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی", "موگہ نمبری", moghaFull];
+  if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
+  if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
+  if (header.section) headerParts.push(`سیکشن ${header.section}`);
+  if (header.sub_division) headerParts.push(`سب ڈویژن ${header.sub_division}`);
+  if (header.canal_division) headerParts.push(`ڈویژن ${header.canal_division}`);
   const headerLine = (
-    <div style={{ textAlign: "center", lineHeight: 1.4 }}>
-      <div style={{ fontSize: "24px", fontWeight: "700", color: "#1e3a5f", letterSpacing: "2px", fontFamily: "'Rajdhani', sans-serif" }}>
-        <span dir="ltr" style={{ unicodeBidi: "isolate", display: "inline-block" }}>{moghaFull}</span>
-      </div>
-      <div dir="rtl" style={{ fontSize: "11px", color: "#64748b", marginTop: "3px", fontFamily: "'Noto Nastaliq Urdu', serif", whiteSpace: "nowrap" }}>
-        {smallParts.join("  ·  ")}
-      </div>
-    </div>
+    <>
+      {headerParts.map((part, i) => (
+        <React.Fragment key={i}>
+          {part === moghaFull ? (
+            <span dir="ltr" style={{ unicodeBidi: "isolate", display: "inline-block" }}>{moghaFull}</span>
+          ) : part}
+          {i < headerParts.length - 1 ? "  " : ""}
+        </React.Fragment>
+      ))}
+    </>
   );
 
   const inp = "w-full bg-transparent outline-none text-[8px] text-slate-800 text-center px-0.5 py-0.5 placeholder:text-slate-300";
@@ -811,7 +813,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         </div>
 
 
-        <div dir="rtl" className="mt-3 mb-1">
+        <div dir="rtl" className="mt-3 text-center text-[16px] text-blue-700 font-bold whitespace-nowrap"
+          style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 1.5, letterSpacing: "0.5px", wordSpacing: "0.3em" }}>
           {headerLine}
         </div>
       </div>
@@ -1281,7 +1284,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif", display: "flex", flexDirection: "column", minHeight: "80vh" }}>
           {/* Table — header line as <caption> so it spans the full table width; renders once */}
           <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
-            <caption style={{ textAlign: "center", marginBottom: "22px", paddingBottom: "10px", borderBottom: "1.5px solid #1e3a5f", captionSide: "top" }}>
+            <caption style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold", marginBottom: "22px", paddingBottom: "10px", borderBottom: "1.5px solid #1e3a5f", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.5px", wordSpacing: "0.3em", whiteSpace: "nowrap", captionSide: "top" }}>
               {headerLine}
             </caption>
             <thead>
