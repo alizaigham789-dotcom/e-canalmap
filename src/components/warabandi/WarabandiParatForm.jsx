@@ -1088,7 +1088,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
   const [pageSize, setPageSize] = useState("A4");
   const isJadeed = variant === "jadeed";
   const showSummary = !isJadeed;
-  const thP = { border: "1.5px solid #1e3a5f", padding: "3px 4px", textAlign: "center", backgroundColor: "#dbeafe", fontSize: "8px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" };
+  const thP = { border: "1.5px solid #1e3a5f", padding: "4px 5px", textAlign: "center", backgroundColor: "#dbeafe", fontSize: "12px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" };
   const thLetters = { ...thP, backgroundColor: "#f0f4ff" };
   const thSub = { ...thP, backgroundColor: "#eff6ff" };
   const tdP = { border: "1.5px solid #555", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontFamily: "'Noto Nastaliq Urdu', serif" };
@@ -1261,7 +1261,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
 
         <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
           {/* Header line — first page only (borderless div outside the table so it doesn't repeat) */}
-          <div style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold", marginBottom: "8px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.2px", whiteSpace: "nowrap" }}>
+          <div style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold", marginTop: "10px", marginBottom: "22px", paddingBottom: "10px", borderBottom: "1.5px solid #1e3a5f", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.2px", whiteSpace: "nowrap" }}>
             {headerLine}
           </div>
 
