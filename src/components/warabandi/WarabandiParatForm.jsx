@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste } from "lucide-react";
@@ -136,7 +136,7 @@ function fracHtml(val) {
 }
 
 export default function WarabandiParatForm({ defaultDocType = "پرت وارہ بندی" }) {
-  const [isUrduMode, setIsUrduMode] = useState(false);
+  const [isUrduMode, setIsUrduMode] = useState(true);
   const [docType, setDocType] = useState(defaultDocType);
   const isJadeed = docType === "پرت وارہ بندی";
   const showSummary = !isJadeed;
@@ -153,12 +153,31 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [printColSr, setPrintColSr] = useState(false);
   // Automation toggle
   const [autoOn, setAutoOn] = useState(true);
+  // واری حساب: 1 ایکڑ کا وقت = (7*24*60 − وضگی − لیڈ) ÷ CCA
+  const [cca, setCca] = useState("");
+  const [lead, setLead] = useState("");
+  const [wazgi, setWazgi] = useState("");
+  const ccaNum = parseFloat(cca) || 0;
+  const leadNum = parseFloat(lead) || 0;
+  const wazgiNum = parseFloat(wazgi) || 0;
+  const minutesPerAcre = ccaNum > 0 ? Math.max(0, (10080 - wazgiNum - leadNum) / ccaNum) : 0;
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfPreview, setPdfPreview] = useState(null);
   const [showPaste, setShowPaste] = useState(false);
   const pdfRef = useRef();
 
   const updateHeader = (key, val) => setHeader(prev => ({ ...prev, [key]: val }));
+
+  // جب CCA / لیڈ / وضگی بدلیں تو تمام قطاروں کی خالص واری خود بخود دوبارہ حساب ہو
+  useEffect(() => {
+    if (!autoOn || ccaNum <= 0) return;
+    setRows(prev => prev.map(row => {
+      const acres = parseFloat(row.khalis_raqba) || 0;
+      if (acres <= 0) return row;
+      const { h, m } = minsToStr(acres * minutesPerAcre);
+      return { ...row, khalis_waari_minute: m, khalis_waari_ghante: h, khalis_waari2_minute: m, khalis_waari2_ghante: h };
+    }));
+  }, [cca, lead, wazgi, autoOn, ccaNum, minutesPerAcre]);
 
   const updateRow = (i, key, val) => {
     setRows(prev => {
@@ -184,6 +203,18 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
         row.khalis_raqba = calcKhalis(val, row.ghair_mumkin);
       }
       if (key === "ghair_mumkin") row.khalis_raqba = calcKhalis(row.total_area, val);
+
+      // خالص واری auto-calc from خالص رقبہ × (1 ایکڑ وقت) جب CCA درج ہو
+      if (ccaNum > 0 && ["khalis_raqba", "total_area", "total_area2", "ghair_mumkin"].includes(key)) {
+        const acres = parseFloat(row.khalis_raqba) || 0;
+        if (acres > 0) {
+          const { h, m } = minsToStr(acres * minutesPerAcre);
+          row.khalis_waari_minute = m;
+          row.khalis_waari_ghante = h;
+          row.khalis_waari2_minute = m;
+          row.khalis_waari2_ghante = h;
+        }
+      }
 
       // خالص واری calc from واری + زائدہ − وضگی
       const needsKhalisRecalc = ["waari_minute","waari_ghante","zaidah_minute","zaidah_ghante","wazgi_minute","wazgi_ghante"].includes(key);
@@ -567,6 +598,30 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           </span>
         </div>
 
+        {/* واری حساب: CCA / لیڈ / وضگی — 1 ایکڑ کا وقت خود بخود (not printed) */}
+        <div className="flex items-center gap-3 mb-3 p-2 bg-amber-50 rounded border border-amber-200 flex-wrap" dir="rtl">
+          <div className="flex items-center gap-1">
+            <label className="text-[10px] text-amber-700 font-semibold">CCA (ایکڑ)</label>
+            <input type="number" value={cca} onChange={e => setCca(e.target.value)} placeholder="130"
+              className="w-20 border border-amber-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-[10px] text-amber-700 font-semibold" style={{ fontFamily: "serif" }}>لیڈ (منٹ)</label>
+            <input type="number" value={lead} onChange={e => setLead(e.target.value)} placeholder="0"
+              className="w-20 border border-amber-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-[10px] text-amber-700 font-semibold" style={{ fontFamily: "serif" }}>وضگی (منٹ)</label>
+            <input type="number" value={wazgi} onChange={e => setWazgi(e.target.value)} placeholder="0"
+              className="w-20 border border-amber-300 rounded px-1.5 py-1 text-xs text-center bg-white focus:outline-none focus:border-amber-500" />
+          </div>
+          {ccaNum > 0 && (
+            <div className="text-[10px] bg-amber-100 border border-amber-200 rounded-lg px-2 py-1 text-amber-800 font-mono">
+              1 ایکڑ = {minutesPerAcre.toFixed(2)} منٹ
+            </div>
+          )}
+        </div>
+
 
         <div dir="rtl" className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
           <div className="flex flex-col gap-0.5">
@@ -634,17 +689,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         </div>
       </div>
 
-      {/* Table + left action column */}
+      {/* Table + action column (number-shumar side) */}
       <div className="flex">
-        {/* Left action buttons column */}
-        <div className="shrink-0 bg-slate-50 border-r border-slate-200 flex flex-col pt-[52px]">
-          {rows.map((_, i) => (
-            <div key={i} className="flex flex-col items-center justify-center py-1 border-b border-slate-100 gap-0.5" style={{ minHeight: "34px" }}>
-              <RowActions i={i} />
-            </div>
-          ))}
-        </div>
-
         {/* Scrollable table */}
         <div className="overflow-x-auto flex-1">
           <table style={{ borderCollapse: "collapse", minWidth: "1700px", width: "100%", direction: "rtl" }}>
@@ -801,6 +847,15 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               </tr>
             </tbody>
           </table>
+        </div>
+
+        {/* Action buttons column — number-shumar side (right in RTL) */}
+        <div className="shrink-0 bg-slate-50 border-l border-slate-200 flex flex-col pt-[52px]">
+          {rows.map((_, i) => (
+            <div key={i} className="flex flex-col items-center justify-center py-1 border-b border-slate-100 gap-0.5" style={{ minHeight: "34px" }}>
+              <RowActions i={i} />
+            </div>
+          ))}
         </div>
       </div>
 
