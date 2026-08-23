@@ -715,7 +715,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const tdCls = "border border-slate-300 text-center px-0 py-0 text-[10px]";
   const totalCls = "border border-slate-400 text-center px-0.5 py-1 text-[10px] font-bold bg-amber-50";
 
-  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, variant: isJadeed ? "jadeed" : "tarmeem" };
+  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, variant: isJadeed ? "jadeed" : "tarmeem" };
 
 
 
@@ -748,14 +748,6 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             </label>
           </div>
           <div className="flex gap-2 items-center flex-wrap justify-end">
-            <label className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={printRowSr} onChange={e => setPrintRowSr(e.target.checked)} className="w-3 h-3" />
-              پرنٹ قطار نمبرشمار
-            </label>
-            <label className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={printColSr} onChange={e => setPrintColSr(e.target.checked)} className="w-3 h-3" />
-              پرنٹ کالم نمبرشمار
-            </label>
             <Button size="sm" onClick={handleSave} disabled={saving} className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1">
               {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} محفوظ
             </Button>
@@ -889,7 +881,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
       {/* Table + action column (number-shumar side) */}
       <div className="flex">
         {/* Scrollable table */}
-        <div ref={scrollRef} className="overflow-auto flex-1" style={{ maxHeight: "70vh" }}>
+        <div ref={scrollRef} className="overflow-auto flex-1" style={{ maxHeight: "220px" }}>
           <table style={{ borderCollapse: "collapse", minWidth: "1700px", width: "100%", direction: "rtl" }}>
             <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
               {showColSr && (
@@ -1130,7 +1122,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   );
 }
 
-function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, onClose, variant }) {
+function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, onClose, variant }) {
+  const [orientation, setOrientation] = useState("landscape");
   const isJadeed = variant === "jadeed";
   const showSummary = !isJadeed;
   const thP = { border: "1.5px solid #1e3a5f", padding: "3px 4px", textAlign: "center", backgroundColor: "#dbeafe", fontSize: "8px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" };
@@ -1142,8 +1135,9 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
   const handlePrint = () => {
     const w = window.open("", "_blank", "width=1300,height=900");
     const content = document.getElementById("parat-print-content").innerHTML;
+    const css = PRINT_CSS.replace("A4 landscape", `A4 ${orientation}`);
     w.document.write(`<!DOCTYPE html><html dir="rtl"><head><title></title>
-      <style>${PRINT_CSS}</style>
+      <style>${css}</style>
     </head><body>${content}</body></html>`);
     w.document.close();
     setTimeout(() => { w.print(); w.close(); }, 800);
@@ -1271,7 +1265,22 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <div className="bg-white rounded-xl shadow-2xl max-w-[1300px] w-full mx-4">
         <div className="flex items-center justify-between px-5 py-3 border-b bg-slate-50 rounded-t-xl">
           <h3 className="text-sm font-bold text-slate-800">Print Preview — {docType}</h3>
-          <div className="flex gap-2">
+          <div className="flex gap-3 items-center flex-wrap">
+            <label className="flex items-center gap-1 text-[11px] text-slate-700 font-medium" dir="rtl">
+              رخ:
+              <select value={orientation} onChange={e => setOrientation(e.target.value)} className="border border-slate-300 rounded px-1.5 py-1 text-xs bg-white">
+                <option value="landscape">Landscape</option>
+                <option value="portrait">Portrait</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer" dir="rtl">
+              <input type="checkbox" checked={printRowSr} onChange={e => setPrintRowSr(e.target.checked)} className="w-3 h-3" />
+              قطار نمبرشمار
+            </label>
+            <label className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer" dir="rtl">
+              <input type="checkbox" checked={printColSr} onChange={e => setPrintColSr(e.target.checked)} className="w-3 h-3" />
+              کالم نمبرشمار
+            </label>
             <button onClick={handlePrint} className="px-4 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700">🖨 Print / PDF</button>
             <button onClick={onClose} className="px-3 py-1.5 bg-slate-200 text-slate-700 text-xs rounded-lg hover:bg-slate-300">بند کریں</button>
           </div>
