@@ -8,6 +8,7 @@ import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
 import MogaSearchSelect from "./MogaSearchSelect";
 import BandubastPicker from "./BandubastPicker";
+import FractionInput from "./FractionInput";
 
 // ====== Area format helpers ======
 function formatAreaMB(totalAcres) {
@@ -696,7 +697,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const addNote = () => setNotes(prev => [...prev, ""]);
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
-  const moghaFull = `${header.mogha_side}/${header.mogha_number}`;
+  const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
   const headerParts = [`موگہ نمبری ${moghaFull}`];
   if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
@@ -968,8 +969,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   </td>
                   <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls}><input value={row.nikha2_lega} onChange={e => updateRow(i, "nikha2_lega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} /></td>
-                  <td className={tdCls}><input value={row.nikha2_dega} onChange={e => updateRow(i, "nikha2_dega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} /></td>
+                  <td className={tdCls}><FractionInput value={row.nikha2_lega} onChange={v => updateRow(i, "nikha2_lega", v)} placeholderTop="مستطیل" placeholderBottom="کلا" fontFamily="serif" /></td>
+                  <td className={tdCls}><FractionInput value={row.nikha2_dega} onChange={v => updateRow(i, "nikha2_dega", v)} placeholderTop="مستطیل" placeholderBottom="کلا" fontFamily="serif" /></td>
                   </>}
                   <td className={tdCls}><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
                   <td className={tdCls} style={{ minWidth: 80 }}>
@@ -979,7 +980,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   </td>
                   <td className={tdCls} style={{ minWidth: 90 }}>
                     <div className="flex items-center gap-0.5">
-                      <input value={row.bandubast} onChange={e => updateRow(i, "bandubast", e.target.value)} className={inp} placeholder="87/3" dir="ltr" style={{ fontFamily: "serif" }} />
+                      <FractionInput value={row.bandubast} onChange={v => updateRow(i, "bandubast", v)} placeholderTop="مستطیل" placeholderBottom="کلا" fontFamily="serif" />
                       <button onClick={() => setPicker({ row: i, field: "bandubast" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے مستطیل/ایکڑ منتخب کریں">
                         <LayoutGrid className="w-3 h-3" />
                       </button>
@@ -987,7 +988,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   </td>
                   <td className={tdCls}>
                     <div className="flex items-center gap-0.5">
-                      <input value={row.nikha_lega} onChange={e => updateRow(i, "nikha_lega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} />
+                      <FractionInput value={row.nikha_lega} onChange={v => updateRow(i, "nikha_lega", v)} placeholderTop="مستطیل" placeholderBottom="کلا" fontFamily="serif" />
                       <button onClick={() => setPicker({ row: i, field: "nikha_lega" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے نکہ منتخب کریں">
                         <LayoutGrid className="w-3 h-3" />
                       </button>
@@ -995,7 +996,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   </td>
                   <td className={tdCls}>
                     <div className="flex items-center gap-0.5">
-                      <input value={row.nikha_dega} onChange={e => updateRow(i, "nikha_dega", e.target.value)} className={inp} style={{ fontFamily: "serif" }} />
+                      <FractionInput value={row.nikha_dega} onChange={v => updateRow(i, "nikha_dega", v)} placeholderTop="مستطیل" placeholderBottom="کلا" fontFamily="serif" />
                       <button onClick={() => setPicker({ row: i, field: "nikha_dega" })} className="text-emerald-600 hover:text-emerald-700 shrink-0" title="نقشے سے نکہ منتخب کریں">
                         <LayoutGrid className="w-3 h-3" />
                       </button>
