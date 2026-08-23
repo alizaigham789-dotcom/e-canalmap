@@ -151,7 +151,7 @@ function fracHtml(val) {
       return `<span class="frac"><span class="num">${parts[0]}</span><span>${parts.slice(1).join("/")}</span></span>`;
     }
     return `<span>${entry}</span>`;
-  }).join("، ");
+  }).join(", ");
 }
 
 // ====== تشریح اوقات helpers ======
@@ -701,7 +701,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const addNote = () => setNotes(prev => [...prev, ""]);
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
-  const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
+  const moghaFull = `${header.mogha_side}/${header.mogha_number}`;
   const headerParts = [`موگہ نمبری ${moghaFull}`];
   if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
@@ -973,8 +973,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   </td>
                   <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} /></td>
-                  <td className={tdCls}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} /></td>
+                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} /></td>
+                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} /></td>
                   </>}
                   <td className={tdCls}><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
                   <td className={tdCls} style={{ minWidth: 80 }}>
@@ -990,14 +990,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                       placeholder="555/5-10"
                     />
                   </td>
-                  <td className={tdCls}>
+                  <td className={tdCls} style={{ minWidth: 70 }}>
                     <FractionCell
                       value={row.nikha_lega}
                       onChange={(v) => updateRow(i, "nikha_lega", v)}
                       onPicker={() => setPicker({ row: i, field: "nikha_lega" })}
                     />
                   </td>
-                  <td className={tdCls}>
+                  <td className={tdCls} style={{ minWidth: 70 }}>
                     <FractionCell
                       value={row.nikha_dega}
                       onChange={(v) => updateRow(i, "nikha_dega", v)}
