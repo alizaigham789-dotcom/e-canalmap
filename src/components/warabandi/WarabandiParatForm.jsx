@@ -1090,7 +1090,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
   const showSummary = !isJadeed;
   const thP = { border: "1.5px solid #1e3a5f", padding: "4px 5px", textAlign: "center", backgroundColor: "#dbeafe", fontSize: "12px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" };
   const thLetters = { ...thP, backgroundColor: "#f0f4ff" };
-  const thSub = { ...thP, backgroundColor: "#eff6ff" };
+  const thSub = { ...thP, backgroundColor: "#eff6ff", fontSize: "6px", padding: "2px 3px" };
   const tdP = { border: "1.5px solid #555", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontFamily: "'Noto Nastaliq Urdu', serif" };
   const tdTotal = { border: "1.5px solid #333", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontWeight: "bold", backgroundColor: "#fef9e7", fontFamily: "'Noto Nastaliq Urdu', serif" };
 
@@ -1278,8 +1278,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
 
           {/* جناب عالیٰ + Notes */}
           <div style={{ marginTop: "20px", direction: "rtl" }}>
-            <div style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
-            <div style={{ fontSize: "10px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+            <div style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
+            <div style={{ fontSize: "6px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
               {notes.filter(n => n.trim()).map((note, i) => (
                 <div key={i} style={{ marginBottom: "2px" }}>{i + 1}- {note}</div>
               ))}
@@ -1287,7 +1287,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
           </div>
 
           {/* Signatures */}
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px", fontSize: "11px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
             <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "140px" }}>دستخط نہری پٹواری</div>
             <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "140px" }}>دستخط ضلعدار</div>
             <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "200px" }}>دستخط سب ڈویژنل کینال آفیسر</div>
