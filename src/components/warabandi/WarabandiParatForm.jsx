@@ -678,12 +678,13 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
   const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
-  const headerParts = [isJadeed ? "پرت وارابندی" : "ترمیم پرت وارابندی", moghaFull, "موگہ نمبری"];
-  if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
-  if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
-  if (header.section) headerParts.push(`ضلعداری سیکشن ${header.section}`);
-  if (header.sub_division) headerParts.push(`سب ڈویژن ${header.sub_division}`);
+  const headerParts = [];
   if (header.canal_division) headerParts.push(`ڈویژن ${header.canal_division}`);
+  if (header.sub_division) headerParts.push(`سب ڈویژن ${header.sub_division}`);
+  if (header.section) headerParts.push(`ضلعداری سیکشن ${header.section}`);
+  if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
+  if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
+  headerParts.push(moghaFull, "موگہ نمبری", isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی");
   const headerLine = headerParts.join("  ");
 
   const inp = "w-full bg-transparent outline-none text-[10px] text-slate-800 text-center px-0.5 py-0.5 placeholder:text-slate-300";
