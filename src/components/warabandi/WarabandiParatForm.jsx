@@ -677,14 +677,25 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const addNote = () => setNotes(prev => [...prev, ""]);
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
-  const moghaFull = `${header.mogha_side}/${header.mogha_number}`;
+  const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
   const headerParts = [isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی", "موگہ نمبری", moghaFull];
   if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
   if (header.section) headerParts.push(`سیکشن ${header.section}`);
   if (header.sub_division) headerParts.push(`سب ڈویژن ${header.sub_division}`);
   if (header.canal_division) headerParts.push(`ڈویژن ${header.canal_division}`);
-  const headerLine = headerParts.join("  ");
+  const headerLine = (
+    <>
+      {headerParts.map((part, i) => (
+        <React.Fragment key={i}>
+          {part === moghaFull ? (
+            <span dir="ltr" style={{ unicodeBidi: "isolate", display: "inline-block" }}>{moghaFull}</span>
+          ) : part}
+          {i < headerParts.length - 1 ? "  " : ""}
+        </React.Fragment>
+      ))}
+    </>
+  );
 
   const inp = "w-full bg-transparent outline-none text-[10px] text-slate-800 text-center px-0.5 py-0.5 placeholder:text-slate-300";
   const thCls = "border border-slate-500 text-center bg-blue-100 px-1.5 py-1.5 text-[12px] font-bold leading-snug text-blue-900";
@@ -793,7 +804,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         </div>
 
 
-        <div dir="rtl" className="mt-3 text-center text-[18px] text-blue-700 font-bold whitespace-nowrap"
+        <div dir="rtl" className="mt-3 text-center text-[14px] text-blue-700 font-bold whitespace-nowrap"
           style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 1.5, letterSpacing: "0.1px" }}>
           {headerLine}
         </div>
@@ -1250,7 +1261,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
 
         <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
           {/* Header line — first page only (borderless div outside the table so it doesn't repeat) */}
-          <div style={{ textAlign: "center", fontSize: "20px", fontWeight: "bold", marginBottom: "8px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.2px", whiteSpace: "nowrap" }}>
+          <div style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold", marginBottom: "8px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.2px", whiteSpace: "nowrap" }}>
             {headerLine}
           </div>
 
