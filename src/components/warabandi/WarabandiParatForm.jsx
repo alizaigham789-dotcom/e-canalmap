@@ -681,7 +681,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const headerParts = [];
   if (header.canal_division) headerParts.push(`ڈویژن ${header.canal_division}`);
   if (header.sub_division) headerParts.push(`سب ڈویژن ${header.sub_division}`);
-  if (header.section) headerParts.push(`ضلعداری سیکشن ${header.section}`);
+  if (header.section) headerParts.push(`سیکشن ${header.section}`);
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
   if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
   headerParts.push(moghaFull, "موگہ نمبری", isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی");
