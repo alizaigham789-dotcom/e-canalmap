@@ -677,7 +677,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const addNote = () => setNotes(prev => [...prev, ""]);
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
-  const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
+  const moghaFull = `${header.mogha_side}/${header.mogha_number}`;
   const headerParts = [isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی", "موگہ نمبری", moghaFull];
   if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
@@ -687,7 +687,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const headerLine = headerParts.join("  ");
 
   const inp = "w-full bg-transparent outline-none text-[10px] text-slate-800 text-center px-0.5 py-0.5 placeholder:text-slate-300";
-  const thCls = "border border-slate-500 text-center bg-blue-100 px-0.5 py-0.5 text-[9px] font-bold leading-tight text-blue-900";
+  const thCls = "border border-slate-500 text-center bg-blue-100 px-1.5 py-1.5 text-[12px] font-bold leading-snug text-blue-900";
   const tdCls = "border border-slate-300 text-center px-0 py-0 text-[10px]";
   const totalCls = "border border-slate-400 text-center px-0.5 py-1 text-[10px] font-bold bg-amber-50";
 
