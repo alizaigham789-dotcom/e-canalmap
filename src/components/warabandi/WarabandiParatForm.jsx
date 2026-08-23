@@ -677,7 +677,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const addNote = () => setNotes(prev => [...prev, ""]);
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
-  const moghaFull = `${header.mogha_side}`;
+  const moghaFull = `${header.mogha_side}/`;
   const headerParts = [isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی", "موگہ نمبری", moghaFull];
   headerParts.push(header.rajbaha ? `راجباہ ${header.rajbaha} ${header.mogha_number}` : `راجباہ ${header.mogha_number}`);
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
@@ -793,8 +793,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         </div>
 
 
-        <div dir="rtl" className="mt-3 p-3 bg-white border border-dashed border-slate-300 rounded text-center text-[22px] text-blue-700 font-bold"
-          style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 3.2, letterSpacing: "0.6px" }}>
+        <div dir="rtl" className="mt-3 p-2 bg-white border border-dashed border-slate-300 rounded text-center text-[22px] text-blue-700 font-bold whitespace-nowrap overflow-x-auto"
+          style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 1.6, letterSpacing: "0.2px" }}>
           {headerLine}
         </div>
       </div>
@@ -1250,7 +1250,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
 
         <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
           {/* Header line — first page only (borderless div outside the table so it doesn't repeat) */}
-          <div style={{ textAlign: "center", fontSize: "26px", fontWeight: "bold", marginBottom: "8px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 3, letterSpacing: "0.6px" }}>
+          <div style={{ textAlign: "center", fontSize: "26px", fontWeight: "bold", marginBottom: "8px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.6, letterSpacing: "0.3px", whiteSpace: "nowrap", overflowX: "auto" }}>
             {headerLine}
           </div>
 
