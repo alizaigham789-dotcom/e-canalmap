@@ -677,9 +677,9 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const addNote = () => setNotes(prev => [...prev, ""]);
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
-  const moghaFull = `${header.mogha_side}/`;
+  const moghaFull = `${header.mogha_side}/${header.mogha_number}`;
   const headerParts = [isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی", "موگہ نمبری", moghaFull];
-  headerParts.push(header.rajbaha ? `راجباہ ${header.rajbaha} ${header.mogha_number}` : `راجباہ ${header.mogha_number}`);
+  if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
   if (header.section) headerParts.push(`سیکشن ${header.section}`);
   if (header.sub_division) headerParts.push(`سب ڈویژن ${header.sub_division}`);
