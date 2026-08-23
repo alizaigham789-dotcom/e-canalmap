@@ -526,6 +526,17 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
 
   const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
 
+  // ڈیفالٹ اسکرول نمبرشمار (سٹارٹ) سائڈ پر — ٹشریح اینڈ پر نہیں
+  const scrollRef = useRef(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const raf = requestAnimationFrame(() => {
+      el.scrollLeft = el.scrollWidth - el.clientWidth;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   const updateNote = (i, val) => setNotes(prev => { const n = [...prev]; n[i] = val; return n; });
   const addNote = () => setNotes(prev => [...prev, ""]);
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
@@ -546,19 +557,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
 
   const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, variant: isJadeed ? "jadeed" : "tarmeem" };
 
-  // Row action controls (left side)
-  const RowActions = ({ i }) => (
-    <div className="flex flex-col items-center gap-0.5 shrink-0">
-      <button onClick={() => insertRowAfter(i - 1)}
-        className="w-5 h-5 flex items-center justify-center text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded text-[8px]" title="اوپر قطار شامل کریں">
-        <Plus className="w-3 h-3" />
-      </button>
-      <button onClick={() => removeRow(i)}
-        className="w-5 h-5 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded" title="حذف کریں">
-        <Trash2 className="w-3 h-3" />
-      </button>
-      </div>
-      );
+
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -701,11 +700,12 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
       {/* Table + action column (number-shumar side) */}
       <div className="flex">
         {/* Scrollable table */}
-        <div className="overflow-x-auto flex-1">
+        <div ref={scrollRef} className="overflow-x-auto flex-1">
           <table style={{ borderCollapse: "collapse", minWidth: "1700px", width: "100%", direction: "rtl" }}>
             <thead>
               {showColSr && (
                 <tr style={{ backgroundColor: "#f0f4ff" }}>
+                  <th className={thCls} style={{ fontSize: "8px", width: 32 }}></th>
                   {showRowSr && <th className={thCls} style={{ fontSize: "8px", width: 28 }}>#</th>}
                   {COL_LETTERS.slice(isJadeed ? 7 : 0).map((l, i) => (
                     <th key={i} className={thCls} style={{ fontSize: "8px" }}>{l}</th>
@@ -714,6 +714,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 </tr>
               )}
               <tr style={{ backgroundColor: "#dbeafe" }}>
+                <th className={thCls} rowSpan={2} style={{ width: 32 }}></th>
                 {showRowSr && <th className={thCls} rowSpan={2} style={{ width: 28 }}>نمبرشمار</th>}
                 {showSummary && <>
                 <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
@@ -766,6 +767,16 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             <tbody>
               {rows.map((row, i) => (
                 <tr key={i} className="hover:bg-blue-50/30">
+                  <td className={tdCls} style={{ width: 32 }}>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <button onClick={() => insertRowAfter(i - 1)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded p-0.5" title="اوپر قطار شامل کریں">
+                        <Plus className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => removeRow(i)} className="text-slate-300 hover:text-red-500 hover:bg-red-50 rounded p-0.5" title="حذف کریں">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </td>
                   {showRowSr && <td className={tdCls} style={{ fontSize: "9px", color: "#1d4ed8", minWidth: 28, textAlign: "center", fontWeight: "bold" }}>{i + 1}</td>}
                   {showSummary && <>
                   <td className={tdCls}><input value={row.khatoni2} onChange={e => updateRow(i, "khatoni2", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
@@ -827,6 +838,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               ))}
               {/* میزان row */}
               <tr style={{ backgroundColor: "#fef9e7" }}>
+                <td className={totalCls} style={{ width: 32 }}></td>
                 {showRowSr && <td className={totalCls}>—</td>}
                 {showSummary && <>
                 <td className={totalCls}>—</td>
@@ -858,14 +870,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           </table>
         </div>
 
-        {/* Action buttons column — number-shumar side (right in RTL) */}
-        <div className="shrink-0 bg-slate-50 border-l border-slate-200 flex flex-col pt-[52px]">
-          {rows.map((_, i) => (
-            <div key={i} className="flex flex-col items-center justify-center py-1 border-b border-slate-100 gap-0.5" style={{ minHeight: "34px" }}>
-              <RowActions i={i} />
-            </div>
-          ))}
-        </div>
+
       </div>
 
       {/* جناب عالیٰ Notes Section */}

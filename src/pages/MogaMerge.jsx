@@ -164,6 +164,7 @@ export default function MogaMerge() {
     setBusy(true); setError(null);
     try {
       const parcels = objects.filter((o) => ["mustateel", "muraba"].includes(o.type)).length;
+      const placedSource = villageMogas.find(m => selectedSet.has(m.id) && m.geo_placement_lat != null && m.geo_placement_lng != null);
       const saved = await base44.entities.LandMap.create({
         title: titleRef.current || `موضع نقشہ - ${mouza}`,
         village: mouza,
@@ -173,6 +174,9 @@ export default function MogaMerge() {
         status,
         drawing_data: await storeDrawingData(objects),
         total_parcels: parcels,
+        geo_placement_lat: placedSource?.geo_placement_lat ?? null,
+        geo_placement_lng: placedSource?.geo_placement_lng ?? null,
+        geo_rotation: placedSource?.geo_rotation || 0,
       });
       queryClient.invalidateQueries({ queryKey: ["landmaps-all"] });
       queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
