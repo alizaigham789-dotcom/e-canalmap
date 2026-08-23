@@ -816,7 +816,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         </div>
 
 
-        <div dir="rtl" className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
+        <div dir="rtl" className="grid grid-cols-2 gap-2 lg:grid-cols-3">
           <div className="flex flex-col gap-0.5">
             <label className="text-[9px] text-slate-500 font-semibold" style={{ fontFamily: "serif" }}>موگہ نمبری</label>
             <MogaSearchSelect
@@ -836,7 +836,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               <label className="text-[9px] text-slate-500 font-semibold" style={{ fontFamily: "serif" }}>{f.label}</label>
               <input value={header[f.key]} onChange={e => updateHeader(f.key, e.target.value)}
                 placeholder={f.placeholder} dir="rtl"
-                className="border border-slate-300 rounded px-2 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:border-blue-400"
+                className="w-full border border-slate-300 rounded px-2 py-1 text-[11px] text-slate-800 bg-white focus:outline-none focus:border-blue-400"
                 style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }} />
             </div>
           ))}
@@ -899,11 +899,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 {showSummary && <>
                 <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 80 }}>نام مالک معہ والدیت</th>
-                {/* کل رقبہ with ایکڑ sub-label */}
-                <th className={thCls} rowSpan={2}>
-                  <div>کل رقبہ</div>
-                  <div style={{ fontSize: "8px", fontWeight: "normal", color: "#555", borderTop: "1px solid #aaa", marginTop: "2px", paddingTop: "2px" }}>ایکڑ</div>
-                </th>
+                <th className={thCls}>کل رقبہ</th>
                 <th className={thCls} colSpan={2}>خالص واری</th>
                 <th className={thCls} colSpan={2}>نکہ جات</th>
                 </>}
@@ -911,18 +907,9 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <th className={thCls} rowSpan={2} style={{ minWidth: 80 }}>نام مالک معہ والدیت</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 90 }}>نمبران بندوبست</th>
                 <th className={thCls} colSpan={2}>نکہ جات</th>
-                <th className={thCls} rowSpan={2}>
-                  <div>کل رقبہ</div>
-                  <div style={{ fontSize: "8px", fontWeight: "normal", color: "#555", borderTop: "1px solid #aaa", marginTop: "2px", paddingTop: "2px" }}>ایکڑ</div>
-                </th>
-                <th className={thCls} rowSpan={2}>
-                  <div>غیر ممکن رقبہ</div>
-                  <div style={{ fontSize: "8px", fontWeight: "normal", color: "#555", borderTop: "1px solid #aaa", marginTop: "2px", paddingTop: "2px" }}>ایکڑ</div>
-                </th>
-                <th className={thCls} rowSpan={2}>
-                  <div>خالص رقبہ</div>
-                  <div style={{ fontSize: "8px", fontWeight: "normal", color: "#555", borderTop: "1px solid #aaa", marginTop: "2px", paddingTop: "2px" }}>ایکڑ</div>
-                </th>
+                <th className={thCls}>کل رقبہ</th>
+                <th className={thCls}>غیر ممکن رقبہ</th>
+                <th className={thCls}>خالص رقبہ</th>
                 <th className={thCls} colSpan={2}>واری بحساب رقبہ</th>
                 <th className={thCls} colSpan={2}>زائدہ وصولی</th>
                 <th className={thCls} colSpan={2}>وضگی</th>
@@ -933,10 +920,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               </tr>
               <tr style={{ backgroundColor: "#eff6ff" }}>
                 {showSummary && <>
+                <th className={thCls}>ایکڑ</th>
                 <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
                 <th className={thCls}>لیگا</th><th className={thCls}>دیگا</th>
                 </>}
                 <th className={thCls}>لیگا</th><th className={thCls}>دیگا</th>
+                <th className={thCls}>ایکڑ</th>
+                <th className={thCls}>ایکڑ</th>
+                <th className={thCls}>ایکڑ</th>
                 <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
                 <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
                 <th className={thCls}>منٹ</th><th className={thCls}>گھنٹے</th>
