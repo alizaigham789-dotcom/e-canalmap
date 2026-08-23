@@ -677,7 +677,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const addNote = () => setNotes(prev => [...prev, ""]);
   const removeNote = (i) => setNotes(prev => prev.filter((_, idx) => idx !== i));
 
-  const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
+  const moghaFull = `${header.mogha_side}/${header.mogha_number}`;
   const headerParts = [isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی", "موگہ نمبری", moghaFull];
   if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
@@ -793,8 +793,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         </div>
 
 
-        <div dir="rtl" className="mt-3 text-center text-[22px] text-blue-700 font-bold whitespace-nowrap"
-          style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 1.6, letterSpacing: "0.2px" }}>
+        <div dir="rtl" className="mt-3 text-center text-[18px] text-blue-700 font-bold whitespace-nowrap"
+          style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 1.5, letterSpacing: "0.1px" }}>
           {headerLine}
         </div>
       </div>
@@ -1250,7 +1250,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
 
         <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
           {/* Header line — first page only (borderless div outside the table so it doesn't repeat) */}
-          <div style={{ textAlign: "center", fontSize: "26px", fontWeight: "bold", marginBottom: "8px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.6, letterSpacing: "0.3px", whiteSpace: "nowrap", overflowX: "auto" }}>
+          <div style={{ textAlign: "center", fontSize: "20px", fontWeight: "bold", marginBottom: "8px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.2px", whiteSpace: "nowrap" }}>
             {headerLine}
           </div>
 
