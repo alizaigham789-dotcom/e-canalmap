@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Printer, Clock, Languages, ScanLine, Loader2, ClipboardPaste } from "lucide-react";
+import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste } from "lucide-react";
 import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
 
@@ -143,6 +143,8 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [header, setHeader] = useState({
     mogha_number: "18650", mogha_side: "R", rajbaha: "پیلو مائنر",
     mouza: "روڈہ", section: "گنجیال", sub_division: "قائد آباد", canal_division: "خوشاب",
+    khata_number: "", name: "", malik_waldeyat: "",
+    kull_raqba: "", khalis_raqba: "", zaid_wasoli: "", lead: "",
   });
   const [rows, setRows] = useState(() => Array.from({ length: 5 }, emptyRow));
   const [notes, setNotes] = useState([...DEFAULT_NOTES]);
@@ -153,8 +155,6 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [printColSr, setPrintColSr] = useState(false);
   // Automation toggle
   const [autoOn, setAutoOn] = useState(true);
-  // Acre-to-time rate
-  const [acreMinutes, setAcreMinutes] = useState("6");
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfPreview, setPdfPreview] = useState(null);
   const [showPaste, setShowPaste] = useState(false);
@@ -227,26 +227,6 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
 
       return next;
     });
-  };
-
-  // واری بحساب رقبہ auto-calc from خالص رقبہ × rate
-  const calcWaariFromAcre = () => {
-    const rate = parseFloat(acreMinutes) || 6;
-    setRows(prev => prev.map(row => {
-      const acres = parseFloat(row.khalis_raqba) || 0;
-      if (acres === 0) return row;
-      const totalMins = acres * rate;
-      const { h, m } = minsToStr(totalMins);
-      const updated = { ...row, waari_minute: m, waari_ghante: h };
-      if (autoOn) {
-        const kw = calcKhalisWaari(updated);
-        updated.khalis_waari_minute = kw.khalis_waari_minute;
-        updated.khalis_waari_ghante = kw.khalis_waari_ghante;
-        updated.khalis_waari2_minute = kw.khalis_waari_minute;
-        updated.khalis_waari2_ghante = kw.khalis_waari_ghante;
-      }
-      return updated;
-    }));
   };
 
   // AI Scanner — reads PDF / image / Excel / CSV and fills header + rows
@@ -519,7 +499,17 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const tdCls = "border border-slate-300 text-center px-0 py-0 text-[10px]";
   const totalCls = "border border-slate-400 text-center px-0.5 py-1 text-[10px] font-bold bg-amber-50";
 
-  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, variant: isJadeed ? "jadeed" : "tarmeem" };
+  const SUMMARY_FIELDS = [
+    { key: "khata_number", label: "کھاتہ نمبر" },
+    { key: "name", label: "نام" },
+    { key: "malik_waldeyat", label: "مالک و ولدیت" },
+    { key: "kull_raqba", label: "کل رقبہ" },
+    { key: "khalis_raqba", label: "خالص رقبہ" },
+    { key: "zaid_wasoli", label: "زائد وصولی" },
+    { key: "lead", label: "لیڈ" },
+  ];
+  const summary = SUMMARY_FIELDS.reduce((o, f) => { o[f.key] = header[f.key] || ""; return o; }, {});
+  const printData = { docType, headerLine, summary, SUMMARY_FIELDS, rows, notes, printRowSr, printColSr, variant: isJadeed ? "jadeed" : "tarmeem" };
 
   // Row action controls (left side)
   const RowActions = ({ i }) => (
@@ -589,19 +579,24 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           </span>
         </div>
 
-        {/* Acre-to-time rate box (not printed) */}
-        <div className="flex items-center gap-3 mb-3 p-2 bg-amber-50 rounded border border-amber-200">
-          <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-          <span className="text-xs font-semibold text-amber-800" style={{ fontFamily: "serif" }}>ایکڑ → وقت کا فارمولہ</span>
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-amber-700">1 ایکڑ =</span>
-            <input type="number" value={acreMinutes} onChange={e => setAcreMinutes(e.target.value)} min="1"
-              className="w-16 border border-amber-300 rounded px-1 py-0.5 text-xs text-center bg-white focus:outline-none focus:border-amber-500" />
-            <span className="text-xs text-amber-700">منٹ</span>
-          </div>
-          <Button size="sm" onClick={calcWaariFromAcre} className="h-6 text-[10px] bg-amber-500 hover:bg-amber-600 text-white px-2">
-            واری حساب کریں
-          </Button>
+        {/* Summary input boxes — کھاتہ نمبر / نام / مالک و ولدیت / کل رقبہ / خالص رقبہ / زائد وصولی / لیڈ (printed) */}
+        <div dir="rtl" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-3 p-2 bg-amber-50 rounded border border-amber-200">
+          {[
+            { key: "khata_number", label: "کھاتہ نمبر" },
+            { key: "name", label: "نام" },
+            { key: "malik_waldeyat", label: "مالک و ولدیت" },
+            { key: "kull_raqba", label: "کل رقبہ" },
+            { key: "khalis_raqba", label: "خالص رقبہ" },
+            { key: "zaid_wasoli", label: "زائد وصولی" },
+            { key: "lead", label: "لیڈ" },
+          ].map(f => (
+            <div key={f.key} className="flex flex-col gap-0.5">
+              <label className="text-[9px] text-amber-700 font-semibold" style={{ fontFamily: "serif" }}>{f.label}</label>
+              <input value={header[f.key] || ""} onChange={e => updateHeader(f.key, e.target.value)} dir="rtl"
+                className="border border-amber-300 rounded px-1.5 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:border-amber-500"
+                style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }} />
+            </div>
+          ))}
         </div>
 
         <div dir="rtl" className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
@@ -888,7 +883,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   );
 }
 
-function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, onClose, variant }) {
+function PrintModal({ docType, headerLine, summary, SUMMARY_FIELDS, rows, notes, printRowSr, printColSr, onClose, variant }) {
   const isJadeed = variant === "jadeed";
   const showSummary = !isJadeed;
   const thP = { border: "1.5px solid #1e3a5f", padding: "3px 4px", textAlign: "center", backgroundColor: "#dbeafe", fontSize: "8px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" };
@@ -1049,6 +1044,18 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
           <div style={{ textAlign: "center", fontSize: "13px", fontWeight: "bold", marginBottom: "8px", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 2.4, letterSpacing: "0.4px" }}>
             {headerLine}
           </div>
+
+          {/* Summary input boxes — printed */}
+          {summary && (SUMMARY_FIELDS || []).some(f => summary[f.key]) && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px", direction: "rtl" }}>
+              {(SUMMARY_FIELDS || []).map(f => (
+                <div key={f.key} style={{ border: "1.5px solid #1e3a5f", padding: "3px 6px", fontSize: "9px", fontFamily: "'Noto Nastaliq Urdu', serif", minWidth: "90px", backgroundColor: "#f0f4ff" }}>
+                  <span style={{ fontWeight: "bold", color: "#1e3a5f" }}>{f.label}: </span>
+                  <span>{summary[f.key] || "—"}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Table — column headers in <thead> repeat on every printed page */}
           <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
