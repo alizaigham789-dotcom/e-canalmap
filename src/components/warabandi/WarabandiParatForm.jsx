@@ -129,7 +129,7 @@ const COL_LETTERS = ["ا","ب","ج","د","ہ","و","ز","ح","ط","ی","ک","ل"
 const PRINT_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
   @page { size: A4 landscape; margin: 8mm; }
-  body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:10px; direction:rtl; color:#000; }
+  body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:10px 10px 60px; direction:rtl; color:#000; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
   th { font-weight: bold; }
@@ -139,8 +139,8 @@ const PRINT_CSS = `
   .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
   .tashreeh-table th { font-size: 7px; padding: 2px; }
   .tashreeh-table td { font-size: 7px; padding: 2px; }
-  #parat-print-content { display: flex; flex-direction: column; min-height: calc(100vh - 20px); }
-  .signatures { margin-top: auto !important; }
+  #parat-print-content { display: block !important; min-height: 0 !important; }
+  .signatures { position: fixed; bottom: 10px; left: 10px; right: 10px; margin: 0 !important; }
 `;
 
 function fracHtml(val) {
@@ -1281,7 +1281,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
           </div>
         </div>
 
-        <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+        <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif", display: "flex", flexDirection: "column", minHeight: "80vh" }}>
           {/* Table — header line as <caption> so it spans the full table width; renders once */}
           <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
             <caption style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold", marginBottom: "22px", paddingBottom: "10px", borderBottom: "1.5px solid #1e3a5f", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.5px", wordSpacing: "0.3em", whiteSpace: "nowrap", captionSide: "top" }}>
@@ -1307,10 +1307,10 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
           </div>
 
           {/* Signatures */}
-          <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "28px", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "140px" }}>دستخط نہری پٹواری</div>
-            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "140px" }}>دستخط ضلعدار</div>
-            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", minWidth: "200px" }}>دستخط سب ڈویژنل کینال آفیسر</div>
+          <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "auto", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط نہری پٹواری</div>
+            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط ضلعدار</div>
+            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط سب ڈویژنل کینال آفیسر</div>
           </div>
         </div>
       </div>
