@@ -20,7 +20,7 @@ export default function FractionInput({ value, onChange, placeholderTop, placeho
   return (
     <div className="flex flex-col w-full">
       <input value={top} onChange={e => handleChange(e.target.value, bottom)} placeholder={placeholderTop} dir="ltr" className={inpCls} style={style} />
-      <div className="border-t border-slate-500" />
+      <div style={{ borderTop: "1.5px solid #334155", margin: "1px 0" }} />
       <input value={bottom} onChange={e => handleChange(top, e.target.value)} placeholder={placeholderBottom} dir="ltr" className={inpCls} style={style} />
     </div>
   );

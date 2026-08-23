@@ -182,6 +182,10 @@
   display: none;
 }
 
+/* Fraction display (mustateel/killa) — on-screen rendering for fracHtml output */
+.frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.frac .num { border-bottom: 1px solid #000; padding-bottom: 1px; }
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
