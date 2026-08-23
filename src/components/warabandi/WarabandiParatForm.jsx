@@ -44,6 +44,7 @@ const emptyRow = () => ({
   khatoni2: "", owner_name2: "", total_area2: "",
   khalis_waari2_minute: "", khalis_waari2_ghante: "",
   nikha2_lega: "", nikha2_dega: "",
+  bandubast2: "",
   khatoni: "", owner_name: "", bandubast: "", total_area: "", ghair_mumkin: "", khalis_raqba: "",
   waari_minute: "", waari_ghante: "",
   zaidah_minute: "", zaidah_ghante: "",
@@ -387,6 +388,10 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       if (key === "khalis_waari2_ghante") { row.khalis_waari_ghante = val; }
       if (key === "khalis_waari_ghante") { row.khalis_waari2_ghante = val; }
 
+      // بندوبست mirror (summary ↔ main)
+      if (key === "bandubast2") row.bandubast = val;
+      if (key === "bandubast") row.bandubast2 = val;
+
       // نکہ جات mirror (summary ↔ main)
       if (key === "nikha2_lega") row.nikha_lega = val;
       if (key === "nikha_lega") row.nikha2_lega = val;
@@ -575,6 +580,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           khatoni, khatoni2: khatoni,
           owner_name, owner_name2: owner_name,
           bandubast: r.bandubast || "",
+          bandubast2: r.bandubast || "",
           total_area, total_area2: total_area,
           ghair_mumkin,
           khalis_raqba,
@@ -864,6 +870,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 {showSummary && <>
                 <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 80 }}>نام مالک معہ والدیت</th>
+                <th className={thCls} rowSpan={2} style={{ minWidth: 90 }}>نمبران بندوبست</th>
                 <th className={thCls}>کل رقبہ</th>
                 <th className={thCls} colSpan={2}>خالص واری</th>
                 <th className={thCls} colSpan={2}>نکہ جات</th>
@@ -921,6 +928,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                       dir={isUrduMode ? "rtl" : "ltr"}
                       style={{ fontFamily: isUrduMode ? "'Noto Nastaliq Urdu', serif" : undefined, textAlign: isUrduMode ? "right" : "left" }} />
                   </td>
+                  <td className={tdCls} style={{ minWidth: 90 }}>
+                    <FractionCell
+                      value={row.bandubast2}
+                      onChange={(v) => updateRow(i, "bandubast2", v)}
+                      onPicker={() => setPicker({ row: i, field: "bandubast2" })}
+                      placeholder="555/5-10"
+                    />
+                  </td>
                   <td className={tdCls} style={{ position: "relative" }}>
                     <input value={row.total_area2} onChange={e => updateRow(i, "total_area2", e.target.value)} className={inp} dir="ltr" />
                     {!isUrduMode && row.total_area2 && isEnglishOrDigit(row.total_area2) && (
@@ -929,8 +944,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   </td>
                   <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} /></td>
-                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} /></td>
+                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} onPicker={() => setPicker({ row: i, field: "nikha2_lega" })} /></td>
+                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} onPicker={() => setPicker({ row: i, field: "nikha2_dega" })} /></td>
                   </>}
                   <td className={tdCls}><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
                   <td className={tdCls} style={{ minWidth: 80 }}>
@@ -998,6 +1013,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 {showSummary && <>
                 <td className={totalCls}>—</td>
                 <td className={totalCls} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>میزان</td>
+                <td className={totalCls}>—</td>
                 <td className={totalCls}>{sumCol(rows, "total_area2")}</td>
                 <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").m}</td>
                 <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
@@ -1077,7 +1093,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         onChange={(v) => { if (picker) updateRow(picker.row, picker.field, v); }}
         mogaNumber={header.mogha_number}
         mapId={header.map_id}
-        title={picker?.field === "nikha_lega" ? "نکہ لیگا" : picker?.field === "nikha_dega" ? "نکہ دیگا" : "نمبران بندوبست"}
+        title={picker?.field === "nikha_lega" || picker?.field === "nikha2_lega" ? "نکہ لیگا" : picker?.field === "nikha_dega" || picker?.field === "nikha2_dega" ? "نکہ دیگا" : "نمبران بندوبست"}
         onClose={() => setPicker(null)}
       />
 
@@ -1123,6 +1139,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         {showSummary && <>
         <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
         <th style={{ ...thP, minWidth: 70 }} rowSpan={2}>نام مالک معہ والدیت</th>
+        <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نمبران بندوبست</th>
         <th style={thP}>کل رقبہ</th>
         <th style={thP} colSpan={2}>خالص واری</th>
         <th style={thP} colSpan={2}>نکہ جات</th>
@@ -1168,6 +1185,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       {showSummary && <>
       <td style={tdP}>{d(row.khatoni2)}</td>
       <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name2)}</td>
+      <td style={tdP} dangerouslySetInnerHTML={{ __html: row.bandubast2 ? fracHtml(row.bandubast2) : "-" }} />
       <td style={tdP}>{d(row.total_area2)}</td>
       <td style={tdP}>{d(row.khalis_waari2_minute)}</td>
       <td style={tdP}>{d(row.khalis_waari2_ghante)}</td>
@@ -1202,6 +1220,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       {showSummary && <>
       <td style={tdTotal}>—</td>
       <td style={{ ...tdTotal, textAlign: "right" }}>میزان</td>
+      <td style={tdTotal}>—</td>
       <td style={tdTotal}>{sumCol(rows, "total_area2")}</td>
       <td style={tdTotal}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").m}</td>
       <td style={tdTotal}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
@@ -1263,13 +1282,11 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         </div>
 
         <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-          {/* Header line — first page only (borderless div outside the table so it doesn't repeat) */}
-          <div style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold", marginTop: "10px", marginBottom: "22px", paddingBottom: "10px", borderBottom: "1.5px solid #1e3a5f", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.5px", wordSpacing: "0.3em", whiteSpace: "nowrap" }}>
-            {headerLine}
-          </div>
-
-          {/* Table — column headers in <thead> repeat on every printed page */}
+          {/* Table — header line as <caption> so it spans the full table width; renders once */}
           <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
+            <caption style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold", marginBottom: "22px", paddingBottom: "10px", borderBottom: "1.5px solid #1e3a5f", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.5px", wordSpacing: "0.3em", whiteSpace: "nowrap", captionSide: "top" }}>
+              {headerLine}
+            </caption>
             <thead>
               {headerRows}
             </thead>

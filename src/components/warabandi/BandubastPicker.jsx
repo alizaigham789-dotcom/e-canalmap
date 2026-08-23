@@ -61,6 +61,7 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
   const [objects, setObjects] = useState([]);
   const [loadingObjs, setLoadingObjs] = useState(false);
   const [draft, setDraft] = useState(value || "");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -87,6 +88,12 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
       .map((o) => ({ mustNo: String(o.label).trim(), acreCount: Math.max(1, parcelKillaCells(o).length) }))
       .sort((a, b) => +a.mustNo - +b.mustNo);
   }, [objects, mogaNumber]);
+
+  const filteredMustateels = useMemo(() => {
+    const q = search.trim();
+    if (!q) return mustateels;
+    return mustateels.filter((m) => String(m.mustNo).includes(q));
+  }, [mustateels, search]);
 
   const selection = useMemo(() => parseSelection(draft), [draft]);
 
@@ -149,8 +156,25 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
               {mapId ? "اس موگہ کا نقشہ ڈیٹا دستیاب نہیں" : "پہلے ہیڈر سے موگہ منتخب کریں"}
             </div>
           ) : (
+            <>
+            <div>
+              <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1" dir="rtl" style={{ fontFamily: "serif" }}>
+                مستطیل تلاش
+              </label>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                dir="ltr"
+                placeholder="مستطیل نمبر درج کریں"
+                className="w-full h-8 text-xs px-2 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono"
+              />
+            </div>
             <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-              {mustateels.map((m) => {
+              {filteredMustateels.length === 0 ? (
+                <div className="text-center py-4 text-[11px] text-slate-400" dir="rtl" style={{ fontFamily: "serif" }}>
+                  کوئی مستطیل نہیں ملی
+                </div>
+              ) : filteredMustateels.map((m) => {
                 const allSel = Array.from({ length: m.acreCount }, (_, k) => k + 1).every((a) => selection.has(`${m.mustNo}/${a}`));
                 return (
                   <div key={m.mustNo} className="border border-slate-200 rounded-lg p-2">
@@ -184,6 +208,7 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
                 );
               })}
             </div>
+            </>
           )}
         </div>
 
