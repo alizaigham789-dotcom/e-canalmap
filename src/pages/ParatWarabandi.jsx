@@ -236,7 +236,7 @@ export default function ParatWarabandi() {
           ) : (
             <div className="space-y-3">
               {records.map(rec => {
-                const moghaDisplay = `${rec.mogha_side || "R"}/${rec.mogha_number || ""}`;
+                const moghaDisplay = `${rec.mogha_number || ""}/${rec.mogha_side || "R"}`;
                 const hdr = parseHeader(rec);
                 return (
                   <div key={rec.id} className={`bg-white border rounded-xl p-3 hover:border-blue-300 hover:shadow-md transition-all shadow-sm ${selectedIds.has(rec.id) ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"}`}>
@@ -343,7 +343,7 @@ export default function ParatWarabandi() {
               <DialogTitle className="font-heading text-base text-red-600" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>پرت وارابندی حذف کریں؟</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-slate-600 py-2" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-              کیا آپ واقعی موگہ {deleteTarget?.mogha_side}/{deleteTarget?.mogha_number} کا پرت وارابندی حذف کرنا چاہتے ہیں؟
+              کیا آپ واقعی موگہ {deleteTarget?.mogha_number}/{deleteTarget?.mogha_side} کا پرت وارابندی حذف کرنا چاہتے ہیں؟
             </p>
             <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-2" dir="rtl">
               <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
@@ -418,7 +418,7 @@ export default function ParatWarabandi() {
   }
 
   // EDIT MODE
-  const moghaDisplay = selectedRecord ? `${selectedRecord.mogha_side || "R"}/${selectedRecord.mogha_number || ""}` : "";
+  const moghaDisplay = selectedRecord ? `${selectedRecord.mogha_number || ""}/${selectedRecord.mogha_side || "R"}` : "";
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
