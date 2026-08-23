@@ -1142,13 +1142,6 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
     setTimeout(() => { w.print(); w.close(); }, 800);
   };
 
-  const kulRaqbaHeader = (
-    <>
-      <div>کل رقبہ</div>
-      <div style={{ fontSize: "7px", fontWeight: "normal", borderTop: "1px solid #aaa", marginTop: "1px", paddingTop: "1px" }}>ایکڑ</div>
-    </>
-  );
-
   // Reusable header rows (col letters + main header + sub header)
   const headerRows = (
     <>
@@ -1163,22 +1156,16 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         {showSummary && <>
         <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
         <th style={{ ...thP, minWidth: 70 }} rowSpan={2}>نام مالک معہ والدیت</th>
-        <th style={thP} rowSpan={2}>{kulRaqbaHeader}</th>
+        <th style={thP}>کل رقبہ</th>
         <th style={thP} colSpan={2}>خالص واری</th>
         <th style={thP} colSpan={2}>نکہ جات</th>
         </>}
         <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
         <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نام مالک معہ والدیت</th>
         <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نمبران بندوبست</th>
-        <th style={thP} rowSpan={2}>{kulRaqbaHeader}</th>
-        <th style={thP} rowSpan={2}>
-          <div>غیر ممکن رقبہ</div>
-          <div style={{ fontSize: "7px", fontWeight: "normal", borderTop: "1px solid #aaa", marginTop: "1px", paddingTop: "1px" }}>ایکڑ</div>
-        </th>
-        <th style={thP} rowSpan={2}>
-          <div>خالص رقبہ</div>
-          <div style={{ fontSize: "7px", fontWeight: "normal", borderTop: "1px solid #aaa", marginTop: "1px", paddingTop: "1px" }}>ایکڑ</div>
-        </th>
+        <th style={thP}>کل رقبہ</th>
+        <th style={thP}>غیر ممکن رقبہ</th>
+        <th style={thP}>خالص رقبہ</th>
         <th style={thP} colSpan={2}>واری بحساب رقبہ</th>
         <th style={thP} colSpan={2}>زائدہ وصولی</th>
         <th style={thP} colSpan={2}>وضگی</th>
@@ -1189,9 +1176,13 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       </tr>
       <tr>
         {showSummary && <>
+        <th style={thSub}>ایکڑ</th>
         <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
         <th style={thSub}>لیگا</th><th style={thSub}>دیگا</th>
         </>}
+        <th style={thSub}>ایکڑ</th>
+        <th style={thSub}>ایکڑ</th>
+        <th style={thSub}>ایکڑ</th>
         <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
         <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
         <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
