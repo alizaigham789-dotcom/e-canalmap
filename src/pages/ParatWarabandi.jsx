@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, FileText, Trash2, Loader2, MapPin, Pencil, Check } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Trash2, Loader2, MapPin, Pencil, Check, AlertTriangle } from "lucide-react";
 import WarabandiParatForm from "@/components/warabandi/WarabandiParatForm";
 import MogaSearchSelect from "@/components/warabandi/MogaSearchSelect";
 import BottomNav from "@/components/BottomNav";
@@ -113,7 +113,7 @@ export default function ParatWarabandi() {
       mogha_side: map.mogha_side || prev.mogha_side,
       rajbaha: map.rajbah || "",
       mouza: map.village || "",
-      section: map.section || "",
+      section: map.zilladar_section || map.section || "",
       sub_division: map.tehsil || "",
       canal_division: map.district || "",
       map_id: map.id || "",
@@ -147,7 +147,7 @@ export default function ParatWarabandi() {
       mogha_side: map.mogha_side || prev.mogha_side,
       rajbaha: map.rajbah || "",
       mouza: map.village || "",
-      section: map.section || "",
+      section: map.zilladar_section || map.section || "",
       sub_division: map.tehsil || "",
       canal_division: map.district || "",
       map_id: map.id || "",
@@ -345,6 +345,12 @@ export default function ParatWarabandi() {
             <p className="text-sm text-slate-600 py-2" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
               کیا آپ واقعی موگہ {deleteTarget?.mogha_side}/{deleteTarget?.mogha_number} کا پرت وارابندی حذف کرنا چاہتے ہیں؟
             </p>
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-2" dir="rtl">
+              <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-700 font-semibold leading-relaxed" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                خبردار: یہ پرت اور اس کا تمام ڈیٹا (قطاراں، نوٹس، حساب) مستقل طور پر حذف ہو جائے گا۔ یہ واپس نہیں ہوگا۔
+              </p>
+            </div>
             <DialogFooter className="gap-2">
               <Button variant="ghost" onClick={() => setDeleteTarget(null)} className="text-slate-500">منسوخ</Button>
               <Button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending}
