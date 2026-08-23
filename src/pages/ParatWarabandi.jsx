@@ -252,17 +252,19 @@ export default function ParatWarabandi() {
                         <FileText className="w-5 h-5 text-blue-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-bold text-slate-800 truncate" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-                          <span>موضع {hdr.mouza || rec.mouza || "—"}</span>
-                          <span className="text-slate-300 mx-1">·</span>
-                          <span>راجباہ {hdr.rajbaha || "—"}</span>
-                          <span className="text-slate-300 mx-1">·</span>
-                          <span>موگہ {moghaDisplay}</span>
-                        </h3>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full border font-medium bg-slate-100 text-slate-600 border-slate-300" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-lg font-bold text-blue-700 font-mono tracking-tight leading-none" dir="ltr">{moghaDisplay}</span>
+                          <span className="text-[9px] px-2 py-0.5 rounded-full border font-medium bg-slate-100 text-slate-600 border-slate-300 shrink-0" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
                             {rec.doc_type || "پرت وارہ بندی"}
                           </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-slate-500" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                          <span className="truncate">راجباہ {hdr.rajbaha || "—"}</span>
+                          <span className="text-slate-300 shrink-0">•</span>
+                          <span className="truncate">موضع {hdr.mouza || rec.mouza || "—"}</span>
+                        </div>
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className={`w-1.5 h-1.5 rounded-full ${rec.status === "completed" ? "bg-emerald-500" : "bg-amber-400"}`}></span>
                           <span className="text-[10px] text-slate-400" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{rec.status === "completed" ? "مکمل" : "ڈرافٹ"}</span>
                         </div>
                       </div>
