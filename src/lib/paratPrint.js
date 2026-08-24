@@ -226,9 +226,11 @@ export function buildPrintCSS(opts = {}) {
   const orientation = opts.orientation || "landscape";
   return `
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-    @page { size: ${pageSize} ${orientation}; margin: 8mm; @bottom-right { content: "Page " counter(page); font-size: 9px; color: #555; font-family: sans-serif; } }
-    body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:10px; direction:rtl; color:#000; }
+    @page { size: ${pageSize} ${orientation}; margin: 0; }
+    body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; }
     .print-date { position: fixed; top: 2mm; right: 6mm; font-size: 9px; color: #555; font-family: sans-serif; z-index: 100; }
+    .parat-page { padding: 12mm 10mm; min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; page-break-after: always; }
+    .parat-page:last-child { page-break-after: auto; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
     th { font-weight: bold; }
@@ -236,9 +238,7 @@ export function buildPrintCSS(opts = {}) {
     tr { page-break-inside: avoid; }
     .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 7px; }
     .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
-    .parat-page { page-break-after: always; }
-    .parat-page:last-child { page-break-after: auto; }
-    .signatures { display:flex; justify-content:space-between; margin-top: 24px; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
+    .signatures { display:flex; justify-content:space-between; margin-top: auto; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
     .sig-item { text-align:center; border-top:1px solid #333; padding-top:4px; width:200px; white-space:nowrap; }
   `;
 }
@@ -252,7 +252,7 @@ export function printParatBatch(records, opts = {}) {
   const css = buildPrintCSS(opts);
   const body = buildBatchHTML(records, opts);
   w.document.write(
-    `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>پرت وارابندی</title><style>${css}</style></head><body><div class="print-date">${dateStr}</div>${body}</body></html>`
+    `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title></title><style>${css}</style></head><body><div class="print-date">${dateStr}</div>${body}</body></html>`
   );
   w.document.close();
   setTimeout(() => { w.focus(); w.print(); }, 800);

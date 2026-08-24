@@ -128,8 +128,10 @@ const COL_LETTERS = ["ا","ب","ج","د","ہ","و","ز","ح","ط","ی","ک","ل"
 
 const PRINT_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-  @page { size: A4 landscape; margin: 8mm; }
-  body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:10px 10px 60px; direction:rtl; color:#000; }
+  @page { size: A4 landscape; margin: 0; }
+  body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; }
+  .print-date { position: fixed; top: 2mm; right: 6mm; font-size: 9px; color: #555; font-family: sans-serif; z-index: 100; }
+  .print-page-wrap { padding: 12mm 10mm; min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
   th { font-weight: bold; }
@@ -139,8 +141,7 @@ const PRINT_CSS = `
   .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
   .tashreeh-table th { font-size: 7px; padding: 2px; }
   .tashreeh-table td { font-size: 7px; padding: 2px; }
-  #parat-print-content { display: block !important; min-height: 0 !important; }
-  .signatures { position: fixed; bottom: 10px; left: 10px; right: 10px; margin: 0 !important; }
+  .signatures { margin-top: auto !important; }
 `;
 
 function fracHtml(val) {
@@ -1114,13 +1115,16 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
   const tdTotal = { border: "1.5px solid #333", padding: "2px 3px", textAlign: "center", fontSize: "8px", fontWeight: "bold", backgroundColor: "#fef9e7", fontFamily: "'Noto Nastaliq Urdu', serif" };
 
   const handlePrint = () => {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const w = window.open("", "_blank", "width=1300,height=900");
     const content = document.getElementById("parat-print-content").innerHTML;
     const css = PRINT_CSS.replace("A4 landscape", `${pageSize} ${orientation}`);
-    w.document.write(`<!DOCTYPE html><html dir="rtl"><head><title>پرت وارابندی</title>
+    w.document.write(`<!DOCTYPE html><html dir="rtl"><head><title></title>
       <style>${css}</style>
-    </head><body>${content}</body></html>`);
-    w.document.title = "پرت وارابندی";
+    </head><body><div class="print-date">${dateStr}</div><div class="print-page-wrap">${content}</div></body></html>`);
+    w.document.title = "";
     w.document.close();
     setTimeout(() => { w.print(); w.close(); }, 800);
   };
