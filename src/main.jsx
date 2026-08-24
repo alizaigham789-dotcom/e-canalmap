@@ -20,6 +20,12 @@ if ('serviceWorker' in navigator) {
           }
         });
       });
+      // Force-check for updates on every load (in addition to the browser's
+      // default navigation check) so existing users pick up new versions fast.
+      reg.update().catch(() => {});
+      // Re-check every 30 minutes so long-running / background PWA sessions
+      // also receive pushed updates (name, icon, manifest, code).
+      setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
     }).catch((err) => console.warn('SW registration failed:', err));
   });
 

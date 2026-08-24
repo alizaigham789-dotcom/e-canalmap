@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e6fd9"/>
+      <stop offset="1" stop-color="#0c3a8c"/>
+    </linearGradient>
+    <linearGradient id="drop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#bae6fd"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- Water drop (irrigation) -->
+  <path d="M256 118 C 256 118, 172 224, 172 306 a84 84 0 0 0 168 0 C 340 224, 256 118, 256 118 Z" fill="url(#drop)"/>
+  <ellipse cx="226" cy="286" rx="22" ry="30" fill="#ffffff" opacity="0.55"/>
+  <!-- Canal waves -->
+  <path d="M104 404 q34 -26 68 0 t68 0 t68 0 t68 0 t68 0" stroke="#7dd3fc" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <path d="M104 444 q34 -26 68 0 t68 0 t68 0 t68 0 t68 0" stroke="#38bdf8" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.8"/>
+</svg>

@@ -1,8 +1,9 @@
-// E-Canal Patwari service worker
+// Canal E Record service worker
 // Network-first for ALL GET requests so every user (new and existing)
-// always gets the latest deployed version. Cache is only a fallback for
-// offline use. Old caches are wiped on activation.
-const CACHE = 'ecanal-app-v2';
+// always gets the latest deployed version — including app name, icon, and
+// manifest changes. Cache is only a fallback for offline use.
+// Old caches are wiped on activation so stale favicons/manifests are purged.
+const CACHE = 'ecanal-app-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -27,7 +28,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     try {
-      const fresh = await fetch(req);
+      const fresh = await fetch(req, { cache: 'no-store' });
       if (fresh && fresh.status === 200 && (fresh.type === 'basic' || fresh.type === 'default' || fresh.type === 'cors')) {
         cache.put(req, fresh.clone());
       }
