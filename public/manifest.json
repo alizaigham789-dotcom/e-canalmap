@@ -1,24 +1,23 @@
 {
-  "name": "E-Canal Patwari",
-  "short_name": "E-Canal",
-  "description": "Irrigation & Canal System — GIS land records and Warabandi",
-  "start_url": "/?source=pwa",
-  "scope": "/",
+  "name": "Canal E Record",
+  "short_name": "Canal E Record",
+  "description": "Canal E Record — Irrigation & Canal Land Record System",
+  "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ffffff",
+  "background_color": "#0a0f1a",
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/8253b208e_generated_image.png",
+      "src": "https://base44.com/logo_v2.svg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/8253b208e_generated_image.png",
+      "src": "https://base44.com/logo_v2.svg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]

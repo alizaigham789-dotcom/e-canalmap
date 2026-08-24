@@ -1,5 +1,5 @@
 {
-  "name": "E-Canal Patwari",
+  "name": "Canal E Record",
   "site": {
     "installCommand": "npm install",
     "buildCommand": "npm run build",
