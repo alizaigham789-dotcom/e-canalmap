@@ -2,7 +2,7 @@ import React, { useMemo, memo } from "react";
 import { Polygon, Polyline, Tooltip, CircleMarker, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import { getMustateeelKillaGrid, DIMENSIONS } from "@/lib/gisEngine";
-import { canvasRectToLatLngs, canvasPolylineToLatLngs, polygonAreaSqMeters, sqMetersToUnits } from "@/lib/geoOverlay";
+import { canvasRectToLatLngs, canvasPolylineToLatLngs, polygonAreaSqMeters, sqMetersToUnits, computeCcaCenter } from "@/lib/geoOverlay";
 
 function labelFontSize(zoom) {
   return Math.max(8, Math.min(16, 9 + (zoom - 14) * 1.2));
@@ -315,7 +315,7 @@ function RoadLine({ obj, latlngs, zoom, transform }) {
 
 // ─── CHAKBANDI: green line + cross pattern marks ─────────────────
 // Same as map editor: green boundary with × marks at regular intervals.
-function ChakbandiLine({ obj, latlngs, zoom, transform }) {
+function ChakbandiLine({ obj, latlngs, zoom, transform, ccaCenter }) {
   const fontSize = labelFontSize(zoom);
   const lineThickness = obj.lineThickness || 6;
   const crossPattern = obj.crossPattern !== false;
@@ -376,13 +376,26 @@ function ChakbandiLine({ obj, latlngs, zoom, transform }) {
           <span style={{ fontSize: `${fontSize * 0.6}px`, fontWeight: 600, color: "#15803d", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 3px" }}>{obj.name}</span>
         </Tooltip>
       )}
-      {/* CCA/GCA center label */}
-      {obj.centerLabel && (
-        <Tooltip permanent direction="center" className="chakbandi-center" opacity={0.95}>
-          <span style={{ fontSize: `${fontSize * 0.55}px`, fontWeight: 700, color: "#15803d", backgroundColor: "rgba(255,255,255,0.9)", padding: "1px 4px", borderRadius: 2 }}>{obj.centerLabel}</span>
-        </Tooltip>
-      )}
+      <CcaCenterLabel latlng={ccaCenter} text={obj.centerLabel} zoom={zoom} />
     </>
+  );
+}
+
+// CCA/GCA label placed at the centroid of the canal + chakbandi closed loop,
+// nudged away from mustateel numbers so it doesn't disturb parcel text.
+function CcaCenterLabel({ latlng, text, zoom }) {
+  if (!latlng || !text) return null;
+  const fontSize = labelFontSize(zoom);
+  return (
+    <CircleMarker
+      center={[latlng.lat, latlng.lng]}
+      radius={0}
+      pathOptions={{ opacity: 0, fillOpacity: 0 }}
+    >
+      <Tooltip permanent direction="center" opacity={0.95} className="chakbandi-center">
+        <span style={{ fontSize: `${fontSize * 0.6}px`, fontWeight: 700, color: "#15803d", backgroundColor: "rgba(255,255,255,0.92)", padding: "2px 6px", borderRadius: 3, border: "1px solid #15803d", whiteSpace: "nowrap" }}>{text}</span>
+      </Tooltip>
+    </CircleMarker>
   );
 }
 
@@ -492,13 +505,14 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
       } else if (obj.points?.length >= 2) {
         latlngs = canvasPolylineToLatLngs(obj, transform);
       } else return null;
-      return { obj, latlngs, killaLatLngs };
+      const ccaCenter = obj.type === "chakbandi" && obj.centerLabel ? computeCcaCenter(obj, objects, transform) : null;
+      return { obj, latlngs, killaLatLngs, ccaCenter };
     }).filter(Boolean);
   }, [objects, transform, mogaFilter, killaVisible]);
 
   return (
     <>
-      {geoObjects.map(({ obj, latlngs, killaLatLngs }) => {
+      {geoObjects.map(({ obj, latlngs, killaLatLngs, ccaCenter }) => {
         switch (obj.type) {
           case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} onClick={onMustateelClick} />;
           case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
@@ -506,7 +520,7 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
           case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
           case "khal": return <MemoKhal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
           case "road": return <MemoRoad key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
-          case "chakbandi": return <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
+          case "chakbandi": return <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} ccaCenter={ccaCenter} />;
           case "mouza": return <MemoMouza key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "outlet": return <MemoOutlet key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           default: return null;

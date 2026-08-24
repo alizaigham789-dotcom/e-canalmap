@@ -436,6 +436,120 @@ export function canvasPolylineToLatLngs(obj, transform) {
   return obj.points.map(p => transform.transform(p.x, p.y));
 }
 
+// ─── CCA (chakbandi) CENTER PLACEMENT ────────────────────────────
+// Places the CCA label at the centroid of the closed loop formed by the
+// chakbandi (green) line and its nearest canal, so the label sits in the
+// middle of the enclosed area instead of on top of the boundary line.
+// The chosen point is nudged away from mustateel label centers so parcel
+// numbers / important text on the map are not disturbed by the CCA label.
+
+function distToPolyline(p, pts) {
+  let min = Infinity;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy || 1;
+    let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const cx = a.x + t * dx, cy = a.y + t * dy;
+    const d = Math.hypot(p.x - cx, p.y - cy);
+    if (d < min) min = d;
+  }
+  return min;
+}
+
+function polygonCentroid(pts) {
+  if (!pts || pts.length < 3) return null;
+  let area = 0, cx = 0, cy = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length;
+    const cross = pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+    area += cross;
+    cx += (pts[i].x + pts[j].x) * cross;
+    cy += (pts[i].y + pts[j].y) * cross;
+  }
+  if (Math.abs(area) < 1e-6) return null;
+  area /= 2;
+  return { x: cx / (6 * area), y: cy / (6 * area) };
+}
+
+function pointInPolygon(p, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y;
+    const intersect = ((yi > p.y) !== (yj > p.y)) &&
+      (p.x < (xj - xi) * (p.y - yi) / ((yj - yi) || 1e-9) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function bboxOf(pts) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of pts) {
+    if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y;
+    if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y;
+  }
+  return { minX, minY, maxX, maxY };
+}
+
+export function computeCcaCenter(chakbandiObj, objects, transform) {
+  if (!transform || !chakbandiObj?.points?.length) return null;
+  const chakPts = chakbandiObj.points.slice();
+
+  // Find the canal whose polyline runs closest to this chakbandi
+  let bestCanal = null, bestDist = Infinity;
+  for (const o of objects) {
+    if (o.type !== "canal" || !o.points?.length) continue;
+    let total = 0;
+    for (const p of chakPts) total += distToPolyline(p, o.points);
+    const avg = total / chakPts.length;
+    if (avg < bestDist) { bestDist = avg; bestCanal = o; }
+  }
+
+  // Closed loop = chakbandi forward + canal reversed (+ close)
+  let poly = chakPts.slice();
+  if (bestCanal) poly = poly.concat(bestCanal.points.slice().reverse());
+  const first = poly[0], last = poly[poly.length - 1];
+  if (Math.hypot(first.x - last.x, first.y - last.y) > 1) poly.push({ x: first.x, y: first.y });
+  if (poly.length < 3) return null;
+
+  // Mustateel label centers (canvas space) — avoid overlapping these
+  const mustateelCenters = [];
+  for (const o of objects) {
+    if (o.type === "mustateel") mustateelCenters.push({ x: o.x + o.w / 2, y: o.y + o.h / 2 });
+  }
+
+  const CLEAR_R = 60; // feet — keep CCA at least this far from any parcel number
+  const isClear = (pt) => mustateelCenters.every(m => Math.hypot(m.x - pt.x, m.y - pt.y) > CLEAR_R);
+
+  let chosen = polygonCentroid(poly);
+  if (!chosen) return null;
+
+  // If the centroid collides with a mustateel number, search the interior for
+  // the point that maximizes distance to the nearest parcel number.
+  if (!isClear(chosen)) {
+    const bb = bboxOf(poly);
+    let best = null, bestScore = -Infinity;
+    const step = 40;
+    for (let x = bb.minX; x <= bb.maxX; x += step) {
+      for (let y = bb.minY; y <= bb.maxY; y += step) {
+        const pt = { x, y };
+        if (!pointInPolygon(pt, poly)) continue;
+        let minD = Infinity;
+        for (const m of mustateelCenters) {
+          const d = Math.hypot(m.x - pt.x, m.y - pt.y);
+          if (d < minD) minD = d;
+        }
+        if (minD > bestScore) { bestScore = minD; best = pt; }
+      }
+    }
+    if (best) chosen = best;
+  }
+
+  return transform.transform(chosen.x, chosen.y);
+}
+
 // Expected acres for a canvas parcel (mustateel = 10, muraba = 25, acre = 1)
 export function parcelExpectedAcres(obj) {
   const canvasArea = obj.w * obj.h;
