@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, FileText, Trash2, Loader2, MapPin, Pencil, Check, AlertTriangle, Printer } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Trash2, Loader2, MapPin, Pencil, Check, AlertTriangle, Printer, Search } from "lucide-react";
 import WarabandiParatForm from "@/components/warabandi/WarabandiParatForm";
 import MogaSearchSelect from "@/components/warabandi/MogaSearchSelect";
 import BottomNav from "@/components/BottomNav";
@@ -33,11 +33,22 @@ export default function ParatWarabandi() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showBatchPrint, setShowBatchPrint] = useState(false);
   const [batchRecords, setBatchRecords] = useState([]);
+  const [search, setSearch] = useState("");
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["parat-records"],
     queryFn: () => base44.entities.ParatWarabandiRecord.list("-updated_date", 50),
   });
+
+  const filteredRecords = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return records;
+    return records.filter((rec) => {
+      const hdr = parseHeader(rec);
+      const hay = `${rec.mogha_number || ""} ${rec.mouza || hdr.mouza || ""} ${hdr.rajbaha || ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [records, search]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.ParatWarabandiRecord.create(data),
@@ -205,15 +216,26 @@ export default function ParatWarabandi() {
         </header>
 
         <main className="max-w-md mx-auto px-4 py-5">
+          <div className="mb-3 relative">
+            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="موگہ نمبر، موضع یا راجباہ تلاش کریں"
+              dir="rtl"
+              className="w-full h-10 pr-9 pl-3 border border-slate-200 rounded-lg text-sm text-slate-800 bg-white focus:outline-none focus:border-blue-400 shadow-sm"
+              style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}
+            />
+          </div>
           {selectedIds.size > 0 && (
             <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-3">
               <span className="text-xs text-blue-700 font-medium">{selectedIds.size} پرت منتخب</span>
               <div className="flex gap-1.5 items-center">
                 <Button size="sm" variant="ghost" className="text-xs h-7 text-slate-500" onClick={() => {
-                  if (selectedIds.size === records.length) setSelectedIds(new Set());
-                  else setSelectedIds(new Set(records.map(r => r.id)));
+                  if (selectedIds.size === filteredRecords.length) setSelectedIds(new Set());
+                  else setSelectedIds(new Set(filteredRecords.map(r => r.id)));
                 }}>
-                  {selectedIds.size === records.length ? "غیر منتخب" : "سب منتخب کریں"}
+                  {selectedIds.size === filteredRecords.length ? "غیر منتخب" : "سب منتخب کریں"}
                 </Button>
                 <Button size="sm" variant="ghost" className="text-xs h-7 text-blue-700 hover:bg-blue-100 gap-1 font-semibold" onClick={() => { setBatchRecords(records.filter(r => selectedIds.has(r.id))); setShowBatchPrint(true); }}>
                   <Printer className="w-3 h-3" /> PDF & Print
@@ -231,17 +253,27 @@ export default function ParatWarabandi() {
             <div className="space-y-3">
               {[1, 2, 3].map(i => <div key={i} className="h-20 bg-white rounded-xl border border-slate-200 animate-pulse" />)}
             </div>
-          ) : records.length === 0 ? (
-            <div className="text-center py-16">
-              <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 text-sm mb-4" style={{ fontFamily: "serif" }}>کوئی پرت وارابندی محفوظ نہیں</p>
-              <Button onClick={() => setShowCreate(true)} className="bg-blue-600 hover:bg-blue-500 gap-2">
-                <Plus className="w-4 h-4" /> نیا پرت وارابندی
-              </Button>
-            </div>
+          ) : filteredRecords.length === 0 ? (
+            search ? (
+              <div className="text-center py-16">
+                <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 text-sm mb-4" style={{ fontFamily: "serif" }}>تلاش کے مطابق کوئی پرت نہیں ملی</p>
+                <Button onClick={() => setSearch("")} variant="outline" className="gap-2">
+                  <Plus className="w-4 h-4" /> تلاش صاف کریں
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 text-sm mb-4" style={{ fontFamily: "serif" }}>کوئی پرت وارابندی محفوظ نہیں</p>
+                <Button onClick={() => setShowCreate(true)} className="bg-blue-600 hover:bg-blue-500 gap-2">
+                  <Plus className="w-4 h-4" /> نیا پرت وارابندی
+                </Button>
+              </div>
+            )
           ) : (
             <div className="space-y-3">
-              {records.map(rec => {
+              {filteredRecords.map(rec => {
                 const moghaDisplay = `${rec.mogha_number || ""}/${rec.mogha_side || "R"}`;
                 const hdr = parseHeader(rec);
                 return (
@@ -264,13 +296,15 @@ export default function ParatWarabandi() {
                             {rec.doc_type || "پرت وارہ بندی"}
                           </span>
                         </div>
-                        <div className="mt-1 text-[13px] font-semibold text-slate-700 truncate" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-                          موضع {hdr.mouza || rec.mouza || "—"}
+                        <div className="mt-1 flex items-start justify-between gap-2">
+                          <div className="text-[13px] font-semibold text-slate-700 truncate" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                            موضع {hdr.mouza || rec.mouza || "—"}
+                          </div>
+                          <div className="text-[12px] text-slate-600 truncate text-right" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                            {hdr.rajbaha || "—"}
+                          </div>
                         </div>
-                        <div className="mt-0.5 text-[12px] text-slate-600 truncate" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-                          راجباہ {hdr.rajbaha || "—"}
-                        </div>
-                        <div className="flex items-center gap-1 mt-1">
+                        <div className="flex items-center justify-center gap-1 mt-1">
                           <span className={`w-1.5 h-1.5 rounded-full ${rec.status === "completed" ? "bg-emerald-500" : "bg-amber-400"}`}></span>
                           <span className="text-[10px] text-slate-400" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{rec.status === "completed" ? "مکمل" : "ڈرافٹ"}</span>
                         </div>

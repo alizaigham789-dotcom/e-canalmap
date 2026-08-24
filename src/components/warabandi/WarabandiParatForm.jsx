@@ -1307,7 +1307,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
           </div>
 
           {/* Signatures */}
-          <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "auto", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+          <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "auto", paddingTop: "60px", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
             <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط نہری پٹواری</div>
             <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط ضلعدار</div>
             <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط سب ڈویژنل کینال آفیسر</div>

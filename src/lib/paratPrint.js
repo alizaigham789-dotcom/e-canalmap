@@ -238,7 +238,7 @@ export function buildPrintCSS(opts = {}) {
     tr { page-break-inside: avoid; }
     .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 7px; }
     .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
-    .signatures { display:flex; justify-content:space-between; margin-top: auto; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
+    .signatures { display:flex; justify-content:space-between; margin-top: auto; padding-top: 60px; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
     .sig-item { text-align:center; border-top:1px solid #333; padding-top:4px; width:200px; white-space:nowrap; }
   `;
 }
