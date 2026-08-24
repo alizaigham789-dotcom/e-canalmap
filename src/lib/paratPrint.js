@@ -12,7 +12,7 @@ const S = {
   tdR: "border:1.5px solid #555;padding:2px 3px;text-align:right;font-size:8px;font-family:'Noto Nastaliq Urdu',serif",
   tt: "border:1.5px solid #333;padding:2px 3px;text-align:center;font-size:8px;font-weight:bold;background-color:#fef9e7;font-family:'Noto Nastaliq Urdu',serif",
   ttR: "border:1.5px solid #333;padding:2px 3px;text-align:right;font-size:8px;font-weight:bold;background-color:#fef9e7;font-family:'Noto Nastaliq Urdu',serif",
-  caption: "text-align:center;font-size:16px;font-weight:bold;margin-bottom:22px;padding-bottom:10px;border-bottom:1.5px solid #1e3a5f;font-family:'Noto Nastaliq Urdu',serif;color:#1e3a5f;line-height:1.5;letter-spacing:0.5px;word-spacing:0.3em;white-space:nowrap;caption-side:top",
+  caption: "text-align:center;font-size:16px;font-weight:bold;margin-top:6px;margin-bottom:22px;padding-top:10px;padding-bottom:10px;border-bottom:1.5px solid #1e3a5f;font-family:'Noto Nastaliq Urdu',serif;color:#1e3a5f;line-height:2.2;letter-spacing:0.5px;word-spacing:0.3em;white-space:nowrap;caption-side:top",
 };
 
 function d(v) { return (v === "" || v === null || v === undefined) ? "-" : v; }
@@ -228,11 +228,11 @@ export function buildPrintCSS(opts = {}) {
   const orientation = opts.orientation || "landscape";
   return `
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-    @page { size: ${pageSize} ${orientation}; margin: 10mm 10mm 14mm 10mm; @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; } @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: counter(page) " / " counter(pages); font-family: sans-serif; font-size: 9px; color: #555; padding: 0 6mm 4mm 0; } }
+    @page { size: ${pageSize} ${orientation}; margin: 10mm 10mm 10mm 10mm; @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; } @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: counter(page) " / " counter(pages); font-family: sans-serif; font-size: 9px; color: #555; padding: 0 6mm 4mm 0; } }
     body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; }
     .parat-page { box-sizing: border-box; }
     .notes-block { direction: rtl; margin-top: 1em; }
-    .sig-page { min-height: calc(100vh - 24mm); box-sizing: border-box; display: flex; flex-direction: column; page-break-before: always; }
+    .sig-page { box-sizing: border-box; display: flex; flex-direction: column; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
     th { font-weight: bold; }
@@ -240,7 +240,7 @@ export function buildPrintCSS(opts = {}) {
     tr { page-break-inside: avoid; }
     .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 7px; }
     .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
-    .signatures { display:flex; justify-content:space-between; margin-top: auto; page-break-inside: avoid; break-inside: avoid; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
+    .signatures { display:flex; justify-content:space-between; margin-top: 2em; margin-bottom: 10mm; page-break-inside: avoid; break-inside: avoid; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
     .sig-item { text-align:center; border-top:1px solid #333; padding-top:4px; width:200px; white-space:nowrap; }
   `;
 }
