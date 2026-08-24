@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator, Ban, MousePointerClick, RotateCcw } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { calculateChakbandiGCA } from "@/lib/gisEngine";
+import { calculateChakbandiGCA, acresToAcreKanalMarla } from "@/lib/gisEngine";
 import AcreUseControl from "@/components/editor/AcreUseControl";
 
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
@@ -262,8 +262,10 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                   <div>
                     <label className="text-[9px] text-slate-400 uppercase">CCA</label>
                     <Input type="number" disabled={!!local.ccaEqualsGca} value={local.cca ?? ""} onChange={e => {
-                      const v = e.target.value;
+                      let v = e.target.value;
                       const gca = local.gca ?? "";
+                      // CCA (upper term) can never exceed GCA (lower term) — equal is allowed
+                      if (v !== "" && gca !== "" && parseFloat(v) > parseFloat(gca)) v = gca;
                       commitMultiple({ cca: v, centerLabel: v || gca ? `(${v}/${gca})` : "" });
                     }} placeholder="auto" className="h-7 text-xs font-mono bg-white border-green-200 text-green-800 focus:border-green-500 disabled:opacity-50" />
                   </div>
@@ -271,10 +273,12 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                     <label className="text-[9px] text-slate-400 uppercase">GCA</label>
                     <Input type="number" value={local.gca ?? ""} onChange={e => {
                       const v = e.target.value;
-                      const cca = local.ccaEqualsGca ? v : (local.cca ?? "");
+                      let cca = local.ccaEqualsGca ? v : (local.cca ?? "");
+                      // If GCA drops below CCA, cap CCA down to GCA (upper ≤ lower)
+                      if (!local.ccaEqualsGca && cca !== "" && v !== "" && parseFloat(cca) > parseFloat(v)) cca = v;
                       commitMultiple(local.ccaEqualsGca
                         ? { gca: v, cca: v, centerLabel: v ? `(${v}/${v})` : "" }
-                        : { gca: v, centerLabel: cca || v ? `(${cca}/${v})` : "" });
+                        : { gca: v, cca, centerLabel: cca || v ? `(${cca}/${v})` : "" });
                     }} placeholder="auto" className="h-7 text-xs font-mono bg-white border-green-200 text-green-800 focus:border-green-500" />
                   </div>
                 </div>
@@ -283,13 +287,40 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                     const parcels = allObjects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
                     const canals = allObjects.filter(o => o.type === "canal");
                     const gca = calculateChakbandiGCA(selectedObj, parcels, canals);
+                    const cappedCca = local.ccaEqualsGca ? gca : Math.min(parseFloat(local.cca) || gca, gca);
                     commitMultiple(local.ccaEqualsGca
                       ? { cca: String(gca), gca: String(gca), centerLabel: `(${gca}/${gca})` }
-                      : { gca: String(gca), centerLabel: `(${local.cca ?? gca}/${gca})` });
+                      : { gca: String(gca), cca: String(cappedCca), centerLabel: `(${cappedCca}/${gca})` });
                   }}>
                   <Calculator className="w-3 h-3 mr-1" /> Auto Calculate
                 </Button>
                 <p className="text-[9px] text-green-600">Counts partial mustateels inside boundary; canal-crossed parcels count half. Each mustateel = 10 acres.</p>
+                {(() => {
+                  const parcels = allObjects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
+                  const canals = allObjects.filter(o => o.type === "canal");
+                  const gca = calculateChakbandiGCA(selectedObj, parcels, canals);
+                  const { acres, kanal, marla } = acresToAcreKanalMarla(gca);
+                  return (
+                    <div className="mt-1 p-2 bg-white border border-green-300 rounded-lg">
+                      <div className="text-[9px] text-green-700 font-bold uppercase tracking-wider mb-1">Chakbandi Area</div>
+                      <div className="grid grid-cols-3 gap-1 text-center">
+                        <div className="bg-green-50 rounded px-1 py-0.5">
+                          <div className="text-[8px] text-green-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>ایکڑ</div>
+                          <div className="text-xs font-bold text-green-800 font-mono">{acres}</div>
+                        </div>
+                        <div className="bg-green-50 rounded px-1 py-0.5">
+                          <div className="text-[8px] text-green-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>کنال</div>
+                          <div className="text-xs font-bold text-green-800 font-mono">{kanal}</div>
+                        </div>
+                        <div className="bg-green-50 rounded px-1 py-0.5">
+                          <div className="text-[8px] text-green-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>مرلہ</div>
+                          <div className="text-xs font-bold text-green-800 font-mono">{marla}</div>
+                        </div>
+                      </div>
+                      <div className="text-[8px] text-green-500 mt-1 text-center font-mono">1 مرلہ = 272.25 sq ft</div>
+                    </div>
+                  );
+                })()}
               </div>
               <SpacingControl label="Line Thickness" value={local.lineThickness || 6} min={1} max={10} step={1} onChange={v => commit("lineThickness", v)} />
               <div className="flex items-center justify-between mt-2">

@@ -901,6 +901,26 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
     const lp = getOutletLabelPos(obj);
     drawMogaFractionBoxOnCanvas(ctx, moghaNum, moghaSide, lp.x, lp.y, 0, "rgba(120,225,245,0.92)", "#0891b2", 0.5);
   }
+  // Moga number INSIDE the canal — drawn along the canal direction at the outlet start,
+  // matching the canal name style (yellow text + dark outline on the blue water).
+  if (moghaNum || moghaSide) {
+    const mogaText = [moghaNum, moghaSide].filter(Boolean).join("/");
+    const canalAng = angle + Math.PI / 2; // canal runs perpendicular to the outlet shaft
+    const cf = canalNameFont(obj.canalWidth || 100);
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(canalAng);
+    ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.lineWidth = Math.max(2, cf * 0.18);
+    ctx.lineJoin = "round";
+    ctx.strokeText(mogaText, 0, 0);
+    ctx.fillStyle = "#FFD700";
+    ctx.fillText(mogaText, 0, 0);
+    ctx.restore();
+  }
 }
 
 // ============================================================
@@ -975,28 +995,30 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false)
   for (const p of obj.points) ctx.lineTo(p.x, p.y);
   ctx.stroke();
 
-  // Always draw X crosses along each segment (rotated with segment direction)
-  ctx.strokeStyle = isSelected ? "#86efac" : color;
-  ctx.lineWidth = (lineW * 0.6 + (isSelected ? 2 : 0)) / zoom;
-  ctx.lineCap = "round";
-  for (let i = 0; i < obj.points.length - 1; i++) {
-    const a = obj.points[i], b = obj.points[i+1];
-    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
-    const angle = Math.atan2(b.y - a.y, b.x - a.x);
-    const cos = Math.cos(angle), sin = Math.sin(angle);
-    const steps = Math.max(1, Math.floor(segLen / spacing));
-    for (let s = 0; s <= steps; s++) {
-      const t = s / steps;
-      const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
-      // X rotated along segment direction
-      ctx.beginPath();
-      ctx.moveTo(cx + (-crossSize*cos - -crossSize*sin), cy + (-crossSize*sin + -crossSize*cos));
-      ctx.lineTo(cx + ( crossSize*cos -  crossSize*sin), cy + ( crossSize*sin +  crossSize*cos));
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx + ( crossSize*cos - -crossSize*sin), cy + ( crossSize*sin + -crossSize*cos));
-      ctx.lineTo(cx + (-crossSize*cos -  crossSize*sin), cy + (-crossSize*sin +  crossSize*cos));
-      ctx.stroke();
+  // X crosses along each segment — only when cross pattern is enabled (matches print)
+  if (obj.crossPattern !== false) {
+    ctx.strokeStyle = isSelected ? "#86efac" : color;
+    ctx.lineWidth = (lineW * 0.6 + (isSelected ? 2 : 0)) / zoom;
+    ctx.lineCap = "round";
+    for (let i = 0; i < obj.points.length - 1; i++) {
+      const a = obj.points[i], b = obj.points[i+1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const angle = Math.atan2(b.y - a.y, b.x - a.x);
+      const cos = Math.cos(angle), sin = Math.sin(angle);
+      const steps = Math.max(1, Math.floor(segLen / spacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+        // X rotated along segment direction
+        ctx.beginPath();
+        ctx.moveTo(cx + (-crossSize*cos - -crossSize*sin), cy + (-crossSize*sin + -crossSize*cos));
+        ctx.lineTo(cx + ( crossSize*cos -  crossSize*sin), cy + ( crossSize*sin +  crossSize*cos));
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + ( crossSize*cos - -crossSize*sin), cy + ( crossSize*sin + -crossSize*cos));
+        ctx.lineTo(cx + (-crossSize*cos -  crossSize*sin), cy + (-crossSize*sin +  crossSize*cos));
+        ctx.stroke();
+      }
     }
   }
   if (obj.name && zoom > 0.3) {

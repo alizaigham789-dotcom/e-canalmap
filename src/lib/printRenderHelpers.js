@@ -397,23 +397,18 @@ export function drawCCAGCAFractionBoxOnCanvas(ctx, ccaText, gcaText, cx, cy, fon
   if (!ccaStr && !gcaStr) return;
   if (!ccaStr) {
     ctx.fillStyle = "#166534";
-    ctx.font = `bold ${fontPx}px Rajdhani, sans-serif`;
+    ctx.font = `${fontPx}px Rajdhani, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(gcaStr, cx, cy);
     return;
   }
-  const padX = fontPx * 0.4, padY = fontPx * 0.3;
   const textW = fontPx * Math.max(ccaStr.length, gcaStr.length, 1) * 0.58;
-  const boxW = textW + padX * 2;
-  const boxH = fontPx * 2.0 + padY * 2;
-  const bx = cx - boxW / 2, by = cy - boxH / 2;
   const lineY = cy;
   const ccaY = cy - fontPx * 0.55;
   const gcaY = cy + fontPx * 0.55;
   const ink = "#166534";
   const sw = Math.max(1.5, fontPx * 0.07);
-  const tickW = fontPx * 0.25;
 
   ctx.fillStyle = ink;
   ctx.strokeStyle = ink;
@@ -421,21 +416,26 @@ export function drawCCAGCAFractionBoxOnCanvas(ctx, ccaText, gcaText, cx, cy, fon
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
 
-  if (ccaStr) {
-    ctx.font = `bold ${fontPx}px Rajdhani, sans-serif`;
-    ctx.textBaseline = "middle";
-    ctx.fillText(ccaStr, cx, ccaY);
-  }
+  // Round brackets covering BOTH terms (the whole fraction), not just one
+  const bracketFont = fontPx * 1.8;
+  const bracketOffset = textW / 2 + fontPx * 0.22;
+  ctx.font = `${bracketFont}px Rajdhani, sans-serif`;
+  ctx.fillText("(", cx - bracketOffset, cy);
+  ctx.fillText(")", cx + bracketOffset, cy);
+
+  // Upper term (CCA) — regular weight, balanced with the lower term (not overly bold)
+  ctx.font = `${fontPx}px Rajdhani, sans-serif`;
+  ctx.fillText(ccaStr, cx, ccaY);
+  // Straight fraction line (not a slash)
   ctx.beginPath();
   ctx.moveTo(cx - textW / 2, lineY);
   ctx.lineTo(cx + textW / 2, lineY);
   ctx.stroke();
-  if (gcaStr) {
-    ctx.font = `bold ${fontPx * 0.85}px Rajdhani, sans-serif`;
-    ctx.textBaseline = "middle";
-    ctx.fillText(gcaStr, cx, gcaY);
-  }
+  // Lower term (GCA) — same size & weight as the upper term
+  ctx.font = `${fontPx}px Rajdhani, sans-serif`;
+  ctx.fillText(gcaStr, cx, gcaY);
 }
 
 // ─── SVG: CCA/GCA fraction inside a box ──────────────────────────────────
@@ -444,28 +444,23 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
   const gcaStr = String(gcaText || "");
   if (!ccaStr && !gcaStr) return "";
   if (!ccaStr) {
-    return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="#166534">${gcaStr}</text>`;
+    return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx.toFixed(1)}" fill="#166534">${gcaStr}</text>`;
   }
-  const padX = fontPx * 0.4, padY = fontPx * 0.3;
   const textW = fontPx * Math.max(ccaStr.length, gcaStr.length, 1) * 0.58;
-  const boxW = textW + padX * 2;
-  const boxH = fontPx * 2.0 + padY * 2;
-  const bx = cx - boxW / 2, by = cy - boxH / 2;
   const lineY = cy;
   const ccaY = cy - fontPx * 0.55;
   const gcaY = cy + fontPx * 0.55;
   const ink = "#166534";
   const sw = Math.max(1.5, fontPx * 0.07);
-  const tickW = fontPx * 0.25;
+  const bracketFont = fontPx * 1.8;
+  const bracketOffset = textW / 2 + fontPx * 0.22;
 
   let svg = "";
-  if (ccaStr) {
-    svg += `<text x="${cx.toFixed(1)}" y="${ccaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${ccaStr}</text>`;
-  }
+  svg += `<text x="${(cx - bracketOffset).toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${bracketFont.toFixed(1)}" fill="${ink}">(</text>`;
+  svg += `<text x="${(cx + bracketOffset).toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${bracketFont.toFixed(1)}" fill="${ink}">)</text>`;
+  svg += `<text x="${cx.toFixed(1)}" y="${ccaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx.toFixed(1)}" fill="${ink}">${ccaStr}</text>`;
   svg += `<line x1="${(cx - textW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + textW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="${ink}" stroke-width="${sw.toFixed(1)}"/>`;
-  if (gcaStr) {
-    svg += `<text x="${cx.toFixed(1)}" y="${gcaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(fontPx * 0.85).toFixed(1)}" fill="${ink}">${gcaStr}</text>`;
-  }
+  svg += `<text x="${cx.toFixed(1)}" y="${gcaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx.toFixed(1)}" fill="${ink}">${gcaStr}</text>`;
   return svg;
 }
 

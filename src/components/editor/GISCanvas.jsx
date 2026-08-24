@@ -165,7 +165,11 @@ const GISCanvas = forwardRef(function GISCanvas(
             // (CCA over a straight line over GCA), matching the moga number fraction.
             if (ch.centerLabel) {
               const m = String(ch.centerLabel).match(/^\(?([^/)]*)\/([^/)]*)\)?$/);
-              if (m) { cca = m[1].trim(); gcaTxt = m[2].trim(); }
+              if (m) {
+                cca = m[1].trim(); gcaTxt = m[2].trim();
+                // Upper term (CCA) can never exceed the lower term (GCA) — equal is allowed
+                if (cca && gcaTxt && parseFloat(cca) > parseFloat(gcaTxt)) cca = gcaTxt;
+              }
             }
             if (cca || gcaTxt) {
               drawCCAGCAFractionBoxOnCanvas(ctx, cca, gcaTxt, lp.x, lp.y, gcaFont, "rgba(255,255,255,0.94)", "#166534");

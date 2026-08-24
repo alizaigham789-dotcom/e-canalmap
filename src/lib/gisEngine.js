@@ -1071,8 +1071,19 @@ export function calculateChakbandiGCA(chakbandi, parcels, canals = []) {
       }
     }
   }
-  // Round to the nearest kanal (1 acre = 8 kanal) for an exact, kanal-aligned measurement
-  return Math.round(totalAcres * 8) / 8;
+  // Keep decimal precision (1 acre = 160 marla) — the marla breakdown needs the point
+  return Math.round(totalAcres * 100) / 100;
+}
+
+// Break acres into acres / kanal / marla (1 acre = 8 kanal = 160 marla; 1 marla = 272.25 sq ft).
+// Marla keeps its decimal so the breakdown always shows the point.
+export function acresToAcreKanalMarla(acres) {
+  const a = acres || 0;
+  const wholeAcres = Math.floor(a);
+  const kanalFloat = (a - wholeAcres) * 8;
+  const kanal = Math.floor(kanalFloat);
+  const marla = (kanalFloat - kanal) * 20;
+  return { acres: wholeAcres, kanal, marla: Number(marla.toFixed(2)) };
 }
 
 // Format acres as "X ایکڑ Y کنال" (1 acre = 8 kanal) — exact kanal-aligned display
