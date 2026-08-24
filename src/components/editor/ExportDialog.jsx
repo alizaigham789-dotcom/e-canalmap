@@ -317,8 +317,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         // Moga number INSIDE the canal — at the outlet start, along the canal direction,
         // kept upright. Yellow fill + vivid red outline.
         const mogaText = [o.mogha_number, o.mogha_side].filter(Boolean).join("/");
-        let canalAng = ang + Math.PI / 2;
-        if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
+        const canalAng = ang + Math.PI / 2; // follows canal direction
         const cf = canalNameFont(o.canalWidth || DIMENSIONS.CANAL_WIDTH);
         ctx.save();
         ctx.translate(sx, sy);

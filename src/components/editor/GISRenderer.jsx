@@ -906,9 +906,7 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
   // beautiful yellow text with a vivid red outline for maximum readability on blue water.
   if (moghaNum || moghaSide) {
     const mogaText = [moghaNum, moghaSide].filter(Boolean).join("/");
-    let canalAng = angle + Math.PI / 2; // canal runs perpendicular to the outlet shaft
-    // Keep text upright — flip 180° if it would render upside-down
-    if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
+    const canalAng = angle + Math.PI / 2; // canal runs perpendicular to the outlet shaft — text follows canal direction
     const cf = canalNameFont(obj.canalWidth || 100);
     ctx.save();
     ctx.translate(sx, sy);

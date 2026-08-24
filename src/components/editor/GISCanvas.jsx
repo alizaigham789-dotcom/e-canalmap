@@ -47,6 +47,9 @@ const GISCanvas = forwardRef(function GISCanvas(
   const movingObjId = useRef(null);
   const moveOffset = useRef({ x: 0, y: 0 });
   const movingObjOrigPoints = useRef(null);
+  // Originals of chakbandis + outlets attached to a canal being dragged — captured
+  // at drag start so elastic hook joints + stuck mogas move by the exact delta (no drift).
+  const attachedOrigRef = useRef(null);
   const movingObjOrigStartEnd = useRef(null); // { start, end } — for outlet/moga dragging
   const movingGroupRef = useRef(null); // { groupId, originals } — whole moga group drag (merged maps)
   const vertexDrag = useRef(null); // { id, index } — dragging a single vertex of the selected chakbandi/canal
@@ -450,6 +453,19 @@ const GISCanvas = forwardRef(function GISCanvas(
     return () => cancelAnimationFrame(raf);
   }, [onPanChange]);
 
+  // Capture original positions of all chakbandis + outlets at the start of a
+  // canal drag, so elastic hook joints and stuck mogas move by the exact delta.
+  const captureAttachedOriginals = useCallback((objs) => {
+    attachedOrigRef.current = {
+      chakbandis: objs.filter(o => o.type === "chakbandi" && o.points).map(o => ({
+        id: o.id, points: o.points.map(p => ({ x: p.x, y: p.y })),
+      })),
+      outlets: objs.filter(o => o.type === "outlet" && o.start && o.end).map(o => ({
+        id: o.id, start: { x: o.start.x, y: o.start.y }, end: { x: o.end.x, y: o.end.y },
+      })),
+    };
+  }, []);
+
   const getSnappedWorld = useCallback((e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -605,19 +621,24 @@ const GISCanvas = forwardRef(function GISCanvas(
         const dx = worldRaw.x - moveOffset.current.x;
         const dy = worldRaw.y - moveOffset.current.y;
         const newPoints = movingObjOrigPoints.current.map(p => ({ x: p.x + dx, y: p.y + dy }));
-        // Elastic hook joints — when a canal moves, chakbandi endpoints that were
-        // touching the canal stay attached (move with the canal) while the rest of
-        // the chakbandi stays put. Lines stretch/shorten like rubber bands — the
-        // chakbandi itself does NOT move, only the hooked endpoints follow the canal.
+        // Elastic hook joints + stuck mogas — when a canal moves:
+        //  1. Chakbandi endpoints that were touching the canal stay attached (move
+        //     with the canal) while the rest of the chakbandi stays put.
+        //  2. Mogas/outlets drawn on this canal (outlet.canalId === canal.id) move
+        //     with the canal — they stick to it.
+        // Uses original positions captured at drag start (attachedOrigRef) so the
+        // delta is applied exactly once — no drift/accumulation across frames.
         if (movingObj.type === "canal") {
           const halfW = (movingObj.width || DIMENSIONS.CANAL_WIDTH) / 2;
           const hookThreshold = halfW + 15;
           const origCanalPts = movingObjOrigPoints.current;
+          const attached = attachedOrigRef.current || { chakbandis: [], outlets: [] };
           const updates = [{ id: movingObjId.current, changes: { points: newPoints } }];
-          for (const o of objectsRef.current) {
-            if (o.type !== "chakbandi" || !o.points || o.id === movingObjId.current) continue;
+          // Chakbandi hook joints — move only endpoints that were on the canal
+          for (const orig of attached.chakbandis) {
+            if (orig.id === movingObjId.current) continue;
             let anyHooked = false;
-            const newChPoints = o.points.map(p => {
+            const newChPoints = orig.points.map(p => {
               const near = nearestPointOnPolyline(p.x, p.y, origCanalPts);
               if (near && near.dist <= hookThreshold) {
                 anyHooked = true;
@@ -625,7 +646,20 @@ const GISCanvas = forwardRef(function GISCanvas(
               }
               return p;
             });
-            if (anyHooked) updates.push({ id: o.id, changes: { points: newChPoints } });
+            if (anyHooked) updates.push({ id: orig.id, changes: { points: newChPoints } });
+          }
+          // Mogas/outlets stuck to this canal — move start + end by the same delta
+          for (const orig of attached.outlets) {
+            if (orig.id === movingObjId.current) continue;
+            const outlet = objectsRef.current.find(o => o.id === orig.id);
+            if (!outlet || outlet.canalId !== movingObjId.current) continue;
+            updates.push({
+              id: orig.id,
+              changes: {
+                start: { x: orig.start.x + dx, y: orig.start.y + dy },
+                end: { x: orig.end.x + dx, y: orig.end.y + dy },
+              },
+            });
           }
           if (updates.length > 1) onBulkUpdate(updates);
           else onUpdateObject(movingObjId.current, { points: newPoints });
@@ -726,10 +760,14 @@ const GISCanvas = forwardRef(function GISCanvas(
         moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
         movingObjOrigPoints.current = null;
         onSelect(hit.id);
-      } else if (hit && ["chakbandi", "canal", "khal", "road", "bridge", "mouza"].includes(hit.type) && hit.points) {
+      } else if (hit && ["canal", "khal", "road", "bridge", "mouza"].includes(hit.type) && hit.points) {
         isMoving.current = true; movingObjId.current = hit.id;
         moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
         movingObjOrigPoints.current = hit.points.map(p => ({ ...p }));
+        if (hit.type === "canal") captureAttachedOriginals(objects);
+        onSelect(hit.id);
+      } else if (hit && hit.type === "chakbandi" && hit.points) {
+        // Chakbandi: select only — no whole-line move. Drag nodes individually.
         onSelect(hit.id);
       } else if (hit && hit.type === "outlet" && hit.start && hit.end) {
         // Moga / outlet — draggable via start+end translation (drag-and-drop)
@@ -850,10 +888,14 @@ const GISCanvas = forwardRef(function GISCanvas(
           moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
           movingObjOrigPoints.current = null;
           onSelect(hit.id);
-        } else if (hit && ["chakbandi", "canal", "khal", "road", "bridge", "mouza"].includes(hit.type) && hit.points) {
+        } else if (hit && ["canal", "khal", "road", "bridge", "mouza"].includes(hit.type) && hit.points) {
           isMoving.current = true; movingObjId.current = hit.id;
           moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
           movingObjOrigPoints.current = hit.points.map(p => ({ ...p }));
+          if (hit.type === "canal") captureAttachedOriginals(objects);
+          onSelect(hit.id);
+        } else if (hit && hit.type === "chakbandi" && hit.points) {
+          // Chakbandi: select only — no whole-line move. Drag nodes individually.
           onSelect(hit.id);
         } else if (hit && hit.type === "outlet" && hit.start && hit.end) {
           isMoving.current = true; movingObjId.current = hit.id;
@@ -869,7 +911,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       const hit = hitTest(worldRaw.x, worldRaw.y, objects, true); // true = eraser mode (boundary-aware)
       if (hit) onAddObject("__delete__", { id: hit.id });
     }
-  }, [activeTool, pan, zoom, objects, selectedId, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd, onBridgePointAdd, onMouzaPointAdd, onDamageMarkerClick, deleteVertexMode]);
+  }, [activeTool, pan, zoom, objects, selectedId, getSnappedWorld, onAddObject, onCanalPointAdd, onChakbandiPointAdd, onOutletStart, onOutletFinish, onSelect, outletDraft, onKhalPointAdd, onRoadPointAdd, onBridgePointAdd, onMouzaPointAdd, onDamageMarkerClick, deleteVertexMode, captureAttachedOriginals]);
 
   const handleMouseUp = useCallback((e) => {
     // Finish box-select
@@ -888,6 +930,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     movingLabelType.current = null;
     movingGroupRef.current = null;
     movingObjOrigPoints.current = null; movingObjOrigStartEnd.current = null;
+    attachedOrigRef.current = null;
     edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0;
     // Finish damage marker line on mouse up
     if (activeTool === "damageMarker" && damageStartRef.current) {

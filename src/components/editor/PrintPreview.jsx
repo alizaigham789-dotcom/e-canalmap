@@ -439,8 +439,7 @@ function svgOutlet(obj, C, idx, mogaScale = 1) {
   let mogaInside = "";
   if (obj.mogha_number || obj.mogha_side) {
     const mogaText = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
-    let canalAngDeg = (angle + Math.PI / 2) * 180 / Math.PI;
-    if (canalAngDeg > 90 || canalAngDeg < -90) canalAngDeg += 180;
+    const canalAngDeg = (angle + Math.PI / 2) * 180 / Math.PI; // follows canal direction
     const cf = canalNameFont(obj.canalWidth || DIMENSIONS.CANAL_WIDTH);
     mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="#DC2626" stroke-width="${Math.max(2.5, cf * 0.22).toFixed(1)}" stroke-linejoin="round" fill="#FFD700">${mogaText}</text>`;
   }

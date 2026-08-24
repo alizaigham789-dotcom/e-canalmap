@@ -469,10 +469,21 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
 // Otherwise auto-calculate from GCA.
 export function getCCAGCAText(chakbandi, gcaValue) {
   if (chakbandi.centerLabel) {
-      return { cca: "", gca: chakbandi.centerLabel };
+    // centerLabel is stored as "(cca/gca)" — split into stacked fraction terms
+    const m = String(chakbandi.centerLabel).match(/^\(?([^/)]*)\/([^/)]*)\)?$/);
+    if (m) {
+      let cca = m[1].trim(), gca = m[2].trim();
+      // Upper term (CCA) can never exceed the lower term (GCA) — equal is allowed
+      if (cca && gca && parseFloat(cca) > parseFloat(gca)) cca = gca;
+      return { cca, gca };
     }
-    const gcaText = acresToAcreKanalText(gcaValue || 0);
-    return { cca: "", gca: gcaText };
+    return { cca: "", gca: chakbandi.centerLabel };
+  }
+  const gcaText = acresToAcreKanalText(gcaValue || 0);
+  // Default: CCA = GCA so the fraction (CCA/GCA) appears as soon as the
+  // chakbandi is completed, matching the editor display.
+  if (gcaValue > 0) return { cca: gcaText, gca: gcaText };
+  return { cca: "", gca: gcaText };
 }
 
 // ─── Helper: does killa number `kn` on this mustateel have a land-use label? ─

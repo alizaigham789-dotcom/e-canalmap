@@ -148,6 +148,13 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
       const gx = Math.round(wx / DIMENSIONS.MURABA.width) * DIMENSIONS.MURABA.width;
       const gy = Math.round(wy / DIMENSIONS.MURABA.height) * DIMENSIONS.MURABA.height;
       if (Math.hypot(wx - gx, wy - gy) < threshold * 3) { bestX = gx; bestY = gy; bestDist = 0; }
+    } else if (activeTool === "chakbandi") {
+      // Chakbandi follows the acre grid lines (220×198 ft) while drawing —
+      // snaps to the nearest grid intersection so lines align with killa boundaries.
+      const aw = DIMENSIONS.ACRE.width, ah = DIMENSIONS.ACRE.height;
+      const gx = Math.round(wx / aw) * aw;
+      const gy = Math.round(wy / ah) * ah;
+      if (Math.hypot(wx - gx, wy - gy) < threshold * 3) { bestX = gx; bestY = gy; bestDist = 0; }
     }
   }
 
