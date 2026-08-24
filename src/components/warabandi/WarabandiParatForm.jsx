@@ -142,7 +142,7 @@ const PRINT_CSS = `
   .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
   .tashreeh-table th { font-size: 7px; padding: 2px; }
   .tashreeh-table td { font-size: 7px; padding: 2px; }
-  .signatures { margin-top: auto !important; }
+  .signatures { margin-top: auto !important; padding-top: 60px; page-break-inside: avoid; break-inside: avoid; }
 `;
 
 function fracHtml(val) {
