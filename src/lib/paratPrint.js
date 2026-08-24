@@ -243,31 +243,28 @@ export function buildPrintCSS(opts = {}) {
   `;
 }
 
-// Open a print window from an HTML string. Tries a blob URL first (avoids the
-// "about:blank" footer text); falls back to about:blank + document.write if the
-// popup is blocked, so it never crashes on a null window.
+// Open a print window from an HTML string. The child page prints itself once
+// loaded (via an injected script), so the opener never calls w.print() on a
+// not-yet-ready / null window — this fixes the print dialog not appearing.
+// Tries a blob URL first (no "about:blank" footer); falls back to about:blank
+// + document.write if the popup is blocked.
+const AUTO_PRINT_SCRIPT = "<script>(function(){var d=false;function p(){if(d)return;d=true;window.print();}if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(p,80);});}setTimeout(p,1500);})();</script>";
+
 export function openPrintWindow(html) {
+  const doc = html.includes("</body>") ? html.replace("</body>", AUTO_PRINT_SCRIPT + "</body>") : html + AUTO_PRINT_SCRIPT;
   let url = null;
   try {
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const blob = new Blob([doc], { type: "text/html;charset=utf-8" });
     url = URL.createObjectURL(blob);
     const w = window.open(url, "_blank", "width=1300,height=900");
-    if (w) {
-      setTimeout(() => {
-        w.focus();
-        w.print();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
-      }, 800);
-      return;
-    }
+    if (w) { setTimeout(() => URL.revokeObjectURL(url), 60000); return; }
   } catch {}
   if (url) URL.revokeObjectURL(url);
   const w = window.open("", "_blank", "width=1300,height=900");
   if (!w) return;
   w.document.open();
-  w.document.write(html);
+  w.document.write(doc);
   w.document.close();
-  setTimeout(() => { w.focus(); w.print(); }, 800);
 }
 
 export function printParatBatch(records, opts = {}) {

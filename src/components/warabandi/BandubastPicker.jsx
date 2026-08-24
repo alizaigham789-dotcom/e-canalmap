@@ -133,20 +133,6 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
         </div>
 
         <div className="p-3 space-y-3 overflow-y-auto">
-          {/* Manual entry */}
-          <div>
-            <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1" dir="rtl" style={{ fontFamily: "serif" }}>
-              مانول انٹری (khasra)
-            </label>
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              dir="ltr"
-              placeholder="87/3, 87/4-5"
-              className="w-full h-8 text-xs px-2 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono"
-            />
-          </div>
-
           {loadingObjs || isLoading ? (
             <div className="flex items-center justify-center py-8 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -159,7 +145,7 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
             <>
             <div>
               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1" dir="rtl" style={{ fontFamily: "serif" }}>
-                مستطیل تلاش
+                مستطیل تلاش کریں (Khasra)
               </label>
               <input
                 value={search}
