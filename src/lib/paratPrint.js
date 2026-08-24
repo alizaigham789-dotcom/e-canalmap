@@ -214,7 +214,9 @@ export function buildParatRecordHTML(record, opts = {}) {
     <div style="font-size:16px;font-weight:bold;font-family:'Noto Nastaliq Urdu',serif;margin-bottom:8px">جناب عالیٰ</div>
     <div style="font-size:14px;line-height:2.2;font-family:'Noto Nastaliq Urdu',serif">${notesHtml}</div>
   </div>
-  ${signaturesHtml}`;
+  <div class="sig-page">
+    ${signaturesHtml}
+  </div>`;
 }
 
 export function buildBatchHTML(records, opts = {}) {
@@ -226,11 +228,11 @@ export function buildPrintCSS(opts = {}) {
   const orientation = opts.orientation || "landscape";
   return `
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-    @page { size: ${pageSize} ${orientation}; margin: 10mm 10mm 12mm 10mm; @bottom-right { content: counter(page); font-family: sans-serif; font-size: 9px; color: #555; padding: 0 6mm 4mm 0; } }
+    @page { size: ${pageSize} ${orientation}; margin: 10mm 10mm 14mm 10mm; @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; } @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: counter(page) " / " counter(pages); font-family: sans-serif; font-size: 9px; color: #555; padding: 0 6mm 4mm 0; } }
     body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; }
-    .print-date { position: fixed; top: 2mm; left: 6mm; font-size: 9px; color: #555; font-family: sans-serif; z-index: 100; }
     .parat-page { box-sizing: border-box; }
     .notes-block { direction: rtl; margin-top: 1em; }
+    .sig-page { min-height: calc(100vh - 24mm); box-sizing: border-box; display: flex; flex-direction: column; page-break-before: always; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
     th { font-weight: bold; }
@@ -238,8 +240,7 @@ export function buildPrintCSS(opts = {}) {
     tr { page-break-inside: avoid; }
     .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 7px; }
     .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
-    .signatures { display:flex; justify-content:space-between; margin-top: 3em; page-break-inside: avoid; break-inside: avoid; page-break-after: always; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
-    .signatures:last-child { page-break-after: auto; }
+    .signatures { display:flex; justify-content:space-between; margin-top: auto; page-break-inside: avoid; break-inside: avoid; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
     .sig-item { text-align:center; border-top:1px solid #333; padding-top:4px; width:200px; white-space:nowrap; }
   `;
 }
@@ -270,11 +271,8 @@ export function openPrintWindow(html) {
 
 export function printParatBatch(records, opts = {}) {
   if (!records || records.length === 0) return;
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   const css = buildPrintCSS(opts);
   const body = buildBatchHTML(records, opts);
-  const html = `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title></title><style>${css}</style></head><body><div class="print-date">${dateStr}</div>${body}</body></html>`;
+  const html = `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title></title><style>${css}</style></head><body>${body}</body></html>`;
   openPrintWindow(html);
 }
