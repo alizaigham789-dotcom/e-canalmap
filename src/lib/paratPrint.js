@@ -209,7 +209,9 @@ export function buildParatRecordHTML(record, opts = {}) {
       <thead>${colLettersRow}${mainHeader}${subHeader}</thead>
       <tbody>${dataRows}${totalRow}</tbody>
     </table>
-    <div style="margin-top:20px;direction:rtl">
+  </div>
+  <div class="sig-page">
+    <div class="notes-block">
       <div style="font-size:16px;font-weight:bold;font-family:'Noto Nastaliq Urdu',serif;margin-bottom:8px">جناب عالیٰ</div>
       <div style="font-size:14px;line-height:2.2;font-family:'Noto Nastaliq Urdu',serif">${notesHtml}</div>
     </div>
@@ -226,11 +228,13 @@ export function buildPrintCSS(opts = {}) {
   const orientation = opts.orientation || "landscape";
   return `
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-    @page { size: ${pageSize} ${orientation}; margin: 0; }
+    @page { size: ${pageSize} ${orientation}; margin: 0 0 10mm 0; @bottom-right { content: counter(page); font-family: sans-serif; font-size: 9px; color: #555; } }
     body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; }
-    .print-date { position: fixed; top: 2mm; right: 6mm; font-size: 9px; color: #555; font-family: sans-serif; z-index: 100; }
-    .parat-page { padding: 12mm 10mm; min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; page-break-after: always; }
-    .parat-page:last-child { page-break-after: auto; }
+    .print-date { position: fixed; top: 2mm; left: 6mm; font-size: 9px; color: #555; font-family: sans-serif; z-index: 100; }
+    .parat-page { padding: 14mm 10mm 6mm; box-sizing: border-box; }
+    .sig-page { padding: 14mm 10mm 6mm; min-height: calc(100vh - 10mm); box-sizing: border-box; display: flex; flex-direction: column; page-break-before: always; page-break-after: always; }
+    .sig-page:last-child { page-break-after: auto; }
+    .notes-block { direction: rtl; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
     th { font-weight: bold; }

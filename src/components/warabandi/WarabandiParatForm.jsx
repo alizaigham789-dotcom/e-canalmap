@@ -129,10 +129,13 @@ const COL_LETTERS = ["ا","ب","ج","د","ہ","و","ز","ح","ط","ی","ک","ل"
 
 const PRINT_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-  @page { size: A4 landscape; margin: 0; }
+  @page { size: A4 landscape; margin: 0 0 10mm 0; @bottom-right { content: counter(page); font-family: sans-serif; font-size: 9px; color: #555; } }
   body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; }
-  .print-date { position: fixed; top: 2mm; right: 6mm; font-size: 9px; color: #555; font-family: sans-serif; z-index: 100; }
-  .print-page-wrap { padding: 12mm 10mm; min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; }
+  .print-date { position: fixed; top: 2mm; left: 6mm; font-size: 9px; color: #555; font-family: sans-serif; z-index: 100; }
+  .print-page-wrap { box-sizing: border-box; }
+  .parat-page { padding: 14mm 10mm 6mm; box-sizing: border-box; }
+  .sig-page { padding: 14mm 10mm 6mm; min-height: calc(100vh - 10mm) !important; box-sizing: border-box; display: flex; flex-direction: column; page-break-before: always; }
+  .notes-block { direction: rtl; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
   th { font-weight: bold; }
@@ -1281,36 +1284,40 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
           </div>
         </div>
 
-        <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif", display: "flex", flexDirection: "column", minHeight: "80vh" }}>
+        <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
           {/* Table — header line as <caption> so it spans the full table width; renders once */}
-          <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
-            <caption style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold", marginBottom: "22px", paddingBottom: "10px", borderBottom: "1.5px solid #1e3a5f", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.5px", wordSpacing: "0.3em", whiteSpace: "nowrap", captionSide: "top" }}>
-              {headerLine}
-            </caption>
-            <thead>
-              {headerRows}
-            </thead>
-            <tbody>
-              {dataRows}
-              {totalRow}
-            </tbody>
-          </table>
-
-          {/* جناب عالیٰ + Notes */}
-          <div style={{ marginTop: "20px", direction: "rtl" }}>
-            <div style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
-            <div style={{ fontSize: "14px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-              {notes.filter(n => n.trim()).map((note, i) => (
-                <div key={i} style={{ marginBottom: "2px" }}>{i + 1}- {note}</div>
-              ))}
-            </div>
+          <div className="parat-page">
+            <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
+              <caption style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold", marginBottom: "22px", paddingBottom: "10px", borderBottom: "1.5px solid #1e3a5f", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f", lineHeight: 1.5, letterSpacing: "0.5px", wordSpacing: "0.3em", whiteSpace: "nowrap", captionSide: "top" }}>
+                {headerLine}
+              </caption>
+              <thead>
+                {headerRows}
+              </thead>
+              <tbody>
+                {dataRows}
+                {totalRow}
+              </tbody>
+            </table>
           </div>
 
-          {/* Signatures */}
-          <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "auto", paddingTop: "60px", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط نہری پٹواری</div>
-            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط ضلعدار</div>
-            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط سب ڈویژنل کینال آفیسر</div>
+          {/* جناب عالیٰ + Notes + Signatures on a dedicated bottom-pinned page */}
+          <div className="sig-page" style={{ display: "flex", flexDirection: "column", minHeight: "70vh" }}>
+            <div className="notes-block" style={{ direction: "rtl" }}>
+              <div style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
+              <div style={{ fontSize: "14px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                {notes.filter(n => n.trim()).map((note, i) => (
+                  <div key={i} style={{ marginBottom: "2px" }}>{i + 1}- {note}</div>
+                ))}
+              </div>
+            </div>
+
+            {/* Signatures */}
+            <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "auto", paddingTop: "60px", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+              <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط نہری پٹواری</div>
+              <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط ضلعدار</div>
+              <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط سب ڈویژنل کینال آفیسر</div>
+            </div>
           </div>
         </div>
       </div>
