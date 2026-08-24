@@ -309,15 +309,14 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.lineTo(ex - headLen * Math.cos(ang) - headW * Math.sin(ang), ey - headLen * Math.sin(ang) + headW * Math.cos(ang));
       ctx.lineTo(ex - headLen * Math.cos(ang) + headW * Math.sin(ang), ey - headLen * Math.sin(ang) - headW * Math.cos(ang));
       ctx.closePath(); ctx.fill();
-      // Moga number — fraction inside a square box at labelPos (draggable)
+      // Moga number — rendered INSIDE the canal (along the canal direction), matching
+      // the canal name's colour and upright rotation. The external label box is no
+      // longer drawn; labelPos is kept on the object for backward compatibility.
       if (o.mogha_number || o.mogha_side) {
-        const numFont = mogaNumberFont();
-        const lp = getOutletLabelPos(o);
-        drawMogaFractionBoxOnCanvas(ctx, o.mogha_number, o.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#0891b2", mogaScale);
-        // Moga number INSIDE the canal — at the outlet start, along the canal direction,
-        // kept upright. Yellow fill + vivid red outline.
         const mogaText = [o.mogha_number, o.mogha_side].filter(Boolean).join("/");
-        const canalAng = ang - Math.PI / 2; // rotated 180°
+        // Canal direction = perpendicular to the outlet shaft; keep upright like canal name text.
+        let canalAng = ang + Math.PI / 2;
+        if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
         const cf = canalNameFont(o.canalWidth || DIMENSIONS.CANAL_WIDTH);
         ctx.save();
         ctx.translate(sx, sy);
@@ -325,8 +324,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.strokeStyle = "#DC2626";
-        ctx.lineWidth = Math.max(2.5, cf * 0.22);
+        ctx.strokeStyle = "rgba(0,0,0,0.85)";
+        ctx.lineWidth = Math.max(2, cf * 0.18);
         ctx.lineJoin = "round";
         ctx.strokeText(mogaText, 0, 0);
         ctx.fillStyle = "#FFD700";
@@ -615,15 +614,22 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const h1y=(ey - headLen*Math.sin(ang) + headW*Math.cos(ang)).toFixed(1);
       const h2x=(ex - headLen*Math.cos(ang) + headW*Math.sin(ang)).toFixed(1);
       const h2y=(ey - headLen*Math.sin(ang) - headW*Math.cos(ang)).toFixed(1);
-      // Moga number — fraction inside a square box at labelPos (draggable)
-      const numFont = mogaNumberFont();
-      const _lp = getOutletLabelPos(o);
-      const numLbl = svgMogaFractionBox(o.mogha_number, o.mogha_side, _lp.x, _lp.y, numFont, "rgba(120,225,245,0.92)", "#0891b2");
+      // Moga number INSIDE the canal — along the canal direction (perpendicular to the
+      // outlet shaft), kept upright like the canal name. Same colours as the canal name.
+      let mogaInside = "";
+      if (o.mogha_number || o.mogha_side) {
+        const mogaText = [o.mogha_number, o.mogha_side].filter(Boolean).join("/");
+        let canalAng = ang + Math.PI / 2;
+        if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
+        const canalAngDeg = canalAng * 180 / Math.PI;
+        const cf = canalNameFont(o.canalWidth || DIMENSIONS.CANAL_WIDTH);
+        mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="rgba(0,0,0,0.85)" stroke-width="${Math.max(2, cf * 0.18).toFixed(1)}" stroke-linejoin="round" fill="#FFD700">${mogaText}</text>`;
+      }
       return `<g>
         <rect x="${(sx-half).toFixed(1)}" y="${(sy-half).toFixed(1)}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" rx="${radius.toFixed(1)}" fill="${color}" stroke="#0e7490" stroke-width="1"/>
         <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${shaftWidth.toFixed(1)}" stroke-linecap="round"/>
         <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
-        ${numLbl}
+        ${mogaInside}
       </g>`;
     }
     return null;

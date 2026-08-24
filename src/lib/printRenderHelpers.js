@@ -399,12 +399,14 @@ export function svgMogaFractionBox(num, side, cx, cy, fontPx, boxColor, borderCo
 // ─── CANVAS: CCA/GCA fraction inside a box ───────────────────────────────
 // Top: CCA value, line, bottom: GCA value — like "345 CCA" over "454 GCA"
 export function drawCCAGCAFractionBoxOnCanvas(ctx, ccaText, gcaText, cx, cy, fontPx, boxColor, borderColor) {
-  const ccaStr = String(ccaText || "");
-  const gcaStr = String(gcaText || "");
+  // Integer-only values — strip any decimal places from user-entered labels.
+  const _int = (s) => { const n = parseFloat(s); return isNaN(n) ? String(s) : String(Math.round(n)); };
+  const ccaStr = _int(ccaText || "");
+  const gcaStr = _int(gcaText || "");
   if (!ccaStr && !gcaStr) return;
   if (!ccaStr) {
     ctx.fillStyle = "#166534";
-    ctx.font = `${fontPx}px Rajdhani, sans-serif`;
+    ctx.font = `bold ${fontPx}px Rajdhani, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(gcaStr, cx, cy);
@@ -432,26 +434,28 @@ export function drawCCAGCAFractionBoxOnCanvas(ctx, ccaText, gcaText, cx, cy, fon
   ctx.fillText("(", cx - bracketOffset, cy);
   ctx.fillText(")", cx + bracketOffset, cy);
 
-  // Upper term (CCA) — regular weight, balanced with the lower term (not overly bold)
-  ctx.font = `${fontPx}px Rajdhani, sans-serif`;
+  // Upper term (CCA) — bold green
+  ctx.font = `bold ${fontPx}px Rajdhani, sans-serif`;
   ctx.fillText(ccaStr, cx, ccaY);
   // Straight fraction line (not a slash)
   ctx.beginPath();
   ctx.moveTo(cx - textW / 2, lineY);
   ctx.lineTo(cx + textW / 2, lineY);
   ctx.stroke();
-  // Lower term (GCA) — same size & weight as the upper term
-  ctx.font = `${fontPx}px Rajdhani, sans-serif`;
+  // Lower term (GCA) — bold green
+  ctx.font = `bold ${fontPx}px Rajdhani, sans-serif`;
   ctx.fillText(gcaStr, cx, gcaY);
 }
 
 // ─── SVG: CCA/GCA fraction inside a box ──────────────────────────────────
 export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor, borderColor) {
-  const ccaStr = String(ccaText || "");
-  const gcaStr = String(gcaText || "");
+  // Integer-only values — strip any decimal places from user-entered labels.
+  const _int = (s) => { const n = parseFloat(s); return isNaN(n) ? String(s) : String(Math.round(n)); };
+  const ccaStr = _int(ccaText || "");
+  const gcaStr = _int(gcaText || "");
   if (!ccaStr && !gcaStr) return "";
   if (!ccaStr) {
-    return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx.toFixed(1)}" fill="#166534">${gcaStr}</text>`;
+    return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="#166534">${gcaStr}</text>`;
   }
   const textW = fontPx * Math.max(ccaStr.length, gcaStr.length, 1) * 0.58;
   const lineY = cy;
@@ -465,9 +469,9 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
   let svg = "";
   svg += `<text x="${(cx - bracketOffset).toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${bracketFont.toFixed(1)}" fill="${ink}">(</text>`;
   svg += `<text x="${(cx + bracketOffset).toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${bracketFont.toFixed(1)}" fill="${ink}">)</text>`;
-  svg += `<text x="${cx.toFixed(1)}" y="${ccaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx.toFixed(1)}" fill="${ink}">${ccaStr}</text>`;
+  svg += `<text x="${cx.toFixed(1)}" y="${ccaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${ccaStr}</text>`;
   svg += `<line x1="${(cx - textW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + textW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="${ink}" stroke-width="${sw.toFixed(1)}"/>`;
-  svg += `<text x="${cx.toFixed(1)}" y="${gcaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${fontPx.toFixed(1)}" fill="${ink}">${gcaStr}</text>`;
+  svg += `<text x="${cx.toFixed(1)}" y="${gcaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${gcaStr}</text>`;
   return svg;
 }
 
