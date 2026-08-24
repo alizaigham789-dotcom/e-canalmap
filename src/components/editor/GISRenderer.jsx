@@ -901,11 +901,14 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
     const lp = getOutletLabelPos(obj);
     drawMogaFractionBoxOnCanvas(ctx, moghaNum, moghaSide, lp.x, lp.y, 0, "rgba(120,225,245,0.92)", "#0891b2", 0.5);
   }
-  // Moga number INSIDE the canal — drawn along the canal direction at the outlet start,
-  // matching the canal name style (yellow text + dark outline on the blue water).
+  // Moga number INSIDE the canal — drawn along the canal direction at the outlet
+  // start point (which sits on the canal centerline). Kept upright (never upside-down),
+  // beautiful yellow text with a vivid red outline for maximum readability on blue water.
   if (moghaNum || moghaSide) {
     const mogaText = [moghaNum, moghaSide].filter(Boolean).join("/");
-    const canalAng = angle + Math.PI / 2; // canal runs perpendicular to the outlet shaft
+    let canalAng = angle + Math.PI / 2; // canal runs perpendicular to the outlet shaft
+    // Keep text upright — flip 180° if it would render upside-down
+    if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
     const cf = canalNameFont(obj.canalWidth || 100);
     ctx.save();
     ctx.translate(sx, sy);
@@ -913,8 +916,9 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
     ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.strokeStyle = "rgba(0,0,0,0.85)";
-    ctx.lineWidth = Math.max(2, cf * 0.18);
+    // Beautiful red outline + yellow fill — vivid on blue canal water
+    ctx.strokeStyle = "#DC2626";
+    ctx.lineWidth = Math.max(2.5, cf * 0.22);
     ctx.lineJoin = "round";
     ctx.strokeText(mogaText, 0, 0);
     ctx.fillStyle = "#FFD700";
