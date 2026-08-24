@@ -894,19 +894,16 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
   ctx.closePath();
   ctx.fill();
 
-  // Moga number — fraction inside a rounded box at labelPos (draggable)
+  // Moga number — rendered INSIDE the canal (along the canal direction), matching
+  // the canal name's colour and upright rotation. The external label box is no
+  // longer drawn; labelPos is kept on the object for backward compatibility.
   const moghaNum = obj.mogha_number || "";
   const moghaSide = obj.mogha_side || "";
   if (moghaNum || moghaSide) {
-    const lp = getOutletLabelPos(obj);
-    drawMogaFractionBoxOnCanvas(ctx, moghaNum, moghaSide, lp.x, lp.y, 0, "rgba(120,225,245,0.92)", "#0891b2", 0.5);
-  }
-  // Moga number INSIDE the canal — drawn along the canal direction at the outlet
-  // start point (which sits on the canal centerline). Kept upright (never upside-down),
-  // beautiful yellow text with a vivid red outline for maximum readability on blue water.
-  if (moghaNum || moghaSide) {
     const mogaText = [moghaNum, moghaSide].filter(Boolean).join("/");
-    const canalAng = angle - Math.PI / 2; // rotated 180° so the moga number reads from the other side of the canal
+    // Canal direction = perpendicular to the outlet shaft; keep upright like canal name text.
+    let canalAng = angle + Math.PI / 2;
+    if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
     const cf = canalNameFont(obj.canalWidth || 100);
     ctx.save();
     ctx.translate(sx, sy);
@@ -914,9 +911,9 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
     ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    // Beautiful red outline + yellow fill — vivid on blue canal water
-    ctx.strokeStyle = "#DC2626";
-    ctx.lineWidth = Math.max(2.5, cf * 0.22);
+    // Same colours as the canal name: dark outline + yellow fill
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.lineWidth = Math.max(2, cf * 0.18);
     ctx.lineJoin = "round";
     ctx.strokeText(mogaText, 0, 0);
     ctx.fillStyle = "#FFD700";
