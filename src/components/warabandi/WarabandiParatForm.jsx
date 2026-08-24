@@ -135,7 +135,7 @@ const PRINT_CSS = `
   .print-page-wrap { box-sizing: border-box; }
   .parat-page { box-sizing: border-box; }
   .notes-block { direction: rtl; margin-top: 1em; }
-  .sig-page { box-sizing: border-box; display: flex; flex-direction: column; }
+  .final-block { box-sizing: border-box; display: flex; flex-direction: column; min-height: 85vh; page-break-inside: avoid; break-inside: avoid; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
   th { font-weight: bold; }
@@ -145,12 +145,12 @@ const PRINT_CSS = `
   .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
   .tashreeh-table th { font-size: 7px; padding: 2px; }
   .tashreeh-table td { font-size: 7px; padding: 2px; }
-  .signatures { margin-top: 2em !important; margin-bottom: 10mm; page-break-inside: avoid; break-inside: avoid; }
+  .signatures { margin-top: auto !important; margin-bottom: 10mm; page-break-inside: avoid; break-inside: avoid; }
 `;
 
 const BW_CSS = `
   .bw-mode caption { color:#000 !important; background:transparent !important; }
-  .bw-mode th { background:#fff !important; color:#000 !important; border-color:#000 !important; }
+  .bw-mode th { background:#000 !important; color:#fff !important; border-color:#000 !important; }
   .bw-mode td { background:#fff !important; color:#000 !important; border-color:#000 !important; }
   .bw-mode .total-row td { background:#fff !important; color:#000 !important; font-weight:bold !important; }
   .bw-mode .frac .num { border-bottom-color:#000 !important; }
@@ -1309,18 +1309,16 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
             </table>
           </div>
 
-          {/* جناب عالیٰ + Notes — right after the table, one line gap */}
-          <div className="notes-block" style={{ direction: "rtl", marginTop: "1em" }}>
-            <div style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
-            <div style={{ fontSize: "14px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-              {notes.filter(n => n.trim()).map((note, i) => (
-                <div key={i} style={{ marginBottom: "2px" }}>{i + 1}- {note}</div>
-              ))}
+          {/* جناب عالیٰ + Notes + Signatures stay together; signatures pinned to bottom of the page */}
+          <div className="final-block" style={{ display: "flex", flexDirection: "column" }}>
+            <div className="notes-block" style={{ direction: "rtl", marginTop: "1em" }}>
+              <div style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
+              <div style={{ fontSize: "14px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                {notes.filter(n => n.trim()).map((note, i) => (
+                  <div key={i} style={{ marginBottom: "2px" }}>{i + 1}- {note}</div>
+                ))}
+              </div>
             </div>
-          </div>
-
-          {/* Signatures — pinned to the bottom of the last page */}
-          <div className="sig-page" style={{ display: "flex", flexDirection: "column", minHeight: "70vh" }}>
             <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "auto", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
               <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط نہری پٹواری</div>
               <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط ضلعدار</div>

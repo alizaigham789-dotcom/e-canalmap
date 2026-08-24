@@ -210,11 +210,11 @@ export function buildParatRecordHTML(record, opts = {}) {
       <tbody>${dataRows}${totalRow}</tbody>
     </table>
   </div>
-  <div class="notes-block">
-    <div style="font-size:16px;font-weight:bold;font-family:'Noto Nastaliq Urdu',serif;margin-bottom:8px">جناب عالیٰ</div>
-    <div style="font-size:14px;line-height:2.2;font-family:'Noto Nastaliq Urdu',serif">${notesHtml}</div>
-  </div>
-  <div class="sig-page">
+  <div class="final-block">
+    <div class="notes-block">
+      <div style="font-size:16px;font-weight:bold;font-family:'Noto Nastaliq Urdu',serif;margin-bottom:8px">جناب عالیٰ</div>
+      <div style="font-size:14px;line-height:2.2;font-family:'Noto Nastaliq Urdu',serif">${notesHtml}</div>
+    </div>
     ${signaturesHtml}
   </div>`;
 }
@@ -232,7 +232,7 @@ export function buildPrintCSS(opts = {}) {
     body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; }
     .parat-page { box-sizing: border-box; }
     .notes-block { direction: rtl; margin-top: 1em; }
-    .sig-page { box-sizing: border-box; display: flex; flex-direction: column; }
+    .final-block { box-sizing: border-box; display: flex; flex-direction: column; min-height: 85vh; page-break-inside: avoid; break-inside: avoid; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
     th { font-weight: bold; }
@@ -240,7 +240,7 @@ export function buildPrintCSS(opts = {}) {
     tr { page-break-inside: avoid; }
     .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 7px; }
     .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
-    .signatures { display:flex; justify-content:space-between; margin-top: 2em; margin-bottom: 10mm; page-break-inside: avoid; break-inside: avoid; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
+    .signatures { display:flex; justify-content:space-between; margin-top: auto; margin-bottom: 10mm; page-break-inside: avoid; break-inside: avoid; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
     .sig-item { text-align:center; border-top:1px solid #333; padding-top:4px; width:200px; white-space:nowrap; }
   `;
 }
