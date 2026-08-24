@@ -325,11 +325,10 @@ export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxC
   const numStr = String(num || "");
   const sideStr = String(side || "");
   const f = MOGA_BOX_FONT * scale;
-  const textW = f * Math.max(numStr.length, sideStr.length, 1) * 0.65;
   const ink = "#0c4a6e";
 
   ctx.save();
-  // No box — background only behind the number text
+  // No background box — moga number is drawn directly on the map.
   const lineY = cy;
   const numY = cy - f * 0.55;
   const sideY = cy + f * 0.55;
@@ -339,25 +338,32 @@ export function drawMogaFractionBoxOnCanvas(ctx, num, side, cx, cy, fontPx, boxC
   ctx.lineWidth = Math.max(1.5, f * 0.07);
   ctx.lineCap = "round";
   ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Division line sized to the actual text width (no over-long bar).
+  let lineW = 0;
+  if (numStr) {
+    ctx.font = `bold ${f}px Rajdhani, sans-serif`;
+    lineW = Math.max(lineW, ctx.measureText(numStr).width);
+  }
+  if (sideStr) {
+    ctx.font = `bold ${f * 0.8}px Rajdhani, sans-serif`;
+    lineW = Math.max(lineW, ctx.measureText(sideStr).width);
+  }
+  lineW = Math.max(lineW, f * 0.4);
 
   if (numStr) {
     ctx.font = `bold ${f}px Rajdhani, sans-serif`;
-    ctx.textBaseline = "middle";
-    // Background only behind the number text
-    const numW = ctx.measureText(numStr).width;
-    ctx.fillStyle = boxColor || "rgba(120,225,245,0.92)";
-    ctx.fillRect(cx - numW / 2 - f * 0.1, numY - f * 0.5, numW + f * 0.2, f);
-    // Number text
     ctx.fillStyle = ink;
     ctx.fillText(numStr, cx, numY);
   }
   ctx.beginPath();
-  ctx.moveTo(cx - textW / 2, lineY);
-  ctx.lineTo(cx + textW / 2, lineY);
+  ctx.moveTo(cx - lineW / 2, lineY);
+  ctx.lineTo(cx + lineW / 2, lineY);
   ctx.stroke();
   if (sideStr) {
     ctx.font = `bold ${f * 0.8}px Rajdhani, sans-serif`;
-    ctx.textBaseline = "middle";
+    ctx.fillStyle = ink;
     ctx.fillText(sideStr, cx, sideY);
   }
   ctx.restore();
@@ -369,20 +375,21 @@ export function svgMogaFractionBox(num, side, cx, cy, fontPx, boxColor, borderCo
   const numStr = String(num || "");
   const sideStr = String(side || "");
   const f = MOGA_BOX_FONT * scale;
-  const textW = f * Math.max(numStr.length, sideStr.length, 1) * 0.65;
   const lineY = cy;
   const numY = cy - f * 0.55;
   const sideY = cy + f * 0.55;
   const ink = "#0c4a6e";
 
-  // No box — background only behind the number text
+  // No background box — division line sized to the text width.
+  const numW = numStr ? f * numStr.length * 0.52 : 0;
+  const sideW = sideStr ? f * 0.8 * sideStr.length * 0.52 : 0;
+  const lineW = Math.max(numW, sideW, f * 0.4);
+
   let svg = "";
   if (numStr) {
-    const numW = f * numStr.length * 0.65;
-    svg += `<rect x="${(cx - numW/2 - f * 0.1).toFixed(1)}" y="${(numY - f * 0.5).toFixed(1)}" width="${(numW + f * 0.2).toFixed(1)}" height="${f.toFixed(1)}" fill="${boxColor || 'rgba(120,225,245,0.92)'}"/>`;
     svg += `<text x="${cx.toFixed(1)}" y="${numY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${f.toFixed(1)}" fill="${ink}">${numStr}</text>`;
   }
-  svg += `<line x1="${(cx - textW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + textW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="${ink}" stroke-width="${Math.max(1.5, f * 0.07).toFixed(1)}" stroke-linecap="round"/>`;
+  svg += `<line x1="${(cx - lineW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + lineW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="${ink}" stroke-width="${Math.max(1.5, f * 0.07).toFixed(1)}" stroke-linecap="round"/>`;
   if (sideStr) {
     svg += `<text x="${cx.toFixed(1)}" y="${sideY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(f * 0.8).toFixed(1)}" fill="${ink}">${sideStr}</text>`;
   }
@@ -479,8 +486,8 @@ export function getCCAGCAText(chakbandi, gcaValue) {
     }
     return { cca: "", gca: chakbandi.centerLabel };
   }
-  // Plain acre number only — no "ایکڑ" (Acre) word next to the number.
-  const gcaText = String(Math.round((gcaValue || 0) * 100) / 100);
+  // Plain acre number only — integer digits, no decimals, no "ایکڑ" (Acre) word.
+  const gcaText = String(Math.round(gcaValue || 0));
   // Default: CCA = GCA so the fraction (CCA/GCA) appears as soon as the
   // chakbandi is completed, matching the editor display.
   if (gcaValue > 0) return { cca: gcaText, gca: gcaText };

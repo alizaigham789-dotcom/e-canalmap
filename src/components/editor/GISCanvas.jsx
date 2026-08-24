@@ -812,7 +812,9 @@ const GISCanvas = forwardRef(function GISCanvas(
       // 1. Vertex handle on the selected line object (drag a single anchor point)
       const selectedObj = selectedId ? objects.find(o => o.id === selectedId) : null;
       if (selectedObj && ["chakbandi", "canal", "khal", "road", "bridge", "mouza"].includes(selectedObj.type) && selectedObj.points) {
-        const vThresh = 10 / zoom;
+        // Bigger hit area on touch so chakbandi endpoints/nodes are easy to grab
+        // and drag onto a canal (finger targets need more room than a mouse cursor).
+        const vThresh = (isTouchRef.current ? 30 : 10) / zoom;
         const vIdx = selectedObj.points.findIndex(p => Math.hypot(p.x - worldRaw.x, p.y - worldRaw.y) < vThresh);
         if (vIdx !== -1) {
           // Delete-vertex mode: clicking a vertex removes it (keep ≥ 2 points)
