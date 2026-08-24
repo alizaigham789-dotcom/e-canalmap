@@ -8,6 +8,7 @@ import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
 import BandubastPicker from "./BandubastPicker";
 import FractionCell from "./FractionCell";
+import { openPrintWindow } from "@/lib/paratPrint";
 
 // ====== Area format helpers ======
 function formatAreaMB(totalAcres) {
@@ -1121,10 +1122,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
     const content = document.getElementById("parat-print-content").innerHTML;
     const css = PRINT_CSS.replace("A4 landscape", `${pageSize} ${orientation}`);
     const html = `<!DOCTYPE html><html dir="rtl"><head><title></title><style>${css}</style></head><body><div class="print-date">${dateStr}</div><div class="print-page-wrap">${content}</div></body></html>`;
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const w = window.open(url, "_blank", "width=1300,height=900");
-    setTimeout(() => { w.focus(); w.print(); setTimeout(() => URL.revokeObjectURL(url), 2000); }, 800);
+    openPrintWindow(html);
   };
 
   // Reusable header rows (col letters + main header + sub header)

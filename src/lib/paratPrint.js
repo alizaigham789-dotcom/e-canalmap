@@ -243,6 +243,33 @@ export function buildPrintCSS(opts = {}) {
   `;
 }
 
+// Open a print window from an HTML string. Tries a blob URL first (avoids the
+// "about:blank" footer text); falls back to about:blank + document.write if the
+// popup is blocked, so it never crashes on a null window.
+export function openPrintWindow(html) {
+  let url = null;
+  try {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank", "width=1300,height=900");
+    if (w) {
+      setTimeout(() => {
+        w.focus();
+        w.print();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      }, 800);
+      return;
+    }
+  } catch {}
+  if (url) URL.revokeObjectURL(url);
+  const w = window.open("", "_blank", "width=1300,height=900");
+  if (!w) return;
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => { w.focus(); w.print(); }, 800);
+}
+
 export function printParatBatch(records, opts = {}) {
   if (!records || records.length === 0) return;
   const now = new Date();
@@ -251,12 +278,5 @@ export function printParatBatch(records, opts = {}) {
   const css = buildPrintCSS(opts);
   const body = buildBatchHTML(records, opts);
   const html = `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title></title><style>${css}</style></head><body><div class="print-date">${dateStr}</div>${body}</body></html>`;
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url, "_blank", "width=1300,height=900");
-  setTimeout(() => {
-    w.focus();
-    w.print();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }, 800);
+  openPrintWindow(html);
 }
