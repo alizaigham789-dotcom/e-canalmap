@@ -159,7 +159,14 @@ const GISCanvas = forwardRef(function GISCanvas(
           if (gca > 0 || ch.centerLabel || ch.cca || ch.gca) {
             const lp = getChakbandiLabelPos(ch);
             if (!lp) continue;
-            const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
+            const { cca: _cca, gca: _gca } = getCCAGCAText(ch, gca);
+            let cca = _cca, gcaTxt = _gca;
+            // centerLabel is stored as "(cca/gca)" — split it into a stacked fraction
+            // (CCA over a straight line over GCA), matching the moga number fraction.
+            if (ch.centerLabel) {
+              const m = String(ch.centerLabel).match(/^\(?([^/)]*)\/([^/)]*)\)?$/);
+              if (m) { cca = m[1].trim(); gcaTxt = m[2].trim(); }
+            }
             if (cca || gcaTxt) {
               drawCCAGCAFractionBoxOnCanvas(ctx, cca, gcaTxt, lp.x, lp.y, gcaFont, "rgba(255,255,255,0.94)", "#166534");
             }
