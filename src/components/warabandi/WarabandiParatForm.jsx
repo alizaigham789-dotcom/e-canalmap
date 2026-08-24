@@ -692,7 +692,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
   if (header.section) headerParts.push(`سیکشن ${header.section}`);
   if (header.sub_division) headerParts.push(`سب ڈویژن ${header.sub_division}`);
-  if (header.canal_division) headerParts.push(`ڈویژن ${header.canal_division}`);
+  if (header.canal_division) headerParts.push(`کینال ڈویژن ${header.canal_division}`);
   const headerLine = (
     <>
       {headerParts.map((part, i) => (
@@ -1118,15 +1118,13 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
     const now = new Date();
     const pad = (n) => String(n).padStart(2, "0");
     const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const w = window.open("", "_blank", "width=1300,height=900");
     const content = document.getElementById("parat-print-content").innerHTML;
     const css = PRINT_CSS.replace("A4 landscape", `${pageSize} ${orientation}`);
-    w.document.write(`<!DOCTYPE html><html dir="rtl"><head><title></title>
-      <style>${css}</style>
-    </head><body><div class="print-date">${dateStr}</div><div class="print-page-wrap">${content}</div></body></html>`);
-    w.document.title = "";
-    w.document.close();
-    setTimeout(() => { w.print(); w.close(); }, 800);
+    const html = `<!DOCTYPE html><html dir="rtl"><head><title></title><style>${css}</style></head><body><div class="print-date">${dateStr}</div><div class="print-page-wrap">${content}</div></body></html>`;
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank", "width=1300,height=900");
+    setTimeout(() => { w.focus(); w.print(); setTimeout(() => URL.revokeObjectURL(url), 2000); }, 800);
   };
 
   // Reusable header rows (col letters + main header + sub header)

@@ -71,7 +71,7 @@ export function buildParatRecordHTML(record, opts = {}) {
   if (header.mouza) parts.push(`موضع ${header.mouza}`);
   if (header.section) parts.push(`سیکشن ${header.section}`);
   if (header.sub_division) parts.push(`سب ڈویژن ${header.sub_division}`);
-  if (header.canal_division) parts.push(`ڈویژن ${header.canal_division}`);
+  if (header.canal_division) parts.push(`کینال ڈویژن ${header.canal_division}`);
   const headerLineStr = parts
     .map((p) => (p === moghaFull
       ? `<span dir="ltr" style="unicode-bidi:isolate;display:inline-block">${esc(moghaFull)}</span>`
@@ -248,12 +248,15 @@ export function printParatBatch(records, opts = {}) {
   const now = new Date();
   const pad = (n) => String(n).padStart(2, "0");
   const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  const w = window.open("", "_blank", "width=1300,height=900");
   const css = buildPrintCSS(opts);
   const body = buildBatchHTML(records, opts);
-  w.document.write(
-    `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title></title><style>${css}</style></head><body><div class="print-date">${dateStr}</div>${body}</body></html>`
-  );
-  w.document.close();
-  setTimeout(() => { w.focus(); w.print(); }, 800);
+  const html = `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title></title><style>${css}</style></head><body><div class="print-date">${dateStr}</div>${body}</body></html>`;
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, "_blank", "width=1300,height=900");
+  setTimeout(() => {
+    w.focus();
+    w.print();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }, 800);
 }
