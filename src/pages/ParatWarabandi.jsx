@@ -474,7 +474,7 @@ export default function ParatWarabandi() {
             </Button>
             <div className="min-w-0">
               <h1 className="text-sm font-bold font-heading text-slate-800 truncate" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-                پرت وارابندی — موگہ {moghaDisplay}
+                پرت وارابندی موگہ نمبری {moghaDisplay}
               </h1>
               <p className="text-[10px] text-slate-400 truncate" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
                 {selectedRecord?.doc_type || "پرت وارہ بندی"}
