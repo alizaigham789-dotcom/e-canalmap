@@ -727,6 +727,7 @@ function FillControl({ local, commit }) {
 // Outlet / Moga length — sets the shaft length (start→end distance) without
 // changing the direction. Lets the user decide the moga length directly.
 function OutletLengthControl({ local, commit }) {
+  if (!local?.start || !local?.end) return null;
   const len = Math.round(Math.hypot(local.end.x - local.start.x, local.end.y - local.start.y));
   const setLen = (newLen) => {
     const cur = Math.hypot(local.end.x - local.start.x, local.end.y - local.start.y);
