@@ -201,11 +201,35 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
     }
   }
 
+  // Canal edge snap for chakbandi — snap the chakbandi endpoint to the canal's near
+  // edge (centerline offset by half-width toward the cursor) so the joint sits exactly
+  // on the canal boundary: no overlap, no gap — a clean hook connection.
+  if (activeTool === "chakbandi" && spineSnap) {
+    for (const o of objects) {
+      if (o.type !== "canal" || !o.points || o.points.length < 2) continue;
+      const near = nearestPointOnPolyline(wx, wy, o.points);
+      if (!near || near.dist >= threshold * 4) continue;
+      const a = o.points[near.segIdx], b = o.points[near.segIdx + 1];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      const halfCanalW = (o.width || DIMENSIONS.CANAL_WIDTH) / 2;
+      const side = ((wx - a.x) * nx + (wy - a.y) * ny) >= 0 ? 1 : -1;
+      const targetX = near.x + nx * halfCanalW * side;
+      const targetY = near.y + ny * halfCanalW * side;
+      const d = Math.hypot(wx - targetX, wy - targetY);
+      if (d < bestDist) { bestX = targetX; bestY = targetY; bestDist = d; }
+    }
+  }
+
   // Parcel boundary snap for chakbandi/mouza/khal — follows killa & mustateel boundaries,
   // but allows passing through killa centers when not near any boundary
   if (["chakbandi", "mouza", "khal"].includes(activeTool)) {
     const snap = snapToParcelBoundaries(wx, wy, objects, threshold * 2);
-    return snap;
+    // Pick the closer of canal-edge snap vs parcel-boundary snap
+    const dCanal = Math.hypot(wx - bestX, wy - bestY);
+    const dParcel = Math.hypot(wx - snap.x, wy - snap.y);
+    return dCanal < dParcel ? { x: bestX, y: bestY } : snap;
   }
 
   return { x: bestX, y: bestY };

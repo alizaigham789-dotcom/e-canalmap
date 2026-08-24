@@ -433,11 +433,23 @@ function svgOutlet(obj, C, idx, mogaScale = 1) {
   const numFont = mogaNumberFont();
   const lp = getOutletLabelPos(obj);
   const numLabel = svgMogaFractionBox(obj.mogha_number, obj.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#0891b2", mogaScale);
+  // Moga number INSIDE the canal — at the outlet start (on the canal centerline),
+  // rotated along the canal direction (perpendicular to the outlet shaft), kept upright.
+  // Beautiful yellow fill with vivid red outline — matches the editor canvas.
+  let mogaInside = "";
+  if (obj.mogha_number || obj.mogha_side) {
+    const mogaText = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
+    let canalAngDeg = (angle + Math.PI / 2) * 180 / Math.PI;
+    if (canalAngDeg > 90 || canalAngDeg < -90) canalAngDeg += 180;
+    const cf = canalNameFont(obj.canalWidth || DIMENSIONS.CANAL_WIDTH);
+    mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="#DC2626" stroke-width="${Math.max(2.5, cf * 0.22).toFixed(1)}" stroke-linejoin="round" fill="#FFD700">${mogaText}</text>`;
+  }
   return `<g key="outlet_${idx}">
     <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" rx="${radius.toFixed(1)}" fill="${color}" stroke="#0e7490" stroke-width="2"/>
     <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${shaftWidth.toFixed(1)}" stroke-linecap="round"/>
     <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
     ${numLabel}
+    ${mogaInside}
   </g>`;
 }
 

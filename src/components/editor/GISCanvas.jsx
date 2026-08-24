@@ -605,7 +605,33 @@ const GISCanvas = forwardRef(function GISCanvas(
         const dx = worldRaw.x - moveOffset.current.x;
         const dy = worldRaw.y - moveOffset.current.y;
         const newPoints = movingObjOrigPoints.current.map(p => ({ x: p.x + dx, y: p.y + dy }));
-        onUpdateObject(movingObjId.current, { points: newPoints });
+        // Elastic hook joints — when a canal moves, chakbandi endpoints that were
+        // touching the canal stay attached (move with the canal) while the rest of
+        // the chakbandi stays put. Lines stretch/shorten like rubber bands — the
+        // chakbandi itself does NOT move, only the hooked endpoints follow the canal.
+        if (movingObj.type === "canal") {
+          const halfW = (movingObj.width || DIMENSIONS.CANAL_WIDTH) / 2;
+          const hookThreshold = halfW + 15;
+          const origCanalPts = movingObjOrigPoints.current;
+          const updates = [{ id: movingObjId.current, changes: { points: newPoints } }];
+          for (const o of objectsRef.current) {
+            if (o.type !== "chakbandi" || !o.points || o.id === movingObjId.current) continue;
+            let anyHooked = false;
+            const newChPoints = o.points.map(p => {
+              const near = nearestPointOnPolyline(p.x, p.y, origCanalPts);
+              if (near && near.dist <= hookThreshold) {
+                anyHooked = true;
+                return { x: p.x + dx, y: p.y + dy };
+              }
+              return p;
+            });
+            if (anyHooked) updates.push({ id: o.id, changes: { points: newChPoints } });
+          }
+          if (updates.length > 1) onBulkUpdate(updates);
+          else onUpdateObject(movingObjId.current, { points: newPoints });
+        } else {
+          onUpdateObject(movingObjId.current, { points: newPoints });
+        }
       } else if (movingObj && movingObjOrigStartEnd.current) {
         // Moga/outlet — translate both start and end by the drag delta (drag-and-drop)
         const dx = worldRaw.x - moveOffset.current.x;

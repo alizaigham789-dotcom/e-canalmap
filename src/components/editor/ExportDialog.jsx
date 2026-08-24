@@ -314,6 +314,25 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const numFont = mogaNumberFont();
         const lp = getOutletLabelPos(o);
         drawMogaFractionBoxOnCanvas(ctx, o.mogha_number, o.mogha_side, lp.x, lp.y, numFont, "rgba(120,225,245,0.92)", "#0891b2", mogaScale);
+        // Moga number INSIDE the canal — at the outlet start, along the canal direction,
+        // kept upright. Yellow fill + vivid red outline.
+        const mogaText = [o.mogha_number, o.mogha_side].filter(Boolean).join("/");
+        let canalAng = ang + Math.PI / 2;
+        if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
+        const cf = canalNameFont(o.canalWidth || DIMENSIONS.CANAL_WIDTH);
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(canalAng);
+        ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.strokeStyle = "#DC2626";
+        ctx.lineWidth = Math.max(2.5, cf * 0.22);
+        ctx.lineJoin = "round";
+        ctx.strokeText(mogaText, 0, 0);
+        ctx.fillStyle = "#FFD700";
+        ctx.fillText(mogaText, 0, 0);
+        ctx.restore();
       }
     }
   }
