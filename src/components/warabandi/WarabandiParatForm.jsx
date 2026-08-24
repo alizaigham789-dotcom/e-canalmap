@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste, LayoutGrid, Save } from "lucide-react";
+import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste, LayoutGrid, Save, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
@@ -145,6 +145,15 @@ const PRINT_CSS = `
   .tashreeh-table th { font-size: 7px; padding: 2px; }
   .tashreeh-table td { font-size: 7px; padding: 2px; }
   .signatures { margin-top: 2em !important; margin-bottom: 10mm; page-break-inside: avoid; break-inside: avoid; }
+`;
+
+const BW_CSS = `
+  .bw-mode caption { color:#000 !important; background:transparent !important; }
+  .bw-mode th { background:#fff !important; color:#000 !important; border-color:#000 !important; }
+  .bw-mode td { background:#fff !important; color:#000 !important; border-color:#000 !important; }
+  .bw-mode .total-row td { background:#fff !important; color:#000 !important; font-weight:bold !important; }
+  .bw-mode .frac .num { border-bottom-color:#000 !important; }
+  .bw-mode .signatures, .bw-mode .sig-item { border-color:#000 !important; color:#000 !important; background:transparent !important; }
 `;
 
 function fracHtml(val) {
@@ -1107,8 +1116,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
 }
 
 function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, onClose, variant }) {
-  const [orientation, setOrientation] = useState("landscape");
   const [pageSize, setPageSize] = useState("A4");
+  const [bw, setBw] = useState(false);
   const isJadeed = variant === "jadeed";
   const showSummary = !isJadeed;
   const thP = { border: "1.5px solid #1e3a5f", padding: "4px 5px", textAlign: "center", backgroundColor: "#dbeafe", fontSize: "12px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", color: "#1e3a5f" };
@@ -1119,8 +1128,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
 
   const handlePrint = () => {
     const content = document.getElementById("parat-print-content").innerHTML;
-    const css = PRINT_CSS.replace("A4 landscape", `${pageSize} ${orientation}`);
-    const html = `<!DOCTYPE html><html dir="rtl"><head><title></title><style>${css}</style></head><body><div class="print-page-wrap">${content}</div></body></html>`;
+    const css = PRINT_CSS.replace("A4 landscape", `${pageSize} landscape`);
+    const html = `<!DOCTYPE html><html dir="rtl"><head><title></title><style>${css}${bw ? BW_CSS : ""}</style></head><body><div class="print-page-wrap">${content}</div></body></html>`;
     openPrintWindow(html);
   };
 
@@ -1260,13 +1269,14 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
                 <option value="Letter">Letter</option>
               </select>
             </label>
-            <label className="flex items-center gap-1 text-[11px] text-slate-700 font-medium" dir="rtl">
-              رخ:
-              <select value={orientation} onChange={e => setOrientation(e.target.value)} className="border border-slate-300 rounded px-1.5 py-1 text-xs bg-white">
-                <option value="landscape">Landscape</option>
-                <option value="portrait">Portrait</option>
-              </select>
-            </label>
+            <button
+              onClick={() => setBw(v => !v)}
+              title={bw ? "Black & White — کلک کر کے رنگین کریں" : "رنگین پرنٹ — کلک کر کے Black & White کریں"}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${bw ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"}`}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              {bw ? "B&W" : "رنگین"}
+            </button>
             <label className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer" dir="rtl">
               <input type="checkbox" checked={printRowSr} onChange={e => setPrintRowSr(e.target.checked)} className="w-3 h-3" />
               قطار نمبرشمار
@@ -1280,7 +1290,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
           </div>
         </div>
 
-        <div id="parat-print-content" className="p-6 overflow-x-auto" style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+        {bw && <style>{BW_CSS}</style>}
+        <div id="parat-print-content" className={`p-6 overflow-x-auto ${bw ? "bw-mode" : ""}`} style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
           {/* Table — header line as <caption> so it spans the full table width; renders once */}
           <div className="parat-page">
             <table style={{ borderCollapse: "collapse", width: "100%", direction: "rtl" }}>
