@@ -242,17 +242,6 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
           {selectedObj.type === "chakbandi" && (
             <>
               <Separator className="bg-slate-100" />
-              <Field label="Chakbandi Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Chakbandi Boundary 1" />
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Moga Number <span className="text-green-500">★</span></label>
-                <Input
-                  value={local.mogaNumber || ""}
-                  onChange={e => commit("mogaNumber", e.target.value)}
-                  placeholder="e.g. 1, 2, 3…"
-                  className="h-7 text-xs bg-green-50 border-green-200 text-green-800 placeholder:text-green-300 focus:border-green-500 font-mono"
-                />
-                <p className="text-[9px] text-green-500 mt-0.5">Assign a Moga # to filter/print this boundary separately</p>
-              </div>
               <div className="p-2 bg-green-50 border border-green-200 rounded-lg space-y-2">
                 <div className="flex items-center gap-1">
                   <Calculator className="w-3 h-3 text-green-600" />

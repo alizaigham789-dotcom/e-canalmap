@@ -1486,8 +1486,19 @@ export default function Editor() {
         {/* Properties Panel — at the corner of the selected parcel, or right-side for other objects */}
         {selectedObj && (() => {
           const isParcel = ["mustateel", "muraba", "acre"].includes(selectedObj.type);
-          if (isParcel) {
-            const cs = worldToScreen(selectedObj.x, selectedObj.y, pan.x, pan.y, zoom);
+          const isLineAnchored = ["chakbandi", "canal"].includes(selectedObj.type);
+          if (isParcel || isLineAnchored) {
+            // For line objects (chakbandi/canal), anchor the panel at the last drawn
+            // point so the properties popup appears right where drawing ended.
+            let ax, ay;
+            if (isLineAnchored) {
+              const pts = selectedObj.points || [];
+              const anchor = pts.length > 0 ? pts[pts.length - 1] : { x: 0, y: 0 };
+              ax = anchor.x; ay = anchor.y;
+            } else {
+              ax = selectedObj.x; ay = selectedObj.y;
+            }
+            const cs = worldToScreen(ax, ay, pan.x, pan.y, zoom);
             const containerW = canvasRef.current?.getCanvas?.()?.clientWidth || 800;
             const left = Math.max(4, Math.min(cs.x, containerW - 232));
             return (
