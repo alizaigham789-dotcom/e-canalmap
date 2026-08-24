@@ -96,7 +96,7 @@ const MODULES = [
     path: "/parat-warabandi",
     bg: "from-[#11b98a] to-[#06d69a]",
     shadow: "shadow-emerald-400/40",
-    locked: true,
+    locked: false,
   },
   {
     id: "canal-patwari",
