@@ -150,7 +150,7 @@ const PRINT_CSS = `
 
 const BW_CSS = `
   .bw-mode caption { color:#000 !important; background:transparent !important; }
-  .bw-mode th { background:#000 !important; color:#fff !important; border-color:#000 !important; }
+  .bw-mode th { background:#fff !important; color:#000 !important; border-color:#000 !important; }
   .bw-mode td { background:#fff !important; color:#000 !important; border-color:#000 !important; }
   .bw-mode .total-row td { background:#fff !important; color:#000 !important; font-weight:bold !important; }
   .bw-mode .frac .num { border-bottom-color:#000 !important; }
