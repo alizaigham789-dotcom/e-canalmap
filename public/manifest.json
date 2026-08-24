@@ -1,17 +1,24 @@
 {
   "name": "E-Canal Patwari",
-  "short_name": "E-Canal Patwari",
-  "description": "E-Canal Patwari — precision cadastral mapping and land management",
-  "start_url": "/",
+  "short_name": "E-Canal",
+  "description": "Irrigation & Canal System — GIS land records and Warabandi",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0a0f1a",
-  "theme_color": "#0a0f1a",
   "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "https://base44.com/logo_v2.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/8253b208e_generated_image.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/8253b208e_generated_image.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
