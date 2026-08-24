@@ -175,7 +175,7 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
     for (const o of objects) {
       if (o.type !== "chakbandi" || !o.points || o.points.length < 2) continue;
       const near = nearestPointOnPolyline(wx, wy, o.points);
-      if (!near || near.dist >= threshold * 4) continue;
+      if (!near || near.dist >= threshold * 10) continue;
       const a = o.points[near.segIdx], b = o.points[near.segIdx + 1];
       const dx = b.x - a.x, dy = b.y - a.y;
       const len = Math.hypot(dx, dy) || 1;
@@ -208,14 +208,24 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
     }
   }
 
-  // Canal edge snap for chakbandi — snap the chakbandi endpoint to the canal's near
-  // edge (centerline offset by half-width toward the cursor) so the joint sits exactly
-  // on the canal boundary: no overlap, no gap — a clean hook connection.
+  // Canal edge snap for chakbandi — MAGNETIC: snap the chakbandi endpoint to the
+  // canal's near edge (centerline offset by half-width toward the cursor) so the
+  // joint sits exactly on the canal boundary — no overlap, no gap, a clean hook
+  // connection. Wide magnetic range makes the endpoint jump to the canal edge from
+  // a comfortable distance, and canal endpoints (start/end) get the strongest pull.
   if (activeTool === "chakbandi" && spineSnap) {
+    const canalMagnetRange = threshold * 10;
     for (const o of objects) {
       if (o.type !== "canal" || !o.points || o.points.length < 2) continue;
+      // Canal endpoints (start/end) — strongest magnetic pull, connect seamlessly
+      const endpoints = [o.points[0], o.points[o.points.length - 1]];
+      for (const ep of endpoints) {
+        const d = Math.hypot(wx - ep.x, wy - ep.y);
+        if (d < canalMagnetRange && d < bestDist) { bestX = ep.x; bestY = ep.y; bestDist = d; }
+      }
+      // Canal near edge — offset centerline by half-width toward the cursor
       const near = nearestPointOnPolyline(wx, wy, o.points);
-      if (!near || near.dist >= threshold * 4) continue;
+      if (!near || near.dist >= canalMagnetRange) continue;
       const a = o.points[near.segIdx], b = o.points[near.segIdx + 1];
       const dx = b.x - a.x, dy = b.y - a.y;
       const len = Math.hypot(dx, dy) || 1;
@@ -230,13 +240,17 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
   }
 
   // Parcel boundary snap for chakbandi/mouza/khal — follows killa & mustateel boundaries,
-  // but allows passing through killa centers when not near any boundary
+  // but allows passing through killa centers when not near any boundary.
+  // Canal-edge snap takes PRIORITY (magnetic) — when a chakbandi endpoint is within the
+  // canal's magnetic range, it locks onto the canal edge instead of a parcel boundary line.
   if (["chakbandi", "mouza", "khal"].includes(activeTool)) {
+    const canalEdgeDist = Math.hypot(wx - bestX, wy - bestY);
+    if (activeTool === "chakbandi" && canalEdgeDist < threshold * 10) {
+      return { x: bestX, y: bestY };
+    }
     const snap = snapToParcelBoundaries(wx, wy, objects, threshold * 2);
-    // Pick the closer of canal-edge snap vs parcel-boundary snap
-    const dCanal = Math.hypot(wx - bestX, wy - bestY);
     const dParcel = Math.hypot(wx - snap.x, wy - snap.y);
-    return dCanal < dParcel ? { x: bestX, y: bestY } : snap;
+    return canalEdgeDist < dParcel ? { x: bestX, y: bestY } : snap;
   }
 
   return { x: bestX, y: bestY };
