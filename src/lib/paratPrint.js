@@ -210,13 +210,11 @@ export function buildParatRecordHTML(record, opts = {}) {
       <tbody>${dataRows}${totalRow}</tbody>
     </table>
   </div>
-  <div class="sig-page">
-    <div class="notes-block">
-      <div style="font-size:16px;font-weight:bold;font-family:'Noto Nastaliq Urdu',serif;margin-bottom:8px">جناب عالیٰ</div>
-      <div style="font-size:14px;line-height:2.2;font-family:'Noto Nastaliq Urdu',serif">${notesHtml}</div>
-    </div>
-    ${signaturesHtml}
-  </div>`;
+  <div class="notes-block">
+    <div style="font-size:16px;font-weight:bold;font-family:'Noto Nastaliq Urdu',serif;margin-bottom:8px">جناب عالیٰ</div>
+    <div style="font-size:14px;line-height:2.2;font-family:'Noto Nastaliq Urdu',serif">${notesHtml}</div>
+  </div>
+  ${signaturesHtml}`;
 }
 
 export function buildBatchHTML(records, opts = {}) {
@@ -228,13 +226,11 @@ export function buildPrintCSS(opts = {}) {
   const orientation = opts.orientation || "landscape";
   return `
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-    @page { size: ${pageSize} ${orientation}; margin: 0 0 10mm 0; @bottom-right { content: counter(page); font-family: sans-serif; font-size: 9px; color: #555; } }
+    @page { size: ${pageSize} ${orientation}; margin: 10mm 10mm 12mm 10mm; @bottom-right { content: counter(page); font-family: sans-serif; font-size: 9px; color: #555; padding: 0 6mm 4mm 0; } }
     body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; }
     .print-date { position: fixed; top: 2mm; left: 6mm; font-size: 9px; color: #555; font-family: sans-serif; z-index: 100; }
-    .parat-page { padding: 14mm 10mm 6mm; box-sizing: border-box; }
-    .sig-page { padding: 14mm 10mm 6mm; min-height: calc(100vh - 10mm); box-sizing: border-box; display: flex; flex-direction: column; page-break-before: always; page-break-after: always; }
-    .sig-page:last-child { page-break-after: auto; }
-    .notes-block { direction: rtl; }
+    .parat-page { box-sizing: border-box; }
+    .notes-block { direction: rtl; margin-top: 1em; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
     th { font-weight: bold; }
@@ -242,7 +238,8 @@ export function buildPrintCSS(opts = {}) {
     tr { page-break-inside: avoid; }
     .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 7px; }
     .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
-    .signatures { display:flex; justify-content:space-between; margin-top: auto; padding-top: 60px; page-break-inside: avoid; break-inside: avoid; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
+    .signatures { display:flex; justify-content:space-between; margin-top: 3em; page-break-inside: avoid; break-inside: avoid; page-break-after: always; font-size: 12px; font-family: 'Noto Nastaliq Urdu', serif; }
+    .signatures:last-child { page-break-after: auto; }
     .sig-item { text-align:center; border-top:1px solid #333; padding-top:4px; width:200px; white-space:nowrap; }
   `;
 }

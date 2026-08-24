@@ -129,13 +129,12 @@ const COL_LETTERS = ["ا","ب","ج","د","ہ","و","ز","ح","ط","ی","ک","ل"
 
 const PRINT_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-  @page { size: A4 landscape; margin: 0 0 10mm 0; @bottom-right { content: counter(page); font-family: sans-serif; font-size: 9px; color: #555; } }
+  @page { size: A4 landscape; margin: 10mm 10mm 12mm 10mm; @bottom-right { content: counter(page); font-family: sans-serif; font-size: 9px; color: #555; padding: 0 6mm 4mm 0; } }
   body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; }
   .print-date { position: fixed; top: 2mm; left: 6mm; font-size: 9px; color: #555; font-family: sans-serif; z-index: 100; }
   .print-page-wrap { box-sizing: border-box; }
-  .parat-page { padding: 14mm 10mm 6mm; box-sizing: border-box; }
-  .sig-page { padding: 14mm 10mm 6mm; min-height: calc(100vh - 10mm) !important; box-sizing: border-box; display: flex; flex-direction: column; page-break-before: always; }
-  .notes-block { direction: rtl; }
+  .parat-page { box-sizing: border-box; }
+  .notes-block { direction: rtl; margin-top: 1em; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
   th { font-weight: bold; }
@@ -145,7 +144,7 @@ const PRINT_CSS = `
   .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
   .tashreeh-table th { font-size: 7px; padding: 2px; }
   .tashreeh-table td { font-size: 7px; padding: 2px; }
-  .signatures { margin-top: auto !important; padding-top: 60px; page-break-inside: avoid; break-inside: avoid; }
+  .signatures { margin-top: 3em !important; page-break-inside: avoid; break-inside: avoid; }
 `;
 
 function fracHtml(val) {
@@ -1301,23 +1300,21 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
             </table>
           </div>
 
-          {/* جناب عالیٰ + Notes + Signatures on a dedicated bottom-pinned page */}
-          <div className="sig-page" style={{ display: "flex", flexDirection: "column", minHeight: "70vh" }}>
-            <div className="notes-block" style={{ direction: "rtl" }}>
-              <div style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
-              <div style={{ fontSize: "14px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-                {notes.filter(n => n.trim()).map((note, i) => (
-                  <div key={i} style={{ marginBottom: "2px" }}>{i + 1}- {note}</div>
-                ))}
-              </div>
+          {/* جناب عالیٰ + Notes — right after the table, one line gap */}
+          <div className="notes-block" style={{ direction: "rtl", marginTop: "1em" }}>
+            <div style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
+            <div style={{ fontSize: "14px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+              {notes.filter(n => n.trim()).map((note, i) => (
+                <div key={i} style={{ marginBottom: "2px" }}>{i + 1}- {note}</div>
+              ))}
             </div>
+          </div>
 
-            {/* Signatures */}
-            <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "auto", paddingTop: "60px", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-              <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط نہری پٹواری</div>
-              <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط ضلعدار</div>
-              <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط سب ڈویژنل کینال آفیسر</div>
-            </div>
+          {/* Signatures */}
+          <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "3em", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط نہری پٹواری</div>
+            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط ضلعدار</div>
+            <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط سب ڈویژنل کینال آفیسر</div>
           </div>
         </div>
       </div>
