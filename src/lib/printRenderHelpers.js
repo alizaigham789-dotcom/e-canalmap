@@ -4,7 +4,7 @@
 // and canal name text-on-path — used by PrintPreview & ExportDialog
 // ============================================================
 
-import { getParallelPolyline, DIMENSIONS, acresToAcreKanalText, getMustateeelKillaGrid } from "@/lib/gisEngine";
+import { getParallelPolyline, DIMENSIONS, getMustateeelKillaGrid } from "@/lib/gisEngine";
 
 // Detect Urdu/Arabic script — switches canal name rendering to a connected
 // RTL label in Jameel Noori Nastaleeq (char-by-char on-path breaks the joins).
@@ -479,7 +479,8 @@ export function getCCAGCAText(chakbandi, gcaValue) {
     }
     return { cca: "", gca: chakbandi.centerLabel };
   }
-  const gcaText = acresToAcreKanalText(gcaValue || 0);
+  // Plain acre number only — no "ایکڑ" (Acre) word next to the number.
+  const gcaText = String(Math.round((gcaValue || 0) * 100) / 100);
   // Default: CCA = GCA so the fraction (CCA/GCA) appears as soon as the
   // chakbandi is completed, matching the editor display.
   if (gcaValue > 0) return { cca: gcaText, gca: gcaText };

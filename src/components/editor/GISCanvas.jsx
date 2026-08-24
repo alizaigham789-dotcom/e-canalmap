@@ -642,7 +642,9 @@ const GISCanvas = forwardRef(function GISCanvas(
               const near = nearestPointOnPolyline(p.x, p.y, origCanalPts);
               if (near && near.dist <= hookThreshold) {
                 anyHooked = true;
-                return { x: p.x + dx, y: p.y + dy };
+                // Snap the moved endpoint to the acre grid so chakbandi lines
+                // follow gridlines (up/down/left/right) instead of moving diagonally.
+                return snapToAcreGrid(p.x + dx, p.y + dy);
               }
               return p;
             });
