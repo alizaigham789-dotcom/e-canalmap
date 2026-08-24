@@ -1,8 +1,8 @@
 // E-Canal Patwari service worker
-// Network-first for navigations so installed users always get the latest
-// index.html (and therefore the latest hashed JS bundle). Cache-first for
-// static assets with background refresh. Auto-activates without waiting.
-const CACHE = 'ecanal-app-v1';
+// Network-first for ALL GET requests so every user (new and existing)
+// always gets the latest deployed version. Cache is only a fallback for
+// offline use. Old caches are wiped on activation.
+const CACHE = 'ecanal-app-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -24,34 +24,23 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  // Navigation (HTML) requests — always try the network first.
-  if (req.mode === 'navigate') {
-    event.respondWith((async () => {
-      try {
-        const fresh = await fetch(req);
-        const cache = await caches.open(CACHE);
-        cache.put(req, fresh.clone());
-        return fresh;
-      } catch (err) {
-        const cache = await caches.open(CACHE);
-        const cached = await cache.match(req) || await cache.match('/');
-        if (cached) return cached;
-        return Response.error();
-      }
-    })());
-    return;
-  }
-
-  // Other GET requests — cache-first, refresh in background.
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
-    const cached = await cache.match(req);
-    const network = fetch(req).then((res) => {
-      if (res && res.status === 200 && res.type === 'basic') {
-        cache.put(req, res.clone());
+    try {
+      const fresh = await fetch(req);
+      if (fresh && fresh.status === 200 && (fresh.type === 'basic' || fresh.type === 'default' || fresh.type === 'cors')) {
+        cache.put(req, fresh.clone());
       }
-      return res;
-    }).catch(() => cached);
-    return cached || network;
+      return fresh;
+    } catch (err) {
+      const cached = await cache.match(req);
+      if (cached) return cached;
+      // For navigations, fall back to cached root if available.
+      if (req.mode === 'navigate') {
+        const root = await cache.match('/');
+        if (root) return root;
+      }
+      return Response.error();
+    }
   })());
 });
