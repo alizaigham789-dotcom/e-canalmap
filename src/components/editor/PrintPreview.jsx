@@ -22,6 +22,16 @@ const PENCIL_COLORS = {
   labelColor: "#000000",
 };
 
+// Khaka Dasti (hand-drawn sketch) — faint lead-pencil palette. Drawn mustateel
+// boundaries + labels stay dark pencil; the internal killa grid is dim grey so the
+// whole page reads like a light pencil sketch (not heavily highlighted).
+const KHAKA_DASTI_COLORS = {
+  mustateelStroke: "#3a3a3a",
+  murabaStroke: "#3a3a3a",
+  gridStroke: "rgba(110,110,110,0.40)",
+  labelColor: "#2a2a2a",
+};
+
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
 function getObjectsBounds(objects) {
@@ -477,9 +487,35 @@ function svgMouza(obj, C, idx) {
 }
 
 // ─── MAIN SVG GENERATOR ───────────────────────────────────────────────────────
-function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, mogaScale = 1) {
+function buildBackgroundGridSVG(viewX, viewY, viewW, viewH) {
+  const acreW = DIMENSIONS.ACRE.width, acreH = DIMENSIONS.ACRE.height;
+  const mustW = DIMENSIONS.MUSTATEEL.width, mustH = DIMENSIONS.MUSTATEEL.height;
+  const endX = viewX + viewW, endY = viewY + viewH;
+  const killaColor = "rgba(130,130,130,0.28)";
+  const mustColor = "rgba(80,80,80,0.42)";
+  let lines = "";
+  // Killa (acre) grid — thin faint pencil
+  for (let x = Math.floor(viewX / acreW) * acreW; x <= endX; x += acreW) {
+    lines += `<line x1="${x}" y1="${viewY}" x2="${x}" y2="${endY}" stroke="${killaColor}" stroke-width="0.4"/>`;
+  }
+  for (let y = Math.floor(viewY / acreH) * acreH; y <= endY; y += acreH) {
+    lines += `<line x1="${viewX}" y1="${y}" x2="${endX}" y2="${y}" stroke="${killaColor}" stroke-width="0.4"/>`;
+  }
+  // Mustateel grid — thicker (still faint pencil) so it reads above the killa grid
+  for (let x = Math.floor(viewX / mustW) * mustW; x <= endX; x += mustW) {
+    lines += `<line x1="${x}" y1="${viewY}" x2="${x}" y2="${endY}" stroke="${mustColor}" stroke-width="1.0"/>`;
+  }
+  for (let y = Math.floor(viewY / mustH) * mustH; y <= endY; y += mustH) {
+    lines += `<line x1="${viewX}" y1="${y}" x2="${endX}" y2="${y}" stroke="${mustColor}" stroke-width="1.0"/>`;
+  }
+  return lines;
+}
+
+function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, mogaScale = 1, khakaDasti = false) {
   const C = colorSettings || {};
-  const bounds = getObjectsBounds(objects);
+  // Khaka Dasti — only drawn parcels (mustateel/muraba) render on a full-page grid
+  const baseObjects = khakaDasti ? objects.filter(o => o.type === "mustateel" || o.type === "muraba") : objects;
+  const bounds = getObjectsBounds(baseObjects);
   if (!bounds) return null;
 
   const pad = 20;
@@ -494,18 +530,19 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
 
   // Filter objects by moga if needed
   const filtered = filterMoga
-    ? objects.filter(o => {
+    ? baseObjects.filter(o => {
         if (o.type === "chakbandi") return o.mogaNumber === filterMoga;
         if (o.type === "mustateel") return o.mogaNumber === filterMoga || !o.mogaNumber;
         return true;
       })
-    : objects;
+    : baseObjects;
 
   const sorted = [...filtered].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
   const mouzaObjects = objects.filter(o => o.type === "mouza");
   const allOutlets = objects.filter(o => o.type === "outlet");
 
   let svgParts = [];
+  if (khakaDasti) svgParts.push(buildBackgroundGridSVG(viewX, viewY, viewW, viewH));
   sorted.forEach((obj, idx) => {
     switch (obj.type) {
       case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null), showAcreLabels)); break;
@@ -555,6 +592,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [mogaFilter, setMogaFilter] = useState(selectedMogaFilter || "");
   const [bwMode, setBwMode] = useState(false);
   const [pencilMode, setPencilMode] = useState(false);
+  const [khakaDastiMode, setKhakaDastiMode] = useState(false);
   const [pageOrientation, setPageOrientation] = useState("portrait");
   const [pageSize, setPageSize] = useState("A4");
   const [printMargin, setPrintMargin] = useState(1.0); // side margin in cm (0.5–2.0)
@@ -598,6 +636,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   // In B&W mode, override all colors to black/grey; pencil mode uses dim grey + red mouza
   const effectiveColors = useMemo(() => {
+    if (khakaDastiMode) return { ...(colorSettings || {}), ...KHAKA_DASTI_COLORS };
     if (bwMode) {
       return {
         mustateelStroke: "#000000", mustateelFill: "none",
@@ -614,11 +653,11 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     }
     if (pencilMode) return { ...(colorSettings || {}), ...PENCIL_COLORS };
     return colorSettings || {};
-  }, [bwMode, pencilMode, colorSettings]);
+  }, [bwMode, pencilMode, khakaDastiMode, colorSettings]);
 
   const svgData = useMemo(
-    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 0.5),
-    [objects, effectiveColors, mogaFilter, killaVisibility]
+    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 0.5, khakaDastiMode),
+    [objects, effectiveColors, mogaFilter, killaVisibility, khakaDastiMode]
   );
 
   // Per-acre land-uses actually shown (respecting the moga filter) — for the legend
@@ -634,8 +673,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   // Full-scale SVG for actual print / SVG download — moga at 100%
   const printSvgData = useMemo(
-    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 1),
-    [objects, effectiveColors, mogaFilter, killaVisibility]
+    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 1, khakaDastiMode),
+    [objects, effectiveColors, mogaFilter, killaVisibility, khakaDastiMode]
   );
 
   // Convert screen coordinates to SVG world coordinates (must be after svgData)
@@ -684,15 +723,15 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   // CCA/GCA fraction labels for SVG preview/export
   const gcaSvgLabels = useMemo(() => {
-    if (!gcaData.results.length) return "";
+    if (khakaDastiMode || !gcaData.results.length) return "";
     const ch = effectiveColors.chakbandiStroke || "#166534";
     const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
     return gcaData.results.map(({ x, y, cca, gca }) =>
       svgCCAGCAFractionBox(cca, gca, x, y, lblFont, "rgba(255,255,255,0.94)", ch)
     ).join("");
-  }, [gcaData, effectiveColors]);
+  }, [gcaData, effectiveColors, khakaDastiMode]);
 
-  const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses) : "";
+  const legendSVG = (showLegendInPrint && !khakaDastiMode) ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses) : "";
 
   const svgString = printSvgData
     ? `<?xml version="1.0" encoding="UTF-8"?>
@@ -728,15 +767,17 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     const chakbandis = objects.filter(o => o.type === "chakbandi");
     const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
     let gcaLabels = "";
-    for (const ch of chakbandis) {
-      if (ch.points?.length >= 3) {
-        const gca = calculateChakbandiGCA(ch, parcels, canals);
-        if (gca > 0 || ch.centerLabel) {
-          const lp = getChakbandiLabelPos(ch);
-          if (!lp) continue;
-          const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
-          if (cca || gcaTxt) {
-            gcaLabels += svgCCAGCAFractionBox(cca, gcaTxt, lp.x, lp.y, lblFont, "rgba(255,255,255,0.94)", effectiveColors.chakbandiStroke || "#166534");
+    if (!khakaDastiMode) {
+      for (const ch of chakbandis) {
+        if (ch.points?.length >= 3) {
+          const gca = calculateChakbandiGCA(ch, parcels, canals);
+          if (gca > 0 || ch.centerLabel) {
+            const lp = getChakbandiLabelPos(ch);
+            if (!lp) continue;
+            const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
+            if (cca || gcaTxt) {
+              gcaLabels += svgCCAGCAFractionBox(cca, gcaTxt, lp.x, lp.y, lblFont, "rgba(255,255,255,0.94)", effectiveColors.chakbandiStroke || "#166534");
+            }
           }
         }
       }
@@ -744,7 +785,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
     const win = window.open("", "_blank");
     if (!win) { return; }
-    const printLegendSVG = showLegendInPrint ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses) : "";
+    const printLegendSVG = (showLegendInPrint && !khakaDastiMode) ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses) : "";
     win.document.write(`<!DOCTYPE html><html><head>
       <title>Khaka Dasti</title>
       <style>
@@ -869,6 +910,14 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               title="Lead Pencil Mode — dim grey lines, red mouza"
             >
               ✏️ پنسل
+            </button>
+            {/* Khaka Dasti — hand-drawn pencil sketch: only drawn mustateels + faint full-page grid */}
+            <button
+              onClick={() => setKhakaDastiMode(v => !v)}
+              className={`h-8 px-3 rounded-md text-xs font-bold border transition-all ${khakaDastiMode ? "bg-stone-700 text-white border-stone-700" : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"}`}
+              title="Khaka Dasti — hand-drawn pencil sketch with full-page grid"
+            >
+              ✏️ خاکہ دستی
             </button>
             {/* SVG Download */}
             <Button size="sm" variant="outline"

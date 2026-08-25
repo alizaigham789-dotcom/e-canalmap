@@ -580,7 +580,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       setBoxSelectDraft({ x1: boxSelectStart.current.x, y1: boxSelectStart.current.y, x2: worldRaw.x, y2: worldRaw.y });
       return;
     }
-    if (isMoving.current && movingObjId.current && (activeTool === "move" || activeTool === "select")) {
+    if (isMoving.current && movingObjId.current && (activeTool === "canalMove" || activeTool === "move")) {
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
@@ -779,6 +779,18 @@ const GISCanvas = forwardRef(function GISCanvas(
         movingObjOrigStartEnd.current = { start: { ...hit.start }, end: { ...hit.end } };
         onSelect(hit.id);
       }
+    } else if (activeTool === "canalMove") {
+      // Canal Move tool — drag only canals (attached chakbandi endpoints + mogas follow)
+      const hit = hitTest(worldRaw.x, worldRaw.y, objects);
+      if (hit && hit.type === "canal" && hit.points) {
+        isMoving.current = true; movingObjId.current = hit.id;
+        moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
+        movingObjOrigPoints.current = hit.points.map(p => ({ ...p }));
+        captureAttachedOriginals(objects);
+        onSelect(hit.id);
+      } else {
+        onSelect(hit ? hit.id : null);
+      }
     } else if (activeTool === "acre") onAddObject("acre", snapped);
     else if (activeTool === "mustateel") onAddObject("mustateel", snapped);
     else if (activeTool === "muraba") onAddObject("muraba", snapped);
@@ -847,74 +859,21 @@ const GISCanvas = forwardRef(function GISCanvas(
           return;
         }
       }
-      // On touch, keep the long-press-to-move pattern (no move on tap-drag);
-      // on mouse, click-drag moves the object (select + move merged into one tool).
+      // Select tool = selection + vertex/node editing only. Whole-object moving is
+      // done with the Canal Move tool. (Touch: tap to select; mouse: click to select.)
       if (isTouchRef.current) {
         const hit = hitTest(worldRaw.x, worldRaw.y, objects);
         if (hit?.type === "damageMarker" && onDamageMarkerClick) onDamageMarkerClick(hit);
         onSelect(hit ? hit.id : null);
       } else {
-        // 2. Outlet moga label box drag
-        for (const o of objects) {
-          if (o.type === "outlet" && (o.mogha_number || o.mogha_side)) {
-            const lp = getOutletLabelPos(o);
-            const _halfDiag = Math.max(DIMENSIONS.ACRE.width, DIMENSIONS.ACRE.height / 2);
-            if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _halfDiag) {
-              isMoving.current = true; movingObjId.current = o.id;
-              movingLabelType.current = "outlet";
-              moveOffset.current = { x: worldRaw.x - lp.x, y: worldRaw.y - lp.y };
-              onSelect(o.id);
-              return;
-            }
-          }
-        }
-        // 4. Hit test → select + start a move drag (merged select/move tool)
+        // Select tool — selection only (no whole-object move). Use Canal Move tool to move.
         const hit = hitTest(worldRaw.x, worldRaw.y, objects);
         if (hit?.type === "damageMarker" && onDamageMarkerClick) {
           onDamageMarkerClick(hit);
           onSelect(hit.id);
           return;
         }
-        if (hit && hit.mogaGroup) {
-          const groupObjs = objects.filter(o => o.mogaGroup === hit.mogaGroup);
-          movingGroupRef.current = {
-            groupId: hit.mogaGroup,
-            originals: groupObjs.map(o => ({
-              id: o.id, x: o.x, y: o.y,
-              points: o.points ? o.points.map(p => ({ x: p.x, y: p.y })) : null,
-              start: o.start ? { x: o.start.x, y: o.start.y } : null,
-              end: o.end ? { x: o.end.x, y: o.end.y } : null,
-            })),
-          };
-          isMoving.current = true; movingObjId.current = hit.id;
-          moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
-          movingObjOrigPoints.current = null; movingObjOrigStartEnd.current = null;
-          onSelect(hit.id);
-          return;
-        }
-        if (hit && ["mustateel", "muraba"].includes(hit.type)) {
-          isMoving.current = true; movingObjId.current = hit.id;
-          moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
-          movingObjOrigPoints.current = null;
-          onSelect(hit.id);
-        } else if (hit && ["canal", "khal", "road", "bridge", "mouza"].includes(hit.type) && hit.points) {
-          isMoving.current = true; movingObjId.current = hit.id;
-          moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
-          movingObjOrigPoints.current = hit.points.map(p => ({ ...p }));
-          if (hit.type === "canal") captureAttachedOriginals(objects);
-          onSelect(hit.id);
-        } else if (hit && hit.type === "chakbandi" && hit.points) {
-          // Chakbandi: select only — no whole-line move. Drag nodes individually.
-          onSelect(hit.id);
-        } else if (hit && hit.type === "outlet" && hit.start && hit.end) {
-          isMoving.current = true; movingObjId.current = hit.id;
-          moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
-          movingObjOrigPoints.current = null;
-          movingObjOrigStartEnd.current = { start: { ...hit.start }, end: { ...hit.end } };
-          onSelect(hit.id);
-        } else {
-          onSelect(hit ? hit.id : null);
-        }
+        onSelect(hit ? hit.id : null);
       }
     } else if (activeTool === "eraser") {
       const hit = hitTest(worldRaw.x, worldRaw.y, objects, true); // true = eraser mode (boundary-aware)
@@ -1086,7 +1045,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     }
     lastTapRef.current = { time: now, x: touch.clientX, y: touch.clientY };
     touchMoved.current = false;
-    if (activeTool === "select" || activeTool === "move") {
+    if (activeTool === "move") {
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const worldRaw = screenToWorld(touch.clientX - rect.left, touch.clientY - rect.top, pan.x, pan.y, zoom);
