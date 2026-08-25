@@ -251,24 +251,59 @@ function svgAcre(obj, C, idx) {
 
 function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   if (!obj.points || obj.points.length < 2) return "";
-  const useKhakaDasti = obj.chakbandiStyle === "khakaDasti" || khakaDasti;
+  const style = khakaDasti ? "khakaDasti" : (obj.chakbandiStyle || "cross");
   const pts = obj.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const label = obj.name || "";
   const midPt = obj.points[Math.floor(obj.points.length/2)];
+  const mustW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5);
+  const lineColor = style === "khakaDasti" ? "#22c55e" : (C.chakbandiStroke || "#22c55e");
+  const labelSvg = label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${lineColor}">${label}</text>` : "";
 
-  // Khaka Dasti line — simple green line centered on the mustateel border,
-  // thinner than the mustateel boundary so the red mustateel border peeks out
-  // on both sides. Used when the chakbandi's category is "khakaDasti" OR print
-  // خاکہ دستی mode is on.
-  if (useKhakaDasti) {
-    const kdColor = "#16a34a";
-    const kdLineW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5) * 0.5;
+  // 5 professional line styles. Khaka Dasti = solid green line at mustateel-border
+  // width (forced on by the Print خاکہ دستی toggle). Cross keeps the user's colour.
+  if (style === "khakaDasti") {
     return `<g>
-  <polyline points="${pts}" fill="none" stroke="${kdColor}" stroke-width="${kdLineW}" stroke-linecap="round" stroke-linejoin="miter"/>
-  ${label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${kdColor}">${label}</text>` : ""}
+  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${mustW}" stroke-linecap="round" stroke-linejoin="miter"/>
+  ${labelSvg}
+</g>`;
+  }
+  if (style === "dashed") {
+    return `<g>
+  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${mustW}" stroke-dasharray="${(mustW*2.2).toFixed(1)},${(mustW*1.4).toFixed(1)}" stroke-linecap="butt" stroke-linejoin="miter"/>
+  ${labelSvg}
+</g>`;
+  }
+  if (style === "dotted") {
+    return `<g>
+  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${mustW}" stroke-dasharray="${Math.max(2,mustW*0.5).toFixed(1)},${(mustW*1.2).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>
+  ${labelSvg}
+</g>`;
+  }
+  if (style === "stitched") {
+    const spineW = Math.max(2, mustW * 0.5);
+    const tickLen = mustW * 1.1;
+    const tickSpacing = Math.max(20, mustW * 2.5);
+    let ticks = "";
+    for (let i = 0; i < obj.points.length - 1; i++) {
+      const a = obj.points[i], b = obj.points[i+1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const ang = Math.atan2(b.y - a.y, b.x - a.x);
+      const nx = -Math.sin(ang), ny = Math.cos(ang);
+      const steps = Math.max(1, Math.floor(segLen / tickSpacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+        ticks += `<line x1="${(cx - nx*tickLen).toFixed(1)}" y1="${(cy - ny*tickLen).toFixed(1)}" x2="${(cx + nx*tickLen).toFixed(1)}" y2="${(cy + ny*tickLen).toFixed(1)}" stroke="${lineColor}" stroke-width="${Math.max(1.5, spineW*0.7).toFixed(1)}" stroke-linecap="round"/>`;
+      }
+    }
+    return `<g>
+  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${spineW}" stroke-linecap="round" stroke-linejoin="miter"/>
+  ${ticks}
+  ${labelSvg}
 </g>`;
   }
 
+  // Default: Cross (×) pattern — keeps the user's chakbandi colour + thickness
   const color = C.chakbandiStroke || "#000000";
   const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness);
   const crossW = lineW * 0.6;

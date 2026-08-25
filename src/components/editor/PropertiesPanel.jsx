@@ -243,12 +243,23 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
             <>
               <Separator className="bg-slate-100" />
               <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Line Category</label>
-                <div className="flex gap-1">
-                  <button onClick={() => commit("chakbandiStyle", "cross")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${(local.chakbandiStyle || "cross") !== "khakaDasti" ? "bg-green-600 text-white border-green-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-green-300"}`}>Cross Pattern</button>
-                  <button onClick={() => commit("chakbandiStyle", "khakaDasti")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${local.chakbandiStyle === "khakaDasti" ? "bg-green-600 text-white border-green-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-green-300"}`} style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>خاکہ دستی Line</button>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Line Style</label>
+                <div className="grid grid-cols-2 gap-1">
+                  {[
+                    { key: "cross", label: "Cross ×" },
+                    { key: "dashed", label: "Dashed" },
+                    { key: "stitched", label: "Stitched" },
+                    { key: "dotted", label: "Dotted" },
+                    { key: "khakaDasti", label: "خاکہ دستی", urdu: true },
+                  ].map(opt => (
+                    <button key={opt.key} onClick={() => commit("chakbandiStyle", opt.key)}
+                      className={`px-2 py-1 text-[10px] rounded border font-medium transition-colors ${(local.chakbandiStyle || "cross") === opt.key ? "bg-green-600 text-white border-green-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-green-300"}`}
+                      style={opt.urdu ? { fontFamily: "'Noto Nastaliq Urdu', sans-serif" } : undefined}>
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
-                {local.chakbandiStyle === "khakaDasti" && <p className="text-[9px] text-green-600 mt-1">Simple green line on the mustateel border — mustateel border peeks both sides. Auto-used in Print خاکہ دستی mode.</p>}
+                {local.chakbandiStyle === "khakaDasti" && <p className="text-[9px] text-green-600 mt-1">Solid green line (mustateel-width). Auto-used in Print خاکہ دستی mode.</p>}
               </div>
               <div className="p-2 bg-green-50 border border-green-200 rounded-lg space-y-2">
                 <div className="flex items-center gap-1">
@@ -330,7 +341,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                   );
                 })()}
               </div>
-              {local.chakbandiStyle !== "khakaDasti" && (
+              {local.chakbandiStyle === "cross" && (
                 <>
                   <SpacingControl label="Line Thickness" value={local.lineThickness || 6} min={1} max={10} step={1} onChange={v => commit("lineThickness", v)} />
                   <div className="flex items-center justify-between mt-2">
@@ -346,7 +357,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 </>
               )}
               <p className="text-[9px] text-slate-400">Sizes here apply identically in Print Preview & Export</p>
-              <div className="text-[10px] text-green-600 font-mono">{local.chakbandiStyle === "khakaDasti" ? "Khaka Dasti line" : (local.crossPattern ? "Cross pattern" : "Solid line")} • {selectedObj.points?.length || 0} points</div>
+              <div className="text-[10px] text-green-600 font-mono">{({cross:"Cross pattern",dashed:"Dashed",stitched:"Stitched",dotted:"Dotted",khakaDasti:"Khaka Dasti line"}[local.chakbandiStyle || "cross"])} • {selectedObj.points?.length || 0} points</div>
             </>
           )}
 

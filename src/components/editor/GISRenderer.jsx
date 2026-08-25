@@ -967,81 +967,97 @@ export function drawDamageMarker(ctx, obj, isSelected, zoom) {
 // ============================================================
 export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false, forceKhakaDasti = false) {
   if (obj.points.length < 2) return;
-  const useKhakaDasti = obj.chakbandiStyle === "khakaDasti" || forceKhakaDasti;
-  const color = useKhakaDasti ? "#16a34a" : (C.chakbandiStroke || "#22c55e");
+  const style = forceKhakaDasti ? "khakaDasti" : (obj.chakbandiStyle || "cross");
+  const mustBorderW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5) * 0.2;
+  const mustW = mustBorderW / zoom;
+  const lineColor = style === "khakaDasti" ? "#22c55e" : (C.chakbandiStroke || "#22c55e");
+  const color = isSelected ? "#86efac" : lineColor;
 
-  // Khaka Dasti line — a simple green line centered on the mustateel border,
-  // thinner than the mustateel boundary so the red mustateel border peeks out
-  // on both sides. Represents the chakbandi in the hand-drawn sketch style.
-  if (useKhakaDasti) {
-    const mustBorderW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5) * 0.2;
-    const kdLineW = mustBorderW * 0.5;
-    ctx.strokeStyle = isSelected ? "#86efac" : color;
-    ctx.lineWidth = (kdLineW + (isSelected ? 2 : 0)) / zoom;
-    ctx.lineCap = "round";
+  // 5 professional line styles. Khaka Dasti = solid green line at mustateel-border
+  // width (forced on by the Print خاکہ دستی toggle). Cross keeps the user's colour/thickness.
+  const drawSpine = (dash, cap = "round") => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = mustW;
+    ctx.lineCap = cap;
     ctx.lineJoin = "miter";
-    ctx.setLineDash([]);
+    ctx.setLineDash(dash || []);
     ctx.beginPath();
     ctx.moveTo(obj.points[0].x, obj.points[0].y);
     for (const p of obj.points) ctx.lineTo(p.x, p.y);
     ctx.stroke();
-    if (obj.name && zoom > 0.3) {
-      const mid = Math.floor(obj.points.length / 2);
-      const p = obj.points[mid], p2 = obj.points[Math.min(mid+1, obj.points.length-1)];
-      const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
-      ctx.save();
-      ctx.translate(p.x, p.y); ctx.rotate(angle);
-      ctx.fillStyle = color;
-      ctx.font = `bold ${scaledFont(11, zoom)}px Rajdhani, sans-serif`;
-      ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-      ctx.fillText(obj.name, 0, -6/zoom);
-      ctx.restore();
-    }
-    return;
-  }
+    ctx.setLineDash([]);
+  };
 
-  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness) * 0.2;
-  const crossSize = CHAKBANDI_SCALE.crossSize(obj.crossSize) * 0.2 / zoom;
-  const spacing = CHAKBANDI_SCALE.crossSpacing(obj.crossSpacing) / zoom;
-
-  // Always draw straight segments (no curves) — chakbandi is a hard boundary
-  // World-unit thickness, matches print/export exactly
-  ctx.strokeStyle = isSelected ? "#86efac" : color;
-  ctx.lineWidth = (lineW + (isSelected ? 3 : 0)) / zoom;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "miter";
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.moveTo(obj.points[0].x, obj.points[0].y);
-  for (const p of obj.points) ctx.lineTo(p.x, p.y);
-  ctx.stroke();
-
-  // X crosses along each segment — only when cross pattern is enabled (matches print)
-  if (obj.crossPattern !== false) {
-    ctx.strokeStyle = isSelected ? "#86efac" : color;
-    ctx.lineWidth = (lineW * 0.6 + (isSelected ? 2 : 0)) / zoom;
-    ctx.lineCap = "round";
+  if (style === "khakaDasti") {
+    drawSpine(null);
+  } else if (style === "dashed") {
+    drawSpine([mustW * 2.2, mustW * 1.4], "butt");
+  } else if (style === "dotted") {
+    drawSpine([Math.max(0.5, mustW * 0.4), mustW * 1.2], "round");
+  } else if (style === "stitched") {
+    const spineW = Math.max(1, mustW * 0.5);
+    ctx.strokeStyle = color; ctx.lineWidth = spineW; ctx.lineCap = "round"; ctx.lineJoin = "miter"; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(obj.points[0].x, obj.points[0].y);
+    for (const p of obj.points) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    const tickLen = mustW * 1.1;
+    const tickSpacing = Math.max(20, mustW * 2.5);
+    ctx.lineWidth = Math.max(1, spineW * 0.7);
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
-      const angle = Math.atan2(b.y - a.y, b.x - a.x);
-      const cos = Math.cos(angle), sin = Math.sin(angle);
-      const steps = Math.max(1, Math.floor(segLen / spacing));
+      const ang = Math.atan2(b.y - a.y, b.x - a.x);
+      const nx = -Math.sin(ang), ny = Math.cos(ang);
+      const steps = Math.max(1, Math.floor(segLen / tickSpacing));
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
         const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
-        // X rotated along segment direction
         ctx.beginPath();
-        ctx.moveTo(cx + (-crossSize*cos - -crossSize*sin), cy + (-crossSize*sin + -crossSize*cos));
-        ctx.lineTo(cx + ( crossSize*cos -  crossSize*sin), cy + ( crossSize*sin +  crossSize*cos));
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(cx + ( crossSize*cos - -crossSize*sin), cy + ( crossSize*sin + -crossSize*cos));
-        ctx.lineTo(cx + (-crossSize*cos -  crossSize*sin), cy + (-crossSize*sin +  crossSize*cos));
+        ctx.moveTo(cx - nx * tickLen, cy - ny * tickLen);
+        ctx.lineTo(cx + nx * tickLen, cy + ny * tickLen);
         ctx.stroke();
       }
     }
+  } else {
+    // Default: Cross (×) pattern — keeps the user's chakbandi colour + thickness
+    const crossColor = isSelected ? "#86efac" : (C.chakbandiStroke || "#22c55e");
+    const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness) * 0.2;
+    const crossSize = CHAKBANDI_SCALE.crossSize(obj.crossSize) * 0.2 / zoom;
+    const spacing = CHAKBANDI_SCALE.crossSpacing(obj.crossSpacing) / zoom;
+    ctx.strokeStyle = crossColor;
+    ctx.lineWidth = (lineW + (isSelected ? 3 : 0)) / zoom;
+    ctx.lineCap = "round"; ctx.lineJoin = "miter"; ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(obj.points[0].x, obj.points[0].y);
+    for (const p of obj.points) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    if (obj.crossPattern !== false) {
+      ctx.strokeStyle = crossColor;
+      ctx.lineWidth = (lineW * 0.6 + (isSelected ? 2 : 0)) / zoom;
+      ctx.lineCap = "round";
+      for (let i = 0; i < obj.points.length - 1; i++) {
+        const a = obj.points[i], b = obj.points[i+1];
+        const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+        const angle = Math.atan2(b.y - a.y, b.x - a.x);
+        const cos = Math.cos(angle), sin = Math.sin(angle);
+        const steps = Math.max(1, Math.floor(segLen / spacing));
+        for (let s = 0; s <= steps; s++) {
+          const t = s / steps;
+          const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+          ctx.beginPath();
+          ctx.moveTo(cx + (-crossSize*cos - -crossSize*sin), cy + (-crossSize*sin + -crossSize*cos));
+          ctx.lineTo(cx + ( crossSize*cos -  crossSize*sin), cy + ( crossSize*sin +  crossSize*cos));
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(cx + ( crossSize*cos - -crossSize*sin), cy + ( crossSize*sin + -crossSize*cos));
+          ctx.lineTo(cx + (-crossSize*cos -  crossSize*sin), cy + (-crossSize*sin +  crossSize*cos));
+          ctx.stroke();
+        }
+      }
+    }
   }
+
+  // Name label (shared by all styles)
   if (obj.name && zoom > 0.3) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid], p2 = obj.points[Math.min(mid+1, obj.points.length-1)];

@@ -345,17 +345,22 @@ export function chakbandiLabelPosition(chakbandi) {
   return { x: cx, y: minY };
 }
 
-// ─── Default outlet label position (at the arrow tip) ─────────────────────
+// ─── Default outlet label position (near the moga HEAD) ──────────────────
+// Places the moga name + CCA/GCA label just past the head block (start point),
+// along the outlet shaft into the field and offset perpendicular to clear the
+// shaft — so it sits near the head, off the canal/lines, and moves with the moga.
 export function getOutletLabelPos(obj) {
   if (obj.labelPos) return obj.labelPos;
   const size = DIMENSIONS.CANAL_WIDTH * 10;
   const headLen = size * 1.6;
-  // Gap based on moga box height (2 acres = 198)
-  const gap = headLen + MOGA_BOX_H * 0.8;
   const angle = Math.atan2(obj.end.y - obj.start.y, obj.end.x - obj.start.x);
+  const dirX = Math.cos(angle), dirY = Math.sin(angle);
+  const perpX = -Math.sin(angle), perpY = Math.cos(angle);
+  const along = headLen * 0.5 + MOGA_BOX_H * 0.45;
+  const side = MOGA_BOX_H * 0.55;
   return {
-    x: obj.end.x + Math.cos(angle) * gap,
-    y: obj.end.y + Math.sin(angle) * gap,
+    x: obj.start.x + dirX * along + perpX * side,
+    y: obj.start.y + dirY * along + perpY * side,
   };
 }
 
