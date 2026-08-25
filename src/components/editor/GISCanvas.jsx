@@ -809,6 +809,26 @@ const GISCanvas = forwardRef(function GISCanvas(
       boxSelectStart.current = { x: worldRaw.x, y: worldRaw.y };
       setBoxSelectDraft({ x1: worldRaw.x, y1: worldRaw.y, x2: worldRaw.x, y2: worldRaw.y });
     } else if (activeTool === "select") {
+      // 0. Chakbandi CCA/GCA label — click to edit inline on the map (highest priority,
+      //    runs before vertex/label-drag so clicking the CCA value opens the editor).
+      for (const o of objects) {
+        if (o.type === "chakbandi" && o.points?.length >= 3) {
+          const lp = getChakbandiLabelPos(o);
+          if (!lp) continue;
+          const _gf = Math.max(12, Math.min(24, Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30 * zoom)) / zoom;
+          if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _gf * 3) {
+            let initCca = o.cca ?? "";
+            let initGca = o.gca ?? "";
+            if (o.centerLabel) {
+              const m = String(o.centerLabel).match(/^\(?([^/)]*)\/([^/)]*)\)?$/);
+              if (m) { initCca = initCca || m[1].trim(); initGca = initGca || m[2].trim(); }
+            }
+            setEditingLabel({ id: o.id, kind: "cca", value: initCca, value2: initGca });
+            onSelect(o.id);
+            return;
+          }
+        }
+      }
       // 1. Vertex handle on the selected line object (drag a single anchor point)
       const selectedObj = selectedId ? objects.find(o => o.id === selectedId) : null;
       if (selectedObj && ["chakbandi", "canal", "khal", "road", "bridge", "mouza"].includes(selectedObj.type) && selectedObj.points) {
@@ -843,25 +863,6 @@ const GISCanvas = forwardRef(function GISCanvas(
               isMoving.current = true; movingObjId.current = o.id;
               movingLabelType.current = "outlet";
               moveOffset.current = { x: worldRaw.x - lp.x, y: worldRaw.y - lp.y };
-              onSelect(o.id);
-              return;
-            }
-          }
-        }
-        // 3. Chakbandi CCA/GCA label — click to edit inline on the map
-        for (const o of objects) {
-          if (o.type === "chakbandi" && o.points?.length >= 3) {
-            const lp = getChakbandiLabelPos(o);
-            if (!lp) continue;
-            const _gf = Math.max(12, Math.min(24, Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30 * zoom)) / zoom;
-            if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _gf * 3) {
-              let initCca = o.cca ?? "";
-              let initGca = o.gca ?? "";
-              if (o.centerLabel) {
-                const m = String(o.centerLabel).match(/^\(?([^/)]*)\/([^/)]*)\)?$/);
-                if (m) { initCca = initCca || m[1].trim(); initGca = initGca || m[2].trim(); }
-              }
-              setEditingLabel({ id: o.id, kind: "cca", value: initCca, value2: initGca });
               onSelect(o.id);
               return;
             }
