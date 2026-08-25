@@ -521,33 +521,35 @@ function buildKhakaDastiGuideGridSVG(bounds) {
   const mustW = DIMENSIONS.MUSTATEEL.width;
   const mustH = DIMENSIONS.MUSTATEEL.height;
   const leftCount = 3, rightCount = 3, topCount = 1, bottomCount = 1;
-  const startX = Math.floor((bounds.minX - leftCount * mustW) / mustW) * mustW;
-  const endX = Math.ceil((bounds.maxX + rightCount * mustW) / mustW) * mustW;
-  const startY = Math.floor((bounds.minY - topCount * mustH) / mustH) * mustH;
-  const endY = Math.ceil((bounds.maxY + bottomCount * mustH) / mustH) * mustH;
-  // Dim guide cells — thick boundaries like drawn mustateels but muted colour,
-  // plus the same 2×5 killa grid lines inside each cell (also dim).
-  const boundaryColor = "rgba(130,130,130,0.50)";
-  const killaColor = "rgba(130,130,130,0.28)";
-  const boundaryW = MUSTATEEL_SCALE.boundaryWidth();
+  // Exact centering — margins are exactly N mustateels on each side, so the
+  // drawn map sits dead-centre within the guide grid.
+  const startX = bounds.minX - leftCount * mustW;
+  const endX = bounds.maxX + rightCount * mustW;
+  const startY = bounds.minY - topCount * mustH;
+  const endY = bounds.maxY + bottomCount * mustH;
+  // Very dim guide cells — boundaries much lighter than drawn mustateels,
+  // killa grid even lighter so it reads as faint pencil guide lines.
+  const boundaryColor = "rgba(130,130,130,0.25)";
+  const killaColor = "rgba(130,130,130,0.15)";
+  const boundaryW = MUSTATEEL_SCALE.boundaryWidth() * 0.7;
   const cellW = mustW / 2, cellH = mustH / 5;
   let lines = "";
-  // Mustateel boundaries (thick, dim)
+  // Mustateel boundaries (thin, very dim)
   for (let x = startX; x <= endX + 0.5; x += mustW) {
     lines += `<line x1="${x}" y1="${startY}" x2="${x}" y2="${endY}" stroke="${boundaryColor}" stroke-width="${boundaryW}"/>`;
   }
   for (let y = startY; y <= endY + 0.5; y += mustH) {
     lines += `<line x1="${startX}" y1="${y}" x2="${endX}" y2="${y}" stroke="${boundaryColor}" stroke-width="${boundaryW}"/>`;
   }
-  // Killa grid inside each mustateel cell (dim)
+  // Killa grid inside each mustateel cell (very dim)
   for (let x = startX; x < endX; x += mustW) {
     const midX = x + cellW;
-    lines += `<line x1="${midX}" y1="${startY}" x2="${midX}" y2="${endY}" stroke="${killaColor}" stroke-width="0.8"/>`;
+    lines += `<line x1="${midX}" y1="${startY}" x2="${midX}" y2="${endY}" stroke="${killaColor}" stroke-width="0.7"/>`;
   }
   for (let y = startY; y < endY; y += mustH) {
     for (let r = 1; r < 5; r++) {
       const hy = y + r * cellH;
-      lines += `<line x1="${startX}" y1="${hy}" x2="${endX}" y2="${hy}" stroke="${killaColor}" stroke-width="0.8"/>`;
+      lines += `<line x1="${startX}" y1="${hy}" x2="${endX}" y2="${hy}" stroke="${killaColor}" stroke-width="0.7"/>`;
     }
   }
   return { lines, startX, startY, endX, endY };
@@ -841,14 +843,16 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
         @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
         * { margin:0; padding:0; box-sizing:border-box; }
-        html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; }
+        html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
         body { display: flex; flex-direction: column;${showPageBorder ? ` border:2px solid #3b82f6;` : ""} }
-        .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 0 ${printMargin}cm; }
+        .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 0 ${printMargin}cm; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
         .map-wrap svg { width:100%; height:100%; display:block; }
+        .map-wrap svg * { -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
         @media print {
           @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
-          html, body { width:100%; height:100%; overflow:hidden; }
-          body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+          html, body { width:100%; height:100%; overflow:hidden; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
+          body { -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
+          * { -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
         }
       </style>
     </head><body>
@@ -1027,28 +1031,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
           </div>
         </div>
 
-        {/* Moga filter bar */}
+        {/* Options bar */}
         <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 bg-slate-50 border-b border-slate-200 flex-wrap">
-          <span className="text-[10px] text-slate-500 uppercase tracking-widest font-mono shrink-0">Print Mode</span>
-          <button
-            onClick={() => setMogaFilter("")}
-            className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${!mogaFilter ? "bg-blue-600 text-white" : "bg-white text-slate-600 border border-slate-200 hover:text-slate-900"}`}
-          >
-            Full Map
-          </button>
-          {availableMogas.map(m => (
-            <button key={m}
-              onClick={() => setMogaFilter(mogaFilter === m ? "" : m)}
-              className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${mogaFilter === m ? "bg-green-600 text-white" : "bg-white text-slate-600 border border-slate-200 hover:text-slate-900"}`}
-            >
-              Moga {m}
-            </button>
-          ))}
-          {availableMogas.length === 0 && (
-            <span className="text-[10px] text-slate-400 italic">
-              Assign Moga Numbers to Chakbandi lines to enable single-Moga printing
-            </span>
-          )}
           {/* Legend toggle */}
           <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <input type="checkbox" checked={showLegendInPrint} onChange={e => setShowLegendInPrint(e.target.checked)}
