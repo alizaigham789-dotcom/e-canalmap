@@ -11,7 +11,7 @@ import AcreUseControl from "@/components/editor/AcreUseControl";
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
 const KILLA_STROKE_STYLES = ["solid", "dashed", "dotted"];
 
-export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate, onDelete, onClose, deleteVertexMode = false, onToggleDeleteVertexMode = null, onUpdateAllMustateels = null, onResetAllMustateels = null }) {
+export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate, onDelete, onClose, deleteVertexMode = false, onToggleDeleteVertexMode = null, onUpdateAllMustateels = null, onResetAllMustateels = null, maxBodyHeight = 420 }) {
   const [local, setLocal] = useState({});
   const [collapsed, setCollapsed] = useState(true);
 
@@ -87,7 +87,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
 
       {/* Body — only visible when expanded */}
       {!collapsed && (
-        <div className="p-3 space-y-3 max-h-[420px] overflow-y-auto border-t border-slate-200">
+        <div className="p-3 space-y-3 overflow-y-auto border-t border-slate-200 touch-scroll" style={{ maxHeight: maxBodyHeight }}>
           <div>
             <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Object ID</label>
             <p className="text-[10px] font-mono text-slate-400 truncate">{selectedObj.id}</p>

@@ -1508,27 +1508,39 @@ export default function Editor() {
           )}
         </div>
 
-        {/* Properties Panel — at the corner of the selected parcel, or right-side for other objects */}
+        {/* Properties Panel — anchored at the object's endpoint, clamped to stay on screen */}
         {selectedObj && (() => {
           const isParcel = ["mustateel", "muraba", "acre"].includes(selectedObj.type);
-          const isLineAnchored = ["chakbandi", "canal"].includes(selectedObj.type);
-          if (isParcel || isLineAnchored) {
-            // For line objects (chakbandi/canal), anchor the panel at the last drawn
-            // point so the properties popup appears right where drawing ended.
+          const isLineAnchored = ["chakbandi", "canal", "khal", "road", "bridge", "mouza"].includes(selectedObj.type);
+          const isOutlet = selectedObj.type === "outlet";
+          if (isParcel || isLineAnchored || isOutlet) {
+            // Anchor at the object's endpoint so the popup appears where drawing ended.
             let ax, ay;
-            if (isLineAnchored) {
+            if (isOutlet) { ax = selectedObj.end?.x ?? 0; ay = selectedObj.end?.y ?? 0; }
+            else if (isLineAnchored) {
               const pts = selectedObj.points || [];
               const anchor = pts.length > 0 ? pts[pts.length - 1] : { x: 0, y: 0 };
               ax = anchor.x; ay = anchor.y;
-            } else {
-              ax = selectedObj.x; ay = selectedObj.y;
-            }
+            } else { ax = selectedObj.x; ay = selectedObj.y; }
             const cs = worldToScreen(ax, ay, pan.x, pan.y, zoom);
-            const containerW = canvasRef.current?.getCanvas?.()?.clientWidth || 800;
-            const left = Math.max(4, Math.min(cs.x, containerW - 232));
+            const canvasEl = canvasRef.current?.getCanvas?.();
+            const containerW = canvasEl?.clientWidth || 800;
+            const containerH = canvasEl?.clientHeight || 600;
+            const POPUP_W = 224;
+            const margin = 8;
+            const maxBodyH = Math.max(160, Math.min(420, containerH - 120));
+            const estH = maxBodyH + 44;
+            // Prefer below the anchor (never off-top); flip above if no room below; else clamp.
+            const belowTop = cs.y + 14;
+            const aboveTop = cs.y - estH - 4;
+            let top;
+            if (belowTop + estH <= containerH - margin) top = belowTop;
+            else if (aboveTop >= margin) top = aboveTop;
+            else top = margin;
+            top = Math.max(margin, Math.min(top, containerH - estH - margin));
+            const left = Math.max(margin, Math.min(cs.x, containerW - POPUP_W - margin));
             return (
-              <div className="absolute z-30 max-sm:max-w-[calc(100vw-70px)]"
-                style={{ left, top: cs.y, transform: "translate(0, -100%)", marginTop: -4 }}>
+              <div className="absolute z-30 max-sm:max-w-[calc(100vw-70px)]" style={{ left, top }}>
                 <PropertiesPanel
                   selectedObj={selectedObj}
                   allObjects={objects}
@@ -1539,6 +1551,7 @@ export default function Editor() {
                   onToggleDeleteVertexMode={() => setDeleteVertexMode(v => !v)}
                   onUpdateAllMustateels={handleUpdateAllMustateels}
                   onResetAllMustateels={handleResetAllMustateels}
+                  maxBodyHeight={maxBodyH}
                 />
               </div>
             );

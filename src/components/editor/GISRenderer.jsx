@@ -682,19 +682,7 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
     ctx.restore();
   }
 
-  if (obj.name && zoom > 0.3) {
-    const mid = Math.floor(obj.points.length / 2);
-    const p = obj.points[mid];
-    const p2 = obj.points[Math.min(mid + 1, obj.points.length - 1)];
-    const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
-    ctx.save();
-    ctx.translate(p.x, p.y); ctx.rotate(angle);
-    ctx.fillStyle = khalColor;
-    ctx.font = `bold ${scaledFont(11, zoom, 9)}px Rajdhani, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-    ctx.fillText(obj.name, 0, -halfW - 3/zoom);
-    ctx.restore();
-  }
+  // Watercourse (khal) name is NOT rendered on the map — only stored as data.
 }
 
 // ============================================================

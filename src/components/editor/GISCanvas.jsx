@@ -848,16 +848,20 @@ const GISCanvas = forwardRef(function GISCanvas(
             }
           }
         }
-        // 3. Chakbandi GCA label box drag
+        // 3. Chakbandi CCA/GCA label — click to edit inline on the map
         for (const o of objects) {
           if (o.type === "chakbandi" && o.points?.length >= 3) {
             const lp = getChakbandiLabelPos(o);
             if (!lp) continue;
             const _gf = Math.max(12, Math.min(24, Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30 * zoom)) / zoom;
             if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _gf * 3) {
-              isMoving.current = true; movingObjId.current = o.id;
-              movingLabelType.current = "chakbandi";
-              moveOffset.current = { x: worldRaw.x - lp.x, y: worldRaw.y - lp.y };
+              let initCca = o.cca ?? "";
+              let initGca = o.gca ?? "";
+              if (o.centerLabel) {
+                const m = String(o.centerLabel).match(/^\(?([^/)]*)\/([^/)]*)\)?$/);
+                if (m) { initCca = initCca || m[1].trim(); initGca = initGca || m[2].trim(); }
+              }
+              setEditingLabel({ id: o.id, kind: "cca", value: initCca, value2: initGca });
               onSelect(o.id);
               return;
             }
@@ -1013,12 +1017,28 @@ const GISCanvas = forwardRef(function GISCanvas(
       } else if (hit && ["mustateel", "muraba", "acre"].includes(hit.type)) {
         onSelect(hit.id);
         setEditingLabel({ id: hit.id, value: hit.label || "" });
+      } else if (hit && hit.type === "outlet") {
+        // Double-click moga → edit mogha number + side inline on the map
+        onSelect(hit.id);
+        setEditingLabel({ id: hit.id, kind: "moga", value: hit.mogha_number || "", value2: hit.mogha_side || "" });
       }
     }
   }, [activeTool, pan, zoom, selectedId, onSelect, onUpdateObject, onCanalFinish, onChakbandiFinish, onKhalFinish, onRoadFinish, onBridgeFinish, onMouzaFinish, onDamageMarkerClick]);
 
   const commitLabelEdit = useCallback(() => {
-    if (editingLabel) { onUpdateObject(editingLabel.id, { label: editingLabel.value }); setEditingLabel(null); }
+    if (!editingLabel) return;
+    if (editingLabel.kind === "cca") {
+      let cca = String(editingLabel.value || "").trim();
+      let gca = String(editingLabel.value2 || "").trim();
+      // Upper term (CCA) can never exceed the lower term (GCA) — equal is allowed
+      if (cca && gca && parseFloat(cca) > parseFloat(gca)) cca = gca;
+      onUpdateObject(editingLabel.id, { cca, gca, centerLabel: (cca || gca) ? `(${cca}/${gca})` : "" });
+    } else if (editingLabel.kind === "moga") {
+      onUpdateObject(editingLabel.id, { mogha_number: String(editingLabel.value || ""), mogha_side: String(editingLabel.value2 || "") });
+    } else {
+      onUpdateObject(editingLabel.id, { label: editingLabel.value });
+    }
+    setEditingLabel(null);
   }, [editingLabel, onUpdateObject]);
 
   // ---- Touch support (mobile) — tap to draw/select, long-press + drag to move a parcel ----
@@ -1177,7 +1197,18 @@ const GISCanvas = forwardRef(function GISCanvas(
   }[activeTool] || "cursor-crosshair";
 
   const editingObj = editingLabel ? objects.find(o => o.id === editingLabel.id) : null;
-  const labelPos = editingObj ? worldToScreen(editingObj.x, editingObj.y, pan.x, pan.y, zoom) : null;
+  let labelPos = null;
+  if (editingObj) {
+    if (editingLabel.kind === "cca") {
+      const lp = getChakbandiLabelPos(editingObj);
+      if (lp) labelPos = worldToScreen(lp.x, lp.y, pan.x, pan.y, zoom);
+    } else if (editingLabel.kind === "moga") {
+      const lp = getOutletLabelPos(editingObj);
+      labelPos = worldToScreen(lp.x, lp.y, pan.x, pan.y, zoom);
+    } else {
+      labelPos = worldToScreen(editingObj.x, editingObj.y, pan.x, pan.y, zoom);
+    }
+  }
 
   return (
     <div className="relative w-full h-full">
@@ -1225,7 +1256,7 @@ const GISCanvas = forwardRef(function GISCanvas(
           </div>
         </div>
       )}
-      {editingLabel && labelPos && (
+      {editingLabel && labelPos && editingLabel.kind !== "cca" && editingLabel.kind !== "moga" && (
         <input
           autoFocus
           value={editingLabel.value}
@@ -1239,6 +1270,48 @@ const GISCanvas = forwardRef(function GISCanvas(
           }}
           placeholder="Label"
         />
+      )}
+      {editingLabel && labelPos && editingLabel.kind === "cca" && (
+        <div
+          tabIndex={-1}
+          className="absolute z-50 flex flex-col items-center gap-0.5 bg-white border-2 border-green-500 rounded-lg shadow-xl p-1.5"
+          style={{ left: labelPos.x, top: labelPos.y, transform: "translate(-50%, 12px)" }}
+          onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) commitLabelEdit(); }}
+        >
+          <input
+            autoFocus type="number" value={editingLabel.value}
+            onChange={e => setEditingLabel(p => ({ ...p, value: e.target.value }))}
+            onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabel(null); }}
+            placeholder="CCA" className="w-20 px-1.5 py-0.5 text-xs font-mono text-center text-green-800 border border-green-300 rounded outline-none focus:border-green-500" />
+          <div className="w-full h-px bg-green-600" />
+          <input
+            type="number" value={editingLabel.value2}
+            onChange={e => setEditingLabel(p => ({ ...p, value2: e.target.value }))}
+            onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabel(null); }}
+            placeholder="GCA" className="w-20 px-1.5 py-0.5 text-xs font-mono text-center text-green-800 border border-green-300 rounded outline-none focus:border-green-500" />
+        </div>
+      )}
+      {editingLabel && labelPos && editingLabel.kind === "moga" && (
+        <div
+          tabIndex={-1}
+          className="absolute z-50 flex items-center gap-1 bg-white border-2 border-cyan-500 rounded-lg shadow-xl p-1.5"
+          style={{ left: labelPos.x, top: labelPos.y, transform: "translate(-50%, 12px)" }}
+          onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) commitLabelEdit(); }}
+        >
+          <input
+            autoFocus type="number" value={editingLabel.value}
+            onChange={e => setEditingLabel(p => ({ ...p, value: e.target.value }))}
+            onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabel(null); }}
+            placeholder="موگہ نمبری" className="w-20 px-1.5 py-0.5 text-xs font-mono text-center text-cyan-800 border border-cyan-300 rounded outline-none focus:border-cyan-500" />
+          <select
+            value={editingLabel.value2}
+            onChange={e => setEditingLabel(p => ({ ...p, value2: e.target.value }))}
+            className="px-1 py-0.5 text-xs border border-cyan-300 rounded outline-none bg-white text-cyan-800">
+            <option value="">-</option>
+            <option value="L">L</option>
+            <option value="R">R</option>
+          </select>
+        </div>
       )}
     </div>
   );
