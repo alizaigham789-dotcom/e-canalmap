@@ -1,11 +1,10 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import {
   RectangleVertical, RectangleHorizontal,
-  MousePointer2, Hand, Eraser,
-  RotateCcw, RotateCw, ZoomIn, ZoomOut,   Maximize2, Waves, AlertTriangle, Ruler
+  MousePointer2, Hand, Eraser, Move,
+  RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Waves, AlertTriangle, Ruler
 } from "lucide-react";
 
 // ---- Custom SVG Icons matching technical tool names ----
@@ -62,23 +61,25 @@ const BridgeIcon = ({ className }) => (
   </svg>
 );
 
+// Each tool carries a short English `name` shown under the icon.
 const TOOLS = [
-  { id: "select", label: "Select / Move (V) — click to select, drag to move", icon: MousePointer2, group: "nav" },
-  { id: "pan", label: "Pan (H)", icon: Hand, group: "nav" },
+  { id: "select", name: "Select", label: "Select / Move (V) — click to select, drag to move", icon: MousePointer2, group: "nav" },
+  { id: "pan", name: "Pan", label: "Pan (H)", icon: Hand, group: "nav" },
+  { id: "canalMove", name: "Canal Move", label: "Canal Move — drag only canals (attached chakbandi follows)", icon: Move, group: "nav" },
   null,
-  { id: "eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
-  { id: "mustateel", label: "Mustateel 440×990 ft (M)", icon: RectangleVertical, group: "draw", color: "text-red-400" },
-  { id: "muraba", label: "Muraba 1100×990 ft (B)", icon: RectangleHorizontal, group: "draw", color: "text-red-500" },
+  { id: "eraser", name: "Eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
+  { id: "mustateel", name: "Mustateel", label: "Mustateel 440×990 ft (M)", icon: RectangleVertical, group: "draw", color: "text-red-400" },
+  { id: "muraba", name: "Muraba", label: "Muraba 1100×990 ft (B)", icon: RectangleHorizontal, group: "draw", color: "text-red-500" },
   null,
-  { id: "canal", label: "Canal Tool (C)", icon: CanalIcon, group: "draw", color: "text-blue-400" },
-  { id: "chakbandi", label: "Chakbandi Line (K)", icon: ChakbandiIcon, group: "draw", color: "text-green-400" },
-  { id: "outlet", label: "Outlet / Moga (O)", icon: MogaIcon, group: "draw", color: "text-cyan-400" },
-  { id: "khal", label: "Watercourse (W)", icon: Waves, group: "draw", color: "text-blue-500" },
-  { id: "road", label: "Road (R)", icon: RoadIcon, group: "draw", color: "text-amber-400" },
-  { id: "bridge", label: "Bridge / پل (P)", icon: BridgeIcon, group: "draw", color: "text-red-400" },
-  { id: "mouza", label: "Mouza Boundary (U)", icon: MouzaIcon, group: "draw", color: "text-slate-700" },
-  { id: "damageMarker", label: "Canal Damage Marker (G)", icon: AlertTriangle, group: "draw", color: "text-red-500" },
-  { id: "measure", label: "Measure Distance (X)", icon: Ruler, group: "draw", color: "text-purple-500" },
+  { id: "canal", name: "Canal", label: "Canal Tool (C)", icon: CanalIcon, group: "draw", color: "text-blue-400" },
+  { id: "chakbandi", name: "Chakbandi", label: "Chakbandi Line (K)", icon: ChakbandiIcon, group: "draw", color: "text-green-400" },
+  { id: "outlet", name: "Moga", label: "Outlet / Moga (O)", icon: MogaIcon, group: "draw", color: "text-cyan-400" },
+  { id: "khal", name: "Khal", label: "Watercourse (W)", icon: Waves, group: "draw", color: "text-blue-500" },
+  { id: "road", name: "Road", label: "Road (R)", icon: RoadIcon, group: "draw", color: "text-amber-400" },
+  { id: "bridge", name: "Bridge", label: "Bridge / پل (P)", icon: BridgeIcon, group: "draw", color: "text-red-400" },
+  { id: "mouza", name: "Mouza", label: "Mouza Boundary (U)", icon: MouzaIcon, group: "draw", color: "text-slate-700" },
+  { id: "damageMarker", name: "Damage", label: "Canal Damage Marker (G)", icon: AlertTriangle, group: "draw", color: "text-red-500" },
+  { id: "measure", name: "Measure", label: "Measure Distance (X)", icon: Ruler, group: "draw", color: "text-purple-500" },
 ];
 
 export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, onZoomIn, onZoomOut, onFitView, canUndo, canRedo }) {
@@ -90,52 +91,36 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
           const Icon = tool.icon;
           const isActive = activeTool === tool.id;
           const isChakbandi = tool.id === "chakbandi";
+          const isCanalMove = tool.id === "canalMove";
 
-          if (isChakbandi) {
-            return (
-              <Tooltip key={tool.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => onToolChange(tool.id)}
-                    className={`
-                      relative w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] rounded-xl sm:rounded-2xl transition-all duration-200 flex flex-col items-center justify-center gap-1 sm:gap-1.5
-                      border-2 shadow-xl overflow-hidden group shrink-0
-                      ${isActive
-                        ? "bg-gradient-to-br from-green-500 to-emerald-700 border-green-400 text-white shadow-green-500/40"
-                        : "bg-gradient-to-br from-green-50 to-emerald-100 border-green-300 text-green-700 hover:from-green-500 hover:to-emerald-700 hover:text-white hover:border-green-400 hover:shadow-green-500/40"
-                      }
-                    `}
-                  >
-                    {/* Animated background ring on active */}
-                    {isActive && (
-                      <span className="absolute inset-0 rounded-xl sm:rounded-2xl bg-white/10 animate-pulse pointer-events-none" />
-                    )}
-                    <Icon className="w-5 h-5 sm:w-8 sm:h-8 drop-shadow-sm" />
-                    <span className={`text-[7px] sm:text-[9px] font-bold leading-none tracking-wide uppercase ${isActive ? "text-green-100" : "text-green-600 group-hover:text-green-100"}`}>
-                      Chakbandi
-                    </span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="bg-green-900 text-white text-xs border-green-700 font-semibold">
-                  {tool.label}
-                </TooltipContent>
-              </Tooltip>
-            );
-          }
+          // Active colour theme per tool group
+          const activeTheme = isChakbandi
+            ? "bg-gradient-to-br from-green-500 to-emerald-700 border-green-400 text-white shadow-green-500/40"
+            : isCanalMove
+              ? "bg-gradient-to-br from-cyan-500 to-sky-700 border-cyan-400 text-white shadow-cyan-500/40"
+              : "bg-gradient-to-br from-blue-500 to-blue-700 border-blue-400 text-white shadow-lg shadow-blue-500/30";
+          const inactiveTheme = isChakbandi
+            ? "bg-gradient-to-br from-green-50 to-emerald-100 border-green-300 text-green-700 hover:from-green-500 hover:to-emerald-700 hover:text-white hover:border-green-400"
+            : isCanalMove
+              ? "bg-gradient-to-br from-cyan-50 to-sky-100 border-cyan-300 text-cyan-700 hover:from-cyan-500 hover:to-sky-700 hover:text-white hover:border-cyan-400"
+              : `border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 ${tool.color || ""}`;
 
-          const activeClass = "bg-gradient-to-br from-blue-500 to-blue-700 border-blue-400 text-white shadow-lg shadow-blue-500/30";
           return (
             <Tooltip key={tool.id}>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => onToolChange(tool.id)}
-                  className={`${
-                    isActive
-                      ? "w-11 h-11 sm:w-[52px] sm:h-[52px] rounded-xl border-2 " + activeClass
-                      : `w-11 h-11 rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 ${tool.color || ""}`
-                  } transition-all duration-200 flex items-center justify-center shrink-0`}
+                  className={`
+                    relative w-[52px] h-[50px] sm:w-[64px] sm:h-[58px] rounded-xl transition-all duration-200 flex flex-col items-center justify-center gap-0.5
+                    border-2 shadow-sm shrink-0 group overflow-hidden
+                    ${isActive ? activeTheme : inactiveTheme}
+                  `}
                 >
-                  <Icon className={isActive ? "w-5 h-5 sm:w-6 sm:h-6" : "w-4 h-4"} />
+                  {isActive && <span className="absolute inset-0 rounded-xl bg-white/10 animate-pulse pointer-events-none" />}
+                  <Icon className={isActive ? "w-4 h-4 sm:w-5 sm:h-5 drop-shadow-sm" : "w-4 h-4"} />
+                  <span className={`text-[7px] sm:text-[8px] font-bold leading-none tracking-wide uppercase truncate max-w-full px-0.5 ${isActive ? "text-white/95" : "text-slate-600 group-hover:text-white"}`}>
+                    {tool.name}
+                  </span>
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">
@@ -149,20 +134,20 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-11 h-11 text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0"
-              onClick={onUndo} disabled={!canUndo}>
+            <button onClick={onUndo} disabled={!canUndo} className="w-[52px] h-[42px] sm:w-[64px] rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0 flex flex-col items-center justify-center gap-0.5">
               <RotateCcw className="w-4 h-4" />
-            </Button>
+              <span className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-500">Undo</span>
+            </button>
           </TooltipTrigger>
           <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Undo (Ctrl+Z)</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-11 h-11 text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0"
-              onClick={onRedo} disabled={!canRedo}>
+            <button onClick={onRedo} disabled={!canRedo} className="w-[52px] h-[42px] sm:w-[64px] rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0 flex flex-col items-center justify-center gap-0.5">
               <RotateCw className="w-4 h-4" />
-            </Button>
+              <span className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-500">Redo</span>
+            </button>
           </TooltipTrigger>
           <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Redo (Ctrl+Y)</TooltipContent>
         </Tooltip>
@@ -171,27 +156,30 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-11 h-11 text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0" onClick={onZoomIn}>
+            <button onClick={onZoomIn} className="w-[52px] h-[42px] sm:w-[64px] rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0 flex flex-col items-center justify-center gap-0.5">
               <ZoomIn className="w-4 h-4" />
-            </Button>
+              <span className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-500">Zoom+</span>
+            </button>
           </TooltipTrigger>
           <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Zoom In (+)</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-11 h-11 text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0" onClick={onZoomOut}>
+            <button onClick={onZoomOut} className="w-[52px] h-[42px] sm:w-[64px] rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0 flex flex-col items-center justify-center gap-0.5">
               <ZoomOut className="w-4 h-4" />
-            </Button>
+              <span className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-500">Zoom−</span>
+            </button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Zoom Out (-)</TooltipContent>
+          <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Zoom Out (−)</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-11 h-11 text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0" onClick={onFitView}>
+            <button onClick={onFitView} className="w-[52px] h-[42px] sm:w-[64px] rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0 flex flex-col items-center justify-center gap-0.5">
               <Maximize2 className="w-4 h-4" />
-            </Button>
+              <span className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-500">Fit</span>
+            </button>
           </TooltipTrigger>
           <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Fit View (F)</TooltipContent>
         </Tooltip>

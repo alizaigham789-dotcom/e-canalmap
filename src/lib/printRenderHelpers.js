@@ -15,7 +15,7 @@ export function isUrduText(text) {
 // CANVAS: Urdu canal name — repeating connected labels along the path.
 // Urdu is a connected RTL script, so the whole name is drawn as one string at
 // regular intervals (every ~5 acres), kept upright, in Jameel Noori Nastaleeq.
-function drawCanalNameUrduOnCanvas(ctx, points, text, fontSize) {
+function drawCanalNameUrduOnCanvas(ctx, points, text, fontSize, outlets) {
   const { segLens, total } = pathSegments(points);
   if (total < 1) return;
   const repeatSpacing = 1100;
@@ -23,7 +23,10 @@ function drawCanalNameUrduOnCanvas(ctx, points, text, fontSize) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   const labelW = ctx.measureText(text).width || (text.length * fontSize * 0.5);
+  const outletArcs = outletArcsOnCanal(points, segLens, outlets);
+  const clearance = Math.max(120, labelW / 2 + 80);
   for (let dist = labelW / 2; dist + labelW / 2 < total; dist += repeatSpacing) {
+    if (skipNearMoga(dist, outletArcs, clearance)) continue;
     let segIdx = 0, segRem = segLens[0];
     const adv = advanceAlongPath(segLens, segIdx, segRem, dist);
     if (!adv) break;
@@ -46,13 +49,16 @@ function drawCanalNameUrduOnCanvas(ctx, points, text, fontSize) {
 }
 
 // SVG: Urdu canal name — repeating connected labels along the path
-function svgCanalNameUrdu(points, text, fontSize) {
+function svgCanalNameUrdu(points, text, fontSize, outlets) {
   const { segLens, total } = pathSegments(points);
   if (total < 1) return "";
   const repeatSpacing = 1100;
   const labelW = text.length * fontSize * 0.6;
+  const outletArcs = outletArcsOnCanal(points, segLens, outlets);
+  const clearance = Math.max(120, labelW / 2 + 80);
   let svg = "";
   for (let dist = labelW / 2; dist + labelW / 2 < total; dist += repeatSpacing) {
+    if (skipNearMoga(dist, outletArcs, clearance)) continue;
     let segIdx = 0, segRem = segLens[0];
     const adv = advanceAlongPath(segLens, segIdx, segRem, dist);
     if (!adv) break;
@@ -114,23 +120,62 @@ function pointAtDistance(points, segLens, segIdx, segRemaining) {
   };
 }
 
+// ─── Moga (outlet) positions on a canal, as arc-lengths ─────────────────
+// Used to skip canal-name label instances that would overlap a moga number
+// rendered at the outlet's start point on the canal edge.
+export function outletArcsOnCanal(points, segLens, outlets, maxDist = 80) {
+  if (!outlets || !outlets.length) return [];
+  const arcs = [];
+  for (const o of outlets) {
+    const sx = o?.start?.x, sy = o?.start?.y;
+    if (sx == null || sy == null) continue;
+    let acc = 0, bestArc = 0, bestDist = Infinity;
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i], b = points[i + 1];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = segLens[i] || Math.hypot(dx, dy);
+      let t = len > 0 ? ((sx - a.x) * dx + (sy - a.y) * dy) / (len * len) : 0;
+      t = Math.max(0, Math.min(1, t));
+      const px = a.x + dx * t, py = a.y + dy * t;
+      const d = Math.hypot(sx - px, sy - py);
+      if (d < bestDist) { bestDist = d; bestArc = acc + len * t; }
+      acc += len;
+    }
+    if (bestDist < maxDist) arcs.push(bestArc);
+  }
+  return arcs;
+}
+
+// Whether a canal-name instance centered at `arc` should be skipped to avoid
+// overlapping a moga number. Clearance grows with the label width.
+function skipNearMoga(arc, outletArcs, clearance) {
+  if (!outletArcs || !outletArcs.length) return false;
+  for (const a of outletArcs) {
+    if (Math.abs(a - arc) < clearance) return true;
+  }
+  return false;
+}
+
 // ─── CANVAS: draw canal name text along the canal centerline ─────────────
 // Bright yellow fill + dark outline, repeats every ~5 acres (1100 ft).
-export function drawCanalNameOnCanvas(ctx, points, text, fontSize) {
+export function drawCanalNameOnCanvas(ctx, points, text, fontSize, outlets) {
   if (!points || points.length < 2 || !text) return;
-  if (isUrduText(text)) { drawCanalNameUrduOnCanvas(ctx, points, text, fontSize); return; }
+  if (isUrduText(text)) { drawCanalNameUrduOnCanvas(ctx, points, text, fontSize, outlets); return; }
   const { segLens, total } = pathSegments(points);
   if (total < 1) return;
 
   const charW = fontSize * 0.55;
   const textW = text.length * charW;
   const repeatSpacing = 1100; // ~5 acres of frontage
+  const outletArcs = outletArcsOnCanal(points, segLens, outlets);
+  const clearance = Math.max(120, textW / 2 + 80);
 
   ctx.font = `bold ${fontSize}px Rajdhani, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
   for (let startDist = 0; startDist + textW < total; startDist += repeatSpacing) {
+    if (skipNearMoga(startDist + textW / 2, outletArcs, clearance)) continue;
     let segIdx = 0;
     let segRem = segLens[0];
     const start = advanceAlongPath(segLens, segIdx, segRem, startDist);
@@ -173,18 +218,21 @@ export function drawCanalNameOnCanvas(ctx, points, text, fontSize) {
 // ─── SVG: generate canal name text along the canal centerline ────────────
 // Each character is a <text> with a dark stroke (outline) + yellow fill,
 // positioned and rotated to follow the path. Repeats every ~5 acres.
-export function svgCanalNameOnPath(points, text, fontSize) {
+export function svgCanalNameOnPath(points, text, fontSize, outlets) {
   if (!points || points.length < 2 || !text) return "";
-  if (isUrduText(text)) return svgCanalNameUrdu(points, text, fontSize);
+  if (isUrduText(text)) return svgCanalNameUrdu(points, text, fontSize, outlets);
   const { segLens, total } = pathSegments(points);
   if (total < 1) return "";
 
   const charW = fontSize * 0.55;
   const textW = text.length * charW;
   const repeatSpacing = 1100;
+  const outletArcs = outletArcsOnCanal(points, segLens, outlets);
+  const clearance = Math.max(120, textW / 2 + 80);
   let svg = "";
 
   for (let startDist = 0; startDist + textW < total; startDist += repeatSpacing) {
+    if (skipNearMoga(startDist + textW / 2, outletArcs, clearance)) continue;
     let segIdx = 0;
     let segRem = segLens[0];
     const start = advanceAlongPath(segLens, segIdx, segRem, startDist);

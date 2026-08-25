@@ -240,14 +240,14 @@ function svgChakbandi(obj, C, idx, viewW) {
 </g>`;
 }
 
-function svgCanal(obj, C, idx) {
+function svgCanal(obj, C, idx, outlets) {
   if (!obj.points || obj.points.length < 2) return "";
   const w = (obj.width || DIMENSIONS.CANAL_WIDTH);
   const centerPath = pointsToSmoothPath(obj.points);
   const fillColor = C.canalFill || "rgba(163,218,244,0.70)";
   const strokeColor = C.canalStroke || "#2B7AB8";
   const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH);
-  const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf) : "";
+  const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf, outlets) : "";
   if (obj.canalStyle === "flat") {
     const halfW = w / 2;
     const fillPath = parallelSmoothClosedPath(obj.points, halfW);
@@ -444,6 +444,7 @@ export function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {
 
   const sorted = [...filtered].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
   const mouzaObjects = objects.filter(o => o.type === "mouza");
+  const allOutlets = objects.filter(o => o.type === "outlet");
 
   let svgParts = [];
   sorted.forEach((obj, idx) => {
@@ -452,7 +453,7 @@ export function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {
       case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba)); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
       case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW)); break;
-      case "canal":     svgParts.push(svgCanal(obj, C, idx)); break;
+      case "canal":     svgParts.push(svgCanal(obj, C, idx, allOutlets)); break;
       case "khal":      svgParts.push(svgKhal(obj, C, idx)); break;
       case "road":      svgParts.push(svgRoad(obj, C, idx)); break;
       case "bridge":    svgParts.push(svgBridge(obj, C, idx)); break;
