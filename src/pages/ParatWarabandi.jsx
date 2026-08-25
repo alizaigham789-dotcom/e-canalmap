@@ -488,11 +488,11 @@ export default function ParatWarabandi() {
           <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 shrink-0" onClick={handleBack}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <h1 className="text-sm font-bold text-slate-800 leading-relaxed" dir="ltr"
+          <h1 className="text-sm font-bold text-slate-800 leading-relaxed" dir="rtl"
             style={{ fontFamily: "'Times New Roman', 'Noto Nastaliq Urdu', serif", lineHeight: 1.7 }}>
-            <span style={{ unicodeBidi: "isolate" }}>{selectedRecord?.mogha_side || "R"}</span>
-            <span style={{ margin: "0 3px" }}>/</span>
-            <span style={{ unicodeBidi: "isolate" }}>{selectedRecord?.doc_type || "پرت وارہ بندی"}،</span>
+            <span style={{ unicodeBidi: "isolate" }}>/{selectedRecord?.mogha_side || "R"}</span>
+            <span style={{ margin: "0 4px" }} />
+            <span style={{ unicodeBidi: "isolate" }}>{selectedRecord?.doc_type || "پرت وارابندی"}،</span>
             <span style={{ margin: "0 4px" }} />
             <span style={{ unicodeBidi: "isolate" }}>موگہ نمبر</span>
             <span style={{ margin: "0 4px" }} />
