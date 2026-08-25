@@ -1193,7 +1193,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     canal: "cursor-crosshair", chakbandi: "cursor-crosshair", outlet: "cursor-crosshair",
     khal: "cursor-crosshair", road: "cursor-crosshair", mouza: "cursor-crosshair",
     acre: "cursor-crosshair", mustateel: "cursor-crosshair", muraba: "cursor-crosshair",
-    move: "cursor-move", damageMarker: "cursor-crosshair", measure: "cursor-crosshair",
+    move: "cursor-move", canalMove: "cursor-move", damageMarker: "cursor-crosshair", measure: "cursor-crosshair",
     boxSelect: "cursor-crosshair",
   }[activeTool] || "cursor-crosshair";
 
