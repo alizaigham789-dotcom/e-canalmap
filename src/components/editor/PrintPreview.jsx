@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, svgMogaInfo, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel } from "@/lib/printRenderHelpers";
 import { collectLandUses } from "@/lib/landUsePalette";
@@ -647,7 +647,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [khakaDastiMode, setKhakaDastiMode] = useState(false);
   const [pageOrientation, setPageOrientation] = useState("portrait");
   const [pageSize, setPageSize] = useState("A4");
-  const [printMargin, setPrintMargin] = useState(1.0); // side margin in cm (0.5–2.0)
+  const [printMargin, setPrintMargin] = useState(0); // side margin removed per request
 
   // Compute page aspect ratio for preview container
   const pageAspect = useMemo(() => {
@@ -809,7 +809,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     if (isMobile) { handleDownloadPDF(); return; }
     const totalGCA = calculateTotalGCA(objects);
     const headerHTML = buildPrintHeaderHTML(mapData);
-    const footerHTML = buildPrintFooterHTML(mapData);
 
     // Auto-calculated CCA/GCA for each chakbandi — use user's centerLabel if entered,
     // positioned ABOVE the chakbandi boundary (not at centroid)
@@ -841,15 +840,15 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       <title>Khaka Dasti</title>
       <style>
         @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
-        @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
+        @page { margin: 0; size: ${pageSize} ${pageOrientation}; }
         * { margin:0; padding:0; box-sizing:border-box; }
         html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
         body { display: flex; flex-direction: column;${showPageBorder ? ` border:2px solid #3b82f6;` : ""} }
-        .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 0 ${printMargin}cm; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
+        .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
         .map-wrap svg { width:100%; height:100%; display:block; }
         .map-wrap svg * { -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
         @media print {
-          @page { margin: 6mm; size: ${pageSize} ${pageOrientation}; }
+          @page { margin: 0; size: ${pageSize} ${pageOrientation}; }
           html, body { width:100%; height:100%; overflow:hidden; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
           body { -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
           * { -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
@@ -868,7 +867,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
           ${printLegendSVG}
         </svg>
       </div>
-      ${footerHTML}
     </body></html>`);
     win.document.close();
     let printed = false;
@@ -1014,16 +1012,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
                 ⬍ Portrait
               </button>
             </div>
-            {/* Side margin slider */}
-            <div className="flex items-center gap-1.5 bg-white rounded-lg border border-slate-300 px-2 py-1">
-              <span className="text-[10px] text-slate-500 font-bold whitespace-nowrap">↔ Margin</span>
-              <input
-                type="range" min={0.5} max={2.0} step={0.1} value={printMargin}
-                onChange={e => setPrintMargin(parseFloat(e.target.value))}
-                className="w-16 h-1 accent-blue-500 cursor-pointer"
-              />
-              <span className="text-[10px] font-mono text-slate-700 w-8">{printMargin.toFixed(1)}cm</span>
-            </div>
             {/* Print */}
             <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-500 text-white text-xs gap-1" onClick={handlePrint}>
               <Printer className="w-3.5 h-3.5" /> Print / PDF
@@ -1091,8 +1079,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
                 <div style={{ padding:40, textAlign:"center", color:"#999" }}>No objects to print</div>
               )}
             </div>
-            {/* Signature footer — مرتب کنندہ / ضلعدار at the end */}
-            <div dangerouslySetInnerHTML={{ __html: buildPrintFooterHTML(mapData) }} />
           </div>
         </div>
       </div>
