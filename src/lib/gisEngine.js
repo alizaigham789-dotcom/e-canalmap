@@ -1209,8 +1209,8 @@ export function buildPrintHeaderHTML(mapData, options = {}) {
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
   const outerPad = options.compactBottom ? "6px 12px 0" : "6px 12px";
   return `<div style="width:100%;box-sizing:border-box;padding:${outerPad};">
-    <div id="print-header-box" style="border-bottom:3px solid #000; padding:10px 18px 12px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box; background:#f1f5f9; border-radius:4px 4px 0 0;">
-      <span id="print-header-text" style="white-space:nowrap; font-family:${uf}; font-weight:bold; font-size:52px; direction:rtl; color:#0f172a;">${text}</span>
+    <div id="print-header-box" style="border-top:3px solid #000; border-bottom:3px solid #000; padding:14px 18px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box; background:#f8fafc; box-shadow: inset 0 2px 0 #1e3a5f, inset 0 -2px 0 #1e3a5f;">
+      <span id="print-header-text" style="white-space:nowrap; font-family:${uf}; font-weight:bold; font-size:52px; direction:rtl; color:#0f172a; letter-spacing:0.5px;">${text}</span>
     </div>
   </div>
   <script>

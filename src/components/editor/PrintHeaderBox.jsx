@@ -46,7 +46,7 @@ export default function PrintHeaderBox({ mapData, compact = false }) {
   }, []);
 
   return (
-    <div ref={wrapRef} className={`w-full px-3 py-1.5 border-b-2 border-black flex items-center justify-center overflow-hidden bg-white shrink-0 ${compact ? "" : "mb-2"}`}>
+    <div ref={wrapRef} className={`w-full px-3 py-1.5 border-t-2 border-b-2 border-black flex items-center justify-center overflow-hidden bg-slate-50 shrink-0 ${compact ? "" : "mb-2"}`} style={{ boxShadow: "inset 0 2px 0 #1e3a5f, inset 0 -2px 0 #1e3a5f" }}>
       <span
         ref={textRef}
         dir="rtl"
