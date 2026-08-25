@@ -129,13 +129,14 @@ const COL_LETTERS = ["ا","ب","ج","د","ہ","و","ز","ح","ط","ی","ک","ل"
 
 const PRINT_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-  @page { size: A4 landscape; margin: 10mm 10mm 10mm 10mm; @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; } @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: counter(page) " / " counter(pages); direction: ltr; unicode-bidi: embed; font-family: sans-serif; font-size: 9px; color: #555; padding: 0 6mm 4mm 0; } }
+  @page { size: 297mm 210mm; margin: 10mm 10mm 10mm 10mm; @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; } @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: counter(page) " / " counter(pages); direction: ltr; unicode-bidi: embed; font-family: sans-serif; font-size: 9px; color: #555; padding: 0 6mm 4mm 0; } }
+  html, body { width: 100%; }
   body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   .print-page-wrap { box-sizing: border-box; }
   .parat-page { box-sizing: border-box; }
   .notes-block { direction: rtl; margin-top: 1em; }
-  .final-block { box-sizing: border-box; display: flex; flex-direction: column; min-height: 85vh; page-break-inside: avoid; break-inside: avoid; }
+  .final-block { box-sizing: border-box; display: flex; flex-direction: column; page-break-inside: avoid; break-inside: avoid; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
   th { font-weight: bold; }

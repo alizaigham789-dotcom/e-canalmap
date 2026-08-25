@@ -223,16 +223,23 @@ export function buildBatchHTML(records, opts = {}) {
   return (records || []).map((r) => buildParatRecordHTML(r, opts)).join("\n");
 }
 
+const PAGE_DIMS = { A4: { w: 210, h: 297 }, A3: { w: 297, h: 420 }, A5: { w: 148, h: 210 }, Legal: { w: 216, h: 356 }, Letter: { w: 216, h: 279 } };
+function pageDimensions(size, orientation) {
+  const d = PAGE_DIMS[size] || PAGE_DIMS.A4;
+  return orientation === "landscape" ? `${d.h}mm ${d.w}mm` : `${d.w}mm ${d.h}mm`;
+}
+
 export function buildPrintCSS(opts = {}) {
   const pageSize = opts.pageSize || "A4";
   const orientation = opts.orientation || "landscape";
   return `
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-    @page { size: ${pageSize} ${orientation}; margin: 10mm 10mm 10mm 10mm; @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; } @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: counter(page) " / " counter(pages); direction: ltr; unicode-bidi: embed; font-family: sans-serif; font-size: 9px; color: #555; padding: 0 6mm 4mm 0; } }
+    @page { size: ${pageDimensions(pageSize, orientation)}; margin: 10mm 10mm 10mm 10mm; @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; } @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: counter(page) " / " counter(pages); direction: ltr; unicode-bidi: embed; font-family: sans-serif; font-size: 9px; color: #555; padding: 0 6mm 4mm 0; } }
+    html, body { width: 100%; }
     body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; }
     .parat-page { box-sizing: border-box; }
     .notes-block { direction: rtl; margin-top: 1em; }
-    .final-block { box-sizing: border-box; display: flex; flex-direction: column; min-height: 85vh; page-break-inside: avoid; break-inside: avoid; }
+    .final-block { box-sizing: border-box; display: flex; flex-direction: column; page-break-inside: avoid; break-inside: avoid; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
     th { font-weight: bold; }
