@@ -3,7 +3,7 @@ import { buildMapHeaderText } from "@/lib/gisEngine";
 
 // Bordered single-line Urdu header box shown above the map in Print Preview / Export.
 // Auto-shrinks font size so the full line always fits in one row.
-export default function PrintHeaderBox({ mapData }) {
+export default function PrintHeaderBox({ mapData, compact = false }) {
   const wrapRef = useRef(null);
   const textRef = useRef(null);
   const [fontSize, setFontSize] = useState(28);
@@ -46,7 +46,7 @@ export default function PrintHeaderBox({ mapData }) {
   }, []);
 
   return (
-    <div ref={wrapRef} className="w-full px-3 py-1.5 mb-2 border-b-2 border-black flex items-center justify-center overflow-hidden bg-white shrink-0">
+    <div ref={wrapRef} className={`w-full px-3 py-1.5 border-b-2 border-black flex items-center justify-center overflow-hidden bg-white shrink-0 ${compact ? "" : "mb-2"}`}>
       <span
         ref={textRef}
         dir="rtl"

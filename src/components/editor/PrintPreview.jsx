@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, svgMogaInfo, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel } from "@/lib/printRenderHelpers";
 import { collectLandUses } from "@/lib/landUsePalette";
@@ -520,13 +520,13 @@ function buildBackgroundGridSVG(viewX, viewY, viewW, viewH) {
 function buildKhakaDastiGuideGridSVG(bounds) {
   const mustW = DIMENSIONS.MUSTATEEL.width;
   const mustH = DIMENSIONS.MUSTATEEL.height;
-  const leftCount = 3, rightCount = 3, topCount = 1, bottomCount = 1;
-  // Exact centering — margins are exactly N mustateels on each side, so the
-  // drawn map sits dead-centre within the guide grid.
+  // Margins: 1.5 mustateels top (undrawn guide space), 3 mustateels each side,
+  // bottom any (kept 1). The drawn map sits inside this guide grid.
+  const leftCount = 3, rightCount = 3, topMust = 1.5, bottomMust = 1;
   const startX = bounds.minX - leftCount * mustW;
   const endX = bounds.maxX + rightCount * mustW;
-  const startY = bounds.minY - topCount * mustH;
-  const endY = bounds.maxY + bottomCount * mustH;
+  const startY = bounds.minY - topMust * mustH;
+  const endY = bounds.maxY + bottomMust * mustH;
   // Very dim guide cells — boundaries much lighter than drawn mustateels,
   // killa grid even lighter so it reads as faint pencil guide lines.
   const boundaryColor = "rgba(130,130,130,0.25)";
@@ -534,19 +534,24 @@ function buildKhakaDastiGuideGridSVG(bounds) {
   const boundaryW = MUSTATEEL_SCALE.boundaryWidth() * 0.7;
   const cellW = mustW / 2, cellH = mustH / 5;
   let lines = "";
-  // Mustateel boundaries (thin, very dim)
-  for (let x = startX; x <= endX + 0.5; x += mustW) {
+  // Guide grid is aligned to the GLOBAL mustateel grid (multiples of mustW/mustH
+  // from the world origin) — the same grid the drawn mustateels snap to. This
+  // keeps every guide line sitting exactly on top of the drawn mustateel edges
+  // (never offset / "mustateel kahi aur grid line kahi aur").
+  const firstVX = Math.floor(startX / mustW) * mustW;
+  for (let x = firstVX; x <= endX + 0.5; x += mustW) {
     lines += `<line x1="${x}" y1="${startY}" x2="${x}" y2="${endY}" stroke="${boundaryColor}" stroke-width="${boundaryW}"/>`;
   }
-  for (let y = startY; y <= endY + 0.5; y += mustH) {
+  const firstHY = Math.floor(startY / mustH) * mustH;
+  for (let y = firstHY; y <= endY + 0.5; y += mustH) {
     lines += `<line x1="${startX}" y1="${y}" x2="${endX}" y2="${y}" stroke="${boundaryColor}" stroke-width="${boundaryW}"/>`;
   }
-  // Killa grid inside each mustateel cell (very dim)
-  for (let x = startX; x < endX; x += mustW) {
+  // Killa grid inside each mustateel cell (very dim) — aligned to the global grid
+  for (let x = firstVX; x < endX; x += mustW) {
     const midX = x + cellW;
     lines += `<line x1="${midX}" y1="${startY}" x2="${midX}" y2="${endY}" stroke="${killaColor}" stroke-width="0.7"/>`;
   }
-  for (let y = startY; y < endY; y += mustH) {
+  for (let y = firstHY; y < endY; y += mustH) {
     for (let r = 1; r < 5; r++) {
       const hy = y + r * cellH;
       lines += `<line x1="${startX}" y1="${hy}" x2="${endX}" y2="${hy}" stroke="${killaColor}" stroke-width="0.7"/>`;
@@ -808,7 +813,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     const isMobile = (typeof window !== "undefined" && window.innerWidth < 768) || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
     if (isMobile) { handleDownloadPDF(); return; }
     const totalGCA = calculateTotalGCA(objects);
-    const headerHTML = buildPrintHeaderHTML(mapData);
+    const headerHTML = buildPrintHeaderHTML(mapData, { compactBottom: khakaDastiMode });
+    const footerHTML = buildPrintFooterHTML(mapData);
 
     // Auto-calculated CCA/GCA for each chakbandi — use user's centerLabel if entered,
     // positioned ABOVE the chakbandi boundary (not at centroid)
@@ -867,6 +873,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
           ${printLegendSVG}
         </svg>
       </div>
+      ${khakaDastiMode ? "" : footerHTML}
     </body></html>`);
     win.document.close();
     let printed = false;
@@ -1064,7 +1071,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             style={{ width: `${scale}%`, minWidth: 280, maxWidth: pageOrientation === "portrait" ? 460 : 900, aspectRatio: pageAspect, border: showPageBorder ? `2px solid #3b82f6` : "none" }}
             onClick={handlePreviewClick}
           >
-            <PrintHeaderBox mapData={mapData} />
+            <PrintHeaderBox mapData={mapData} compact={khakaDastiMode} />
             {/* SVG Map — pure inline vector, fills remaining space between header & footer */}
             <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-center">
               {inlineSvgMarkup ? (
@@ -1079,6 +1086,9 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
                 <div style={{ padding:40, textAlign:"center", color:"#999" }}>No objects to print</div>
               )}
             </div>
+            {!khakaDastiMode && (
+              <div dangerouslySetInnerHTML={{ __html: buildPrintFooterHTML(mapData) }} />
+            )}
           </div>
         </div>
       </div>

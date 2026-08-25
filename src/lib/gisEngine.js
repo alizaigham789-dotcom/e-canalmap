@@ -1204,10 +1204,11 @@ export function buildMapHeaderText(mapData) {
 }
 
 // Bordered single-line header box for print/export output — auto-shrinks to fit one line
-export function buildPrintHeaderHTML(mapData) {
+export function buildPrintHeaderHTML(mapData, options = {}) {
   const text = escapeHtml(buildMapHeaderText(mapData));
   const uf = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', Rajdhani, Arial, sans-serif";
-  return `<div style="width:100%;box-sizing:border-box;padding:6px 12px;">
+  const outerPad = options.compactBottom ? "6px 12px 0" : "6px 12px";
+  return `<div style="width:100%;box-sizing:border-box;padding:${outerPad};">
     <div id="print-header-box" style="border-bottom:3px solid #000; padding:10px 18px 12px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box; background:#f1f5f9; border-radius:4px 4px 0 0;">
       <span id="print-header-text" style="white-space:nowrap; font-family:${uf}; font-weight:bold; font-size:52px; direction:rtl; color:#0f172a;">${text}</span>
     </div>
