@@ -1,21 +1,33 @@
 {
   "name": "Canal E Record",
   "short_name": "Canal E Record",
-  "description": "Precision cadastral mapping and land records management system for canal patwari operations.",
+  "description": "Canal Patwari Khushab — Digital Maps & Documents",
   "start_url": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0a0f1a",
-  "theme_color": "#0c4a6e",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "https://media.base44.com/images/public/6a43d51df305887291122b25/4837aa3b5_file_00000000fa3c8208949dd84fbc579aac1.png",
+      "src": "https://media.base44.com/images/public/6a43d51df305887291122b25/1c89a5859_file_00000000fa3c8208949dd84fbc579aac1.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://media.base44.com/images/public/6a43d51df305887291122b25/1c89a5859_file_00000000fa3c8208949dd84fbc579aac1.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://media.base44.com/images/public/6a43d51df305887291122b25/1c89a5859_file_00000000fa3c8208949dd84fbc579aac1.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://media.base44.com/images/public/6a43d51df305887291122b25/4837aa3b5_file_00000000fa3c8208949dd84fbc579aac1.png",
+      "src": "https://media.base44.com/images/public/6a43d51df305887291122b25/1c89a5859_file_00000000fa3c8208949dd84fbc579aac1.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
