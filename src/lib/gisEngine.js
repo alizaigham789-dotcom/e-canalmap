@@ -562,12 +562,12 @@ export function createBridge(points, name = "") {
   };
 }
 
-export function createOutlet(canalId, startPt, endPt, label = "", canalWidth = 100) {
+export function createOutlet(canalId, startPt, endPt, label = "", canalWidth = 100, moghaNumber = "", moghaSide = "") {
   return {
     id: `outlet_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "outlet", canalId,
     start: { ...startPt }, end: { ...endPt },
-    label, mogha_name: "", mogha_number: "", mogha_side: "",
+    label, mogha_name: "", mogha_number: moghaNumber, mogha_side: moghaSide,
     arrowScale: 1, blockSize: 20, canalWidth,
   };
 }
@@ -1279,7 +1279,10 @@ export function mogaNumberFont() {
 export function getOutletDimensions(obj) {
   const scale = obj.arrowScale || 1;
   const canalW = obj.canalWidth || 100;
-  const size = DIMENSIONS.KHAL_WIDTH * 4 * scale; // 4× khal width — 2× bigger for prominence
+  // blockSize slider is now functional: default 20 → factor 1 (unchanged look),
+  // 40 → 2× bigger block, 10 → half size. Preserves existing maps (blockSize 20).
+  const blockFactor = (obj.blockSize || 20) / 20;
+  const size = DIMENSIONS.KHAL_WIDTH * 4 * scale * blockFactor;
   return {
     size,                   // block size (square at start point)
     shaftWidth: size * 0.3,  // shaft line width

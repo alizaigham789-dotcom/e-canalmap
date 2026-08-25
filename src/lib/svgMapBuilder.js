@@ -11,7 +11,7 @@ import {
 } from "@/lib/gisEngine";
 import {
   svgCanalNameOnPath, svgMogaFractionBox,
-  svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos,
+  svgCCAGCAFractionBox, svgMogaInfo, getOutletLabelPos, getChakbandiLabelPos,
   getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel,
 } from "@/lib/printRenderHelpers";
 
@@ -388,6 +388,7 @@ function svgOutlet(obj, C, idx) {
     <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${shaftWidth.toFixed(1)}" stroke-linecap="round"/>
     <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
     ${mogaInside}
+    ${svgMogaInfo(obj, size * 1.2)}
   </g>`;
 }
 

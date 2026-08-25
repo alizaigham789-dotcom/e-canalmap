@@ -799,13 +799,38 @@ export default function Editor() {
     const draft = outletDraftRef.current;
     setOutletDraft(null);
     if (draft) {
-      const outlet = createOutlet(draft.canalId, { x: draft.x, y: draft.y }, endPt, "", draft.canalWidth || 100);
+      const start = { x: draft.x, y: draft.y };
+      // Default outlet length = 160 ft, in the drawn direction. If the user clicked
+      // the same spot (no direction), fall back to perpendicular from the canal.
+      const dx = endPt.x - start.x, dy = endPt.y - start.y;
+      const drawn = Math.hypot(dx, dy);
+      let finalEnd;
+      if (drawn > 1) {
+        finalEnd = { x: start.x + (dx / drawn) * 160, y: start.y + (dy / drawn) * 160 };
+      } else {
+        const canal = draft.canalId ? dsmRef.current.objects.find(o => o.id === draft.canalId) : null;
+        if (canal?.points?.length >= 2) {
+          const cp0 = canal.points[0], cp1 = canal.points[canal.points.length - 1];
+          const cdx = cp1.x - cp0.x, cdy = cp1.y - cp0.y;
+          const clen = Math.hypot(cdx, cdy) || 1;
+          let px = -cdy / clen, py = cdx / clen;
+          if ((endPt.x - start.x) * px + (endPt.y - start.y) * py < 0) { px = -px; py = -py; }
+          finalEnd = { x: start.x + px * 160, y: start.y + py * 160 };
+        } else {
+          finalEnd = { x: start.x, y: start.y + 160 };
+        }
+      }
+      // Auto-pick moga number + side from the map header (mapData.moga_number / mogha_side)
+      const outlet = createOutlet(
+        draft.canalId, start, finalEnd, "", draft.canalWidth || 100,
+        mapData?.moga_number || "", mapData?.mogha_side || ""
+      );
       dsmRef.current.add(outlet);
       setSelectedId(outlet.id);
       syncObjects();
       saveRef.current();
     }
-  }, []);
+  }, [mapData]);
 
   const handleSnapChange = (key, val) => setSnapSettings(prev => ({ ...prev, [key]: val }));
 

@@ -4,7 +4,7 @@
 // and canal name text-on-path — used by PrintPreview & ExportDialog
 // ============================================================
 
-import { getParallelPolyline, DIMENSIONS, getMustateeelKillaGrid } from "@/lib/gisEngine";
+import { getParallelPolyline, DIMENSIONS, getMustateeelKillaGrid, escapeHtml } from "@/lib/gisEngine";
 
 // Detect Urdu/Arabic script — switches canal name rendering to a connected
 // RTL label in Jameel Noori Nastaleeq (char-by-char on-path breaks the joins).
@@ -851,4 +851,53 @@ export function drawMogaDetailsOnCanvas(ctx, canvasW, canvasH, objects) {
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
     ctx.fillText(text, dx + 10*S, iy);
   });
+}
+
+// ─── Moga info label (name + CCA/GCA) at the outlet label position ───────
+// Shared by editor canvas & export canvas. fontPx in world units.
+export function drawMogaInfoOnCanvas(ctx, obj, fontPx) {
+  const name = obj.mogha_name || "";
+  const hasCCA = obj.cca != null && String(obj.cca) !== "";
+  const hasGCA = obj.gca != null && String(obj.gca) !== "";
+  if (!name && !hasCCA && !hasGCA) return;
+  const lp = getOutletLabelPos(obj);
+  const urdu = isUrduText(name);
+  const fam = urdu ? "'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,sans-serif" : "Rajdhani,Arial,sans-serif";
+  let cy = lp.y;
+  if (name) {
+    ctx.save();
+    try { if (urdu) ctx.direction = "rtl"; } catch {}
+    ctx.fillStyle = "#0c4a6e";
+    ctx.font = `bold ${fontPx}px ${fam}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(name, lp.x, cy);
+    ctx.restore();
+    cy += fontPx * 0.5;
+  }
+  if (hasCCA || hasGCA) {
+    drawCCAGCAFractionBoxOnCanvas(ctx, String(obj.cca ?? ""), String(obj.gca ?? ""), lp.x, cy + fontPx * 0.9, fontPx);
+  }
+}
+
+// ─── SVG: moga info label (name + CCA/GCA) at the outlet label position ──
+export function svgMogaInfo(obj, fontPx) {
+  const name = obj.mogha_name || "";
+  const hasCCA = obj.cca != null && String(obj.cca) !== "";
+  const hasGCA = obj.gca != null && String(obj.gca) !== "";
+  if (!name && !hasCCA && !hasGCA) return "";
+  const lp = getOutletLabelPos(obj);
+  const urdu = isUrduText(name);
+  const fam = urdu ? "'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" : "Rajdhani,Arial,sans-serif";
+  const dir = urdu ? ' direction="rtl"' : '';
+  let svg = "";
+  let cy = lp.y;
+  if (name) {
+    svg += `<text x="${lp.x.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="bottom" font-family="${fam}" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="#0c4a6e"${dir}>${escapeHtml(name)}</text>`;
+    cy += fontPx * 0.5;
+  }
+  if (hasCCA || hasGCA) {
+    svg += svgCCAGCAFractionBox(String(obj.cca ?? ""), String(obj.gca ?? ""), lp.x, cy + fontPx * 0.9, fontPx);
+  }
+  return svg;
 }

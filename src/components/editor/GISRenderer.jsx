@@ -5,7 +5,7 @@
 // ============================================================
 
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
-import { drawMogaFractionBoxOnCanvas, getOutletLabelPos, isUrduText } from "@/lib/printRenderHelpers";
+import { drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, getOutletLabelPos, isUrduText } from "@/lib/printRenderHelpers";
 
 // ---- Anti-aliased zoom-clamped font size ----
 // For print: use a larger effective min so labels are always readable regardless of zoom
@@ -920,6 +920,8 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
     ctx.fillText(mogaText, 0, 0);
     ctx.restore();
   }
+  // Moga info (name + CCA/GCA) at the label position beyond the arrow tip
+  drawMogaInfoOnCanvas(ctx, obj, size * 1.2);
 }
 
 // ============================================================
