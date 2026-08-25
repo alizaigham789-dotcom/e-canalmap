@@ -22,14 +22,16 @@ const PENCIL_COLORS = {
   labelColor: "#000000",
 };
 
-// Khaka Dasti (hand-drawn sketch) — faint lead-pencil palette. Drawn mustateel
-// boundaries + labels stay dark pencil; the internal killa grid is dim grey so the
-// whole page reads like a light pencil sketch (not heavily highlighted).
+// Khaka Dasti (hand-drawn sketch) — lead-pencil grey palette (not full black).
+// Drawn mustateel boundaries are graphite grey; the internal killa grid is a lighter
+// grey so the whole page reads like a light pencil sketch. Name labels are hidden
+// (the surveyor writes them in by hand); a mustateel guide grid extends beyond the
+// drawn parcels so any missed mustateel can be pencil-drawn later.
 const KHAKA_DASTI_COLORS = {
-  mustateelStroke: "#3a3a3a",
-  murabaStroke: "#3a3a3a",
-  gridStroke: "rgba(110,110,110,0.40)",
-  labelColor: "#2a2a2a",
+  mustateelStroke: "#6b6b6b",
+  murabaStroke: "#6b6b6b",
+  gridStroke: "rgba(120,120,120,0.42)",
+  labelColor: "#6b6b6b",
 };
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
