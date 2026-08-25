@@ -488,14 +488,15 @@ export default function ParatWarabandi() {
           <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 shrink-0" onClick={handleBack}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <h1 className="text-sm font-bold text-slate-800 leading-relaxed" dir="rtl"
+          <h1 className="text-sm font-bold text-slate-800 leading-relaxed" dir="ltr"
             style={{ fontFamily: "'Times New Roman', 'Noto Nastaliq Urdu', serif", lineHeight: 1.7 }}>
-            <span dir="ltr" style={{ unicodeBidi: "isolate", display: "inline-block" }}>{selectedRecord?.mogha_side || "R"}</span>
+            <span style={{ unicodeBidi: "isolate" }}>{selectedRecord?.mogha_side || "R"}</span>
             <span style={{ margin: "0 3px" }}>/</span>
-            {selectedRecord?.doc_type || "پرت وارہ بندی"}
-            <span style={{ margin: "0 4px" }}>،</span>
-            موگہ نمبر
-            <span dir="ltr" style={{ unicodeBidi: "isolate", display: "inline-block", marginLeft: "5px" }}>{selectedRecord?.mogha_number || ""}</span>
+            <span style={{ unicodeBidi: "isolate" }}>{selectedRecord?.doc_type || "پرت وارہ بندی"}،</span>
+            <span style={{ margin: "0 4px" }} />
+            <span style={{ unicodeBidi: "isolate" }}>موگہ نمبر</span>
+            <span style={{ margin: "0 4px" }} />
+            <span style={{ unicodeBidi: "isolate" }}>{selectedRecord?.mogha_number || ""}</span>
           </h1>
         </div>
       </header>
