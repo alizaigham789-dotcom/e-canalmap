@@ -87,7 +87,7 @@ function parallelSmoothClosedPath(pts, offset) {
 }
 
 // ─── SVG OBJECT RENDERERS ─────────────────────────────────────────────────────
-function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null, showLabels = true) {
+function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null, showLabels = true, showNameLabel = true) {
   const cellW = obj.w / 2, cellH = obj.h / 5;
   const strokeColor = C.mustateelStroke || "#000000";
   const fontSize = Math.min(obj.w * 0.30, obj.h * 0.30);
@@ -143,11 +143,11 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null, showLabe
   ${killaLabels}
   ${obj.excluded ? svgExclusionHatch(obj, `must_${idx}`) : ""}
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness)}" stroke-linejoin="miter"/>
-  ${labelSvg}
+  ${showNameLabel ? labelSvg : ""}
 </g>`;
 }
 
-function svgMuraba(obj, C, idx, showKilla = true, mouzaSplit = null) {
+function svgMuraba(obj, C, idx, showKilla = true, mouzaSplit = null, showNameLabel = true) {
   const cellW = obj.w / 5, cellH = obj.h / 5;
   const strokeColor = C.murabaStroke || "#000000";
   const fontSize = Math.min(obj.w * 0.22, obj.h * 0.22);
@@ -197,7 +197,7 @@ function svgMuraba(obj, C, idx, showKilla = true, mouzaSplit = null) {
   ${killaLabels}
   ${obj.excluded ? svgExclusionHatch(obj, `murb_${idx}`) : ""}
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness)}" stroke-linejoin="miter"/>
-  ${labelSvg}
+  ${showNameLabel ? labelSvg : ""}
 </g>`;
 }
 
@@ -513,6 +513,29 @@ function buildBackgroundGridSVG(viewX, viewY, viewW, viewH) {
   return lines;
 }
 
+// Khaka Dasti guide grid — mustateel-sized cells extending 3 mustateels left/right
+// and 1 mustateel top/bottom beyond the drawn parcels, aligned to the global
+// mustateel grid. Lead-pencil grey so it reads as a light pencil guide a surveyor
+// can pencil-draw a missed mustateel onto.
+function buildKhakaDastiGuideGridSVG(bounds) {
+  const mustW = DIMENSIONS.MUSTATEEL.width;
+  const mustH = DIMENSIONS.MUSTATEEL.height;
+  const leftCount = 3, rightCount = 3, topCount = 1, bottomCount = 1;
+  const startX = Math.floor((bounds.minX - leftCount * mustW) / mustW) * mustW;
+  const endX = Math.ceil((bounds.maxX + rightCount * mustW) / mustW) * mustW;
+  const startY = Math.floor((bounds.minY - topCount * mustH) / mustH) * mustH;
+  const endY = Math.ceil((bounds.maxY + bottomCount * mustH) / mustH) * mustH;
+  const guideColor = "rgba(90,90,90,0.55)";
+  let lines = "";
+  for (let x = startX; x <= endX + 0.5; x += mustW) {
+    lines += `<line x1="${x}" y1="${startY}" x2="${x}" y2="${endY}" stroke="${guideColor}" stroke-width="0.9"/>`;
+  }
+  for (let y = startY; y <= endY + 0.5; y += mustH) {
+    lines += `<line x1="${startX}" y1="${y}" x2="${endX}" y2="${y}" stroke="${guideColor}" stroke-width="0.9"/>`;
+  }
+  return { lines, startX, startY, endX, endY };
+}
+
 function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, mogaScale = 1, khakaDasti = false) {
   const C = colorSettings || {};
   // Khaka Dasti — only drawn parcels (mustateel/muraba) render on a full-page grid
@@ -521,10 +544,20 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
   if (!bounds) return null;
 
   const pad = 20;
-  const viewX = bounds.minX - pad;
-  const viewY = bounds.minY - pad;
-  const viewW = (bounds.maxX - bounds.minX) + pad * 2;
-  const viewH = (bounds.maxY - bounds.minY) + pad * 2;
+  let viewX, viewY, viewW, viewH, guideGridSvg = "";
+  if (khakaDasti) {
+    const guide = buildKhakaDastiGuideGridSVG(bounds);
+    guideGridSvg = guide.lines;
+    viewX = guide.startX - pad;
+    viewY = guide.startY - pad;
+    viewW = (guide.endX - guide.startX) + pad * 2;
+    viewH = (guide.endY - guide.startY) + pad * 2;
+  } else {
+    viewX = bounds.minX - pad;
+    viewY = bounds.minY - pad;
+    viewW = (bounds.maxX - bounds.minX) + pad * 2;
+    viewH = (bounds.maxY - bounds.minY) + pad * 2;
+  }
 
   const showKillaMustateel = killaVisibility.mustateel !== false;
   const showKillaMuraba = killaVisibility.muraba !== false;
@@ -544,11 +577,11 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
   const allOutlets = objects.filter(o => o.type === "outlet");
 
   let svgParts = [];
-  if (khakaDasti) svgParts.push(buildBackgroundGridSVG(viewX, viewY, viewW, viewH));
+  if (khakaDasti) svgParts.push(guideGridSvg);
   sorted.forEach((obj, idx) => {
     switch (obj.type) {
-      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null), showAcreLabels)); break;
-      case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null))); break;
+      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null), showAcreLabels, !khakaDasti)); break;
+      case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null), !khakaDasti)); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
       case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW)); break;
       case "canal":     svgParts.push(svgCanal(obj, C, idx, allOutlets)); break;
