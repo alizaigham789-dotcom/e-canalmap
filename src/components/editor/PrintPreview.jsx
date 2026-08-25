@@ -249,15 +249,31 @@ function svgAcre(obj, C, idx) {
 </g>`;
 }
 
-function svgChakbandi(obj, C, idx, viewW) {
+function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   if (!obj.points || obj.points.length < 2) return "";
+  const useKhakaDasti = obj.chakbandiStyle === "khakaDasti" || khakaDasti;
+  const pts = obj.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const label = obj.name || "";
+  const midPt = obj.points[Math.floor(obj.points.length/2)];
+
+  // Khaka Dasti line — simple green line centered on the mustateel border,
+  // thinner than the mustateel boundary so the red mustateel border peeks out
+  // on both sides. Used when the chakbandi's category is "khakaDasti" OR print
+  // خاکہ دستی mode is on.
+  if (useKhakaDasti) {
+    const kdColor = "#16a34a";
+    const kdLineW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5) * 0.5;
+    return `<g>
+  <polyline points="${pts}" fill="none" stroke="${kdColor}" stroke-width="${kdLineW}" stroke-linecap="round" stroke-linejoin="miter"/>
+  ${label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${kdColor}">${label}</text>` : ""}
+</g>`;
+  }
+
   const color = C.chakbandiStroke || "#000000";
   const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness);
   const crossW = lineW * 0.6;
   const crossSize = CHAKBANDI_SCALE.crossSize(obj.crossSize);
   const spacing = CHAKBANDI_SCALE.crossSpacing(obj.crossSpacing);
-
-  const pts = obj.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 
   let crosses = "";
   for (let i = 0; i < obj.points.length - 1; i++) {
@@ -283,9 +299,6 @@ function svgChakbandi(obj, C, idx, viewW) {
       crosses += `<line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" stroke="${color}" stroke-width="${crossW}" stroke-linecap="round"/>`;
     }
   }
-
-  const label = obj.name || "";
-  const midPt = obj.points[Math.floor(obj.points.length/2)];
 
   return `<g>
   <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${lineW}" stroke-linecap="round" stroke-linejoin="miter"/>
@@ -605,7 +618,7 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
       case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null), showAcreLabels, true)); break;
       case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null), true)); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
-      case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW)); break;
+      case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW, khakaDasti)); break;
       case "canal":     svgParts.push(svgCanal(obj, C, idx, allOutlets)); break;
       case "khal":      svgParts.push(svgKhal(obj, C, idx)); break;
       case "road":      svgParts.push(svgRoad(obj, C, idx)); break;

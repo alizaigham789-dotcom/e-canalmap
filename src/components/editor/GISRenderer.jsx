@@ -965,9 +965,41 @@ export function drawDamageMarker(ctx, obj, isSelected, zoom) {
 // ============================================================
 // LAYER 2: Chakbandi
 // ============================================================
-export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false) {
+export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false, forceKhakaDasti = false) {
   if (obj.points.length < 2) return;
-  const color = C.chakbandiStroke || "#22c55e";
+  const useKhakaDasti = obj.chakbandiStyle === "khakaDasti" || forceKhakaDasti;
+  const color = useKhakaDasti ? "#16a34a" : (C.chakbandiStroke || "#22c55e");
+
+  // Khaka Dasti line — a simple green line centered on the mustateel border,
+  // thinner than the mustateel boundary so the red mustateel border peeks out
+  // on both sides. Represents the chakbandi in the hand-drawn sketch style.
+  if (useKhakaDasti) {
+    const mustBorderW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5) * 0.2;
+    const kdLineW = mustBorderW * 0.5;
+    ctx.strokeStyle = isSelected ? "#86efac" : color;
+    ctx.lineWidth = (kdLineW + (isSelected ? 2 : 0)) / zoom;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "miter";
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(obj.points[0].x, obj.points[0].y);
+    for (const p of obj.points) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    if (obj.name && zoom > 0.3) {
+      const mid = Math.floor(obj.points.length / 2);
+      const p = obj.points[mid], p2 = obj.points[Math.min(mid+1, obj.points.length-1)];
+      const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+      ctx.save();
+      ctx.translate(p.x, p.y); ctx.rotate(angle);
+      ctx.fillStyle = color;
+      ctx.font = `bold ${scaledFont(11, zoom)}px Rajdhani, sans-serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillText(obj.name, 0, -6/zoom);
+      ctx.restore();
+    }
+    return;
+  }
+
   const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness) * 0.2;
   const crossSize = CHAKBANDI_SCALE.crossSize(obj.crossSize) * 0.2 / zoom;
   const spacing = CHAKBANDI_SCALE.crossSpacing(obj.crossSpacing) / zoom;

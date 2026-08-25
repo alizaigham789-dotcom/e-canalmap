@@ -589,6 +589,7 @@ export function createChakbandi(points, name = "") {
     type: "chakbandi", points: points.map(p => ({ ...p })), name,
     width: DIMENSIONS.CANAL_WIDTH, crossPattern: true,
     crossSize: 3, crossSpacing: 2, lineThickness: 6, // 1-10 levels
+    chakbandiStyle: "cross", // "cross" (× pattern, default) or "khakaDasti" (simple green line on mustateel border)
   };
 }
 

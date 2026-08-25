@@ -242,6 +242,14 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
           {selectedObj.type === "chakbandi" && (
             <>
               <Separator className="bg-slate-100" />
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Line Category</label>
+                <div className="flex gap-1">
+                  <button onClick={() => commit("chakbandiStyle", "cross")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${(local.chakbandiStyle || "cross") !== "khakaDasti" ? "bg-green-600 text-white border-green-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-green-300"}`}>Cross Pattern</button>
+                  <button onClick={() => commit("chakbandiStyle", "khakaDasti")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${local.chakbandiStyle === "khakaDasti" ? "bg-green-600 text-white border-green-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-green-300"}`} style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>خاکہ دستی Line</button>
+                </div>
+                {local.chakbandiStyle === "khakaDasti" && <p className="text-[9px] text-green-600 mt-1">Simple green line on the mustateel border — mustateel border peeks both sides. Auto-used in Print خاکہ دستی mode.</p>}
+              </div>
               <div className="p-2 bg-green-50 border border-green-200 rounded-lg space-y-2">
                 <div className="flex items-center gap-1">
                   <Calculator className="w-3 h-3 text-green-600" />
@@ -322,19 +330,23 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                   );
                 })()}
               </div>
-              <SpacingControl label="Line Thickness" value={local.lineThickness || 6} min={1} max={10} step={1} onChange={v => commit("lineThickness", v)} />
-              <div className="flex items-center justify-between mt-2">
-                <label className="text-xs text-slate-600">Cross Pattern (× × ×)</label>
-                <Switch checked={!!local.crossPattern} onCheckedChange={v => commit("crossPattern", v)} className="scale-75" />
-              </div>
-              {local.crossPattern && (
+              {local.chakbandiStyle !== "khakaDasti" && (
                 <>
-                  <SpacingControl label="Cross Size" value={local.crossSize || 3} min={1} max={10} step={1} onChange={v => commit("crossSize", v)} />
-                  <SpacingControl label="Cross Spacing" value={local.crossSpacing || 2} min={1} max={10} step={1} onChange={v => commit("crossSpacing", v)} />
+                  <SpacingControl label="Line Thickness" value={local.lineThickness || 6} min={1} max={10} step={1} onChange={v => commit("lineThickness", v)} />
+                  <div className="flex items-center justify-between mt-2">
+                    <label className="text-xs text-slate-600">Cross Pattern (× × ×)</label>
+                    <Switch checked={!!local.crossPattern} onCheckedChange={v => commit("crossPattern", v)} className="scale-75" />
+                  </div>
+                  {local.crossPattern && (
+                    <>
+                      <SpacingControl label="Cross Size" value={local.crossSize || 3} min={1} max={10} step={1} onChange={v => commit("crossSize", v)} />
+                      <SpacingControl label="Cross Spacing" value={local.crossSpacing || 2} min={1} max={10} step={1} onChange={v => commit("crossSpacing", v)} />
+                    </>
+                  )}
                 </>
               )}
               <p className="text-[9px] text-slate-400">Sizes here apply identically in Print Preview & Export</p>
-              <div className="text-[10px] text-green-600 font-mono">{local.crossPattern ? "Cross pattern" : "Solid line"} • {selectedObj.points?.length || 0} points</div>
+              <div className="text-[10px] text-green-600 font-mono">{local.chakbandiStyle === "khakaDasti" ? "Khaka Dasti line" : (local.crossPattern ? "Cross pattern" : "Solid line")} • {selectedObj.points?.length || 0} points</div>
             </>
           )}
 
