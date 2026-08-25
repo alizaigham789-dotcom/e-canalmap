@@ -17,6 +17,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
   const [showLegendInExport, setShowLegendInExport] = useState(true);
   const C = colorSettings || {};
   const landUses = collectLandUses(objects);
+  const allOutlets = objects.filter(o => o.type === "outlet");
   const previewCanvasRef = useRef(null);
 
   // Live preview — shows exactly how the export will look before downloading
@@ -223,7 +224,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       }
       if (o.name) {
         const cf = canalNameFont(o.width || DIMENSIONS.CANAL_WIDTH);
-        drawCanalNameOnCanvas(ctx, o.points, o.name, cf);
+        drawCanalNameOnCanvas(ctx, o.points, o.name, cf, allOutlets);
       }
     } else if (o.type === "khal" && o.points?.length >= 2) {
       const halfW = (o.width || 8)/2;
