@@ -250,6 +250,8 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                     { key: "dashed", label: "Dashed" },
                     { key: "stitched", label: "Stitched" },
                     { key: "dotted", label: "Dotted" },
+                    { key: "rings", label: "Rings" },
+                    { key: "loops", label: "Loops" },
                     { key: "khakaDasti", label: "خاکہ دستی", urdu: true },
                   ].map(opt => (
                     <button key={opt.key} onClick={() => commit("chakbandiStyle", opt.key)}
@@ -357,7 +359,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 </>
               )}
               <p className="text-[9px] text-slate-400">Sizes here apply identically in Print Preview & Export</p>
-              <div className="text-[10px] text-green-600 font-mono">{({cross:"Cross pattern",dashed:"Dashed",stitched:"Stitched",dotted:"Dotted",khakaDasti:"Khaka Dasti line"}[local.chakbandiStyle || "cross"])} • {selectedObj.points?.length || 0} points</div>
+              <div className="text-[10px] text-green-600 font-mono">{({cross:"Cross pattern",dashed:"Dashed",stitched:"Stitched",dotted:"Dotted",rings:"Rings",loops:"Loops",khakaDasti:"Khaka Dasti line"}[local.chakbandiStyle || "cross"])} • {selectedObj.points?.length || 0} points</div>
             </>
           )}
 

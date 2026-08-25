@@ -303,6 +303,49 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
 </g>`;
   }
 
+  if (style === "rings") {
+    // Series of empty circles (rings) along the line — "chakbandi line just rings"
+    const r = mustW;
+    const ringW = Math.max(1.5, mustW * 0.5);
+    const ringSpacing = Math.max(16, mustW * 2.2);
+    let rings = "";
+    for (let i = 0; i < obj.points.length - 1; i++) {
+      const a = obj.points[i], b = obj.points[i+1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.max(1, Math.floor(segLen / ringSpacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+        rings += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="none" stroke="${lineColor}" stroke-width="${ringW.toFixed(1)}"/>`;
+      }
+    }
+    return `<g>${rings}${labelSvg}</g>`;
+  }
+  if (style === "loops") {
+    // Pencil-drawn loops — flattened ellipses (chipti shape) with the stroke
+    // endpoints sticking out along the line, like a hand-drawn cursive loop.
+    const rx = mustW * 1.4, ry = mustW * 0.8;
+    const loopW = Math.max(1.5, mustW * 0.5);
+    const loopSpacing = Math.max(20, mustW * 3);
+    let loops = "";
+    for (let i = 0; i < obj.points.length - 1; i++) {
+      const a = obj.points[i], b = obj.points[i+1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const ang = Math.atan2(b.y - a.y, b.x - a.x);
+      const deg = (ang * 180 / Math.PI).toFixed(1);
+      const dirX = Math.cos(ang), dirY = Math.sin(ang);
+      const steps = Math.max(1, Math.floor(segLen / loopSpacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+        loops += `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${lineColor}" stroke-width="${loopW.toFixed(1)}" transform="rotate(${deg} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`;
+        const stub = rx * 1.6;
+        loops += `<line x1="${(cx - dirX*stub).toFixed(1)}" y1="${(cy - dirY*stub).toFixed(1)}" x2="${(cx + dirX*stub).toFixed(1)}" y2="${(cy + dirY*stub).toFixed(1)}" stroke="${lineColor}" stroke-width="${loopW.toFixed(1)}" stroke-linecap="round"/>`;
+      }
+    }
+    return `<g>${loops}${labelSvg}</g>`;
+  }
+
   // Default: Cross (×) pattern — keeps the user's chakbandi colour + thickness
   const color = C.chakbandiStroke || "#000000";
   const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness);

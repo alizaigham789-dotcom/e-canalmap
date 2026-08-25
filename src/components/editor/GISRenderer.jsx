@@ -970,6 +970,7 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
   const style = forceKhakaDasti ? "khakaDasti" : (obj.chakbandiStyle || "cross");
   const mustBorderW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5) * 0.2;
   const mustW = mustBorderW / zoom;
+  const mustFullW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5);
   const lineColor = style === "khakaDasti" ? "#22c55e" : (C.chakbandiStroke || "#22c55e");
   const color = isSelected ? "#86efac" : lineColor;
 
@@ -1015,6 +1016,46 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
         ctx.beginPath();
         ctx.moveTo(cx - nx * tickLen, cy - ny * tickLen);
         ctx.lineTo(cx + nx * tickLen, cy + ny * tickLen);
+        ctx.stroke();
+      }
+    }
+  } else if (style === "rings") {
+    // Series of empty circles (rings) along the line
+    const r = mustFullW;
+    const ringSpacing = Math.max(16, mustFullW * 2.2);
+    ctx.strokeStyle = color; ctx.lineWidth = mustW; ctx.setLineDash([]);
+    for (let i = 0; i < obj.points.length - 1; i++) {
+      const a = obj.points[i], b = obj.points[i+1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.max(1, Math.floor(segLen / ringSpacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+  } else if (style === "loops") {
+    // Pencil-drawn loops — flattened ellipses with stroke endpoints sticking out
+    const rx = mustFullW * 1.4, ry = mustFullW * 0.8;
+    const loopSpacing = Math.max(20, mustFullW * 3);
+    ctx.strokeStyle = color; ctx.lineWidth = mustW; ctx.setLineDash([]); ctx.lineCap = "round";
+    for (let i = 0; i < obj.points.length - 1; i++) {
+      const a = obj.points[i], b = obj.points[i+1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const ang = Math.atan2(b.y - a.y, b.x - a.x);
+      const dirX = Math.cos(ang), dirY = Math.sin(ang);
+      const steps = Math.max(1, Math.floor(segLen / loopSpacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+        ctx.beginPath();
+        if (ctx.ellipse) ctx.ellipse(cx, cy, rx, ry, ang, 0, Math.PI * 2);
+        else { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.scale(rx, ry); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.restore(); }
+        ctx.stroke();
+        const stub = rx * 1.6;
+        ctx.beginPath();
+        ctx.moveTo(cx - dirX * stub, cy - dirY * stub);
+        ctx.lineTo(cx + dirX * stub, cy + dirY * stub);
         ctx.stroke();
       }
     }
