@@ -14,11 +14,28 @@ import BatchPrintModal from "@/components/warabandi/BatchPrintModal";
 const EMPTY_HEADER = {
   mogha_number: "", mogha_side: "R", rajbaha: "",
   mouza: "", section: "", sub_division: "", canal_division: "", map_id: "",
-  doc_type: "پرت وارہ بندی",
+  doc_type: "پرت وارہ بندی", cca: "",
 };
 
 function parseHeader(rec) {
   try { return JSON.parse(rec.data_json || "{}").header || {}; } catch { return {}; }
+}
+
+// میپ کی chakbandi آبجیکٹس سے CCA خود بخود نکالیں (مoga منتخب کرتے وقت)
+function extractCCAFromMap(map) {
+  if (!map?.drawing_data) return "";
+  try {
+    const objects = JSON.parse(map.drawing_data);
+    if (!Array.isArray(objects)) return "";
+    let total = 0, found = false;
+    for (const o of objects) {
+      if (o.type === "chakbandi" && o.cca != null && o.cca !== "") {
+        const n = parseFloat(o.cca);
+        if (!isNaN(n)) { total += n; found = true; }
+      }
+    }
+    return found ? String(Math.round(total)) : "";
+  } catch { return ""; }
 }
 
 export default function ParatWarabandi() {
@@ -165,13 +182,14 @@ export default function ParatWarabandi() {
       sub_division: map.tehsil || "",
       canal_division: map.district || "",
       map_id: map.id || "",
+      cca: extractCCAFromMap(map),
     }));
   };
 
   const handleCreate = () => {
     if (!newHeader.mogha_number) { toast.error("موگہ نمبری درج کریں"); return; }
-    const { doc_type, ...headerFields } = newHeader;
-    const data_json = JSON.stringify({ header: headerFields });
+    const { doc_type, cca, ...headerFields } = newHeader;
+    const data_json = JSON.stringify({ header: headerFields, cca });
     createMutation.mutate({
       mogha_number: newHeader.mogha_number,
       mogha_side: newHeader.mogha_side,
@@ -463,24 +481,22 @@ export default function ParatWarabandi() {
   }
 
   // EDIT MODE
-  const moghaDisplay = selectedRecord ? `${selectedRecord.mogha_number || ""}/${selectedRecord.mogha_side || "R"}` : "";
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 shrink-0" onClick={handleBack}>
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <div className="min-w-0">
-              <h1 className="text-sm font-bold font-heading text-slate-800 truncate" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-                پرت وارابندی موگہ نمبری {moghaDisplay}
-              </h1>
-              <p className="text-[10px] text-slate-400 truncate" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-                {selectedRecord?.doc_type || "پرت وارہ بندی"}
-              </p>
-            </div>
-          </div>
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 shrink-0" onClick={handleBack}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <h1 className="text-sm font-bold text-slate-800 leading-relaxed" dir="rtl"
+            style={{ fontFamily: "'Times New Roman', 'Noto Nastaliq Urdu', serif", lineHeight: 1.7 }}>
+            <span dir="ltr" style={{ unicodeBidi: "isolate", display: "inline-block" }}>{selectedRecord?.mogha_side || "R"}</span>
+            <span style={{ margin: "0 3px" }}>/</span>
+            {selectedRecord?.doc_type || "پرت وارہ بندی"}
+            <span style={{ margin: "0 4px" }}>،</span>
+            موگہ نمبر
+            <span dir="ltr" style={{ unicodeBidi: "isolate", display: "inline-block", marginLeft: "5px" }}>{selectedRecord?.mogha_number || ""}</span>
+          </h1>
         </div>
       </header>
 
