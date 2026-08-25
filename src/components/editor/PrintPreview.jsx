@@ -525,22 +525,37 @@ function buildKhakaDastiGuideGridSVG(bounds) {
   const endX = Math.ceil((bounds.maxX + rightCount * mustW) / mustW) * mustW;
   const startY = Math.floor((bounds.minY - topCount * mustH) / mustH) * mustH;
   const endY = Math.ceil((bounds.maxY + bottomCount * mustH) / mustH) * mustH;
-  const guideColor = "rgba(90,90,90,0.55)";
+  // Dim guide cells — thick boundaries like drawn mustateels but muted colour,
+  // plus the same 2×5 killa grid lines inside each cell (also dim).
+  const boundaryColor = "rgba(130,130,130,0.50)";
+  const killaColor = "rgba(130,130,130,0.28)";
+  const boundaryW = MUSTATEEL_SCALE.boundaryWidth();
+  const cellW = mustW / 2, cellH = mustH / 5;
   let lines = "";
+  // Mustateel boundaries (thick, dim)
   for (let x = startX; x <= endX + 0.5; x += mustW) {
-    lines += `<line x1="${x}" y1="${startY}" x2="${x}" y2="${endY}" stroke="${guideColor}" stroke-width="0.9"/>`;
+    lines += `<line x1="${x}" y1="${startY}" x2="${x}" y2="${endY}" stroke="${boundaryColor}" stroke-width="${boundaryW}"/>`;
   }
   for (let y = startY; y <= endY + 0.5; y += mustH) {
-    lines += `<line x1="${startX}" y1="${y}" x2="${endX}" y2="${y}" stroke="${guideColor}" stroke-width="0.9"/>`;
+    lines += `<line x1="${startX}" y1="${y}" x2="${endX}" y2="${y}" stroke="${boundaryColor}" stroke-width="${boundaryW}"/>`;
+  }
+  // Killa grid inside each mustateel cell (dim)
+  for (let x = startX; x < endX; x += mustW) {
+    const midX = x + cellW;
+    lines += `<line x1="${midX}" y1="${startY}" x2="${midX}" y2="${endY}" stroke="${killaColor}" stroke-width="0.8"/>`;
+  }
+  for (let y = startY; y < endY; y += mustH) {
+    for (let r = 1; r < 5; r++) {
+      const hy = y + r * cellH;
+      lines += `<line x1="${startX}" y1="${hy}" x2="${endX}" y2="${hy}" stroke="${killaColor}" stroke-width="0.8"/>`;
+    }
   }
   return { lines, startX, startY, endX, endY };
 }
 
 function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, mogaScale = 1, khakaDasti = false) {
   const C = colorSettings || {};
-  // Khaka Dasti — only drawn parcels (mustateel/muraba) render on a full-page grid
-  const baseObjects = khakaDasti ? objects.filter(o => o.type === "mustateel" || o.type === "muraba") : objects;
-  const bounds = getObjectsBounds(baseObjects);
+  const bounds = getObjectsBounds(objects);
   if (!bounds) return null;
 
   const pad = 20;
@@ -565,12 +580,12 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
 
   // Filter objects by moga if needed
   const filtered = filterMoga
-    ? baseObjects.filter(o => {
+    ? objects.filter(o => {
         if (o.type === "chakbandi") return o.mogaNumber === filterMoga;
         if (o.type === "mustateel") return o.mogaNumber === filterMoga || !o.mogaNumber;
         return true;
       })
-    : baseObjects;
+    : objects;
 
   const sorted = [...filtered].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
   const mouzaObjects = objects.filter(o => o.type === "mouza");
@@ -580,8 +595,8 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
   if (khakaDasti) svgParts.push(guideGridSvg);
   sorted.forEach((obj, idx) => {
     switch (obj.type) {
-      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null), showAcreLabels, !khakaDasti)); break;
-      case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null), !khakaDasti)); break;
+      case "mustateel": svgParts.push(svgMustateel(obj, C, idx, obj.excluded || showKillaMustateel, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null), showAcreLabels, true)); break;
+      case "muraba":    svgParts.push(svgMuraba(obj, C, idx, showKillaMuraba, getMustateelMouzaSplit(obj, mouzaObjects) || (obj.label2 ? { centerA: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.25 }, centerB: { x: obj.x + obj.w/2, y: obj.y + obj.h*0.75 }, widthA: obj.w, widthB: obj.w } : null), true)); break;
       case "acre":      svgParts.push(svgAcre(obj, C, idx)); break;
       case "chakbandi": svgParts.push(svgChakbandi(obj, C, idx, viewW)); break;
       case "canal":     svgParts.push(svgCanal(obj, C, idx, allOutlets)); break;
@@ -671,7 +686,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   // In B&W mode, override all colors to black/grey; pencil mode uses dim grey + red mouza
   const effectiveColors = useMemo(() => {
-    if (khakaDastiMode) return { ...(colorSettings || {}), ...KHAKA_DASTI_COLORS };
     if (bwMode) {
       return {
         mustateelStroke: "#000000", mustateelFill: "none",
@@ -688,7 +702,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     }
     if (pencilMode) return { ...(colorSettings || {}), ...PENCIL_COLORS };
     return colorSettings || {};
-  }, [bwMode, pencilMode, khakaDastiMode, colorSettings]);
+  }, [bwMode, pencilMode, colorSettings]);
 
   const svgData = useMemo(
     () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 0.5, khakaDastiMode),
@@ -758,15 +772,15 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   // CCA/GCA fraction labels for SVG preview/export
   const gcaSvgLabels = useMemo(() => {
-    if (khakaDastiMode || !gcaData.results.length) return "";
+    if (!gcaData.results.length) return "";
     const ch = effectiveColors.chakbandiStroke || "#166534";
     const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
     return gcaData.results.map(({ x, y, cca, gca }) =>
       svgCCAGCAFractionBox(cca, gca, x, y, lblFont, "rgba(255,255,255,0.94)", ch)
     ).join("");
-  }, [gcaData, effectiveColors, khakaDastiMode]);
+  }, [gcaData, effectiveColors]);
 
-  const legendSVG = (showLegendInPrint && !khakaDastiMode) ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses) : "";
+  const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses) : "";
 
   const svgString = printSvgData
     ? `<?xml version="1.0" encoding="UTF-8"?>
