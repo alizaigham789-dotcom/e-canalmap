@@ -336,6 +336,63 @@ export function snapMovePosition(obj, allObjects) {
 }
 
 // ============================================================
+// CHAKBANDI VERTEX SNAP — locks edited nodes onto canal edges and
+// mustateel/muraba/acre killa grid lines so the chakbandi line never
+// drifts off parcel boundaries when zoomed in. Generous screen-pixel
+// ranges so the node jumps to the nearest line from a comfortable
+// distance, even at high zoom.
+// ============================================================
+export function snapChakbandiVertex(wx, wy, objects, zoom, snapSettings) {
+  const { spineSnap = true } = snapSettings || {};
+  const z = zoom || 1;
+  const canalRange = 60 / z;   // ~60px magnetic pull to a canal edge/endpoint
+  const lineRange = 32 / z;    // ~32px to a killa/boundary line
+
+  let bestX = wx, bestY = wy, bestDist = Infinity;
+
+  // Canal near-edge + endpoint magnetic snap (highest priority)
+  if (spineSnap) {
+    for (const o of objects) {
+      if (o.type !== "canal" || !o.points || o.points.length < 2) continue;
+      for (const ep of [o.points[0], o.points[o.points.length - 1]]) {
+        const d = Math.hypot(wx - ep.x, wy - ep.y);
+        if (d < canalRange && d < bestDist) { bestX = ep.x; bestY = ep.y; bestDist = d; }
+      }
+      const near = nearestPointOnPolyline(wx, wy, o.points);
+      if (!near || near.dist >= canalRange) continue;
+      const a = o.points[near.segIdx], b = o.points[near.segIdx + 1];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      const halfW = (o.width || DIMENSIONS.CANAL_WIDTH) / 2;
+      const side = ((wx - a.x) * nx + (wy - a.y) * ny) >= 0 ? 1 : -1;
+      const tx = near.x + nx * halfW * side, ty = near.y + ny * halfW * side;
+      const d = Math.hypot(wx - tx, wy - ty);
+      if (d < bestDist) { bestX = tx; bestY = ty; bestDist = d; }
+    }
+  }
+  if (bestDist < Infinity) return { x: bestX, y: bestY };
+
+  // Otherwise snap to nearest mustateel/muraba/acre killa grid line (X & Y independent)
+  let snapX = wx, snapY = wy, xDelta = lineRange, yDelta = lineRange;
+  for (const o of objects) {
+    if (!["acre", "mustateel", "muraba"].includes(o.type)) continue;
+    const cols = o.type === "muraba" ? 5 : (o.type === "mustateel" ? 2 : 1);
+    const rows = o.type === "acre" ? 1 : 5;
+    const cw = o.w / cols, ch = o.h / rows;
+    for (let c = 0; c <= cols; c++) {
+      const ex = o.x + c * cw;
+      if (Math.abs(wx - ex) < xDelta) { snapX = ex; xDelta = Math.abs(wx - ex); }
+    }
+    for (let r = 0; r <= rows; r++) {
+      const ey = o.y + r * ch;
+      if (Math.abs(wy - ey) < yDelta) { snapY = ey; yDelta = Math.abs(wy - ey); }
+    }
+  }
+  return { x: snapX, y: snapY };
+}
+
+// ============================================================
 // KILLA GRID NUMBERING
 // ============================================================
 export function getMustateeelKillaGrid() {
