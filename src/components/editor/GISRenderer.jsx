@@ -206,11 +206,8 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
           const use = acreUses[kn - 1];
           const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
           if (use && use.label && showAcreUseLabels) {
-            try { ctx.direction = "rtl"; } catch {}
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.font = `bold ${labelFont}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif`;
-            ctx.fillStyle = "#0f172a";
-            ctx.fillText(use.label, cx + cellW / 2, cy + cellH / 2);
+            // Acre-use label text is shown in the LEGEND only — inside the mustateel
+            // we keep just the colour fill + a small corner killa number (no centered label).
             if (effectiveShowKilla) {
               try { ctx.direction = "ltr"; } catch {}
               ctx.textAlign = "left"; ctx.textBaseline = "top";
