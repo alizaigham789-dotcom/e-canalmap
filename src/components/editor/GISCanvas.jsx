@@ -38,6 +38,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     onBulkUpdate, // bulk update multiple objects in one history snapshot (group move)
     pageBorderStyle, // "none"|"dashed"|"solid"|"dotted" — page border guide
     deleteVertexMode, // when true: clicking a vertex deletes it (explicit node removal)
+    onAutoSwitchToSelect, // when drawing mustateel/muraba, hovering over an existing parcel switches to select
   },
   ref
 ) {
@@ -521,6 +522,13 @@ const GISCanvas = forwardRef(function GISCanvas(
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const world = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
+      // Hovering over an existing mustateel/muraba → auto-switch to Select so it can be edited/moved
+      const hoverHit = hitTest(world.x, world.y, objectsRef.current);
+      if (hoverHit && ["mustateel", "muraba"].includes(hoverHit.type)) {
+        if (ghostPos) setGhostPos(null);
+        if (onAutoSwitchToSelect) onAutoSwitchToSelect();
+        return;
+      }
       const dimW = activeTool === "muraba" ? DIMENSIONS.MURABA.width : DIMENSIONS.MUSTATEEL.width;
       const dimH = activeTool === "muraba" ? DIMENSIONS.MURABA.height : DIMENSIONS.MUSTATEEL.height;
       const snap = snapToNearestBoundary({ x: world.x, y: world.y, w: dimW, h: dimH }, objectsRef.current);
@@ -687,7 +695,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (SNAP_TOOLS.includes(activeTool)) {
       onSnapPosChange(getSnappedWorld(e));
     }
-  }, [activeTool, pan, zoom, getSnappedWorld, onPanChange, onSnapPosChange, onUpdateObject, onBulkUpdate, ghostPos]);
+  }, [activeTool, pan, zoom, getSnappedWorld, onPanChange, onSnapPosChange, onUpdateObject, onBulkUpdate, ghostPos, onAutoSwitchToSelect]);
 
   const handleMouseDown = useCallback((e) => {
     if (e.button === 1 || activeTool === "pan") {

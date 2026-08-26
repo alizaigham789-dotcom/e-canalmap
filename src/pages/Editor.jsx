@@ -1385,6 +1385,7 @@ export default function Editor() {
             onBulkUpdate={handleBulkUpdate}
             pageBorderStyle={pageBorderStyle}
             deleteVertexMode={deleteVertexMode}
+            onAutoSwitchToSelect={() => setActiveTool("select")}
           />
 
           {/* Map preview — bottom-right corner so a lost map can be located */}
