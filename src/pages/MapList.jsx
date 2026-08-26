@@ -67,9 +67,9 @@ export default function MapList() {
   // overwriting once the user manually edits the title field (titleTouched ref).
   const buildAutoTitle = (m) => {
     const parts = [];
-    if (m.moga_number) parts.push(`Moga ${m.moga_number}${m.mogha_side ? `/${m.mogha_side}` : ""}`);
-    if (m.rajbah) parts.push(m.rajbah);
-    if (m.village) parts.push(m.village);
+    if (m.moga_number) parts.push(`${m.moga_number}${m.mogha_side ? `/${m.mogha_side}` : ""}`);
+    if (m.rajbah) parts.push(`Rajbah ${m.rajbah}`);
+    if (m.village) parts.push(`Mozah ${m.village}`);
     return parts.join(" - ");
   };
   const setField = (key, value) => {
@@ -143,6 +143,9 @@ export default function MapList() {
   // shown as dropdown suggestions so users pick instead of re-typing.
   const subDivisions = useMemo(() => [...new Set(maps.map(m => m.tehsil).filter(Boolean))].sort(), [maps]);
   const canalDivisions = useMemo(() => [...new Set(maps.map(m => m.district).filter(Boolean))].sort(), [maps]);
+  const rajbahOptions = useMemo(() => [...new Set(maps.map(m => m.rajbah).filter(Boolean))].sort(), [maps]);
+  const villageOptions = useMemo(() => [...new Set(maps.map(m => m.village).filter(Boolean))].sort(), [maps]);
+  const sectionOptions = useMemo(() => [...new Set(maps.map(m => m.section).filter(Boolean))].sort(), [maps]);
 
   const updateMapMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.LandMap.update(id, data),
@@ -449,31 +452,43 @@ export default function MapList() {
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Rajbah / Canal Minor (راجباہ)</label>
               <Input
-                placeholder="e.g. Roda Minor"
+                list="rajbah-options"
+                placeholder="e.g. Gunjial Distributry"
                 value={newMap.rajbah}
                 onChange={e => setField("rajbah", e.target.value)}
                 className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
               />
+              <datalist id="rajbah-options">
+                {rajbahOptions.map(s => <option key={s} value={s} />)}
+              </datalist>
             </div>
             {/* 3. Village (موضع) */}
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Village (موضع)</label>
               <Input
-                placeholder="Village name"
+                list="village-options"
+                placeholder="e.g. Roda"
                 value={newMap.village}
                 onChange={e => setField("village", e.target.value)}
                 className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
               />
+              <datalist id="village-options">
+                {villageOptions.map(s => <option key={s} value={s} />)}
+              </datalist>
             </div>
             {/* 4. Section (سیکشن) */}
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Section (سیکشن)</label>
               <Input
+                list="section-options"
                 placeholder="e.g. Roda"
                 value={newMap.section}
                 onChange={e => setField("section", e.target.value)}
                 className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
               />
+              <datalist id="section-options">
+                {sectionOptions.map(s => <option key={s} value={s} />)}
+              </datalist>
             </div>
             {/* 5. Sub Division — dropdown from existing moga files */}
             <div>
