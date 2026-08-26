@@ -65,6 +65,7 @@ const BridgeIcon = ({ className }) => (
 const TOOLS = [
   { id: "select", name: "Select", label: "Select / Move (V) — click to select, drag to move", icon: MousePointer2, group: "nav" },
   { id: "pan", name: "Pan", label: "Pan (H)", icon: Hand, group: "nav" },
+  { id: "canalMove", name: "Canal Move", label: "Canal Move — drag only canals (attached chakbandis & mogas follow)", icon: Move, group: "nav", color: "text-blue-400" },
   null,
   { id: "eraser", name: "Eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
   { id: "mustateel", name: "Mustateel", label: "Mustateel 440×990 ft (M)", icon: RectangleVertical, group: "draw", color: "text-red-400" },
