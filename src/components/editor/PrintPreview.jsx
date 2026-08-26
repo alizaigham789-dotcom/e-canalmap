@@ -416,7 +416,7 @@ function svgCanal(obj, C, idx, outlets) {
     const gx1 = (midX - perpX * halfW).toFixed(1), gy1 = (midY - perpY * halfW).toFixed(1);
     const gx2 = (midX + perpX * halfW).toFixed(1), gy2 = (midY + perpY * halfW).toFixed(1);
     const gradId = `canalWater_${idx}`;
-    const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="${strokeColor}"/><stop offset="0.5" stop-color="${fillColor}"/><stop offset="1" stop-color="${strokeColor}"/></linearGradient></defs>`;
+    const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="#1688C7"/><stop offset="0.5" stop-color="#29A9E8"/><stop offset="1" stop-color="#1688C7"/></linearGradient></defs>`;
     return `
 <g key="canal_${idx}">
   ${boundarySvg}
