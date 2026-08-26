@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator, Ban, MousePointerClick, RotateCcw } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { calculateChakbandiGCA, acresToAcreKanalMarla } from "@/lib/gisEngine";
+import { CANAL_STYLES, CANAL_SHAPES, normalizeCanalStyle } from "@/lib/canalStyles";
 import AcreUseControl from "@/components/editor/AcreUseControl";
 
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
@@ -167,14 +168,10 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Canal Name <span className="text-blue-400 normal-case font-normal" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>اردو سپورٹ</span></label>
                 <Input value={local.name || ""} onChange={e => commit("name", e.target.value)} dir="auto" placeholder="e.g. Nurpur Distry / نور پور" className="h-7 text-xs bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500" />
               </div>
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Canal Style</label>
-                <div className="flex gap-1">
-                  <button onClick={() => commit("canalStyle", "flat")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${(local.canalStyle || "flat") !== "3d" ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>Flat</button>
-                  <button onClick={() => commit("canalStyle", "3d")} className={`flex-1 px-2 py-1 text-[10px] rounded border font-medium transition-colors ${local.canalStyle === "3d" ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>3D Ribbon</button>
-                </div>
-              </div>
+              <CanalStyleControl local={local} commit={commit} />
+              <CanalShapeControl local={local} commit={commit} />
               <CanalWidthControl name={local.name || ""} value={local.width || 10} onChange={v => commit("width", v)} />
+              <SideBoundaryControl local={local} commit={commit} />
               <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
               <p className="text-[9px] text-slate-400">Double-click any anchor point to delete it (remove extra points)</p>
             </>
@@ -763,5 +760,74 @@ function OutletLengthControl({ local, commit }) {
   };
   return (
     <SpacingControl label="Outlet Length" value={Math.max(10, len)} min={10} max={2000} step={10} onChange={setLen} unit="ft" />
+  );
+}
+
+// Canal Style — 10 professional visual styles (appearance only; width/geometry unchanged)
+function CanalStyleControl({ local, commit }) {
+  const current = normalizeCanalStyle(local.canalStyle);
+  return (
+    <div>
+      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Canal Style</label>
+      <Select value={current} onValueChange={v => commit("canalStyle", v)}>
+        <SelectTrigger className="h-7 text-xs bg-slate-50 border-slate-200"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {CANAL_STYLES.map(s => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      {current === "custom" && (
+        <div className="flex items-center gap-2 mt-2">
+          <input type="color" value={local.canalCustomColor || "#29A9E8"} onChange={e => commit("canalCustomColor", e.target.value)} className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
+          <span className="text-[10px] text-slate-500">Custom canal colour</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Canal Shape — 10 shapes: path smoothing + end-cap termination (appearance only)
+function CanalShapeControl({ local, commit }) {
+  const current = local.canalShape || "curved";
+  return (
+    <div>
+      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Canal Shape</label>
+      <Select value={current} onValueChange={v => commit("canalShape", v)}>
+        <SelectTrigger className="h-7 text-xs bg-slate-50 border-slate-200"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {CANAL_SHAPES.map(s => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <p className="text-[9px] text-slate-400 mt-0.5">Curve + end-cap style (visual only)</p>
+    </div>
+  );
+}
+
+// Side Boundary — optional left/right boundary bands in real-world feet, follow the canal
+function SideBoundaryControl({ local, commit }) {
+  return (
+    <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-[10px] text-slate-600 uppercase tracking-wider">Side Boundary</label>
+        <Switch checked={!!local.sideBoundary} onCheckedChange={v => commit("sideBoundary", v)} className="scale-75" />
+      </div>
+      {local.sideBoundary && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[9px] text-slate-400 uppercase">Left (ft)</label>
+              <Input type="number" min={0} step={1} value={local.leftBoundaryWidth ?? 5} onChange={e => commit("leftBoundaryWidth", Math.max(0, parseFloat(e.target.value) || 0))} className="h-7 text-xs font-mono bg-white border-slate-200" />
+            </div>
+            <div>
+              <label className="text-[9px] text-slate-400 uppercase">Right (ft)</label>
+              <Input type="number" min={0} step={1} value={local.rightBoundaryWidth ?? 5} onChange={e => commit("rightBoundaryWidth", Math.max(0, parseFloat(e.target.value) || 0))} className="h-7 text-xs font-mono bg-white border-slate-200" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="color" value={local.boundaryColor || "#c9a86a"} onChange={e => commit("boundaryColor", e.target.value)} className="h-5 w-8 rounded cursor-pointer border border-slate-200" />
+            <span className="text-[9px] text-slate-500">Boundary band colour (0 ft = hide that side)</span>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
