@@ -179,6 +179,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               </div>
               <CanalStyleControl local={local} commit={commit} />
               <CanalWidthControl name={local.name || ""} value={local.width || 10} onChange={v => commit("width", v)} />
+              <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 3} min={1} max={10} step={1} onChange={v => commit("boundaryThickness", v)} unit="ft" />
               <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
               <p className="text-[9px] text-slate-400">Double-click any anchor point to delete it (remove extra points)</p>
             </>
@@ -189,6 +190,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               <Separator className="bg-slate-100" />
               <Field label="Watercourse Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Watercourse 1" />
               <KhalWidthControl value={local.width ?? 11} onChange={v => commit("width", v)} />
+              <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 2} min={1} max={8} step={1} onChange={v => commit("boundaryThickness", v)} unit="ft" />
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Fill Colour</label>
                 <div className="flex items-center gap-2">
@@ -229,6 +231,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 </div>
               </div>
               <SpacingControl label="Side Line Width" value={local.edgeWidth || 2} min={1} max={10} step={1} onChange={v => commit("edgeWidth", v)} unit="ft" />
+              <SpacingControl label="Divider Spacing" value={local.dividerSpacing || 14} min={6} max={40} step={2} onChange={v => commit("dividerSpacing", v)} unit="ft" />
               <Separator className="bg-slate-100" />
               <div className="flex items-center justify-between">
                 <label className="text-xs text-slate-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>ریلوے ٹریک (ساتھ)</label>
@@ -436,7 +439,23 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               <Separator className="bg-slate-100" />
               <Field label="Mouza Name 1 (Side 1)" value={local.label1 || local.name || ""} onChange={v => commit("label1", v)} placeholder="موضع 1" hint="Shown on one side of the boundary line" />
               <Field label="Mouza Name 2 (Side 2)" value={local.label2 || ""} onChange={v => commit("label2", v)} placeholder="موضع 2" hint="Shown on the other side of the boundary line" />
-              <div className="text-[10px] text-slate-600 font-mono">Dotted boundary • {selectedObj.points?.length || 0} points</div>
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Line Style</label>
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    { key: "dashed", label: "Dashed" },
+                    { key: "dotted", label: "Dotted" },
+                    { key: "solid", label: "Solid" },
+                  ].map(opt => (
+                    <button key={opt.key} onClick={() => commit("lineStyle", opt.key)}
+                      className={`px-2 py-1 text-[10px] rounded border font-medium transition-colors ${(local.lineStyle || "dashed") === opt.key ? "bg-slate-700 text-white border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-400"}`}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <SpacingControl label="Line Thickness" value={local.lineWidth || 3} min={1} max={10} step={1} onChange={v => commit("lineWidth", v)} unit="ft" />
+              <div className="text-[10px] text-slate-600 font-mono">{(local.lineStyle || "dashed")} boundary • {selectedObj.points?.length || 0} points</div>
             </>
           )}
 
