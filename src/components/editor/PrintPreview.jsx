@@ -797,9 +797,10 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   // user ticks to keep specific element types colourful.
   // Khaka Dasti colourful toggles persist across sessions — once the user ticks an
   // element colourful, that choice is remembered for later (not reset to grey each time).
-  const KHAKA_COLORFUL_KEY = "khaka_dasti_colorful_prefs";
+  const KHAKA_COLORFUL_KEY = "khaka_dasti_colorful_prefs_v2";
   const [khakaColorful, setKhakaColorful] = useState(() => {
-    const base = { mustateel: false, muraba: false, canal: false, khal: false, road: false, chakbandi: false, mouza: false, outlet: false };
+    // Default: canal, road, chakbandi, mouza, outlet (moga) kept colourful; rest grey.
+    const base = { mustateel: false, muraba: false, canal: true, khal: false, road: true, chakbandi: true, mouza: true, outlet: true };
     try {
       const saved = localStorage.getItem(KHAKA_COLORFUL_KEY);
       if (saved) return { ...base, ...JSON.parse(saved) };
@@ -982,7 +983,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     ).join("");
   }, [gcaData, effectiveColors]);
 
-  const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses) : "";
+  const legendSVG = showLegendInPrint ? buildLegendSVG(svgData?.viewX, svgData?.viewY, svgData?.viewW, svgData?.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses, objects) : "";
 
   const svgString = printSvgData
     ? `<?xml version="1.0" encoding="UTF-8"?>
@@ -1036,7 +1037,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
     const win = window.open("", "_blank");
     if (!win) { return; }
-    const printLegendSVG = (showLegendInPrint && !khakaDastiMode) ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses) : "";
+    const printLegendSVG = (showLegendInPrint && !khakaDastiMode) ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses, objects) : "";
     win.document.write(`<!DOCTYPE html><html><head>
       <title>Khaka Dasti</title>
       <style>

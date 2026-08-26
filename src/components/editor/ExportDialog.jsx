@@ -104,7 +104,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
 
     ctx.restore();
     // Legend + moga details
-    if (showLegendInExport) drawLegendOnCanvas(ctx, canvas.width, canvas.height, C, scale, { minX: 80 * scale, minY: 80 * scale, maxX: canvas.width - 80 * scale, maxY: canvas.height - 80 * scale }, landUses);
+    if (showLegendInExport) drawLegendOnCanvas(ctx, canvas.width, canvas.height, C, scale, { minX: 80 * scale, minY: 80 * scale, maxX: canvas.width - 80 * scale, maxY: canvas.height - 80 * scale }, landUses, objects);
     return canvas;
   }
 
@@ -443,7 +443,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       return order.indexOf(a.type)-order.indexOf(b.type);
     }).map(o => objToSVG(o, bbox)).filter(Boolean).join("\n");
 
-    const legendSvg = showLegendInExport ? buildLegendSVG(bbox.minX, bbox.minY, W, H, C, { minX: bbox.minX + 80, minY: bbox.minY + 80, maxX: bbox.maxX - 80, maxY: bbox.maxY - 80 }, null, landUses) : "";
+    const legendSvg = showLegendInExport ? buildLegendSVG(bbox.minX, bbox.minY, W, H, C, { minX: bbox.minX + 80, minY: bbox.minY + 80, maxX: bbox.maxX - 80, maxY: bbox.maxY - 80 }, null, landUses, objects) : "";
     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
       <rect width="${W}" height="${H}" fill="white"/>
       <g transform="translate(${-bbox.minX},${-bbox.minY})">

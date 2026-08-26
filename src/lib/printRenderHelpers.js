@@ -674,19 +674,8 @@ export function drawAcreUsesOnCanvas(ctx, obj, showKilla, strokeColor, showLabel
 }
 
 // ─── Legend SVG: 2-column table (sign | name), 3× bigger ────────────────
-export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = null, customPos = null, landUses = []) {
-  const items = [
-    { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
-    { label: "کھال", color: C.khalStroke || "#000000", type: "line_thin" },
-    { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
-    { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
-    { label: "موگہ", color: C.outletStroke || "#dc2626", type: "arrow" },
-    { label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" },
-  ];
-  // Per-acre land-use entries (آبادی/قبرستان/فیکٹری/...) — shown in the legend
-  for (const u of (landUses || [])) {
-    if (u && u.color && u.label) items.push({ label: u.label, color: u.color, type: "fill" });
-  }
+export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = null, customPos = null, landUses = [], objects = null) {
+  const items = legendItems(C, objects, landUses);
 
   // Proportional to viewBox — smaller when few mustateels, bigger when many
   const _baseDim = Math.min(viewW, viewH);
@@ -761,6 +750,11 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = nu
       svg += `<polygon points="${symX+symW},${iy} ${symX+symW-4*S},${iy-2.5*S} ${symX+symW-4*S},${iy+2.5*S}" fill="${item.color}"/>`;
     } else if (item.type === "dashed") {
       svg += `<line x1="${symX}" y1="${iy}" x2="${symX+symW}" y2="${iy}" stroke="${item.color}" stroke-width="${S}" stroke-dasharray="${3*S},${2*S}"/>`;
+    } else if (item.type === "mustateel") {
+      const gh = 10*S, gy = iy - gh/2;
+      svg += `<rect x="${symX}" y="${gy.toFixed(1)}" width="${symW}" height="${gh.toFixed(1)}" fill="none" stroke="${item.color}" stroke-width="${(1.2*S).toFixed(1)}"/>`;
+      svg += `<line x1="${(symX+symW/2).toFixed(1)}" y1="${gy.toFixed(1)}" x2="${(symX+symW/2).toFixed(1)}" y2="${(gy+gh).toFixed(1)}" stroke="${item.color}" stroke-width="${(0.7*S).toFixed(1)}"/>`;
+      for (let r=1;r<5;r++) svg += `<line x1="${symX.toFixed(1)}" y1="${(gy+r*gh/5).toFixed(1)}" x2="${(symX+symW).toFixed(1)}" y2="${(gy+r*gh/5).toFixed(1)}" stroke="${item.color}" stroke-width="${(0.7*S).toFixed(1)}"/>`;
     } else if (item.type === "fill") {
       svg += `<rect x="${symX}" y="${(iy-5*S).toFixed(1)}" width="${symW}" height="${(10*S).toFixed(1)}" fill="${item.color}" fill-opacity="0.80" stroke="${item.color}" stroke-width="${S}"/>`;
     }
@@ -799,19 +793,31 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
   return svg;
 }
 
-// ─── CANVAS: draw legend — 2-column table (sign | name), 3× bigger ───────
-export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBounds = null, landUses = []) {
-  const items = [
-    { label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" },
-    { label: "کھال", color: C.khalStroke || "#000000", type: "line_thin" },
-    { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
-    { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
-    { label: "موگہ", color: C.outletStroke || "#dc2626", type: "arrow" },
-    { label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" },
-  ];
+// Build legend items — only element types actually present in the map are listed
+// (e.g. khal is omitted when no khal is drawn). Mustateel grid lines are listed when
+// any parcel (acre/mustateel/muraba) exists.
+function legendItems(C, objects, landUses) {
+  const used = new Set();
+  if (objects) for (const o of objects) used.add(o.type);
+  const has = (t) => !objects || used.has(t);
+  const hasParcel = !objects || used.has("mustateel") || used.has("muraba") || used.has("acre");
+  const items = [];
+  if (has("canal")) items.push({ label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" });
+  if (has("khal")) items.push({ label: "کھال", color: C.khalStroke || "#000000", type: "line_thin" });
+  if (has("road")) items.push({ label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" });
+  if (has("chakbandi")) items.push({ label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" });
+  if (has("outlet")) items.push({ label: "موگہ", color: C.outletStroke || "#dc2626", type: "arrow" });
+  if (has("mouza")) items.push({ label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" });
+  if (hasParcel) items.push({ label: "مستطیل", color: C.mustateelStroke || "#000000", type: "mustateel" });
   for (const u of (landUses || [])) {
     if (u && u.color && u.label) items.push({ label: u.label, color: u.color, type: "fill" });
   }
+  return items;
+}
+
+// ─── CANVAS: draw legend — 2-column table (sign | name), 3× bigger ───────
+export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBounds = null, landUses = [], objects = null) {
+  const items = legendItems(C, objects, landUses);
   // 3× bigger; table style with black header
   const S = 7.5;
   const lf = MUSTATEEL_LABEL_FONT * scale;
@@ -904,6 +910,14 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBound
       ctx.lineWidth = S*scale; ctx.setLineDash([3*S*scale, 2*S*scale]);
       ctx.beginPath(); ctx.moveTo(symX, iy); ctx.lineTo(symX + symW, iy); ctx.stroke();
       ctx.setLineDash([]);
+    } else if (item.type === "mustateel") {
+      const gh = 10*S*scale, gy = iy - gh/2;
+      ctx.strokeStyle = item.color; ctx.setLineDash([]);
+      ctx.lineWidth = 1.2*S*scale;
+      ctx.strokeRect(symX, gy, symW, gh);
+      ctx.lineWidth = 0.7*S*scale;
+      ctx.beginPath(); ctx.moveTo(symX+symW/2, gy); ctx.lineTo(symX+symW/2, gy+gh); ctx.stroke();
+      for (let r=1;r<5;r++) { ctx.beginPath(); ctx.moveTo(symX, gy+r*gh/5); ctx.lineTo(symX+symW, gy+r*gh/5); ctx.stroke(); }
     } else if (item.type === "fill") {
       ctx.globalAlpha = 0.80; ctx.fillStyle = item.color;
       ctx.fillRect(symX, iy - 5*S*scale, symW, 10*S*scale);

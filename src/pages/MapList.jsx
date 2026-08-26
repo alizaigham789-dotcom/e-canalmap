@@ -234,7 +234,7 @@ export default function MapList() {
       }
 
       const bounds = getObjectsBounds(objects);
-      const legendSVG = showLegend ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, C, bounds) : "";
+      const legendSVG = showLegend ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, C, bounds, null, [], objects) : "";
       const footerHTML = buildPrintFooterHTML(map);
 
       pagesHTML += `<div class="map-page">
