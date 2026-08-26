@@ -70,6 +70,11 @@ const GISCanvas = forwardRef(function GISCanvas(
   const [damageDraft, setDamageDraft] = useState(null);
   // Mustateel/muraba ghost preview
   const [ghostPos, setGhostPos] = useState(null);
+  // Hovering over an existing parcel with the Mustateel/Muraba draw tool — temporarily
+  // behaves as Select (move/edit) without leaving the draw tool. Reverts to drawing
+  // when the cursor moves back to empty space.
+  const [hoveringParcel, setHoveringParcel] = useState(false);
+  const hoveringParcelRef = useRef(false);
   // Polygon measurement tool state — multi-point area + perimeter
   const [measurePoly, setMeasurePoly] = useState(null); // [{x,y}, ...]
   const [measureResult, setMeasureResult] = useState(null); // { areaFt, perimeterFt, midScreen }
@@ -517,27 +522,31 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
       return;
     }
-    // Ghost preview for mustateel/muraba
-    if (activeTool === "mustateel" || activeTool === "muraba") {
+    // Ghost preview for mustateel/muraba — hovering over an existing parcel temporarily
+    // behaves as Select (move/edit) without switching away from the draw tool.
+    if ((activeTool === "mustateel" || activeTool === "muraba") && !isMoving.current) {
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const world = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
-      // Hovering over an existing mustateel/muraba → auto-switch to Select so it can be edited/moved
       const hoverHit = hitTest(world.x, world.y, objectsRef.current);
       if (hoverHit && ["mustateel", "muraba"].includes(hoverHit.type)) {
         if (ghostPos) setGhostPos(null);
-        if (onAutoSwitchToSelect) onAutoSwitchToSelect();
-        return;
+        hoveringParcelRef.current = true;
+        setHoveringParcel(true);
+      } else {
+        hoveringParcelRef.current = false;
+        setHoveringParcel(false);
+        const dimW = activeTool === "muraba" ? DIMENSIONS.MURABA.width : DIMENSIONS.MUSTATEEL.width;
+        const dimH = activeTool === "muraba" ? DIMENSIONS.MURABA.height : DIMENSIONS.MUSTATEEL.height;
+        const snap = snapToNearestBoundary({ x: world.x, y: world.y, w: dimW, h: dimH }, objectsRef.current);
+        const wouldOverlap = objectsRef.current
+          .filter(o => ["mustateel","muraba","acre"].includes(o.type))
+          .some(o => rectsOverlap({ x: snap.x, y: snap.y, w: dimW, h: dimH }, o));
+        setGhostPos({ x: snap.x, y: snap.y, w: dimW, h: dimH, blocked: wouldOverlap });
       }
-      const dimW = activeTool === "muraba" ? DIMENSIONS.MURABA.width : DIMENSIONS.MUSTATEEL.width;
-      const dimH = activeTool === "muraba" ? DIMENSIONS.MURABA.height : DIMENSIONS.MUSTATEEL.height;
-      const snap = snapToNearestBoundary({ x: world.x, y: world.y, w: dimW, h: dimH }, objectsRef.current);
-      const wouldOverlap = objectsRef.current
-        .filter(o => ["mustateel","muraba","acre"].includes(o.type))
-        .some(o => rectsOverlap({ x: snap.x, y: snap.y, w: dimW, h: dimH }, o));
-      setGhostPos({ x: snap.x, y: snap.y, w: dimW, h: dimH, blocked: wouldOverlap });
-    } else if (ghostPos) {
-      setGhostPos(null);
+    } else {
+      if (ghostPos) setGhostPos(null);
+      if (hoveringParcelRef.current) { hoveringParcelRef.current = false; setHoveringParcel(false); }
     }
     if (isPanning.current || activeTool === "pan") {
       if (isPanning.current) {
@@ -588,7 +597,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       setBoxSelectDraft({ x1: boxSelectStart.current.x, y1: boxSelectStart.current.y, x2: worldRaw.x, y2: worldRaw.y });
       return;
     }
-    if (isMoving.current && movingObjId.current && (activeTool === "canalMove" || activeTool === "move" || activeTool === "select")) {
+    if (isMoving.current && movingObjId.current && (activeTool === "canalMove" || activeTool === "move" || activeTool === "select" || activeTool === "mustateel" || activeTool === "muraba")) {
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
@@ -695,7 +704,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (SNAP_TOOLS.includes(activeTool)) {
       onSnapPosChange(getSnappedWorld(e));
     }
-  }, [activeTool, pan, zoom, getSnappedWorld, onPanChange, onSnapPosChange, onUpdateObject, onBulkUpdate, ghostPos, onAutoSwitchToSelect]);
+  }, [activeTool, pan, zoom, getSnappedWorld, onPanChange, onSnapPosChange, onUpdateObject, onBulkUpdate, ghostPos, hoveringParcel]);
 
   const handleMouseDown = useCallback((e) => {
     if (e.button === 1 || activeTool === "pan") {
@@ -708,6 +717,20 @@ const GISCanvas = forwardRef(function GISCanvas(
     const rect = canvas.getBoundingClientRect();
     const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
     const snapped = getSnappedWorld(e);
+
+    // Mustateel/Muraba tool hovering over an existing parcel → behave as Select (move/edit)
+    if ((activeTool === "mustateel" || activeTool === "muraba") && hoveringParcelRef.current) {
+      const hit = hitTest(worldRaw.x, worldRaw.y, objects);
+      if (hit && ["mustateel", "muraba"].includes(hit.type)) {
+        isMoving.current = true; movingObjId.current = hit.id;
+        moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
+        movingObjOrigPoints.current = null;
+        onSelect(hit.id);
+      } else {
+        onSelect(null);
+      }
+      return;
+    }
 
     if (activeTool === "measure") {
       // Click adds a polygon vertex
@@ -1165,6 +1188,10 @@ const GISCanvas = forwardRef(function GISCanvas(
       setMeasurePoly(null);
       setMeasureResult(null);
     }
+    if (activeTool !== "mustateel" && activeTool !== "muraba") {
+      hoveringParcelRef.current = false;
+      setHoveringParcel(false);
+    }
     edgePanRef.current.active = false; edgePanRef.current.dx = 0; edgePanRef.current.dy = 0;
     // Clear stale snap indicator for tools that don't use snapping
     const SNAP_TOOLS = ["canal","khal","road","bridge","mouza","chakbandi","outlet","acre","mustateel","muraba","damageMarker","measure"];
@@ -1179,6 +1206,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     move: "cursor-move", canalMove: "cursor-move", damageMarker: "cursor-crosshair", measure: "cursor-crosshair",
     boxSelect: "cursor-crosshair",
   }[activeTool] || "cursor-crosshair";
+  const effectiveCursor = ((activeTool === "mustateel" || activeTool === "muraba") && hoveringParcel) ? "cursor-default" : cursorClass;
 
   const editingObj = editingLabel ? objects.find(o => o.id === editingLabel.id) : null;
   let labelPos = null;
@@ -1198,7 +1226,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     <div className="relative w-full h-full">
       <canvas
         ref={canvasRef}
-        className={`w-full h-full ${cursorClass}`}
+        className={`w-full h-full ${effectiveCursor}`}
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
