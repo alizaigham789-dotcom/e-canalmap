@@ -421,6 +421,52 @@ const GISCanvas = forwardRef(function GISCanvas(
         ctx.fillText(`${ang.toFixed(0)}°`, sx + 18, sy - 15);
       }
     }
+
+    // Canal/Khal advanced alignment guide — shows whether the segment being drawn
+    // is straight (horizontal/vertical) or tilted, with the exact angle and a
+    // reference axis line from the anchor. Green = straight, red = tilted.
+    if ((activeTool === "canal" || activeTool === "khal") && snapPos) {
+      const anchor = getDraftAnchor();
+      if (anchor) {
+        const ang = segmentAngleDeg(anchor, snapPos);
+        const ax = anchor.x * zoom + pan.x, ay = anchor.y * zoom + pan.y;
+        const sx = snapPos.x * zoom + pan.x, sy = snapPos.y * zoom + pan.y;
+        const tol = 2;
+        const aAbs = Math.abs(ang);
+        const nearH = aAbs < tol || Math.abs(aAbs - 180) < tol;
+        const nearV = Math.abs(aAbs - 90) < tol;
+        const isStraight = nearH || nearV;
+        // Reference axis guide — dashed line from anchor along the nearest axis
+        ctx.save();
+        ctx.strokeStyle = isStraight ? "rgba(34,197,94,0.75)" : "rgba(239,68,68,0.55)";
+        ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        if (nearH) { ctx.moveTo(ax, ay); ctx.lineTo(sx, ay); }
+        else if (nearV) { ctx.moveTo(ax, ay); ctx.lineTo(ax, sy); }
+        else { ctx.moveTo(ax, ay); ctx.lineTo(sx, sy); }
+        ctx.stroke(); ctx.setLineDash([]);
+        // Perpendicular tick at the anchor showing the ideal straight target
+        if (isStraight) {
+          ctx.strokeStyle = "rgba(34,197,94,0.4)"; ctx.lineWidth = 1;
+          ctx.beginPath();
+          if (nearH) { ctx.moveTo(ax, ay - 14); ctx.lineTo(ax, ay + 14); }
+          else { ctx.moveTo(ax - 14, ay); ctx.lineTo(ax + 14, ay); }
+          ctx.stroke();
+        }
+        ctx.restore();
+        // Angle + straightness badge
+        const label = isStraight ? (nearH ? "SEDHI 0°" : "SEDHI 90°") : `TIRCHI ${ang.toFixed(1)}°`;
+        const badgeColor = isStraight ? "#16a34a" : "#dc2626";
+        ctx.fillStyle = badgeColor;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(sx + 12, sy - 30, 96, 22, 6);
+        else ctx.rect(sx + 12, sy - 30, 96, 22);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 11px monospace"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillText(label, sx + 18, sy - 19);
+      }
+    }
   }, [objects, zoom, pan, layers, selectedId, activeTool, canalDraft, chakbandiDraft, outletDraft, khalDraft, roadDraft, mouzaDraft, snapPos, C, bgColor, damageDraft, ghostPos, measurePoly, measureResult, endpointSnap, orthoMode, pageBorderStyle, deleteVertexMode]);
 
   // Render only when render-relevant state changes (on-demand) — NOT every frame.
@@ -522,27 +568,33 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
       return;
     }
-    // Ghost preview for mustateel/muraba — hovering over an existing parcel temporarily
-    // behaves as Select (move/edit) without switching away from the draw tool.
-    if ((activeTool === "mustateel" || activeTool === "muraba") && !isMoving.current) {
+    // Hover-auto-select: Mustateel/Muraba tools hover over existing parcels, Canal/Khal
+    // tools hover over existing canals/khals — temporarily behaves as Select (move/edit)
+    // without switching away from the draw tool. Reverts to drawing on empty space.
+    if (["mustateel", "muraba", "canal", "khal"].includes(activeTool) && !isMoving.current) {
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const world = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
       const hoverHit = hitTest(world.x, world.y, objectsRef.current);
-      if (hoverHit && ["mustateel", "muraba"].includes(hoverHit.type)) {
+      const isParcelTool = activeTool === "mustateel" || activeTool === "muraba";
+      const parcelHit = hoverHit && ["mustateel", "muraba"].includes(hoverHit.type);
+      const lineHit = hoverHit && ["canal", "khal"].includes(hoverHit.type);
+      if ((isParcelTool && parcelHit) || (!isParcelTool && lineHit)) {
         if (ghostPos) setGhostPos(null);
         hoveringParcelRef.current = true;
         setHoveringParcel(true);
       } else {
         hoveringParcelRef.current = false;
         setHoveringParcel(false);
-        const dimW = activeTool === "muraba" ? DIMENSIONS.MURABA.width : DIMENSIONS.MUSTATEEL.width;
-        const dimH = activeTool === "muraba" ? DIMENSIONS.MURABA.height : DIMENSIONS.MUSTATEEL.height;
-        const snap = snapToNearestBoundary({ x: world.x, y: world.y, w: dimW, h: dimH }, objectsRef.current);
-        const wouldOverlap = objectsRef.current
-          .filter(o => ["mustateel","muraba","acre"].includes(o.type))
-          .some(o => rectsOverlap({ x: snap.x, y: snap.y, w: dimW, h: dimH }, o));
-        setGhostPos({ x: snap.x, y: snap.y, w: dimW, h: dimH, blocked: wouldOverlap });
+        if (isParcelTool) {
+          const dimW = activeTool === "muraba" ? DIMENSIONS.MURABA.width : DIMENSIONS.MUSTATEEL.width;
+          const dimH = activeTool === "muraba" ? DIMENSIONS.MURABA.height : DIMENSIONS.MUSTATEEL.height;
+          const snap = snapToNearestBoundary({ x: world.x, y: world.y, w: dimW, h: dimH }, objectsRef.current);
+          const wouldOverlap = objectsRef.current
+            .filter(o => ["mustateel","muraba","acre"].includes(o.type))
+            .some(o => rectsOverlap({ x: snap.x, y: snap.y, w: dimW, h: dimH }, o));
+          setGhostPos({ x: snap.x, y: snap.y, w: dimW, h: dimH, blocked: wouldOverlap });
+        }
       }
     } else {
       if (ghostPos) setGhostPos(null);
@@ -597,7 +649,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       setBoxSelectDraft({ x1: boxSelectStart.current.x, y1: boxSelectStart.current.y, x2: worldRaw.x, y2: worldRaw.y });
       return;
     }
-    if (isMoving.current && movingObjId.current && (activeTool === "canalMove" || activeTool === "move" || activeTool === "select" || activeTool === "mustateel" || activeTool === "muraba")) {
+    if (isMoving.current && movingObjId.current && (activeTool === "canalMove" || activeTool === "move" || activeTool === "select" || activeTool === "mustateel" || activeTool === "muraba" || activeTool === "canal" || activeTool === "khal")) {
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
@@ -725,6 +777,21 @@ const GISCanvas = forwardRef(function GISCanvas(
         isMoving.current = true; movingObjId.current = hit.id;
         moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
         movingObjOrigPoints.current = null;
+        onSelect(hit.id);
+      } else {
+        onSelect(null);
+      }
+      return;
+    }
+    // Canal/Khal tool hovering over an existing canal/khal → behave as Select (move).
+    // Elastic hook joints + stuck mogas follow a moved canal (same as the Move tool).
+    if ((activeTool === "canal" || activeTool === "khal") && hoveringParcelRef.current) {
+      const hit = hitTest(worldRaw.x, worldRaw.y, objects);
+      if (hit && ["canal", "khal"].includes(hit.type) && hit.points) {
+        isMoving.current = true; movingObjId.current = hit.id;
+        moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
+        movingObjOrigPoints.current = hit.points.map(p => ({ ...p }));
+        if (hit.type === "canal") captureAttachedOriginals(objects);
         onSelect(hit.id);
       } else {
         onSelect(null);
@@ -1188,7 +1255,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       setMeasurePoly(null);
       setMeasureResult(null);
     }
-    if (activeTool !== "mustateel" && activeTool !== "muraba") {
+    if (!["mustateel", "muraba", "canal", "khal"].includes(activeTool)) {
       hoveringParcelRef.current = false;
       setHoveringParcel(false);
     }
@@ -1206,7 +1273,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     move: "cursor-move", canalMove: "cursor-move", damageMarker: "cursor-crosshair", measure: "cursor-crosshair",
     boxSelect: "cursor-crosshair",
   }[activeTool] || "cursor-crosshair";
-  const effectiveCursor = ((activeTool === "mustateel" || activeTool === "muraba") && hoveringParcel) ? "cursor-default" : cursorClass;
+  const effectiveCursor = (["mustateel", "muraba", "canal", "khal"].includes(activeTool) && hoveringParcel) ? "cursor-default" : cursorClass;
 
   const editingObj = editingLabel ? objects.find(o => o.id === editingLabel.id) : null;
   let labelPos = null;

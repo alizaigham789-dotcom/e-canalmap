@@ -1225,20 +1225,8 @@ export function drawCanalDraft(ctx, canalDraft, snapPos, zoom, C) {
   const halfW = DIMENSIONS.CANAL_WIDTH / 2;
   const left = getParallelPolyline(draftPts, -halfW);
   const right = getParallelPolyline(draftPts, halfW);
-  // Live ghost preview — semi-transparent (35%) fill showing the exact final canal shape.
-  // Same flat-style rendering: squared caps, water fill centered between boundaries.
-  if (draftPts.length >= 2) {
-    ctx.save();
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = C.canalFill || "rgba(163,218,244,0.70)";
-    ctx.beginPath();
-    drawSmoothPath(ctx, left);
-    ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
-    drawSmoothPath(ctx, [...right].reverse());
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
+  // No shadow/ghost fill while drawing — only dashed boundary lines so the user
+  // sees the true canal edges clearly for precise alignment.
   ctx.strokeStyle = C.canalStroke || "#0284c7";
   ctx.lineWidth = 2 / zoom;
   ctx.setLineDash([6/zoom, 4/zoom]);
