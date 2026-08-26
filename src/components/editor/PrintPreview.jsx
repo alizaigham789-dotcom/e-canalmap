@@ -23,16 +23,24 @@ const PENCIL_COLORS = {
   labelColor: "#000000",
 };
 
-// Khaka Dasti (hand-drawn sketch) — lead-pencil grey palette (not full black).
-// Drawn mustateel boundaries are graphite grey; the internal killa grid is a lighter
-// grey so the whole page reads like a light pencil sketch. Name labels are hidden
-// (the surveyor writes them in by hand); a mustateel guide grid extends beyond the
-// drawn parcels so any missed mustateel can be pencil-drawn later.
-const KHAKA_DASTI_COLORS = {
+// Khaka Dasti (hand-drawn sketch) — lead-pencil grey palette for ALL element types.
+// By default every element renders in graphite grey (pencil sketch). The user can
+// selectively tick checkboxes to keep specific elements colourful (canal, road,
+// chakbandi, moga, mustateel, etc.) while the rest stay grey.
+const KHAKA_DASTI_GREY = {
   mustateelStroke: "#6b6b6b",
   murabaStroke: "#6b6b6b",
   gridStroke: "rgba(110,110,110,0.6)",
   labelColor: "#6b6b6b",
+  acreStroke: "#6b6b6b",
+  acreFill: "none",
+  canalStroke: "#6b6b6b",
+  canalFill: "#8a8a8a",
+  khalStroke: "#6b6b6b",
+  roadStroke: "#6b6b6b",
+  chakbandiStroke: "#6b6b6b",
+  mouzaStroke: "#6b6b6b",
+  outletStroke: "#6b6b6b",
 };
 
 const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
@@ -239,8 +247,9 @@ function svgExclusionHatch(obj, idx) {
 }
 
 function svgAcre(obj, C, idx) {
-  const fillColor = obj.fillColor || C.acreFill || "rgba(234,179,8,0.08)";
-  const strokeColor = C.acreStroke || "#eab308";
+  const greyed = C._greyTypes?.has('mustateel') || C._greyTypes?.has('acre');
+  const fillColor = greyed ? "none" : (obj.fillColor || C.acreFill || "rgba(234,179,8,0.08)");
+  const strokeColor = greyed ? "#6b6b6b" : (C.acreStroke || "#eab308");
   const fontSize = Math.min(obj.w, obj.h) * 0.22;
   return `
 <g key="acre_${idx}">
@@ -252,16 +261,19 @@ function svgAcre(obj, C, idx) {
 
 function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   if (!obj.points || obj.points.length < 2) return "";
-  const style = khakaDasti ? "khakaDasti" : (obj.chakbandiStyle || "cross");
+  // Use the chakbandi style selected in the object's properties — never force a
+  // different style in Khaka Dasti. The colour follows C.chakbandiStroke (grey
+  // when greyed, real colour when the user ticks the colourful checkbox).
+  const style = obj.chakbandiStyle || "cross";
   const pts = obj.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const label = obj.name || "";
   const midPt = obj.points[Math.floor(obj.points.length/2)];
   const mustW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5);
-  const lineColor = style === "khakaDasti" ? "#22c55e" : (C.chakbandiStroke || "#22c55e");
+  const lineColor = C.chakbandiStroke || "#22c55e";
   const labelSvg = label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${lineColor}">${label}</text>` : "";
 
-  // 5 professional line styles. Khaka Dasti = solid green line at mustateel-border
-  // width (forced on by the Print خاکہ دستی toggle). Cross keeps the user's colour.
+  // 5 professional line styles. The style comes from the chakbandi's own properties;
+  // the colour follows the grey/colorful toggle via C.chakbandiStroke.
   if (style === "khakaDasti") {
     return `<g>
   <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${mustW}" stroke-linecap="round" stroke-linejoin="miter"/>
@@ -416,7 +428,7 @@ function svgCanal(obj, C, idx, outlets) {
     const gx1 = (midX - perpX * halfW).toFixed(1), gy1 = (midY - perpY * halfW).toFixed(1);
     const gx2 = (midX + perpX * halfW).toFixed(1), gy2 = (midY + perpY * halfW).toFixed(1);
     const gradId = `canalWater_${idx}`;
-    const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="#1688C7"/><stop offset="0.5" stop-color="#29A9E8"/><stop offset="1" stop-color="#1688C7"/></linearGradient></defs>`;
+    const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="${strokeColor}"/><stop offset="0.5" stop-color="${fillColor}"/><stop offset="1" stop-color="${strokeColor}"/></linearGradient></defs>`;
     return `
 <g key="canal_${idx}">
   ${boundarySvg}
@@ -442,9 +454,10 @@ function svgKhal(obj, C, idx) {
   const halfW = (obj.width || DIMENSIONS.KHAL_WIDTH) / 2;
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
-  const color = C.khalStroke || "#0D47A1";
+  const greyed = C._greyTypes?.has('khal');
+  const color = greyed ? "#6b6b6b" : (C.khalStroke || "#0D47A1");
   const isDefaultKhal = !C.khalStroke || C.khalStroke === "#0D47A1" || C.khalStroke === "#2563eb";
-  const khalFill = obj.fillColor || (isDefaultKhal ? "#1565C0" : color);
+  const khalFill = greyed ? "#8a8a8a" : (obj.fillColor || (isDefaultKhal ? "#1565C0" : color));
   // Straight polylines (no smooth curve — matches editor exactly)
   const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
@@ -480,9 +493,10 @@ function svgRoad(obj, C, idx) {
   const fillPath = parallelSmoothClosedPath(obj.points, halfW);
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
-  const edgeColor = obj.edgeColor || "#fbbf24";
+  const greyed = C._greyTypes?.has('road');
+  const edgeColor = greyed ? "#6b6b6b" : (obj.edgeColor || "#fbbf24");
   const edgeW = obj.edgeWidth || 2;
-  const fillColor = obj.fillColor || "#1a1a1a";
+  const fillColor = greyed ? "#6b6b6b" : (obj.fillColor || "#1a1a1a");
   const centerDash = pointsToSmoothPath(obj.points);
   const nameSvg = obj.name ? svgRoadName(obj.points, obj.name, obj.width || DIMENSIONS.ROAD_WIDTH) : "";
   return `
@@ -533,7 +547,8 @@ function svgBridge(obj, C, idx) {
 
 function svgOutlet(obj, C, idx, mogaScale = 1) {
   if (!obj.start || !obj.end) return "";
-  const color = obj.outletColor || C.outletStroke || "#06b6d4";
+  const greyed = C._greyTypes?.has('outlet');
+  const color = greyed ? "#6b6b6b" : (obj.outletColor || C.outletStroke || "#06b6d4");
   // Shared dimensions — identical to editor canvas & all export formats
   const { size, shaftWidth, headLen, headW, radius } = getOutletDimensions(obj);
   const half = size / 2;
@@ -765,6 +780,12 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [bwMode, setBwMode] = useState(false);
   const [pencilMode, setPencilMode] = useState(false);
   const [khakaDastiMode, setKhakaDastiMode] = useState(false);
+  // Per-element colourful toggle in Khaka Dasti — default all grey (pencil sketch),
+  // user ticks to keep specific element types colourful.
+  const [khakaColorful, setKhakaColorful] = useState({
+    mustateel: false, muraba: false, canal: false, khal: false,
+    road: false, chakbandi: false, mouza: false, outlet: false,
+  });
   const [pageOrientation, setPageOrientation] = useState("portrait");
   const [pageSize, setPageSize] = useState("A4");
   const [printMargin, setPrintMargin] = useState(0); // side margin removed per request
@@ -837,9 +858,26 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       };
     }
     if (pencilMode) return { ...(colorSettings || {}), ...PENCIL_COLORS };
-    if (khakaDastiMode) return { ...(colorSettings || {}), ...KHAKA_DASTI_COLORS };
+    if (khakaDastiMode) {
+      const cs = colorSettings || {};
+      // Build the set of types that should be greyed (not ticked colourful)
+      const grey = new Set();
+      const keys = ['mustateel','muraba','canal','khal','road','chakbandi','mouza','outlet'];
+      for (const k of keys) if (!khakaColorful[k]) grey.add(k);
+      // Start from grey palette, then restore real colours for colourful types
+      const base = { ...cs, ...KHAKA_DASTI_GREY, _greyTypes: grey };
+      if (khakaColorful.mustateel) { base.mustateelStroke = cs.mustateelStroke; base.gridStroke = cs.gridStroke; base.labelColor = cs.labelColor; }
+      if (khakaColorful.muraba) { base.murabaStroke = cs.murabaStroke; }
+      if (khakaColorful.canal) { base.canalStroke = cs.canalStroke; base.canalFill = cs.canalFill; }
+      if (khakaColorful.khal) { base.khalStroke = cs.khalStroke; }
+      if (khakaColorful.road) { base.roadStroke = cs.roadStroke; }
+      if (khakaColorful.chakbandi) { base.chakbandiStroke = cs.chakbandiStroke; }
+      if (khakaColorful.mouza) { base.mouzaStroke = cs.mouzaStroke; }
+      if (khakaColorful.outlet) { base.outletStroke = cs.outletStroke; }
+      return base;
+    }
     return colorSettings || {};
-  }, [bwMode, pencilMode, khakaDastiMode, colorSettings]);
+  }, [bwMode, pencilMode, khakaDastiMode, khakaColorful, colorSettings]);
 
   const svgData = useMemo(
     () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 0.5, khakaDastiMode, khakaTargetAspect),
@@ -1158,6 +1196,39 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
         {/* Options bar */}
         <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 bg-slate-50 border-b border-slate-200 flex-wrap">
+          {/* Khaka Dasti per-element colourful toggles */}
+          {khakaDastiMode && (
+            <div className="flex items-center gap-1.5 flex-wrap bg-stone-100 rounded-lg px-2 py-1 border border-stone-300">
+              <span className="text-[9px] font-bold text-stone-600 whitespace-nowrap" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>رنگین رکھیں:</span>
+              {[
+                { key: 'mustateel', label: 'مستطیل', color: '#6b6b6b' },
+                { key: 'muraba', label: 'مر FCCa', color: '#6b6b6b' },
+                { key: 'canal', label: 'کینال', color: '#1688C7' },
+                { key: 'khal', label: 'خال', color: '#0D47A1' },
+                { key: 'road', label: 'سڑک', color: '#1a1a1a' },
+                { key: 'chakbandi', label: 'چکبندی', color: '#22c55e' },
+                { key: 'mouza', label: 'موضع', color: '#dc2626' },
+                { key: 'outlet', label: 'موگا', color: '#06b6d4' },
+              ].map(({ key, label, color }) => (
+                <label key={key} className="flex items-center gap-1 cursor-pointer select-none" title={`Keep ${label} colourful`}>
+                  <input
+                    type="checkbox"
+                    checked={khakaColorful[key]}
+                    onChange={e => setKhakaColorful(prev => ({ ...prev, [key]: e.target.checked }))}
+                    className="w-3 h-3 accent-stone-600"
+                  />
+                  <span
+                    className="text-[10px] font-medium"
+                    style={{
+                      fontFamily: "'Noto Nastaliq Urdu', sans-serif",
+                      color: khakaColorful[key] ? color : '#9a9a9a',
+                      textDecoration: khakaColorful[key] ? 'none' : 'line-through',
+                    }}
+                  >{label}</span>
+                </label>
+              ))}
+            </div>
+          )}
           {/* Legend toggle */}
           <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <input type="checkbox" checked={showLegendInPrint} onChange={e => setShowLegendInPrint(e.target.checked)}
