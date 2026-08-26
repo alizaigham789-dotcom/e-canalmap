@@ -619,16 +619,29 @@ function buildBackgroundGridSVG(viewX, viewY, viewW, viewH) {
 // and 1 mustateel top/bottom beyond the drawn parcels, aligned to the global
 // mustateel grid. Lead-pencil grey so it reads as a light pencil guide a surveyor
 // can pencil-draw a missed mustateel onto.
-function buildKhakaDastiGuideGridSVG(bounds) {
+function buildKhakaDastiGuideGridSVG(bounds, targetAspect) {
   const mustW = DIMENSIONS.MUSTATEEL.width;
   const mustH = DIMENSIONS.MUSTATEEL.height;
-  // Margins: 1.5 mustateels top (undrawn guide space), 3 mustateels each side,
-  // bottom any (kept 1). The drawn map sits inside this guide grid.
-  const leftCount = 3, rightCount = 3, topMust = 1.5, bottomMust = 1;
+  // Margins: 1 dummy mustateel at top, 2 undrawn mustateels each side (left/right),
+  // 1 at bottom. The drawn map sits inside this guide grid; the grid starts right
+  // below the header (no white gap) so the page is fully used.
+  const leftCount = 2, rightCount = 2, topMust = 1, bottomMust = 1;
   const startX = bounds.minX - leftCount * mustW;
   const endX = bounds.maxX + rightCount * mustW;
   const startY = bounds.minY - topMust * mustH;
-  const endY = bounds.maxY + bottomMust * mustH;
+  let endY = bounds.maxY + bottomMust * mustH;
+  // Fill the page: extend the BOTTOM with empty guide rows until the grid's aspect
+  // matches the printable content area (targetAspect = contentW/contentH). The
+  // drawn map stays at the top (1 dumi mustateel above it); the extra space fills
+  // as empty guide grid below, so the whole page is used with no white gap.
+  if (targetAspect && targetAspect > 0) {
+    const width = endX - startX;
+    const targetH = width / targetAspect;
+    if (targetH > (endY - startY)) {
+      const baseHY = Math.floor(startY / mustH) * mustH;
+      endY = baseHY + Math.ceil((startY + targetH - baseHY) / mustH) * mustH;
+    }
+  }
   // Very dim guide cells — boundaries much lighter than drawn mustateels,
   // killa grid even lighter so it reads as faint pencil guide lines.
   const boundaryColor = "rgba(130,130,130,0.25)";
@@ -662,7 +675,7 @@ function buildKhakaDastiGuideGridSVG(bounds) {
   return { lines, startX, startY, endX, endY };
 }
 
-function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, mogaScale = 1, khakaDasti = false) {
+function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, mogaScale = 1, khakaDasti = false, targetAspect = null) {
   const C = colorSettings || {};
   const bounds = getObjectsBounds(objects);
   if (!bounds) return null;
@@ -670,7 +683,7 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
   const pad = 20;
   let viewX, viewY, viewW, viewH, guideGridSvg = "";
   if (khakaDasti) {
-    const guide = buildKhakaDastiGuideGridSVG(bounds);
+    const guide = buildKhakaDastiGuideGridSVG(bounds, targetAspect);
     guideGridSvg = guide.lines;
     viewX = guide.startX - pad;
     viewY = guide.startY - pad;
@@ -761,6 +774,19 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     const dim = PAGE_DIMENSIONS[pageSize] || PAGE_DIMENSIONS.A4;
     return pageOrientation === "portrait" ? dim.w / dim.h : dim.h / dim.w;
   }, [pageSize, pageOrientation]);
+  // Khaka Dasti: target aspect of the printable content area (page minus the
+  // compact header). The guide grid is extended downward with empty rows so its
+  // aspect matches this — the grid then fills the whole page (starting right below
+  // the header, no white gap), and the page isn't left mostly blank.
+  const khakaTargetAspect = useMemo(() => {
+    if (!khakaDastiMode) return null;
+    const dim = PAGE_DIMENSIONS[pageSize] || PAGE_DIMENSIONS.A4;
+    const isLandscape = pageOrientation === "landscape";
+    const pageW = isLandscape ? dim.h : dim.w;
+    const pageH = isLandscape ? dim.w : dim.h;
+    const headerFrac = 0.12; // compact header occupies ~12% of page height
+    return pageW / (pageH * (1 - headerFrac));
+  }, [khakaDastiMode, pageSize, pageOrientation]);
   const [showLegendInPrint, setShowLegendInPrint] = useState(true);
   const [showPageBorder, setShowPageBorder] = useState(false);
   const [legendMoveMode, setLegendMoveMode] = useState(false);
@@ -816,8 +842,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   }, [bwMode, pencilMode, khakaDastiMode, colorSettings]);
 
   const svgData = useMemo(
-    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 0.5, khakaDastiMode),
-    [objects, effectiveColors, mogaFilter, killaVisibility, khakaDastiMode]
+    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 0.5, khakaDastiMode, khakaTargetAspect),
+    [objects, effectiveColors, mogaFilter, killaVisibility, khakaDastiMode, khakaTargetAspect]
   );
 
   // Per-acre land-uses actually shown (respecting the moga filter) — for the legend
@@ -833,8 +859,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   // Full-scale SVG for actual print / SVG download — moga at 100%
   const printSvgData = useMemo(
-    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 1, khakaDastiMode),
-    [objects, effectiveColors, mogaFilter, killaVisibility, khakaDastiMode]
+    () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 1, khakaDastiMode, khakaTargetAspect),
+    [objects, effectiveColors, mogaFilter, killaVisibility, khakaDastiMode, khakaTargetAspect]
   );
 
   // Convert screen coordinates to SVG world coordinates (must be after svgData)
