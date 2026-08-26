@@ -465,7 +465,17 @@ export default function MapList() {
                 className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
               />
             </div>
-            {/* 4. Sub Division — dropdown from existing moga files */}
+            {/* 4. Section (سیکشن) */}
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Section (سیکشن)</label>
+              <Input
+                placeholder="e.g. Roda"
+                value={newMap.section}
+                onChange={e => setField("section", e.target.value)}
+                className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
+              />
+            </div>
+            {/* 5. Sub Division — dropdown from existing moga files */}
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Sub Division (سب ڈویژن)</label>
               <Input
