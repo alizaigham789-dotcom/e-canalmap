@@ -507,7 +507,7 @@ function svgRoad(obj, C, idx) {
     const rwGauge = obj.railway.gaugeWidth || 24;
     const offset = (obj.railway.side === "left" ? -1 : 1) * ((obj.width || DIMENSIONS.ROAD_WIDTH) / 2 + rwGauge / 2 + 4);
     const rwPath = getParallelPolyline(obj.points, offset);
-    railwaySvg = svgRailwayTracks(rwPath, rwGauge, obj.railway.style || 1, { tieSpacing: obj.railway.tieSpacing, gaugeWidth: obj.railway.gaugeWidth });
+    railwaySvg = svgRailwayTracks(rwPath, rwGauge, obj.railway.style || 1, { tieSpacing: obj.railway.tieSpacing, gaugeWidth: obj.railway.gaugeWidth, lineWidthScale: 0.5 });
   }
   return `
 <g key="road_${idx}">
