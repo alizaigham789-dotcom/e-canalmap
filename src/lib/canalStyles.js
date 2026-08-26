@@ -16,12 +16,13 @@ export const CANAL_STYLES = [
   { key: "water",       label: "Water",        swatch: "#1e90ff" },
   { key: "3dwater",     label: "3D Water",      swatch: "#0ea5e9" },
   { key: "green",       label: "Green",         swatch: "#16a34a" },
+  { key: "greenWater",  label: "Green Water",   swatch: "linear-gradient(90deg,#16a34a 0 28%,#1d4ed8 28% 72%,#16a34a 72%)" },
   { key: "engineering", label: "Engineering",   swatch: "#2563eb" },
   { key: "dashed",      label: "Dashed",        swatch: "#3b82f6" },
   { key: "custom",      label: "Custom",        swatch: null },
 ];
 
-const NEW_STYLES = ["concrete", "earth", "water", "3dwater", "green", "engineering", "dashed", "custom"];
+const NEW_STYLES = ["concrete", "earth", "water", "3dwater", "green", "greenWater", "engineering", "dashed", "custom"];
 export function isNewCanalStyle(style) { return NEW_STYLES.includes(style); }
 
 // ---- canvas geometry helpers ----
@@ -115,6 +116,12 @@ export function drawCanalStyleCanvas(ctx, obj, style, zoom, C) {
       ctx.fillStyle = "#16a34a"; fillBetween(ctx, pts, halfW);
       ctx.strokeStyle = "#4ade80"; ctx.lineWidth = halfW * 0.9; strokeCenter(ctx, pts);
       ctx.strokeStyle = "rgba(255,255,255,0.25)"; ctx.lineWidth = Math.max(1, halfW * 0.1); strokeCenter(ctx, pts);
+      bankLines(ctx, pts, halfW, "#15803d", Math.max(2, 2 / zoom));
+      return;
+    case "greenWater":
+      ctx.fillStyle = "#16a34a"; fillBetween(ctx, pts, halfW);
+      ctx.strokeStyle = "#1d4ed8"; ctx.lineWidth = halfW * 1.2; strokeCenter(ctx, pts);
+      ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = Math.max(1, halfW * 0.1); strokeCenter(ctx, pts);
       bankLines(ctx, pts, halfW, "#15803d", Math.max(2, 2 / zoom));
       return;
     case "engineering":
@@ -241,6 +248,11 @@ export function buildCanalStyleSVG(obj, style, C) {
       return svgFill(pts, halfW, "#16a34a")
         + svgCenter(pts, "#4ade80", halfW * 0.9)
         + svgCenter(pts, "rgba(255,255,255,0.25)", Math.max(1, halfW * 0.1))
+        + svgBanks(pts, halfW, "#15803d", 2);
+    case "greenWater":
+      return svgFill(pts, halfW, "#16a34a")
+        + svgCenter(pts, "#1d4ed8", halfW * 1.2)
+        + svgCenter(pts, "rgba(255,255,255,0.3)", Math.max(1, halfW * 0.1))
         + svgBanks(pts, halfW, "#15803d", 2);
     case "engineering":
       return svgFill(pts, halfW, "#2563eb")
