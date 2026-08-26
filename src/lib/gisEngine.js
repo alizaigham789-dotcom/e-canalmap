@@ -245,25 +245,28 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
     }
   }
 
-  // Parcel boundary snap for chakbandi/mouza/khal — follows killa & mustateel boundaries,
-  // but allows passing through killa centers when not near any boundary.
-  // Canal-edge snap takes PRIORITY (magnetic) — when a chakbandi endpoint is within the
-  // canal's magnetic range, it locks onto the canal edge instead of a parcel boundary line.
-  if (["chakbandi", "mouza", "khal"].includes(activeTool)) {
+  // Chakbandi: highest priority = canal-bank × parcel-boundary intersection (node sits
+  // on BOTH the canal boundary and a killa/mustateel line). Then canal edge (hand-join
+  // the canal boundary anywhere), then plain parcel-boundary lines.
+  if (activeTool === "chakbandi") {
+    const interSnap = snapToCanalEdgeParcelIntersection(wx, wy, objects, threshold * 5);
+    if (interSnap) return { x: interSnap.x, y: interSnap.y };
     const canalEdgeDist = Math.hypot(wx - bestX, wy - bestY);
-    // Canal priority fires ONLY when a canal snap was actually applied — otherwise
-    // bestX/bestY equal the raw cursor (canalEdgeDist === 0) and we must fall through
-    // to the parcel-boundary snap so chakbandi nodes follow killa + mustateel lines.
-    if (activeTool === "chakbandi" && canalSnapActive && canalEdgeDist < threshold * 10) {
+    if (canalSnapActive && canalEdgeDist < threshold * 10) {
       return { x: bestX, y: bestY };
     }
     const snap = snapToParcelBoundaries(wx, wy, objects, threshold * 2);
     const dParcel = Math.hypot(wx - snap.x, wy - snap.y);
-    // Prefer the previously-computed snap (grid intersection / moga anchor) ONLY when one
-    // actually fired — otherwise bestX/bestY are still the raw cursor, canalEdgeDist === 0,
-    // and we'd wrongly return the unsnapped cursor instead of the killa/mustateel line snap.
     const anySnapFired = bestDist < Infinity;
     return (anySnapFired && canalEdgeDist < dParcel) ? { x: bestX, y: bestY } : snap;
+  }
+
+  // Mouza / khal — follow killa & mustateel boundary lines (no canal priority).
+  if (activeTool === "mouza" || activeTool === "khal") {
+    const snap = snapToParcelBoundaries(wx, wy, objects, threshold * 2);
+    const anySnapFired = bestDist < Infinity;
+    const canalEdgeDist = Math.hypot(wx - bestX, wy - bestY);
+    return (anySnapFired && canalEdgeDist < Math.hypot(wx - snap.x, wy - snap.y)) ? { x: bestX, y: bestY } : snap;
   }
 
   return { x: bestX, y: bestY };
@@ -316,6 +319,66 @@ export function snapToParcelBoundaries(wx, wy, objects, threshold = 15) {
   }
   if (cornerSnap) return { x: cornerSnap.x, y: cornerSnap.y };
   return { x: bestX, y: bestY };
+}
+
+// Collect every vertical (x) and horizontal (y) parcel boundary line from the killa
+// grids of all acre/mustateel/muraba parcels. Used to find where a canal bank crosses
+// a killa/mustateel boundary — the exact corner where a chakbandi node can sit on
+// BOTH the canal boundary and the parcel boundary at once.
+export function getParcelBoundaryLines(objects) {
+  const verticals = new Set();
+  const horizontals = new Set();
+  for (const o of objects) {
+    if (!["acre", "mustateel", "muraba"].includes(o.type)) continue;
+    const killaCols = o.type === "muraba" ? 5 : o.type === "mustateel" ? 2 : 1;
+    const killaRows = o.type === "acre" ? 1 : 5;
+    const cellW = o.w / killaCols, cellH = o.h / killaRows;
+    for (let c = 0; c <= killaCols; c++) verticals.add(o.x + c * cellW);
+    for (let r = 0; r <= killaRows; r++) horizontals.add(o.y + r * cellH);
+  }
+  return { verticals: [...verticals], horizontals: [...horizontals] };
+}
+
+// Snap a chakbandi node to the intersection of a canal bank (left/right edge polyline)
+// and a parcel boundary line (vertical or horizontal). These crossing points are where
+// the canal boundary meets a killa/mustateel boundary — a node here joins the canal
+// edge cleanly AND stays aligned to the parcel grid (no side drift). Range is tighter
+// than the canal magnetic range so it only wins when the cursor is genuinely near a
+// crossing; elsewhere the canal-edge snap still lets you hand-join the canal boundary.
+export function snapToCanalEdgeParcelIntersection(wx, wy, objects, threshold) {
+  const { verticals, horizontals } = getParcelBoundaryLines(objects);
+  if (verticals.length === 0 && horizontals.length === 0) return null;
+  let bestX = wx, bestY = wy, bestDist = threshold;
+  for (const o of objects) {
+    if (o.type !== "canal" || !o.points || o.points.length < 2) continue;
+    const halfW = (o.width || DIMENSIONS.CANAL_WIDTH) / 2;
+    for (const side of [-1, 1]) {
+      const edge = getParallelPolyline(o.points, halfW * side);
+      for (let i = 0; i < edge.length - 1; i++) {
+        const a = edge[i], b = edge[i + 1];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        if (Math.abs(dx) > 1e-6) {
+          for (const vx of verticals) {
+            const t = (vx - a.x) / dx;
+            if (t < 0 || t > 1) continue;
+            const py = a.y + t * dy;
+            const d = Math.hypot(wx - vx, wy - py);
+            if (d < bestDist) { bestX = vx; bestY = py; bestDist = d; }
+          }
+        }
+        if (Math.abs(dy) > 1e-6) {
+          for (const hy of horizontals) {
+            const t = (hy - a.y) / dy;
+            if (t < 0 || t > 1) continue;
+            const px = a.x + t * dx;
+            const d = Math.hypot(wx - px, wy - hy);
+            if (d < bestDist) { bestX = px; bestY = hy; bestDist = d; }
+          }
+        }
+      }
+    }
+  }
+  return bestDist < threshold ? { x: bestX, y: bestY } : null;
 }
 
 // ============================================================
