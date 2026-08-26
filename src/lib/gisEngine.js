@@ -1273,11 +1273,11 @@ export function buildMapHeaderText(mapData) {
   const side = mapData?.mogha_side || "";
   const rajbah = mapData?.rajbah || "_____";
   const village = mapData?.village || "_____";
-  const zilladarSection = mapData?.zilladar_section || "_____";
+  const zilladarSection = mapData?.section || mapData?.zilladar_section || "_____";
   const tehsil = mapData?.tehsil || "_____";
   const district = mapData?.district || "_____";
   const mogaToken = `${number}${side ? `/${side}` : ""}`;
-  return `خاکہ دستی\u2009\u2009موگہ نمبری\u2009\u2066${mogaToken}\u2069،\u2009راجباہ ${rajbah}،\u2009موضع ${village}،\u2009ضلعداری سیکشن ${zilladarSection}،\u2009سب ڈویژن ${tehsil}،\u2009ڈویژن ${district}`;
+  return `خاکہ دستی\u2009\u2009موگہ نمبری\u2009\u2066${mogaToken}\u2069،\u2009راجباہ ${rajbah}،\u2009موضع ${village}،\u2009ضلعداری سیکشن ${zilladarSection}،\u2009سب ڈویژن ${tehsil}،\u2009نہر ڈویژن ${district}`;
 }
 
 // Bordered single-line header box for print/export output — auto-shrinks to fit one line

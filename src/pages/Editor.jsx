@@ -704,12 +704,15 @@ export default function Editor() {
           }
         }
       }
+      // Auto-fill the canal name from the map header's Rajbah (canal minor) when no
+      // name was inherited from a connected canal — so new canals are named automatically.
+      if (!canal.name) canal.name = mapData?.rajbah || "";
       dsmRef.current.add(canal);
       setSelectedId(canal.id);
       syncObjects();
       saveRef.current();
     }
-  }, []);
+  }, [mapData]);
 
   const handleChakbandiPointAdd = useCallback((pt) => {
     setChakbandiDraft(prev => prev ? [...prev, pt] : [pt]);
