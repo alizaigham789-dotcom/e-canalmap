@@ -484,7 +484,7 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
     ctx.setLineDash([]);
     // Blue boundary lines
     ctx.strokeStyle = strokeC;
-    ctx.lineWidth = Math.max(2, (obj.boundaryThickness || 3) / zoom);
+    ctx.lineWidth = Math.max(2, 3 / zoom);
     ctx.lineCap = "butt"; ctx.lineJoin = "round";
     for (const side of [left, right]) {
       ctx.beginPath();
@@ -687,7 +687,7 @@ export function drawKhal(ctx, obj, isSelected, zoom, C) {
   ctx.closePath(); ctx.fill();
 
   ctx.strokeStyle = khalColor;
-  ctx.lineWidth = (isSelected ? 2.5 : (obj.boundaryThickness || 2)) / zoom;
+  ctx.lineWidth = (isSelected ? 2.5 : 2) / zoom;
   ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const side of [left, right]) {
     ctx.beginPath();
@@ -773,8 +773,7 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 3 / zoom;
   ctx.lineCap = "round";
-  const _roadDash = obj.dividerSpacing || 14;
-  ctx.setLineDash([_roadDash/zoom, (_roadDash*0.57)/zoom]);
+  ctx.setLineDash([14/zoom, 8/zoom]);
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();

@@ -218,7 +218,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
         for (let i = right.length-1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
         ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = strokeC; ctx.lineWidth = Math.max(2, o.boundaryThickness || (w * 0.12));
+        ctx.strokeStyle = strokeC; ctx.lineWidth = Math.max(2, w * 0.12);
         ctx.lineCap = "butt"; ctx.lineJoin = "round";
         for (const side of [left, right]) { ctx.beginPath(); ctx.moveTo(side[0].x, side[0].y); for (const p of side) ctx.lineTo(p.x, p.y); ctx.stroke(); }
       } else {
@@ -240,7 +240,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.fillStyle = o.fillColor || C.khalFill || "#1565C0"; ctx.beginPath(); ctx.moveTo(left[0].x,left[0].y);
       for(const p of left)ctx.lineTo(p.x,p.y); ctx.lineTo(right[right.length-1].x,right[right.length-1].y);
       for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle=kColor; ctx.lineWidth=(o.boundaryThickness || 1.5)/zoom;
+      ctx.strokeStyle=kColor; ctx.lineWidth=1.5/zoom;
       for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
       // Flow arrow at end — 5× size, head at end point, tail behind
       // Use last segment with meaningful length to avoid double-click noise
@@ -301,8 +301,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         }
       }
     } else if (o.type === "mouza" && o.points?.length >= 2) {
-      ctx.strokeStyle=C.mouzaStroke || "#000"; ctx.lineWidth=(o.lineWidth || 3)/zoom; ctx.lineCap="round";
-      if (o.lineStyle === "solid") ctx.setLineDash([]); else if (o.lineStyle === "dotted") ctx.setLineDash([2/zoom,5/zoom]); else ctx.setLineDash([25/zoom,12/zoom]);
+      ctx.strokeStyle=C.mouzaStroke || "#000"; ctx.lineWidth=(CHAKBANDI_SCALE.lineWidth()*5)/3; ctx.lineCap="round"; ctx.setLineDash([25,12]);
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
       for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke(); ctx.setLineDash([]);
     }
@@ -558,7 +557,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
         const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
         const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-        return `<g>${_boundarySvg}<polygon points="${fillPts}" fill="${fillColor}"/><polyline points="${leftPts}" fill="none" stroke="${strokeColor}" stroke-width="${o.boundaryThickness || 2.5}" stroke-linecap="butt" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${strokeColor}" stroke-width="${o.boundaryThickness || 2.5}" stroke-linecap="butt" stroke-linejoin="round"/>${nameSvg}</g>`;
+        return `<g>${_boundarySvg}<polygon points="${fillPts}" fill="${fillColor}"/><polyline points="${leftPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>${nameSvg}</g>`;
       }
       return `<g>${_boundarySvg}<polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 8}" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"/><polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="${Math.max(1, w * 0.12).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
     }
@@ -580,7 +579,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const p1y=(last.y - aLen*Math.sin(ang) + aW*Math.cos(ang)).toFixed(1);
       const p2x=(last.x - aLen*Math.cos(ang) + aW*Math.sin(ang)).toFixed(1);
       const p2y=(last.y - aLen*Math.sin(ang) - aW*Math.cos(ang)).toFixed(1);
-      return `<g><polygon points="${fillPts}" fill="${color}22"/><polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="${o.boundaryThickness || 2}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="${o.boundaryThickness || 2}" stroke-linecap="round" stroke-linejoin="round"/><polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/></g>`;
+      return `<g><polygon points="${fillPts}" fill="${color}22"/><polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/></g>`;
     }
     if (o.type === "road" && o.points?.length >= 2) {
       // Road — bilateral buffer + center dash
@@ -599,7 +598,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const rwPath = getParallelPolyline(o.points, offset);
         railwaySvg = svgRailwayTracks(rwPath, rwGauge, o.railway.style || 1, { tieSpacing: o.railway.tieSpacing, gaugeWidth: o.railway.gaugeWidth, lineWidthScale: 1.5 });
       }
-      return `<g><polygon points="${fillPts}" fill="#3a3a3a"/><polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="${o.dividerSpacing || 10},${((o.dividerSpacing || 10)*0.6).toFixed(0)}" stroke-linecap="round"/>${railwaySvg}</g>`;
+      return `<g><polygon points="${fillPts}" fill="#3a3a3a"/><polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="10,6" stroke-linecap="round"/>${railwaySvg}</g>`;
     }
     if (o.type==="railway" && o.points?.length >= 2) {
       return `<g>${svgRailwayTracks(o.points, o.width || 24, o.railwayStyle || 1, { railColor: o.railColor, tieColor: o.tieColor, tieSpacing: o.tieSpacing, gaugeWidth: o.gaugeWidth })}</g>`;
@@ -633,7 +632,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }
     if (o.type==="mouza" && o.points?.length>=2) {
       const pts=o.points.map(p=>`${p.x},${p.y}`).join(" ");
-      return `<polyline points="${pts}" fill="none" stroke="${C.mouzaStroke || "#000"}" stroke-width="${o.lineWidth || 3}" stroke-linecap="round"${o.lineStyle === "solid" ? "" : o.lineStyle === "dotted" ? ` stroke-dasharray="2,5"` : ` stroke-dasharray="25,12"`}/>`;
+      return `<polyline points="${pts}" fill="none" stroke="${C.mouzaStroke || "#000"}" stroke-width="${(CHAKBANDI_SCALE.lineWidth()*5)/3}" stroke-linecap="round" stroke-dasharray="25,12"/>`;
     }
     if (o.type==="outlet" && o.start && o.end) {
       const color = o.outletColor || C.outletStroke || "#06b6d4";

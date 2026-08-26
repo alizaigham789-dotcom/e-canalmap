@@ -437,8 +437,8 @@ function svgCanal(obj, C, idx, outlets) {
   ${boundarySvg}
   ${gradDef}
   <path d="${fillPath}" fill="url(#${gradId})" />
-  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="${obj.boundaryThickness || 2.5}" stroke-linecap="butt" stroke-linejoin="round"/>
-  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="${obj.boundaryThickness || 2.5}" stroke-linecap="butt" stroke-linejoin="round"/>
+  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
+  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
   ${nameSvg}
 </g>`;
   }
@@ -484,8 +484,8 @@ function svgKhal(obj, C, idx) {
   return `
 <g key="khal_${idx}">
   <polygon points="${fillPts}" fill="${khalFill}" />
-  <polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="${obj.boundaryThickness || 2}" stroke-linecap="round" stroke-linejoin="round"/>
-  <polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="${obj.boundaryThickness || 2}" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   ${arrowSvg}
 </g>`;
 }
@@ -514,7 +514,7 @@ function svgRoad(obj, C, idx) {
   <path d="${fillPath}" fill="${fillColor}" />
   <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${edgeColor}" stroke-width="${edgeW}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${edgeColor}" stroke-width="${edgeW}" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${centerDash}" fill="none" stroke="#ffffff" stroke-width="3" stroke-dasharray="${obj.dividerSpacing || 14},${((obj.dividerSpacing || 14)*0.57).toFixed(0)}" stroke-linecap="round"/>
+  <path d="${centerDash}" fill="none" stroke="#ffffff" stroke-width="3" stroke-dasharray="14,8" stroke-linecap="round"/>
   ${railwaySvg}
   ${nameSvg}
 </g>`;
