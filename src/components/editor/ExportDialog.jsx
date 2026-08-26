@@ -199,7 +199,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.strokeStyle = C.acreStroke || "#eab308"; ctx.lineWidth = 1.5/zoom; ctx.strokeRect(o.x,o.y,o.w,o.h);
     } else if (o.type === "canal" && o.points?.length >= 2) {
       // Side boundary strips under the canal body
-      drawSideBoundaryCanvas(ctx, o, zoom);
+      drawSideBoundaryCanvas(ctx, o, zoom, C);
       if (isNewCanalStyle(o.canalStyle)) {
         drawCanalStyleCanvas(ctx, o, o.canalStyle, zoom, C);
       } else {
@@ -528,7 +528,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${C.acreStroke || "#555"}" stroke-width="1"/>${hatch}`;
     }
     if (o.type === "canal" && o.points?.length >= 2) {
-      const _boundarySvg = buildSideBoundarySVG(o);
+      const _boundarySvg = buildSideBoundarySVG(o, C);
       let nameSvg = "";
       if (o.name) {
         const cf = canalNameFont(o.width || DIMENSIONS.CANAL_WIDTH);

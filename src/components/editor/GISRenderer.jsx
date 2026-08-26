@@ -398,7 +398,7 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
 export function drawCanal(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   // Side boundary strips — drawn under the canal body, follow the full canal geometry
-  drawSideBoundaryCanvas(ctx, obj, zoom);
+  drawSideBoundaryCanvas(ctx, obj, zoom, C);
   const _cs = obj.canalStyle;
   if (isNewCanalStyle(_cs)) {
     drawCanalStyleCanvas(ctx, obj, _cs, zoom, C);

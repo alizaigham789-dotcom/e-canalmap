@@ -388,7 +388,7 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
 
 function svgCanal(obj, C, idx, outlets) {
   if (!obj.points || obj.points.length < 2) return "";
-  const boundarySvg = buildSideBoundarySVG(obj);
+  const boundarySvg = buildSideBoundarySVG(obj, C);
   const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH);
   const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf, outlets) : "";
   if (isNewCanalStyle(obj.canalStyle)) {
@@ -803,6 +803,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         mouzaStroke: "#000000",
         labelColor: "#000000",
         outletStroke: "#333333",
+        bw: true,
       };
     }
     if (pencilMode) return { ...(colorSettings || {}), ...PENCIL_COLORS };

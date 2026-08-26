@@ -50,14 +50,15 @@ function bankLines(ctx, pts, halfW, color, lw) {
 // Real-world width in feet, perpendicular to the canal path.
 // Drawn BEFORE the canal body so the canal sits on top.
 // ============================================================
-export function drawSideBoundaryCanvas(ctx, obj, zoom) {
+export function drawSideBoundaryCanvas(ctx, obj, zoom, C) {
   if (!obj.sideBoundary) return;
   const leftFt = Math.max(0, obj.leftBoundaryFt || 0);
   const rightFt = Math.max(0, obj.rightBoundaryFt || 0);
   if (!leftFt && !rightFt) return;
   const halfW = (obj.width || DIMENSIONS.CANAL_WIDTH) / 2;
-  const fill = obj.boundaryColor || "#b08968";
-  const edge = obj.boundaryEdgeColor || "#6b4f3a";
+  const bw = !!C?.bw;
+  const fill = bw ? "#6b7280" : (obj.boundaryColor || "#b08968");
+  const edge = bw ? "#374151" : (obj.boundaryEdgeColor || "#6b4f3a");
   const drawStrip = (innerOff, outerOff) => {
     const inner = getParallelPolyline(obj.points, innerOff);
     const outer = getParallelPolyline(obj.points, outerOff);
@@ -86,6 +87,15 @@ export function drawCanalStyleCanvas(ctx, obj, style, zoom, C) {
   const pts = obj.points;
   const custom = obj.customColor;
   ctx.lineCap = "round"; ctx.lineJoin = "round";
+
+  // B&W print mode — render every new canal style as greyscale (grey banks + dark water)
+  if (C?.bw) {
+    ctx.fillStyle = "#9ca3af"; fillBetween(ctx, pts, halfW);
+    ctx.strokeStyle = "#1f2937"; ctx.lineWidth = halfW * 1.0; strokeCenter(ctx, pts);
+    ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = Math.max(1, halfW * 0.1); strokeCenter(ctx, pts);
+    bankLines(ctx, pts, halfW, "#374151", Math.max(2, 2 / zoom));
+    return;
+  }
 
   switch (style) {
     case "concrete":
@@ -197,14 +207,15 @@ function svgBanks(pts, halfW, stroke, width) {
 // ============================================================
 // SIDE BOUNDARY — SVG
 // ============================================================
-export function buildSideBoundarySVG(obj) {
+export function buildSideBoundarySVG(obj, C) {
   if (!obj.sideBoundary) return "";
   const leftFt = Math.max(0, obj.leftBoundaryFt || 0);
   const rightFt = Math.max(0, obj.rightBoundaryFt || 0);
   if (!leftFt && !rightFt) return "";
   const halfW = (obj.width || DIMENSIONS.CANAL_WIDTH) / 2;
-  const fill = obj.boundaryColor || "#b08968";
-  const edge = obj.boundaryEdgeColor || "#6b4f3a";
+  const bw = !!C?.bw;
+  const fill = bw ? "#6b7280" : (obj.boundaryColor || "#b08968");
+  const edge = bw ? "#374151" : (obj.boundaryEdgeColor || "#6b4f3a");
   let svg = "";
   const strip = (innerOff, outerOff) => {
     svg += `<path d="${bandPathD(obj.points, innerOff, outerOff)}" fill="${fill}"/>`;
@@ -224,6 +235,13 @@ export function buildCanalStyleSVG(obj, style, C) {
   const halfW = w / 2;
   const pts = obj.points;
   const custom = obj.customColor;
+  // B&W print mode — render every new canal style as greyscale (grey banks + dark water)
+  if (C?.bw) {
+    return svgFill(pts, halfW, "#9ca3af")
+      + svgCenter(pts, "#1f2937", halfW * 1.0)
+      + svgCenter(pts, "rgba(255,255,255,0.35)", Math.max(1, halfW * 0.1))
+      + svgBanks(pts, halfW, "#374151", 2);
+  }
   switch (style) {
     case "concrete":
       return svgFill(pts, halfW, "#9ca3af")
