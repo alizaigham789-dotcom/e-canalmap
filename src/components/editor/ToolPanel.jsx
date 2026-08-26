@@ -3,7 +3,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Separator } from "@/components/ui/separator";
 import {
   RectangleVertical, RectangleHorizontal,
-  MousePointer2, Hand, Eraser,
+  MousePointer2, Hand, Eraser, Move,
   RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Waves, AlertTriangle, Ruler
 } from "lucide-react";
 
