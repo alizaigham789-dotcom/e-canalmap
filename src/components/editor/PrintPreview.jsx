@@ -977,7 +977,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       if (ch.points?.length >= 3) {
         const gca = calculateChakbandiGCA(ch, parcels, canals);
         if (gca > 0 || ch.centerLabel) {
-          const lp = getChakbandiLabelPos(ch);
+          const lp = getChakbandiLabelPos(ch, parcels);
           if (!lp) continue;
           const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
           results.push({ x: lp.x, y: lp.y, cca, gca: gcaTxt });
@@ -1039,7 +1039,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         if (ch.points?.length >= 3) {
           const gca = calculateChakbandiGCA(ch, parcels, canals);
           if (gca > 0 || ch.centerLabel) {
-            const lp = getChakbandiLabelPos(ch);
+            const lp = getChakbandiLabelPos(ch, parcels);
             if (!lp) continue;
             const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
             if (cca || gcaTxt) {

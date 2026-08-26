@@ -91,7 +91,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         if (ch.points?.length >= 3) {
           const gca = calculateChakbandiGCA(ch, _parcels, _canals);
           if (gca > 0 || ch.centerLabel) {
-            const lp = getChakbandiLabelPos(ch);
+            const lp = getChakbandiLabelPos(ch, _parcels);
             if (!lp) continue;
             const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
             if (cca || gcaTxt) {
@@ -436,7 +436,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       if (ch.points?.length >= 3) {
         const gca = calculateChakbandiGCA(ch, parcels, canals);
         if (gca > 0 || ch.centerLabel) {
-          const lp = getChakbandiLabelPos(ch);
+          const lp = getChakbandiLabelPos(ch, parcels);
           if (!lp) continue;
           const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
           if (cca || gcaTxt) {

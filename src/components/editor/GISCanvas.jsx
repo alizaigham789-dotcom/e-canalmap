@@ -171,7 +171,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         if (ch.points?.length >= 3) {
           const gca = interacting ? 0 : calculateChakbandiGCA(ch, _parcels, _canals);
           if (gca > 0 || ch.centerLabel || ch.cca || ch.gca) {
-            const lp = getChakbandiLabelPos(ch);
+            const lp = getChakbandiLabelPos(ch, _parcels);
             if (!lp) continue;
             const { cca: _cca, gca: _gca } = getCCAGCAText(ch, gca);
             let cca = _cca, gcaTxt = _gca;
@@ -849,7 +849,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       // Check for chakbandi GCA label box drag
       for (const o of objects) {
         if (o.type === "chakbandi" && o.points?.length >= 3) {
-          const lp = getChakbandiLabelPos(o);
+          const lp = getChakbandiLabelPos(o, objects);
           if (!lp) continue;
           const _gf = Math.max(12, Math.min(24, Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30 * zoom)) / zoom;
           if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _gf * 3) {
@@ -949,7 +949,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       //    runs before vertex/label-drag so clicking the CCA value opens the editor).
       for (const o of objects) {
         if (o.type === "chakbandi" && o.points?.length >= 3) {
-          const lp = getChakbandiLabelPos(o);
+          const lp = getChakbandiLabelPos(o, objects);
           if (!lp) continue;
           const _gf = Math.max(12, Math.min(24, Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30 * zoom)) / zoom;
           if (Math.hypot(worldRaw.x - lp.x, worldRaw.y - lp.y) < _gf * 3) {
@@ -1338,7 +1338,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   let labelPos = null;
   if (editingObj) {
     if (editingLabel.kind === "cca") {
-      const lp = getChakbandiLabelPos(editingObj);
+      const lp = getChakbandiLabelPos(editingObj, objects);
       if (lp) labelPos = worldToScreen(lp.x, lp.y, pan.x, pan.y, zoom);
     } else if (editingLabel.kind === "moga") {
       const lp = getOutletLabelPos(editingObj);

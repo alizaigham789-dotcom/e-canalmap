@@ -407,9 +407,28 @@ export function getOutletLabelPos(obj) {
 }
 
 // ─── Get chakbandi label position (custom or default) ────────────────────
-export function getChakbandiLabelPos(obj) {
+export function getChakbandiLabelPos(obj, parcels) {
   if (obj.labelPos) return obj.labelPos;
-  return chakbandiLabelPosition(obj);
+  let pos = chakbandiLabelPosition(obj);
+  if (!parcels || !parcels.length || !pos) return pos;
+  // Keep the CCA/GCA label away from the mustateel label (parcel centre) so
+  // the two never overlap and stay readable. If the chakbandi centroid lands
+  // inside a parcel, nudge the label to just outside that parcel.
+  const pcs = parcels.filter(p => p && p.w && p.h);
+  const inside = (x, y, p) => x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h;
+  if (!pcs.some(p => inside(pos.x, pos.y, p))) return pos;
+  const p = pcs.find(p => inside(pos.x, pos.y, p));
+  const pad = Math.max(30, p.h * 0.15);
+  const candidates = [
+    { x: pos.x, y: p.y + p.h + pad },
+    { x: pos.x, y: p.y - pad },
+    { x: p.x - pad, y: pos.y },
+    { x: p.x + p.w + pad, y: pos.y },
+  ];
+  for (const c of candidates) {
+    if (!pcs.some(q => inside(c.x, c.y, q))) return c;
+  }
+  return candidates[0];
 }
 
 // ─── CANVAS: moga fraction inside a square box ───────────────────────────
