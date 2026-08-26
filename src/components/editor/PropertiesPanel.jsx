@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator, Ban, MousePointerClick, RotateCcw } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { calculateChakbandiGCA, acresToAcreKanalMarla } from "@/lib/gisEngine";
-import { CANAL_STYLES, CANAL_SHAPES, normalizeCanalStyle } from "@/lib/canalStyles";
+import { CANAL_STYLES, normalizeCanalStyle, canalDefaultShape } from "@/lib/canalStyles";
 import AcreUseControl from "@/components/editor/AcreUseControl";
 
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
@@ -168,8 +168,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Canal Name <span className="text-blue-400 normal-case font-normal" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>اردو سپورٹ</span></label>
                 <Input value={local.name || ""} onChange={e => commit("name", e.target.value)} dir="auto" placeholder="e.g. Nurpur Distry / نور پور" className="h-7 text-xs bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500" />
               </div>
-              <CanalStyleControl local={local} commit={commit} />
-              <CanalShapeControl local={local} commit={commit} />
+              <CanalStyleControl local={local} commit={commit} commitMultiple={commitMultiple} />
               <CanalWidthControl name={local.name || ""} value={local.width || 10} onChange={v => commit("width", v)} />
               <SideBoundaryControl local={local} commit={commit} />
               <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
@@ -763,41 +762,29 @@ function OutletLengthControl({ local, commit }) {
   );
 }
 
-// Canal Style — 10 professional visual styles (appearance only; width/geometry unchanged)
-function CanalStyleControl({ local, commit }) {
+// Canal Style — one clickable grid (like chakbandi) with the original Flat + 3D
+// Ribbon plus 8 more professional styles. One click sets BOTH canalStyle and the
+// shape folded into that style — no separate shape choice.
+function CanalStyleControl({ local, commit, commitMultiple }) {
   const current = normalizeCanalStyle(local.canalStyle);
   return (
     <div>
       <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Canal Style</label>
-      <Select value={current} onValueChange={v => commit("canalStyle", v)}>
-        <SelectTrigger className="h-7 text-xs bg-slate-50 border-slate-200"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          {CANAL_STYLES.map(s => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
+      <div className="grid grid-cols-2 gap-1">
+        {CANAL_STYLES.map(opt => (
+          <button key={opt.key}
+            onClick={() => commitMultiple({ canalStyle: opt.key, canalShape: canalDefaultShape(opt.key) })}
+            className={`px-2 py-1 text-[10px] rounded border font-medium transition-colors ${current === opt.key ? "bg-blue-600 text-white border-blue-500" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+            {opt.label}
+          </button>
+        ))}
+      </div>
       {current === "custom" && (
         <div className="flex items-center gap-2 mt-2">
           <input type="color" value={local.canalCustomColor || "#29A9E8"} onChange={e => commit("canalCustomColor", e.target.value)} className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
           <span className="text-[10px] text-slate-500">Custom canal colour</span>
         </div>
       )}
-    </div>
-  );
-}
-
-// Canal Shape — 10 shapes: path smoothing + end-cap termination (appearance only)
-function CanalShapeControl({ local, commit }) {
-  const current = local.canalShape || "curved";
-  return (
-    <div>
-      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Canal Shape</label>
-      <Select value={current} onValueChange={v => commit("canalShape", v)}>
-        <SelectTrigger className="h-7 text-xs bg-slate-50 border-slate-200"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          {CANAL_SHAPES.map(s => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <p className="text-[9px] text-slate-400 mt-0.5">Curve + end-cap style (visual only)</p>
     </div>
   );
 }

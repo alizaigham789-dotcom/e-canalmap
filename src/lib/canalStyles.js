@@ -5,20 +5,29 @@
 // Used by GISRenderer (editor canvas) and PrintPreview (print/SVG).
 // ============================================================
 
-// 10 professional canal styles. `water` = channel fill, `bank` = side bank
-// colour, `grass` = outer grass edge (earth style only).
+// 10 professional canal styles — the original 2 (Flat, 3D Ribbon) plus 8 more.
+// `water` = channel fill, `bank` = side bank colour, `grass` = outer grass edge
+// (earth style only). `defaultShape` folds a shape into each style so one click
+// in the properties grid changes both style AND shape together.
 export const CANAL_STYLES = [
-  { key: "classic",         label: "Classic",         water: "#29A9E8", bank: "#1688C7" },
-  { key: "3d",              label: "3D Canal",         water: "#29A9E8", bank: "#1688C7" },
-  { key: "concrete",        label: "Concrete",         water: "#29A9E8", bank: "#9aa7b4", concrete: "#7d8a99" },
-  { key: "earth",           label: "Earth",            water: "#29A9E8", bank: "#795548", grass: "#4caf50" },
-  { key: "water",           label: "Water",            water: "#2196f3", bank: "#1976d2" },
-  { key: "3dwater",         label: "3D Water",          water: "#2196f3", bank: "#1976d2" },
-  { key: "green",           label: "Green",            water: "#29A9E8", bank: "#2e7d32" },
-  { key: "engineeringBlue", label: "Engineering Blue",  water: "#00aaff", bank: "#00aaff" },
-  { key: "dashed",          label: "Dashed",           water: "#29A9E8", bank: "#1688C7" },
-  { key: "custom",          label: "Custom",           water: "#29A9E8", bank: "#1688C7" },
+  { key: "classic",         label: "Flat",            water: "#29A9E8", bank: "#1688C7", defaultShape: "curved" },
+  { key: "3d",              label: "3D Ribbon",       water: "#29A9E8", bank: "#1688C7", defaultShape: "curved" },
+  { key: "concrete",        label: "Concrete",        water: "#29A9E8", bank: "#9aa7b4", concrete: "#7d8a99", defaultShape: "straight" },
+  { key: "earth",           label: "Earth",           water: "#29A9E8", bank: "#795548", grass: "#4caf50", defaultShape: "curved" },
+  { key: "water",           label: "Water",           water: "#2196f3", bank: "#1976d2", defaultShape: "curved" },
+  { key: "3dwater",         label: "3D Water",         water: "#2196f3", bank: "#1976d2", defaultShape: "curved" },
+  { key: "green",           label: "Green",           water: "#29A9E8", bank: "#2e7d32", defaultShape: "curved" },
+  { key: "engineeringBlue", label: "Engineering Blue", water: "#00aaff", bank: "#00aaff", defaultShape: "straight" },
+  { key: "dashed",          label: "Dashed",          water: "#29A9E8", bank: "#1688C7", defaultShape: "straight" },
+  { key: "custom",          label: "Custom",          water: "#29A9E8", bank: "#1688C7", defaultShape: "curved" },
 ];
+
+// The shape folded into a given style key (used by the properties grid so one
+// click sets both canalStyle and canalShape together).
+export function canalDefaultShape(styleKey) {
+  const s = STYLE_MAP[normalizeCanalStyle(styleKey)];
+  return s?.defaultShape || "curved";
+}
 
 const STYLE_MAP = Object.fromEntries(CANAL_STYLES.map(s => [s.key, s]));
 
