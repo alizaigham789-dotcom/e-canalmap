@@ -3,7 +3,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Separator } from "@/components/ui/separator";
 import {
   RectangleVertical, RectangleHorizontal,
-  MousePointer2, Hand, Eraser, Move,
+  MousePointer2, Hand, Eraser,
   RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Waves, AlertTriangle, Ruler
 } from "lucide-react";
 
@@ -65,7 +65,6 @@ const BridgeIcon = ({ className }) => (
 const TOOLS = [
   { id: "select", name: "Select", label: "Select / Move (V) — click to select, drag to move", icon: MousePointer2, group: "nav" },
   { id: "pan", name: "Pan", label: "Pan (H)", icon: Hand, group: "nav" },
-  { id: "canalMove", name: "Canal Move", label: "Canal Move — drag only canals (attached chakbandi follows)", icon: Move, group: "nav" },
   null,
   { id: "eraser", name: "Eraser", label: "Eraser (E)", icon: Eraser, group: "edit", color: "text-red-400" },
   { id: "mustateel", name: "Mustateel", label: "Mustateel 440×990 ft (M)", icon: RectangleVertical, group: "draw", color: "text-red-400" },
@@ -91,19 +90,14 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
           const Icon = tool.icon;
           const isActive = activeTool === tool.id;
           const isChakbandi = tool.id === "chakbandi";
-          const isCanalMove = tool.id === "canalMove";
 
           // Active colour theme per tool group
           const activeTheme = isChakbandi
             ? "bg-gradient-to-br from-green-500 to-emerald-700 border-green-400 text-white shadow-green-500/40"
-            : isCanalMove
-              ? "bg-gradient-to-br from-cyan-500 to-sky-700 border-cyan-400 text-white shadow-cyan-500/40"
-              : "bg-gradient-to-br from-blue-500 to-blue-700 border-blue-400 text-white shadow-lg shadow-blue-500/30";
+            : "bg-gradient-to-br from-blue-500 to-blue-700 border-blue-400 text-white shadow-lg shadow-blue-500/30";
           const inactiveTheme = isChakbandi
             ? "bg-gradient-to-br from-green-50 to-emerald-100 border-green-300 text-green-700 hover:from-green-500 hover:to-emerald-700 hover:text-white hover:border-green-400"
-            : isCanalMove
-              ? "bg-gradient-to-br from-cyan-50 to-sky-100 border-cyan-300 text-cyan-700 hover:from-cyan-500 hover:to-sky-700 hover:text-white hover:border-cyan-400"
-              : `border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 ${tool.color || ""}`;
+            : `border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 ${tool.color || ""}`;
 
           return (
             <Tooltip key={tool.id}>

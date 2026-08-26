@@ -783,15 +783,18 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
       return;
     }
-    // Canal/Khal tool hovering over an existing canal/khal → behave as Select (move).
-    // Elastic hook joints + stuck mogas follow a moved canal (same as the Move tool).
+    // Canal/Khal tool hovering over an existing canal/khal → behave as Select
+    // (selection + vertex editing only). The whole canal/khal is NEVER moved
+    // from the draw tool — only its vertex nodes can be dragged to edit it.
     if ((activeTool === "canal" || activeTool === "khal") && hoveringParcelRef.current) {
       const hit = hitTest(worldRaw.x, worldRaw.y, objects);
       if (hit && ["canal", "khal"].includes(hit.type) && hit.points) {
-        isMoving.current = true; movingObjId.current = hit.id;
-        moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
-        movingObjOrigPoints.current = hit.points.map(p => ({ ...p }));
-        if (hit.type === "canal") captureAttachedOriginals(objects);
+        // If already selected and pressing on a vertex, start vertex drag (edit)
+        const vThresh = (isTouchRef.current ? 30 : 10) / zoom;
+        const vIdx = hit.points.findIndex(p => Math.hypot(p.x - worldRaw.x, p.y - worldRaw.y) < vThresh);
+        if (selectedId === hit.id && vIdx !== -1) {
+          vertexDrag.current = { id: hit.id, index: vIdx };
+        }
         onSelect(hit.id);
       } else {
         onSelect(null);
