@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, calculateChakbandiLoopGCA, buildPrintHeaderHTML, buildPrintFooterHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, svgMogaInfo, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel, svgRailwayTracks } from "@/lib/printRenderHelpers";
 import { collectLandUses } from "@/lib/landUsePalette";
@@ -970,14 +970,15 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const gcaData = useMemo(() => {
     const parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
     const canals = objects.filter(o => o.type === "canal");
+    const roads = objects.filter(o => o.type === "road");
     const chakbandis = objects.filter(o => o.type === "chakbandi");
     const results = [];
     let total = 0;
     for (const ch of chakbandis) {
       if (ch.points?.length >= 3) {
-        const gca = calculateChakbandiGCA(ch, parcels, canals);
+        const gca = calculateChakbandiLoopGCA(ch, parcels, canals, roads);
         if (gca > 0 || ch.centerLabel) {
-          const lp = getChakbandiLabelPos(ch, parcels);
+          const lp = getChakbandiLabelPos(ch, objects);
           if (!lp) continue;
           const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
           results.push({ x: lp.x, y: lp.y, cca, gca: gcaTxt });
@@ -1031,15 +1032,16 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     // positioned ABOVE the chakbandi boundary (not at centroid)
     const parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
     const canals = objects.filter(o => o.type === "canal");
+    const roads = objects.filter(o => o.type === "road");
     const chakbandis = objects.filter(o => o.type === "chakbandi");
     const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
     let gcaLabels = "";
     if (!khakaDastiMode) {
       for (const ch of chakbandis) {
         if (ch.points?.length >= 3) {
-          const gca = calculateChakbandiGCA(ch, parcels, canals);
+          const gca = calculateChakbandiLoopGCA(ch, parcels, canals, roads);
           if (gca > 0 || ch.centerLabel) {
-            const lp = getChakbandiLabelPos(ch, parcels);
+            const lp = getChakbandiLabelPos(ch, objects);
             if (!lp) continue;
             const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
             if (cca || gcaTxt) {

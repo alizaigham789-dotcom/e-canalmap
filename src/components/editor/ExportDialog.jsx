@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Share2 } from "lucide-react";
 import { toast } from "sonner";
-import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, calculateChakbandiLoopGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas, svgAcreUses, acreUseHasLabel, drawAcreUsesOnCanvas, svgRailwayTracks, drawRailwayTracksCanvas as drawRailwayTracks } from "@/lib/printRenderHelpers";
 import { drawExclusionHatchOnCanvas } from "@/components/editor/GISRenderer";
 import { drawSideBoundaryCanvas, drawCanalStyleCanvas, buildSideBoundarySVG, buildCanalStyleSVG, isNewCanalStyle } from "@/lib/canalStyles";
@@ -85,13 +85,14 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     {
       const _parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
       const _canals = objects.filter(o => o.type === "canal");
+      const _roads = objects.filter(o => o.type === "road");
       const _chakbandis = objects.filter(o => o.type === "chakbandi");
       const gcaFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
       for (const ch of _chakbandis) {
         if (ch.points?.length >= 3) {
-          const gca = calculateChakbandiGCA(ch, _parcels, _canals);
+          const gca = calculateChakbandiLoopGCA(ch, _parcels, _canals, _roads);
           if (gca > 0 || ch.centerLabel) {
-            const lp = getChakbandiLabelPos(ch, _parcels);
+            const lp = getChakbandiLabelPos(ch, objects);
             if (!lp) continue;
             const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
             if (cca || gcaTxt) {
@@ -429,14 +430,15 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     // CCA/GCA fraction labels for chakbandis — at labelPos, in fraction boxes
     const parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
     const canals = objects.filter(o => o.type === "canal");
+    const roads = objects.filter(o => o.type === "road");
     const chakbandis = objects.filter(o => o.type === "chakbandi");
     const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
     let gcaLabels = "";
     for (const ch of chakbandis) {
       if (ch.points?.length >= 3) {
-        const gca = calculateChakbandiGCA(ch, parcels, canals);
+        const gca = calculateChakbandiLoopGCA(ch, parcels, canals, roads);
         if (gca > 0 || ch.centerLabel) {
-          const lp = getChakbandiLabelPos(ch, parcels);
+          const lp = getChakbandiLabelPos(ch, objects);
           if (!lp) continue;
           const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
           if (cca || gcaTxt) {

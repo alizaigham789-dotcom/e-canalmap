@@ -1214,6 +1214,94 @@ export function calculateChakbandiGCA(chakbandi, parcels, canals = []) {
   return Math.round(totalAcres * 100) / 100;
 }
 
+// ─── Closed-loop detection for chakbandi + canal/road ───────────────────────
+// A chakbandi line is often an OPEN polyline whose endpoints touch a canal or
+// road. The actual command area (CCA/GCA) is the region enclosed by the
+// chakbandi line PLUS the canal/road segment between its two endpoints.
+// This builds that closed polygon so the area + centroid sit in the open
+// interior (not on top of the chakbandi line itself).
+function lineSegmentBetween(linePoints, nA, nB) {
+  const idxA = nA.segIdx, idxB = nB.segIdx;
+  const result = [{ x: nB.x, y: nB.y }];
+  if (idxA === idxB) { result.push({ x: nA.x, y: nA.y }); return result; }
+  if (idxA < idxB) {
+    for (let i = idxB; i > idxA; i--) result.push(linePoints[i]);
+  } else {
+    for (let i = idxB + 1; i <= idxA; i++) result.push(linePoints[i]);
+  }
+  result.push({ x: nA.x, y: nA.y });
+  return result;
+}
+
+export function getChakbandiLoopPolygon(chakbandi, canals = [], roads = []) {
+  const pts = chakbandi && chakbandi.points;
+  if (!pts || pts.length < 2) return null;
+  const closeThreshold = 30;
+  // Already a closed loop (first ≈ last) → drop the duplicate closing point
+  if (pts.length >= 4 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < closeThreshold) {
+    return pts.slice(0, -1);
+  }
+  if (pts.length < 3) return pts; // not enough to form a loop
+  const lines = [
+    ...(canals || []).map(c => ({ points: c.points, width: c.width || DIMENSIONS.CANAL_WIDTH })),
+    ...(roads || []).map(r => ({ points: r.points, width: r.width || DIMENSIONS.ROAD_WIDTH })),
+  ].filter(l => l.points && l.points.length >= 2);
+  if (lines.length === 0) return pts;
+  const first = pts[0], last = pts[pts.length - 1];
+  const connectThreshold = 60;
+  let bestFirst = null, bestLast = null;
+  for (const l of lines) {
+    const nA = nearestPointOnPolyline(first.x, first.y, l.points);
+    if (nA && nA.dist < connectThreshold && (!bestFirst || nA.dist < bestFirst.n.dist)) bestFirst = { n: nA, line: l };
+    const nB = nearestPointOnPolyline(last.x, last.y, l.points);
+    if (nB && nB.dist < connectThreshold && (!bestLast || nB.dist < bestLast.n.dist)) bestLast = { n: nB, line: l };
+  }
+  if (bestFirst && bestLast && bestFirst.line === bestLast.line) {
+    const seg = lineSegmentBetween(bestFirst.line.points, bestFirst.n, bestLast.n);
+    if (seg && seg.length >= 2) return [...pts, ...seg];
+  }
+  return pts;
+}
+
+// Area-weighted centroid of a polygon; if it falls outside a concave loop,
+// spiral outward to find an interior point. Used to place the CCA label in
+// the OPEN centre of the loop (away from the boundary lines).
+export function polygonInteriorPoint(points) {
+  if (!points || points.length === 0) return null;
+  if (points.length < 3) {
+    let cx = 0, cy = 0; for (const p of points) { cx += p.x; cy += p.y; }
+    return { x: cx / points.length, y: cy / points.length };
+  }
+  let area = 0, cx = 0, cy = 0;
+  for (let i = 0; i < points.length; i++) {
+    const j = (i + 1) % points.length;
+    const cross = points[i].x * points[j].y - points[j].x * points[i].y;
+    area += cross; cx += (points[i].x + points[j].x) * cross; cy += (points[i].y + points[j].y) * cross;
+  }
+  let cen;
+  if (Math.abs(area) > 1e-9) { area *= 0.5; cen = { x: cx / (6 * area), y: cy / (6 * area) }; }
+  else { let ax = 0, ay = 0; for (const p of points) { ax += p.x; ay += p.y; } cen = { x: ax / points.length, y: ay / points.length }; }
+  if (pointInPolygon(cen, points)) return cen;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of points) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
+  const step = Math.max(8, Math.min(maxX - minX, maxY - minY) / 24);
+  for (let r = 1; r < 60; r++) {
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+      const tx = cen.x + Math.cos(a) * r * step, ty = cen.y + Math.sin(a) * r * step;
+      if (pointInPolygon({ x: tx, y: ty }, points)) return { x: tx, y: ty };
+    }
+  }
+  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+}
+
+// GCA for a chakbandi computed over its full closed loop (chakbandi + canal/road
+// segment between endpoints), so the area matches the visible enclosed region.
+export function calculateChakbandiLoopGCA(chakbandi, parcels, canals = [], roads = []) {
+  const loop = getChakbandiLoopPolygon(chakbandi, canals, roads);
+  if (!loop || loop.length < 3) return 0;
+  return calculateChakbandiGCA({ points: loop }, parcels, canals);
+}
+
 // Break acres into acres / kanal / marla (1 acre = 8 kanal = 160 marla; 1 marla = 272.25 sq ft).
 // Marla keeps its decimal so the breakdown always shows the point.
 export function acresToAcreKanalMarla(acres) {

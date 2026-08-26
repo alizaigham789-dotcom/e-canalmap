@@ -11,7 +11,7 @@ import BottomNav from "@/components/BottomNav";
 import MapDetailsDialog from "@/components/editor/MapDetailsDialog";
 import BulkPrintDialog from "@/components/editor/BulkPrintDialog";
 import { buildSVG, getObjectsBounds } from "@/lib/svgMapBuilder";
-import { DIMENSIONS, calculateChakbandiGCA, buildPrintFooterHTML } from "@/lib/gisEngine";
+import { DIMENSIONS, calculateChakbandiGCA, calculateChakbandiLoopGCA, buildPrintFooterHTML } from "@/lib/gisEngine";
 import { svgCCAGCAFractionBox, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG } from "@/lib/printRenderHelpers";
 
 const STATUS_COLORS = {
@@ -216,14 +216,15 @@ export default function MapList() {
 
       const parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
       const canals = objects.filter(o => o.type === "canal");
+      const roads = objects.filter(o => o.type === "road");
       const chakbandis = objects.filter(o => o.type === "chakbandi");
       const lblFont = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
       let gcaLabels = "";
       for (const ch of chakbandis) {
         if (ch.points?.length >= 3) {
-          const gca = calculateChakbandiGCA(ch, parcels, canals);
+          const gca = calculateChakbandiLoopGCA(ch, parcels, canals, roads);
           if (gca > 0 || ch.centerLabel) {
-            const lp = getChakbandiLabelPos(ch);
+            const lp = getChakbandiLabelPos(ch, objects);
             if (!lp) continue;
             const { cca, gca: gcaTxt } = getCCAGCAText(ch, gca);
             if (cca || gcaTxt) {

@@ -4,7 +4,7 @@
 // and canal name text-on-path — used by PrintPreview & ExportDialog
 // ============================================================
 
-import { getParallelPolyline, DIMENSIONS, getMustateeelKillaGrid, escapeHtml, pointInPolygon } from "@/lib/gisEngine";
+import { getParallelPolyline, DIMENSIONS, getMustateeelKillaGrid, escapeHtml, pointInPolygon, getChakbandiLoopPolygon, polygonInteriorPoint } from "@/lib/gisEngine";
 
 // Detect Urdu/Arabic script — switches canal name rendering to a connected
 // RTL label in Jameel Noori Nastaleeq (char-by-char on-path breaks the joins).
@@ -407,13 +407,21 @@ export function getOutletLabelPos(obj) {
 }
 
 // ─── Get chakbandi label position (custom or default) ────────────────────
-export function getChakbandiLabelPos(obj, parcels) {
+// CCA/GCA label position for a chakbandi:
+//  1. Build the closed loop (chakbandi + canal/road segment between endpoints)
+//     so the label sits in the OPEN centre of the enclosed area — never on top
+//     of the chakbandi/canal/road line.
+//  2. Keep it away from any mustateel label (parcel centre) so both stay readable.
+// `objects` is the full object array (parcels, canals, roads are derived here).
+export function getChakbandiLabelPos(obj, objects) {
   if (obj.labelPos) return obj.labelPos;
-  let pos = chakbandiLabelPosition(obj);
-  if (!parcels || !parcels.length || !pos) return pos;
-  // Keep the CCA/GCA label away from the mustateel label (parcel centre) so
-  // the two never overlap and stay readable. If the chakbandi centroid lands
-  // inside a parcel, nudge the label to just outside that parcel.
+  const canals = (objects || []).filter(o => o.type === "canal");
+  const roads = (objects || []).filter(o => o.type === "road");
+  const loop = getChakbandiLoopPolygon(obj, canals, roads);
+  let pos = polygonInteriorPoint(loop || obj.points);
+  if (!pos) pos = chakbandiLabelPosition(obj);
+  const parcels = (objects || []).filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
+  if (!parcels.length || !pos) return pos;
   const pcs = parcels.filter(p => p && p.w && p.h);
   const inside = (x, y, p) => x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h;
   if (!pcs.some(p => inside(pos.x, pos.y, p))) return pos;

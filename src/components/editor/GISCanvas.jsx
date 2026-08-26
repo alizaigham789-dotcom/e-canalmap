@@ -6,7 +6,7 @@ import {
   DIMENSIONS, distToLineSegment, computeSnapPosition,
   snapToNearestBoundary, rectsOverlap, createMustateel, createMuraba, createAcre,
   getMustateelMouzaSplit, getObjectsInBox, nearestPointOnPolyline,
-  calculateChakbandiGCA, mogaNumberFont,
+  calculateChakbandiGCA, calculateChakbandiLoopGCA, mogaNumberFont,
 } from "@/lib/gisEngine";
 import { drawCCAGCAFractionBoxOnCanvas, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText } from "@/lib/printRenderHelpers";
 import { applyOrthoConstraint, segmentAngleDeg, findNearbyEndpoint, isLineTool } from "@/lib/drawingAssist";
@@ -58,6 +58,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   const outletNodeDrag = useRef(null); // { id, which: "start"|"end" } — dragging a start/end node of the selected outlet/moga
   const outletRotDrag = useRef(null); // { id, start, len } — rotating the outlet end around its start (length fixed)
   const movingLabelType = useRef(null); // "outlet" | "chakbandi" — dragging a label box
+  const ccaPendingRef = useRef(null); // { id, offsetX, offsetY, startWX, startWY, initCca, initGca } — click-vs-drag for select-tool CCA label
   const lastMouse = useRef({ x: 0, y: 0 });
   const longPressTimer = useRef(null);
   const touchMoved = useRef(false);
@@ -163,15 +164,16 @@ const GISCanvas = forwardRef(function GISCanvas(
     {
       const _parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
       const _canals = objects.filter(o => o.type === "canal");
+      const _roads = objects.filter(o => o.type === "road");
       const _chakbandis = objects.filter(o => o.type === "chakbandi");
       const gcaFontWorld = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.45; // 1.5× bigger (was 0.30)
       const gcaFont = Math.max(18, Math.min(36, gcaFontWorld * zoom)) / zoom; // 1.5× bigger cap (was 12–24)
       const interacting = isPanning.current || isMoving.current || !!vertexDrag.current;
       for (const ch of _chakbandis) {
         if (ch.points?.length >= 3) {
-          const gca = interacting ? 0 : calculateChakbandiGCA(ch, _parcels, _canals);
+          const gca = interacting ? 0 : calculateChakbandiLoopGCA(ch, _parcels, _canals, _roads);
           if (gca > 0 || ch.centerLabel || ch.cca || ch.gca) {
-            const lp = getChakbandiLabelPos(ch, _parcels);
+            const lp = getChakbandiLabelPos(ch, objects);
             if (!lp) continue;
             const { cca: _cca, gca: _gca } = getCCAGCAText(ch, gca);
             let cca = _cca, gcaTxt = _gca;
@@ -590,6 +592,22 @@ const GISCanvas = forwardRef(function GISCanvas(
       onUpdateObject(outletNodeDrag.current.id, { [outletNodeDrag.current.which]: { x: snapped.x, y: snapped.y } });
       return;
     }
+    // Select-tool CCA label: pressed on the CCA value — if now dragging past a small
+    // threshold, switch from "maybe edit" to "drag the label". The actual labelPos
+    // update is handled by the isMoving block below once this converts.
+    if (ccaPendingRef.current) {
+      const _cv = canvasRef.current;
+      const _rc = _cv.getBoundingClientRect();
+      const _wr = screenToWorld(e.clientX - _rc.left, e.clientY - _rc.top, pan.x, pan.y, zoom);
+      const p = ccaPendingRef.current;
+      if (Math.hypot(_wr.x - p.startWX, _wr.y - p.startWY) > 6 / zoom) {
+        isMoving.current = true;
+        movingObjId.current = p.id;
+        movingLabelType.current = "chakbandi";
+        moveOffset.current = { x: p.offsetX, y: p.offsetY };
+        ccaPendingRef.current = null;
+      }
+    }
     // Hover-auto-select: Mustateel/Muraba tools hover over existing parcels, Canal/Khal
     // tools hover over existing canals/khals — temporarily behaves as Select (move/edit)
     // without switching away from the draw tool. Reverts to drawing on empty space.
@@ -945,8 +963,9 @@ const GISCanvas = forwardRef(function GISCanvas(
       boxSelectStart.current = { x: worldRaw.x, y: worldRaw.y };
       setBoxSelectDraft({ x1: worldRaw.x, y1: worldRaw.y, x2: worldRaw.x, y2: worldRaw.y });
     } else if (activeTool === "select") {
-      // 0. Chakbandi CCA/GCA label — click to edit inline on the map (highest priority,
-      //    runs before vertex/label-drag so clicking the CCA value opens the editor).
+      // 0. Chakbandi CCA/GCA label — press to grab; drag to move it, release (no
+      //    drag) to edit inline. Runs before vertex/label-drag so the CCA value
+      //    is grabbed first. Click-vs-drag is resolved in mousemove/mouseup.
       for (const o of objects) {
         if (o.type === "chakbandi" && o.points?.length >= 3) {
           const lp = getChakbandiLabelPos(o, objects);
@@ -959,7 +978,7 @@ const GISCanvas = forwardRef(function GISCanvas(
               const m = String(o.centerLabel).match(/^\(?([^/)]*)\/([^/)]*)\)?$/);
               if (m) { initCca = initCca || m[1].trim(); initGca = initGca || m[2].trim(); }
             }
-            setEditingLabel({ id: o.id, kind: "cca", value: initCca, value2: initGca });
+            ccaPendingRef.current = { id: o.id, offsetX: worldRaw.x - lp.x, offsetY: worldRaw.y - lp.y, startWX: worldRaw.x, startWY: worldRaw.y, initCca, initGca };
             onSelect(o.id);
             return;
           }
@@ -1063,6 +1082,12 @@ const GISCanvas = forwardRef(function GISCanvas(
       if (onBoxSelect) onBoxSelect(selected);
       boxSelectStart.current = null;
       setBoxSelectDraft(null);
+    }
+    // Select-tool CCA label: pressed but never dragged → treat as a click → edit inline
+    if (ccaPendingRef.current) {
+      const p = ccaPendingRef.current;
+      setEditingLabel({ id: p.id, kind: "cca", value: p.initCca, value2: p.initGca });
+      ccaPendingRef.current = null;
     }
     vertexDrag.current = null;
     outletNodeDrag.current = null;
