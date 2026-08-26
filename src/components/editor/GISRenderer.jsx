@@ -6,7 +6,6 @@
 
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, getOutletLabelPos, isUrduText } from "@/lib/printRenderHelpers";
-import { normalizeCanalStyle, canalStyleOf, canalWaterColor, canalBankColor, canalShapeOf, sideBoundaryOf } from "@/lib/canalStyles";
 
 // ---- Anti-aliased zoom-clamped font size ----
 // For print: use a larger effective min so labels are always readable regardless of zoom
@@ -395,184 +394,73 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
 // ============================================================
 // LAYER 3: Canal — symmetric bilateral buffering, squared ends
 // ============================================================
-// Canal path helper — smooth (curved) or straight (angular), set by Canal Shape
-function drawCanalPath(ctx, points, smooth) {
-  drawSmoothPath(ctx, points, smooth ? 0.4 : 0);
-}
-
-// Side boundary bands — drawn beneath the canal, follow the whole path automatically.
-// Width is in real-world feet, measured perpendicular to the canal path.
-function drawCanalSideBoundaries(ctx, obj, zoom) {
-  const sb = sideBoundaryOf(obj);
-  if (!sb.enabled || (sb.leftWidth === 0 && sb.rightWidth === 0)) return;
-  const halfW = Math.max(2, obj.width) / 2;
-  const shape = canalShapeOf(obj);
-  const drawBand = (innerOff, outerOff) => {
-    const inner = getParallelPolyline(obj.points, innerOff);
-    const outer = getParallelPolyline(obj.points, outerOff);
-    ctx.fillStyle = sb.color;
-    ctx.beginPath();
-    drawCanalPath(ctx, inner, shape.smooth);
-    ctx.lineTo(outer[outer.length - 1].x, outer[outer.length - 1].y);
-    drawCanalPath(ctx, [...outer].reverse(), shape.smooth);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = sb.edgeColor;
-    ctx.lineWidth = Math.max(1, 1.5 / zoom);
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.beginPath();
-    drawCanalPath(ctx, outer, shape.smooth);
-    ctx.stroke();
-  };
-  if (sb.leftWidth > 0) drawBand(-halfW, -(halfW + sb.leftWidth));
-  if (sb.rightWidth > 0) drawBand(halfW, halfW + sb.rightWidth);
-}
-
-// Water ripples — two dashed white offset lines along the centerline (water styles)
-function drawWaterRipples(ctx, points, w, zoom, smooth) {
-  ctx.strokeStyle = "rgba(255,255,255,0.45)";
-  ctx.lineWidth = Math.max(1, w * 0.08);
-  ctx.lineCap = "round";
-  ctx.setLineDash([10 / zoom, 8 / zoom]);
-  for (const off of [-w * 0.18, w * 0.18]) {
-    const rip = getParallelPolyline(points, off);
-    ctx.beginPath();
-    drawCanalPath(ctx, rip, smooth);
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
-}
-
-// Canal banks + end caps — square / bevel / round / arrow / open (set by Canal Shape)
-function drawCanalBanksAndCaps(ctx, obj, left, right, color, zoom) {
-  const shape = canalShapeOf(obj);
-  const cap = shape.cap;
-  const w = Math.max(2, obj.width);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = Math.max(2, 3 / zoom);
-  ctx.lineJoin = "round";
-  ctx.lineCap = (cap === "round") ? "round" : "butt";
-  for (const side of [left, right]) {
-    ctx.beginPath();
-    drawCanalPath(ctx, side, shape.smooth);
-    ctx.stroke();
-  }
-  if (cap === "square") {
-    ctx.beginPath();
-    ctx.moveTo(left[0].x, left[0].y); ctx.lineTo(right[0].x, right[0].y);
-    ctx.moveTo(left[left.length - 1].x, left[left.length - 1].y);
-    ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
-    ctx.stroke();
-  } else if (cap === "arrow") {
-    const pts = obj.points;
-    const last = pts[pts.length - 1];
-    const prev = pts[pts.length - 2] || pts[0];
-    const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
-    const aLen = w * 0.9, aW = w * 0.5;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(last.x, last.y);
-    ctx.lineTo(last.x - aLen * Math.cos(ang) - aW * Math.sin(ang), last.y - aLen * Math.sin(ang) + aW * Math.cos(ang));
-    ctx.lineTo(last.x - aLen * Math.cos(ang) + aW * Math.sin(ang), last.y - aLen * Math.sin(ang) - aW * Math.cos(ang));
-    ctx.closePath();
-    ctx.fill();
-  }
-}
-
-// ============================================================
-// LAYER 3: Canal — 10 professional styles + 10 shapes + side boundaries
-// Style/Shape/Boundary change ONLY appearance; width, points, geometry,
-// editing, saving and exports stay exactly as before.
-// ============================================================
 export function drawCanal(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
   const w = Math.max(2, obj.width);
-  const halfW = w / 2;
-  const style = normalizeCanalStyle(obj.canalStyle);
-  const s = canalStyleOf(obj);
-  const shape = canalShapeOf(obj);
-  const water = C.canalFill || canalWaterColor(obj);
-  const bank = isSelected ? "#60a5fa" : (C.canalStroke || canalBankColor(obj));
+  // Vivid full-blue water (opaque, saturated, bright) — replaces the old translucent powder blue.
+  // Used by the 3D ribbon body; the flat style renders its own blue gradient below.
+  const fillC = C.canalFill || "#29A9E8";
+  const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#1688C7");
 
-  // Side boundaries drawn first (beneath the canal)
-  drawCanalSideBoundaries(ctx, obj, zoom);
-
-  const left = getParallelPolyline(obj.points, -halfW);
-  const right = getParallelPolyline(obj.points, halfW);
-
-  // Classic flat-style gradient fill (preserves the original professional blue look)
-  const fillGradient = (color) => {
+  if (obj.canalStyle === "flat") {
+    // Flat style — squared ends, two parallel blue boundary lines, beautiful full-blue water
+    const halfW = w / 2;
+    const left = getParallelPolyline(obj.points, -halfW);
+    const right = getParallelPolyline(obj.points, halfW);
+    // Beautiful blue water — linear gradient across the canal width (deep edges → bright full-blue center)
     const p0 = obj.points[0], p1 = obj.points[obj.points.length - 1];
     const dirAng = Math.atan2(p1.y - p0.y, p1.x - p0.x);
     const perpX = Math.cos(dirAng + Math.PI / 2), perpY = Math.sin(dirAng + Math.PI / 2);
     const midX = (p0.x + p1.x) / 2, midY = (p0.y + p1.y) / 2;
-    const grad = ctx.createLinearGradient(midX - perpX * halfW, midY - perpY * halfW, midX + perpX * halfW, midY + perpY * halfW);
-    grad.addColorStop(0, bank);
-    grad.addColorStop(0.5, color);
-    grad.addColorStop(1, bank);
-    return grad;
-  };
-  const fillWater = (fillStyle) => {
-    ctx.fillStyle = fillStyle;
+    const grad = ctx.createLinearGradient(
+      midX - perpX * halfW, midY - perpY * halfW,
+      midX + perpX * halfW, midY + perpY * halfW
+    );
+    grad.addColorStop(0, "#1688C7");    // darker blue outline edge
+    grad.addColorStop(0.5, "#29A9E8");  // clean professional blue centre
+    grad.addColorStop(1, "#1688C7");    // darker blue outline edge
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    drawCanalPath(ctx, left, shape.smooth);
+    drawSmoothPath(ctx, left);
     ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
-    drawCanalPath(ctx, [...right].reverse(), shape.smooth);
+    drawSmoothPath(ctx, [...right].reverse());
     ctx.closePath();
     ctx.fill();
-  };
-  const strokeSideBanks = (color, width) => {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = width;
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-    for (const side of [left, right]) { ctx.beginPath(); drawCanalPath(ctx, side, shape.smooth); ctx.stroke(); }
-  };
-
-  if (style === "3d" || style === "3dwater") {
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.strokeStyle = bank; ctx.lineWidth = w + 3;
-    ctx.beginPath(); drawCanalPath(ctx, obj.points, shape.smooth); ctx.stroke();
-    ctx.strokeStyle = water; ctx.lineWidth = w;
-    ctx.beginPath(); drawCanalPath(ctx, obj.points, shape.smooth); ctx.stroke();
-    ctx.strokeStyle = "rgba(255,255,255,0.30)"; ctx.lineWidth = Math.max(1, w * 0.12);
-    ctx.beginPath(); drawCanalPath(ctx, obj.points, shape.smooth); ctx.stroke();
-    if (style === "3dwater") drawWaterRipples(ctx, obj.points, w, zoom, shape.smooth);
-  } else if (style === "engineeringBlue") {
-    ctx.strokeStyle = bank; ctx.lineWidth = Math.max(2, w * 0.5);
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.beginPath(); drawCanalPath(ctx, obj.points, shape.smooth); ctx.stroke();
-    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = Math.max(1, w * 0.12);
+    // Subtle white shimmer down the centerline — gives the water a lively, beautiful feel
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth = Math.max(1, w * 0.10);
+    ctx.lineCap = "round";
     ctx.setLineDash([14 / zoom, 10 / zoom]);
-    ctx.beginPath(); drawCanalPath(ctx, obj.points, shape.smooth); ctx.stroke();
+    ctx.beginPath();
+    drawSmoothPath(ctx, obj.points);
+    ctx.stroke();
     ctx.setLineDash([]);
-  } else if (style === "dashed") {
-    ctx.strokeStyle = water; ctx.lineWidth = Math.max(2, w * 0.6);
+    // Blue boundary lines
+    ctx.strokeStyle = strokeC;
+    ctx.lineWidth = Math.max(2, 3 / zoom);
     ctx.lineCap = "butt"; ctx.lineJoin = "round";
-    ctx.setLineDash([18 / zoom, 10 / zoom]);
-    ctx.beginPath(); drawCanalPath(ctx, obj.points, shape.smooth); ctx.stroke();
-    ctx.setLineDash([]);
-  } else {
-    // classic / concrete / earth / water / green / custom → fill + banks + caps
-    if (style === "concrete") strokeSideBanks(s.concrete, Math.max(3, w * 0.18));
-    else if (style === "earth") strokeSideBanks(s.grass, Math.max(2, w * 0.10));
-    else if (style === "green") strokeSideBanks(s.bank, Math.max(3, w * 0.14));
-
-    if (style === "classic" || style === "custom") {
-      fillWater(fillGradient(water));
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
-      ctx.lineWidth = Math.max(1, w * 0.10);
-      ctx.lineCap = "round";
-      ctx.setLineDash([14 / zoom, 10 / zoom]);
-      ctx.beginPath(); drawCanalPath(ctx, obj.points, shape.smooth); ctx.stroke();
-      ctx.setLineDash([]);
-    } else {
-      fillWater(water);
-      if (style === "water") drawWaterRipples(ctx, obj.points, w, zoom, shape.smooth);
+    for (const side of [left, right]) {
+      ctx.beginPath();
+      drawSmoothPath(ctx, side);
+      ctx.stroke();
     }
-    drawCanalBanksAndCaps(ctx, obj, left, right, bank, zoom);
+  } else {
+    // 3D ribbon — soft glow halo + darker outline + body + inner highlight
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.strokeStyle = strokeC;
+    ctx.lineWidth = w + 3;
+    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+    ctx.strokeStyle = fillC;
+    ctx.lineWidth = w;
+    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.30)";
+    ctx.lineWidth = Math.max(1, w * 0.12);
+    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
   }
 
-  // Canal name INSIDE the canal (unchanged behaviour)
+  // Layer 5: Canal name INSIDE the blue canal — repeats every ~5 acres along the path,
+  // follows canal geometry (straight or curved), highly visible colour, 5× font size.
+  // English: char-by-char on path. Urdu: whole connected labels at the same intervals.
   if (obj.name) {
     drawTextOnCanalPath(ctx, obj.points, obj.name, zoom);
   }

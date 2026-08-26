@@ -4,7 +4,6 @@ import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, svgMogaInfo, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel } from "@/lib/printRenderHelpers";
-import { normalizeCanalStyle, canalStyleOf, canalWaterColor, canalBankColor, canalShapeOf, sideBoundaryOf } from "@/lib/canalStyles";
 import { collectLandUses } from "@/lib/landUsePalette";
 import { Move, Download, Share2, Loader2 } from "lucide-react";
 import { canvasToPdfBlob, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdfExport";
@@ -386,122 +385,43 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
 </g>`;
 }
 
-// Canal SVG — 10 professional styles + 10 shapes + side boundaries.
-// Style/Shape/Boundary change ONLY appearance; width, points, geometry and
-// editing stay exactly as before. Mirrors the editor canvas rendering.
 function svgCanal(obj, C, idx, outlets) {
   if (!obj.points || obj.points.length < 2) return "";
   const w = (obj.width || DIMENSIONS.CANAL_WIDTH);
-  const halfW = w / 2;
-  const style = normalizeCanalStyle(obj.canalStyle);
-  const s = canalStyleOf(obj);
-  const shape = canalShapeOf(obj);
-  const smooth = shape.smooth;
-  const water = C.canalFill || canalWaterColor(obj);
-  const bank = C.canalStroke || canalBankColor(obj);
+  const centerPath = pointsToSmoothPath(obj.points);
+  // Vivid full-blue water (opaque, saturated, bright) — replaces the old translucent powder blue
+  const fillColor = C.canalFill || "#29A9E8";
+  const strokeColor = C.canalStroke || "#1688C7";
   const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH);
   const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf, outlets) : "";
-  const tension = smooth ? 0.4 : 0;
-  const pth = (pts) => pointsToSmoothPath(pts, tension);
-
-  const left = getParallelPolyline(obj.points, -halfW);
-  const right = getParallelPolyline(obj.points, halfW);
-  const fillPath = `${pth(left)} L${right[right.length - 1].x.toFixed(1)},${right[right.length - 1].y.toFixed(1)} ${pth([...right].reverse()).replace(/^M[\d.,\s-]+/, "")} Z`;
-  const centerPath = pth(obj.points);
-
-  // Side boundary bands
-  const sb = sideBoundaryOf(obj);
-  let bandsSvg = "";
-  if (sb.enabled && (sb.leftWidth || sb.rightWidth)) {
-    const drawBand = (innerOff, outerOff) => {
-      const inner = getParallelPolyline(obj.points, innerOff);
-      const outer = getParallelPolyline(obj.points, outerOff);
-      const bp = `${pth(inner)} L${outer[outer.length - 1].x.toFixed(1)},${outer[outer.length - 1].y.toFixed(1)} ${pth([...outer].reverse()).replace(/^M[\d.,\s-]+/, "")} Z`;
-      return `<path d="${bp}" fill="${sb.color}"/><path d="${pth(outer)}" fill="none" stroke="${sb.edgeColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
-    };
-    if (sb.leftWidth > 0) bandsSvg += drawBand(-halfW, -(halfW + sb.leftWidth));
-    if (sb.rightWidth > 0) bandsSvg += drawBand(halfW, halfW + sb.rightWidth);
-  }
-
-  // Banks + end caps
-  const capLine = shape.cap === "round" ? "round" : "butt";
-  let banksSvg = "";
-  for (const side of [left, right]) {
-    banksSvg += `<path d="${pth(side)}" fill="none" stroke="${bank}" stroke-width="2.5" stroke-linecap="${capLine}" stroke-linejoin="round"/>`;
-  }
-  if (shape.cap === "square") {
-    banksSvg += `<line x1="${left[0].x.toFixed(1)}" y1="${left[0].y.toFixed(1)}" x2="${right[0].x.toFixed(1)}" y2="${right[0].y.toFixed(1)}" stroke="${bank}" stroke-width="2.5"/>`;
-    banksSvg += `<line x1="${left[left.length - 1].x.toFixed(1)}" y1="${left[left.length - 1].y.toFixed(1)}" x2="${right[right.length - 1].x.toFixed(1)}" y2="${right[right.length - 1].y.toFixed(1)}" stroke="${bank}" stroke-width="2.5"/>`;
-  } else if (shape.cap === "arrow") {
-    const pts = obj.points;
-    const last = pts[pts.length - 1], prev = pts[pts.length - 2] || pts[0];
-    const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
-    const aLen = w * 0.9, aW = w * 0.5;
-    const p1x = (last.x - aLen * Math.cos(ang) - aW * Math.sin(ang)).toFixed(1);
-    const p1y = (last.y - aLen * Math.sin(ang) + aW * Math.cos(ang)).toFixed(1);
-    const p2x = (last.x - aLen * Math.cos(ang) + aW * Math.sin(ang)).toFixed(1);
-    const p2y = (last.y - aLen * Math.sin(ang) - aW * Math.cos(ang)).toFixed(1);
-    banksSvg += `<polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${bank}"/>`;
-  }
-
-  // Gradient def for classic / custom
-  const gradId = `canalWater_${idx}`;
-  const p0 = obj.points[0], p1 = obj.points[obj.points.length - 1];
-  const dirAng = Math.atan2(p1.y - p0.y, p1.x - p0.x);
-  const perpX = Math.cos(dirAng + Math.PI / 2), perpY = Math.sin(dirAng + Math.PI / 2);
-  const midX = (p0.x + p1.x) / 2, midY = (p0.y + p1.y) / 2;
-  const gx1 = (midX - perpX * halfW).toFixed(1), gy1 = (midY - perpY * halfW).toFixed(1);
-  const gx2 = (midX + perpX * halfW).toFixed(1), gy2 = (midY + perpY * halfW).toFixed(1);
-  const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="${bank}"/><stop offset="0.5" stop-color="${water}"/><stop offset="1" stop-color="${bank}"/></linearGradient></defs>`;
-
-  // Water ripples
-  let ripplesSvg = "";
-  if (style === "water" || style === "3dwater") {
-    for (const off of [-w * 0.18, w * 0.18]) {
-      const rip = getParallelPolyline(obj.points, off);
-      ripplesSvg += `<path d="${pth(rip)}" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="${Math.max(1, w * 0.08).toFixed(1)}" stroke-linecap="round" stroke-dasharray="10,8"/>`;
-    }
-  }
-
-  let bodySvg = "";
-  if (style === "3d" || style === "3dwater") {
-    bodySvg = `
-  <path d="${centerPath}" fill="none" stroke="${bank}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${centerPath}" fill="none" stroke="${water}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${centerPath}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="${Math.max(1, w * 0.12).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>${ripplesSvg ? "\n  " + ripplesSvg : ""}`;
-  } else if (style === "engineeringBlue") {
-    bodySvg = `
-  <path d="${centerPath}" fill="none" stroke="${bank}" stroke-width="${Math.max(2, w * 0.5).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${centerPath}" fill="none" stroke="#ffffff" stroke-width="${Math.max(1, w * 0.12).toFixed(1)}" stroke-linecap="round" stroke-dasharray="14,10"/>`;
-  } else if (style === "dashed") {
-    bodySvg = `
-  <path d="${centerPath}" fill="none" stroke="${water}" stroke-width="${Math.max(2, w * 0.6).toFixed(1)}" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="18,10"/>`;
-  } else {
-    let preBanks = "";
-    if (style === "concrete") {
-      preBanks = `<path d="${pth(left)}" fill="none" stroke="${s.concrete}" stroke-width="${Math.max(3, w * 0.18).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/><path d="${pth(right)}" fill="none" stroke="${s.concrete}" stroke-width="${Math.max(3, w * 0.18).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
-    } else if (style === "earth") {
-      preBanks = `<path d="${pth(left)}" fill="none" stroke="${s.grass}" stroke-width="${Math.max(2, w * 0.10).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/><path d="${pth(right)}" fill="none" stroke="${s.grass}" stroke-width="${Math.max(2, w * 0.10).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
-    } else if (style === "green") {
-      preBanks = `<path d="${pth(left)}" fill="none" stroke="${s.bank}" stroke-width="${Math.max(3, w * 0.14).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/><path d="${pth(right)}" fill="none" stroke="${s.bank}" stroke-width="${Math.max(3, w * 0.14).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
-    }
-    const waterFill = (style === "classic" || style === "custom")
-      ? `<path d="${fillPath}" fill="url(#${gradId})"/>`
-      : `<path d="${fillPath}" fill="${water}"/>`;
-    const shimmer = (style === "classic" || style === "custom")
-      ? `<path d="${centerPath}" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="${Math.max(1, w * 0.10).toFixed(1)}" stroke-linecap="round" stroke-dasharray="14,10"/>`
-      : "";
-    bodySvg = `
+  if (obj.canalStyle === "flat") {
+    const halfW = w / 2;
+    const fillPath = parallelSmoothClosedPath(obj.points, halfW);
+    const left = getParallelPolyline(obj.points, -halfW);
+    const right = getParallelPolyline(obj.points, halfW);
+    // Beautiful blue water gradient across the canal width (deep edges → vivid bright center)
+    const p0 = obj.points[0], p1 = obj.points[obj.points.length - 1];
+    const dirAng = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+    const perpX = Math.cos(dirAng + Math.PI / 2), perpY = Math.sin(dirAng + Math.PI / 2);
+    const midX = (p0.x + p1.x) / 2, midY = (p0.y + p1.y) / 2;
+    const gx1 = (midX - perpX * halfW).toFixed(1), gy1 = (midY - perpY * halfW).toFixed(1);
+    const gx2 = (midX + perpX * halfW).toFixed(1), gy2 = (midY + perpY * halfW).toFixed(1);
+    const gradId = `canalWater_${idx}`;
+    const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="#1688C7"/><stop offset="0.5" stop-color="#29A9E8"/><stop offset="1" stop-color="#1688C7"/></linearGradient></defs>`;
+    return `
+<g key="canal_${idx}">
   ${gradDef}
-  ${preBanks}
-  ${waterFill}
-  ${ripplesSvg}
-  ${shimmer}
-  ${banksSvg}`;
+  <path d="${fillPath}" fill="url(#${gradId})" />
+  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
+  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
+  ${nameSvg}
+</g>`;
   }
-
-  return `<g key="canal_${idx}">
-  ${bandsSvg}${bodySvg}
+  return `
+<g key="canal_${idx}">
+  <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${centerPath}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="${Math.max(1, w * 0.12).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>
   ${nameSvg}
 </g>`;
 }
