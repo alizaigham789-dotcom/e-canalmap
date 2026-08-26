@@ -175,27 +175,6 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
     }
   }
 
-  // Canal → chakbandi flush snap: when drawing a canal near a chakbandi line, offset
-  // the canal centerline by half its width so its near edge sits exactly on the
-  // chakbandi line — no gap, no overlap.
-  if (spineSnap && activeTool === "canal") {
-    for (const o of objects) {
-      if (o.type !== "chakbandi" || !o.points || o.points.length < 2) continue;
-      const near = nearestPointOnPolyline(wx, wy, o.points);
-      if (!near || near.dist >= threshold * 10) continue;
-      const a = o.points[near.segIdx], b = o.points[near.segIdx + 1];
-      const dx = b.x - a.x, dy = b.y - a.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len, ny = dx / len;
-      const halfCanalW = DIMENSIONS.CANAL_WIDTH / 2;
-      const side = ((wx - a.x) * nx + (wy - a.y) * ny) >= 0 ? 1 : -1;
-      const targetX = near.x + nx * halfCanalW * side;
-      const targetY = near.y + ny * halfCanalW * side;
-      const d = Math.hypot(wx - targetX, wy - targetY);
-      if (d < bestDist) { bestX = targetX; bestY = targetY; bestDist = d; }
-    }
-  }
-
   // Canal/road spine snap — snap to endpoints first (for seamless connection), then spine
   if (spineSnap) {
     for (const o of objects) {
