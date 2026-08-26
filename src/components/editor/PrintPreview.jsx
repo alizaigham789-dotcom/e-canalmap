@@ -390,13 +390,16 @@ function svgCanal(obj, C, idx, outlets) {
   if (!obj.points || obj.points.length < 2) return "";
   const boundarySvg = buildSideBoundarySVG(obj, C);
   const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH);
-  const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf, outlets) : "";
+  const bw = !!C?.bw;
+  const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf, outlets, bw) : "";
   if (isNewCanalStyle(obj.canalStyle)) {
     return `<g>${boundarySvg}${buildCanalStyleSVG(obj, obj.canalStyle, C)}${nameSvg}</g>`;
   }
   const w = (obj.width || DIMENSIONS.CANAL_WIDTH);
   const centerPath = pointsToSmoothPath(obj.points);
-  // Vivid full-blue water (opaque, saturated, bright) — replaces the old translucent powder blue
+  // Vivid full-blue water (opaque, saturated, bright) — replaces the old translucent powder blue.
+  // In B&W print mode these resolve to black/grey so the canal renders black & white
+  // like every other tool (gradient stops use the same colours, not hardcoded blue).
   const fillColor = C.canalFill || "#29A9E8";
   const strokeColor = C.canalStroke || "#1688C7";
   if (obj.canalStyle === "flat") {
@@ -404,7 +407,8 @@ function svgCanal(obj, C, idx, outlets) {
     const fillPath = parallelSmoothClosedPath(obj.points, halfW);
     const left = getParallelPolyline(obj.points, -halfW);
     const right = getParallelPolyline(obj.points, halfW);
-    // Beautiful blue water gradient across the canal width (deep edges → vivid bright center)
+    // Water gradient across the canal width (deep edges → bright center).
+    // Uses fillColor/strokeColor so B&W mode turns the canal black & white.
     const p0 = obj.points[0], p1 = obj.points[obj.points.length - 1];
     const dirAng = Math.atan2(p1.y - p0.y, p1.x - p0.x);
     const perpX = Math.cos(dirAng + Math.PI / 2), perpY = Math.sin(dirAng + Math.PI / 2);
@@ -412,7 +416,7 @@ function svgCanal(obj, C, idx, outlets) {
     const gx1 = (midX - perpX * halfW).toFixed(1), gy1 = (midY - perpY * halfW).toFixed(1);
     const gx2 = (midX + perpX * halfW).toFixed(1), gy2 = (midY + perpY * halfW).toFixed(1);
     const gradId = `canalWater_${idx}`;
-    const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="#1688C7"/><stop offset="0.5" stop-color="#29A9E8"/><stop offset="1" stop-color="#1688C7"/></linearGradient></defs>`;
+    const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="${strokeColor}"/><stop offset="0.5" stop-color="${fillColor}"/><stop offset="1" stop-color="${strokeColor}"/></linearGradient></defs>`;
     return `
 <g key="canal_${idx}">
   ${boundarySvg}

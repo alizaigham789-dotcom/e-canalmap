@@ -49,13 +49,16 @@ function drawCanalNameUrduOnCanvas(ctx, points, text, fontSize, outlets) {
 }
 
 // SVG: Urdu canal name — repeating connected labels along the path
-function svgCanalNameUrdu(points, text, fontSize, outlets) {
+// bw=true (B&W print mode) renders the name in solid black instead of yellow.
+function svgCanalNameUrdu(points, text, fontSize, outlets, bw = false) {
   const { segLens, total } = pathSegments(points);
   if (total < 1) return "";
   const repeatSpacing = 1100;
   const labelW = text.length * fontSize * 0.6;
   const outletArcs = outletArcsOnCanal(points, segLens, outlets);
   const clearance = Math.max(120, labelW / 2 + 80);
+  const fill = bw ? "#000000" : "#FFD700";
+  const stroke = bw ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.85)";
   let svg = "";
   for (let dist = labelW / 2; dist + labelW / 2 < total; dist += repeatSpacing) {
     if (skipNearMoga(dist, outletArcs, clearance)) continue;
@@ -67,7 +70,7 @@ function svgCanalNameUrdu(points, text, fontSize, outlets) {
     let ang = pos.angle;
     if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
     const deg = (ang * 180) / Math.PI;
-    svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="#FFD700" stroke="rgba(0,0,0,0.85)" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" direction="rtl" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${text}</text>`;
+    svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" direction="rtl" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${text}</text>`;
   }
   return svg;
 }
@@ -218,9 +221,10 @@ export function drawCanalNameOnCanvas(ctx, points, text, fontSize, outlets) {
 // ─── SVG: generate canal name text along the canal centerline ────────────
 // Each character is a <text> with a dark stroke (outline) + yellow fill,
 // positioned and rotated to follow the path. Repeats every ~5 acres.
-export function svgCanalNameOnPath(points, text, fontSize, outlets) {
+// bw=true (B&W print mode) renders the name in solid black instead of yellow.
+export function svgCanalNameOnPath(points, text, fontSize, outlets, bw = false) {
   if (!points || points.length < 2 || !text) return "";
-  if (isUrduText(text)) return svgCanalNameUrdu(points, text, fontSize, outlets);
+  if (isUrduText(text)) return svgCanalNameUrdu(points, text, fontSize, outlets, bw);
   const { segLens, total } = pathSegments(points);
   if (total < 1) return "";
 
@@ -250,8 +254,11 @@ export function svgCanalNameOnPath(points, text, fontSize, outlets) {
       if (!pos) break;
 
       const deg = (pos.angle * 180) / Math.PI;
-      // paint-order: stroke fill — draws stroke first so fill is on top (outline effect)
-      svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="#FFD700" stroke="rgba(0,0,0,0.85)" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${text[ci]}</text>`;
+      // paint-order: stroke fill — draws stroke first so fill is on top (outline effect).
+      // B&W print mode → black fill + white outline; otherwise yellow fill + dark outline.
+      const _fill = bw ? "#000000" : "#FFD700";
+      const _stroke = bw ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.85)";
+      svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="${_fill}" stroke="${_stroke}" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${text[ci]}</text>`;
 
       const half2 = advanceAlongPath(segLens, segIdx, segRem, charW * 0.5);
       if (!half2) break;
