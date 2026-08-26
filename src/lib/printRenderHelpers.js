@@ -645,7 +645,7 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = nu
     { label: "کھال", color: C.khalStroke || "#000000", type: "line_thin" },
     { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
     { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
-    { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
+    { label: "موگہ", color: C.outletStroke || "#dc2626", type: "arrow" },
     { label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" },
   ];
   // Per-acre land-use entries (آبادی/قبرستان/فیکٹری/...) — shown in the legend
@@ -771,7 +771,7 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBound
     { label: "کھال", color: C.khalStroke || "#000000", type: "line_thin" },
     { label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" },
     { label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" },
-    { label: "موگہ", color: C.outletStroke || "#06b6d4", type: "arrow" },
+    { label: "موگہ", color: C.outletStroke || "#dc2626", type: "arrow" },
     { label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" },
   ];
   for (const u of (landUses || [])) {

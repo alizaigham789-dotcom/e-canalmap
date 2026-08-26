@@ -17,7 +17,7 @@ const COLOR_FIELDS = [
   { key: "roadStroke", label: "Road Edge", default: "#b45309" },
   { key: "chakbandiStroke", label: "Chakbandi Line", default: "#22c55e" },
   { key: "mouzaStroke", label: "Mouza Boundary", default: "#dc2626" },
-  { key: "outletStroke", label: "Outlet Arrow", default: "#06b6d4" },
+  { key: "outletStroke", label: "Outlet Arrow", default: "#dc2626" },
 ];
 
 export default function ColorSettingsPanel({ colorSettings, onColorChange, bgColor, onBgColorChange, onClose }) {

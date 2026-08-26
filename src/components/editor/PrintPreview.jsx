@@ -548,7 +548,7 @@ function svgBridge(obj, C, idx) {
 function svgOutlet(obj, C, idx, mogaScale = 1) {
   if (!obj.start || !obj.end) return "";
   const greyed = C._greyTypes?.has('outlet');
-  const color = greyed ? "#6b6b6b" : (obj.outletColor || C.outletStroke || "#06b6d4");
+  const color = greyed ? "#6b6b6b" : (obj.outletColor || C.outletStroke || "#dc2626");
   // Shared dimensions — identical to editor canvas & all export formats
   const { size, shaftWidth, headLen, headW, radius } = getOutletDimensions(obj);
   const half = size / 2;
@@ -571,7 +571,7 @@ function svgOutlet(obj, C, idx, mogaScale = 1) {
     mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="rgba(0,0,0,0.85)" stroke-width="${Math.max(2, cf * 0.18).toFixed(1)}" stroke-linejoin="round" fill="#FFD700">${mogaText}</text>`;
   }
   return `<g key="outlet_${idx}">
-    <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" rx="${radius.toFixed(1)}" fill="${color}" stroke="#0e7490" stroke-width="2"/>
+    <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" rx="${radius.toFixed(1)}" fill="${color}" stroke="#7f1d1d" stroke-width="2"/>
     <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${shaftWidth.toFixed(1)}" stroke-linecap="round"/>
     <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
     ${mogaInside}

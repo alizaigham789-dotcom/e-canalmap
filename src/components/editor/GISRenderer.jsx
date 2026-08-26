@@ -898,7 +898,7 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
   const { x: sx, y: sy } = obj.start;
   const { x: ex, y: ey } = obj.end;
   const angle = Math.atan2(ey - sy, ex - sx);
-  const color = isSelected ? "#67e8f9" : (obj.outletColor || C.outletStroke || "#06b6d4");
+  const color = isSelected ? "#fca5a5" : (obj.outletColor || C.outletStroke || "#dc2626");
   const half = size / 2;
 
   // Block at start — rounded square (matches print exactly)
@@ -907,7 +907,7 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
   if (ctx.roundRect) { ctx.roundRect(sx - half, sy - half, size, size, radius); }
   else { ctx.rect(sx - half, sy - half, size, size); }
   ctx.fill();
-  ctx.strokeStyle = "#0e7490"; ctx.lineWidth = 2 / zoom;
+  ctx.strokeStyle = "#7f1d1d"; ctx.lineWidth = 2 / zoom;
   ctx.stroke();
 
   // Shaft — from start to end (world-unit width, scales with zoom like print)

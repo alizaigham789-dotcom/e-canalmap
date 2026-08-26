@@ -54,6 +54,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   const movingObjOrigStartEnd = useRef(null); // { start, end } — for outlet/moga dragging
   const movingGroupRef = useRef(null); // { groupId, originals } — whole moga group drag (merged maps)
   const vertexDrag = useRef(null); // { id, index } — dragging a single vertex of the selected chakbandi/canal
+  const outletNodeDrag = useRef(null); // { id, which: "start"|"end" } — dragging a start/end node of the selected outlet/moga
   const movingLabelType = useRef(null); // "outlet" | "chakbandi" — dragging a label box
   const lastMouse = useRef({ x: 0, y: 0 });
   const longPressTimer = useRef(null);
@@ -209,30 +210,16 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
     }
 
-    // Move handles for the selected outlet/moga — 4 arrows so it's clearly draggable
+    // Draggable node handles for the selected outlet/moga — start (block) & end (arrow tip).
+    // Drag either node to change direction/length; drag the body to move the whole moga.
     if (selObj && selObj.type === "outlet" && selObj.start && selObj.end) {
-      const cx = (selObj.start.x + selObj.end.x) / 2;
-      const cy = (selObj.start.y + selObj.end.y) / 2;
-      const r = 22 / zoom;
-      ctx.save();
-      ctx.strokeStyle = "#06b6d4";
-      ctx.fillStyle = "rgba(6,182,212,0.15)";
-      ctx.lineWidth = 2 / zoom;
-      // Bounding circle
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      // 4 directional arrows
-      const arrows = [[0, -1], [0, 1], [-1, 0], [1, 0]];
-      for (const [dx, dy] of arrows) {
-        const tipX = cx + dx * r, tipY = cy + dy * r;
-        const baseX = cx + dx * r * 0.5, baseY = cy + dy * r * 0.5;
-        ctx.fillStyle = "#06b6d4";
-        ctx.beginPath();
-        ctx.moveTo(tipX, tipY);
-        ctx.lineTo(baseX - dy * r * 0.2, baseY + dx * r * 0.2);
-        ctx.lineTo(baseX + dy * r * 0.2, baseY - dx * r * 0.2);
-        ctx.closePath(); ctx.fill();
+      const s = 12 / zoom;
+      for (const pt of [selObj.start, selObj.end]) {
+        ctx.fillStyle = "#3b82f6";
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5 / zoom;
+        ctx.beginPath(); ctx.rect(pt.x - s / 2, pt.y - s / 2, s, s); ctx.fill(); ctx.stroke();
       }
-      ctx.restore();
     }
 
     // Draft previews
@@ -566,6 +553,15 @@ const GISCanvas = forwardRef(function GISCanvas(
         const newPoints = obj.points.map((p, i) => i === vertexDrag.current.index ? { x: snapped.x, y: snapped.y } : p);
         onUpdateObject(obj.id, { points: newPoints });
       }
+      return;
+    }
+    // Dragging a start/end node of the selected outlet/moga — change direction/length
+    if (outletNodeDrag.current) {
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
+      const snapped = snapToAcreGrid(worldRaw.x, worldRaw.y);
+      onUpdateObject(outletNodeDrag.current.id, { [outletNodeDrag.current.which]: { x: snapped.x, y: snapped.y } });
       return;
     }
     // Hover-auto-select: Mustateel/Muraba tools hover over existing parcels, Canal/Khal
@@ -960,6 +956,18 @@ const GISCanvas = forwardRef(function GISCanvas(
           return;
         }
       }
+      // Outlet/moga node handles — drag start or end to change direction/length
+      if (selectedObj && selectedObj.type === "outlet" && selectedObj.start && selectedObj.end) {
+        const vThresh = (isTouchRef.current ? 30 : 10) / zoom;
+        if (Math.hypot(worldRaw.x - selectedObj.start.x, worldRaw.y - selectedObj.start.y) < vThresh) {
+          outletNodeDrag.current = { id: selectedObj.id, which: "start" };
+          return;
+        }
+        if (Math.hypot(worldRaw.x - selectedObj.end.x, worldRaw.y - selectedObj.end.y) < vThresh) {
+          outletNodeDrag.current = { id: selectedObj.id, which: "end" };
+          return;
+        }
+      }
       // Select tool — selection + vertex/node editing + move mustateel/muraba
       // parcels (same as the Move tool). Other objects are selection-only.
       const hit = hitTest(worldRaw.x, worldRaw.y, objects);
@@ -991,6 +999,15 @@ const GISCanvas = forwardRef(function GISCanvas(
         onSelect(hit.id);
         return;
       }
+      if (hit && hit.type === "outlet" && hit.start && hit.end) {
+        // Moga/outlet — draggable via start+end translation (drag-and-drop)
+        isMoving.current = true; movingObjId.current = hit.id;
+        moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
+        movingObjOrigPoints.current = null;
+        movingObjOrigStartEnd.current = { start: { ...hit.start }, end: { ...hit.end } };
+        onSelect(hit.id);
+        return;
+      }
       onSelect(hit ? hit.id : null);
     } else if (activeTool === "eraser") {
       const hit = hitTest(worldRaw.x, worldRaw.y, objects, true); // true = eraser mode (boundary-aware)
@@ -1011,6 +1028,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       setBoxSelectDraft(null);
     }
     vertexDrag.current = null;
+    outletNodeDrag.current = null;
     isPanning.current = false; isMoving.current = false; movingObjId.current = null;
     movingLabelType.current = null;
     movingGroupRef.current = null;
@@ -1392,6 +1410,10 @@ const GISCanvas = forwardRef(function GISCanvas(
             <option value="">-</option>
             <option value="L">L</option>
             <option value="R">R</option>
+            <option value="T.L">T.L</option>
+            <option value="T.R">T.R</option>
+            <option value="T-F.R">T-F.R</option>
+            <option value="T-F.L">T-F.L</option>
           </select>
         </div>
       )}

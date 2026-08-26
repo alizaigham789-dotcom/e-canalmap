@@ -645,6 +645,7 @@ export function createOutlet(canalId, startPt, endPt, label = "", canalWidth = 1
     start: { ...startPt }, end: { ...endPt },
     label, mogha_name: "", mogha_number: moghaNumber, mogha_side: moghaSide,
     arrowScale: 1, blockSize: 20, canalWidth,
+    outletColor: "#dc2626",
   };
 }
 

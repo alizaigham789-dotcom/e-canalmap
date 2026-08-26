@@ -382,7 +382,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Moga Colour</label>
                 <div className="flex items-center gap-2">
-                  <input type="color" value={local.outletColor || "#06b6d4"}
+                  <input type="color" value={local.outletColor || "#dc2626"}
                     onChange={e => commit("outletColor", e.target.value)}
                     className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
                   <span className="text-xs text-slate-600">Block &amp; arrow colour</span>
@@ -420,6 +420,10 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                     <SelectContent>
                       <SelectItem value="L">L</SelectItem>
                       <SelectItem value="R">R</SelectItem>
+                      <SelectItem value="T.L">T.L</SelectItem>
+                      <SelectItem value="T.R">T.R</SelectItem>
+                      <SelectItem value="T-F.R">T-F.R</SelectItem>
+                      <SelectItem value="T-F.L">T-F.L</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
