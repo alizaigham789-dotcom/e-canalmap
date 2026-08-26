@@ -11,6 +11,7 @@ export const DIMENSIONS = {
   CANAL_WIDTH: 14,
   KHAL_WIDTH: 11,
   ROAD_WIDTH: 28,
+  RAILWAY_WIDTH: 24,
 };
 
 // Standard paper sizes in pixels at 96 DPI (w = portrait width, h = portrait height)
@@ -635,6 +636,19 @@ export function createBridge(points, name = "") {
     type: "bridge", points: points.map(p => ({ ...p })), name,
     width: 28,              // ladder width (distance between the two side rails)
     rungSpacing: 20,        // distance between ladder rungs in feet
+  };
+}
+
+// Railway track (ریلوے) — standalone line tool. 5 professional styles (1-5).
+// Also used for road-attached railway (drawn parallel to a road on left/right side).
+export function createRailway(points, name = "") {
+  return {
+    id: `railway_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    type: "railway", points: points.map(p => ({ ...p })), name,
+    width: DIMENSIONS.RAILWAY_WIDTH,
+    railwayStyle: 1, // 1=Wood ties, 2=Concrete ties, 3=Dashed ties, 4=Ballast, 5=Double line
+    railColor: "#4b5563",
+    tieColor: "#78350f",
   };
 }
 
@@ -1404,12 +1418,12 @@ export function hitTest(wx, wy, objects, eraser = false) {
           if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < 12) return o;
         }
       }
-    } else if (["canal", "chakbandi", "khal", "road"].includes(o.type)) {
+    } else if (["canal", "chakbandi", "khal", "road", "railway"].includes(o.type)) {
       // Eraser: wider threshold + account for line width so overlapping lines
       // can each be erased one at a time (top first, then bottom on next click).
       // Non-eraser: threshold scales with actual line width so clicking on the
       // canal body always hits the canal, not the parcel underneath.
-      const lineWidth = o.width || (o.type === "canal" ? 14 : o.type === "khal" ? 8 : o.type === "road" ? 28 : 14);
+      const lineWidth = o.width || (o.type === "canal" ? 14 : o.type === "khal" ? 8 : o.type === "road" ? 28 : o.type === "railway" ? 24 : 14);
       // Chakbandi: tighter non-eraser threshold so clicking a parcel interior
       // selects the parcel, not a chakbandi line passing nearby. Only direct
       // clicks on the line itself select the chakbandi (showing its edit nodes).

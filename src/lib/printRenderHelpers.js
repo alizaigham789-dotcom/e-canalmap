@@ -288,6 +288,53 @@ export function svgRoadName(points, text, roadWidth) {
   return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="${fontFamily}" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="white" stroke="rgba(0,0,0,0.6)" stroke-width="${(fontPx*0.12).toFixed(1)}" paint-order="stroke"${direction} transform="rotate(${deg.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)})">${text}</text>`;
 }
 
+// ─── SVG: railway tracks — 5 professional styles ────────────────────────
+// `points` is the railway centreline (already offset when road-attached).
+export function svgRailwayTracks(points, width, style, colors) {
+  if (!points || points.length < 2) return "";
+  const w = width || 24;
+  const halfW = w / 2;
+  const railColor = (colors && colors.railColor) || "#4b5563";
+  const tieColor = (colors && colors.tieColor) || "#78350f";
+  const left = getParallelPolyline(points, -halfW);
+  const right = getParallelPolyline(points, halfW);
+  let svg = "";
+  if (style === 4) {
+    const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    svg += `<polygon points="${fillPts}" fill="#cbd5e1"/>`;
+  }
+  if (style === 1 || style === 2 || style === 3) {
+    const tieSpacing = 18;
+    const tieW = style === 2 ? 8 : 5;
+    const tieStroke = style === 2 ? "#9ca3af" : tieColor;
+    const dash = style === 3 ? ` stroke-dasharray="6,4"` : "";
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i], b = points[i + 1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.max(1, Math.floor(segLen / tieSpacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const lIdx = Math.min(i, left.length - 1), lNext = Math.min(i + 1, left.length - 1);
+        const rIdx = Math.min(i, right.length - 1), rNext = Math.min(i + 1, right.length - 1);
+        const lx = left[lIdx].x + (left[lNext].x - left[lIdx].x) * t;
+        const ly = left[lIdx].y + (left[lNext].y - left[lIdx].y) * t;
+        const rx = right[rIdx].x + (right[rNext].x - right[rIdx].x) * t;
+        const ry = right[rIdx].y + (right[rNext].y - right[rIdx].y) * t;
+        svg += `<line x1="${lx.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${rx.toFixed(1)}" y2="${ry.toFixed(1)}" stroke="${tieStroke}" stroke-width="${tieW}" stroke-linecap="round"${dash}/>`;
+      }
+    }
+  }
+  const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  svg += `<polyline points="${leftPts}" fill="none" stroke="${railColor}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  svg += `<polyline points="${rightPts}" fill="none" stroke="${railColor}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if (style === 5) {
+    const ctrPts = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    svg += `<polyline points="${ctrPts}" fill="none" stroke="#fbbf24" stroke-width="2" stroke-dasharray="8,5" stroke-linecap="round"/>`;
+  }
+  return svg;
+}
+
 // ─── SVG: moga number as a fraction (number over line over R/L) ──────────
 // Positioned at (x, y). Returns SVG markup.
 export function svgMogaFraction(num, side, x, y, fontPx, color) {
@@ -617,11 +664,10 @@ export function svgAcreUses(obj, showKilla, strokeColor, showLabels = true) {
       if (!use || !use.color) continue;
       const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
       svg += `<rect x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" width="${cellW.toFixed(1)}" height="${cellH.toFixed(1)}" fill="${use.color}" fill-opacity="0.80" stroke="${use.color}" stroke-width="1.2"/>`;
-      if (use.label && showLabels) {
-        svg += `<text x="${(cx + cellW/2).toFixed(1)}" y="${(cy + cellH/2).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${labelFont.toFixed(1)}" fill="#0f172a" direction="rtl">${use.label}</text>`;
-        if (showKilla) {
-          svg += `<text x="${(cx + 2).toFixed(1)}" y="${(cy + 2).toFixed(1)}" text-anchor="start" dominant-baseline="hanging" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cornerFont.toFixed(1)}" fill="${strokeColor}" fill-opacity="0.75">${kn}</text>`;
-        }
+      // Acre-use label text is shown in the LEGEND only — inside the mustateel we
+      // keep just the colour fill + a small corner killa number (no centered label).
+      if (use.label && showLabels && showKilla) {
+        svg += `<text x="${(cx + 2).toFixed(1)}" y="${(cy + 2).toFixed(1)}" text-anchor="start" dominant-baseline="hanging" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cornerFont.toFixed(1)}" fill="${strokeColor}" fill-opacity="0.75">${kn}</text>`;
       }
     }
   }
@@ -650,24 +696,17 @@ export function drawAcreUsesOnCanvas(ctx, obj, showKilla, strokeColor, showLabel
       ctx.strokeStyle = use.color;
       ctx.lineWidth = 1.2;
       ctx.strokeRect(cx, cy, cellW, cellH);
-      if (use.label && showLabels) {
+      // Acre-use label text is shown in the LEGEND only — inside the mustateel we
+      // keep just the colour fill + a small corner killa number (no centered label).
+      if (use.label && showLabels && showKilla) {
         ctx.save();
-        try { ctx.direction = "rtl"; } catch {}
-        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.font = `bold ${labelFont}px 'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,sans-serif`;
-        ctx.fillStyle = "#0f172a";
-        ctx.fillText(use.label, cx + cellW/2, cy + cellH/2);
+        try { ctx.direction = "ltr"; } catch {}
+        ctx.textAlign = "left"; ctx.textBaseline = "top";
+        ctx.font = `bold ${cornerFont}px Rajdhani, sans-serif`;
+        ctx.fillStyle = strokeColor;
+        ctx.globalAlpha = 0.75;
+        ctx.fillText(String(kn), cx + 2, cy + 2);
         ctx.restore();
-        if (showKilla) {
-          ctx.save();
-          try { ctx.direction = "ltr"; } catch {}
-          ctx.textAlign = "left"; ctx.textBaseline = "top";
-          ctx.font = `bold ${cornerFont}px Rajdhani, sans-serif`;
-          ctx.fillStyle = strokeColor;
-          ctx.globalAlpha = 0.75;
-          ctx.fillText(String(kn), cx + 2, cy + 2);
-          ctx.restore();
-        }
       }
     }
   }
@@ -755,6 +794,10 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = nu
       svg += `<rect x="${symX}" y="${gy.toFixed(1)}" width="${symW}" height="${gh.toFixed(1)}" fill="none" stroke="${item.color}" stroke-width="${(1.2*S).toFixed(1)}"/>`;
       svg += `<line x1="${(symX+symW/2).toFixed(1)}" y1="${gy.toFixed(1)}" x2="${(symX+symW/2).toFixed(1)}" y2="${(gy+gh).toFixed(1)}" stroke="${item.color}" stroke-width="${(0.7*S).toFixed(1)}"/>`;
       for (let r=1;r<5;r++) svg += `<line x1="${symX.toFixed(1)}" y1="${(gy+r*gh/5).toFixed(1)}" x2="${(symX+symW).toFixed(1)}" y2="${(gy+r*gh/5).toFixed(1)}" stroke="${item.color}" stroke-width="${(0.7*S).toFixed(1)}"/>`;
+    } else if (item.type === "railway") {
+      svg += `<line x1="${symX}" y1="${(iy-3*S).toFixed(1)}" x2="${symX+symW}" y2="${(iy-3*S).toFixed(1)}" stroke="${item.color}" stroke-width="${(2*S).toFixed(1)}"/>`;
+      svg += `<line x1="${symX}" y1="${(iy+3*S).toFixed(1)}" x2="${symX+symW}" y2="${(iy+3*S).toFixed(1)}" stroke="${item.color}" stroke-width="${(2*S).toFixed(1)}"/>`;
+      for (let t=0;t<3;t++) { const tx=symX+symW*(0.2+0.3*t); svg += `<line x1="${tx.toFixed(1)}" y1="${(iy-4*S).toFixed(1)}" x2="${tx.toFixed(1)}" y2="${(iy+4*S).toFixed(1)}" stroke="#78350f" stroke-width="${S}"/>`; }
     } else if (item.type === "fill") {
       svg += `<rect x="${symX}" y="${(iy-5*S).toFixed(1)}" width="${symW}" height="${(10*S).toFixed(1)}" fill="${item.color}" fill-opacity="0.80" stroke="${item.color}" stroke-width="${S}"/>`;
     }
@@ -805,6 +848,7 @@ function legendItems(C, objects, landUses) {
   if (has("canal")) items.push({ label: "راجباہ", color: C.canalStroke || "#0284c7", type: "line" });
   if (has("khal")) items.push({ label: "کھال", color: C.khalStroke || "#000000", type: "line_thin" });
   if (has("road")) items.push({ label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" });
+  if (has("railway")) items.push({ label: "ریلوے", color: C.railwayStroke || "#4b5563", type: "railway" });
   if (has("chakbandi")) items.push({ label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" });
   if (has("outlet")) items.push({ label: "موگہ", color: C.outletStroke || "#dc2626", type: "arrow" });
   if (has("mouza")) items.push({ label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" });
@@ -918,6 +962,13 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBound
       ctx.lineWidth = 0.7*S*scale;
       ctx.beginPath(); ctx.moveTo(symX+symW/2, gy); ctx.lineTo(symX+symW/2, gy+gh); ctx.stroke();
       for (let r=1;r<5;r++) { ctx.beginPath(); ctx.moveTo(symX, gy+r*gh/5); ctx.lineTo(symX+symW, gy+r*gh/5); ctx.stroke(); }
+    } else if (item.type === "railway") {
+      ctx.strokeStyle = item.color; ctx.setLineDash([]);
+      ctx.lineWidth = 2*S*scale;
+      ctx.beginPath(); ctx.moveTo(symX, iy-3*S*scale); ctx.lineTo(symX+symW, iy-3*S*scale); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(symX, iy+3*S*scale); ctx.lineTo(symX+symW, iy+3*S*scale); ctx.stroke();
+      ctx.strokeStyle = "#78350f"; ctx.lineWidth = S*scale;
+      for (let t=0;t<3;t++) { const tx=symX+symW*(0.2+0.3*t); ctx.beginPath(); ctx.moveTo(tx, iy-4*S*scale); ctx.lineTo(tx, iy+4*S*scale); ctx.stroke(); }
     } else if (item.type === "fill") {
       ctx.globalAlpha = 0.80; ctx.fillStyle = item.color;
       ctx.fillRect(symX, iy - 5*S*scale, symW, 10*S*scale);

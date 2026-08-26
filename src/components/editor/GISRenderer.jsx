@@ -890,6 +890,107 @@ export function drawBridgeDraft(ctx, bridgeDraft, snapPos, zoom, C) {
 }
 
 // ============================================================
+// LAYER 3c: Railway Track (ریلوے) — 5 professional styles
+// Used standalone and for road-attached railway (offset parallel to road).
+// ============================================================
+export function drawRailwayTracks(ctx, points, width, style, colors, zoom, isSelected) {
+  if (!points || points.length < 2) return;
+  const w = width || 24;
+  const halfW = w / 2;
+  const railColor = colors.railColor || "#4b5563";
+  const tieColor = colors.tieColor || "#78350f";
+  const left = getParallelPolyline(points, -halfW);
+  const right = getParallelPolyline(points, halfW);
+
+  // Style 4: ballast fill band between the rails
+  if (style === 4) {
+    ctx.fillStyle = "#cbd5e1";
+    ctx.beginPath();
+    drawSmoothPath(ctx, left);
+    ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
+    drawSmoothPath(ctx, [...right].reverse());
+    ctx.closePath(); ctx.fill();
+  }
+
+  // Ties (sleepers) — perpendicular bars at regular intervals (styles 1, 2, 3)
+  if (style === 1 || style === 2 || style === 3) {
+    const tieSpacing = 18;
+    const tieW = style === 2 ? 8 : 5; // concrete ties wider
+    ctx.strokeStyle = style === 2 ? "#9ca3af" : tieColor;
+    ctx.lineWidth = tieW / zoom;
+    ctx.lineCap = "round";
+    if (style === 3) ctx.setLineDash([6 / zoom, 4 / zoom]);
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i], b = points[i + 1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.max(1, Math.floor(segLen / tieSpacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const lIdx = Math.min(i, left.length - 1), lNext = Math.min(i + 1, left.length - 1);
+        const rIdx = Math.min(i, right.length - 1), rNext = Math.min(i + 1, right.length - 1);
+        const lx = left[lIdx].x + (left[lNext].x - left[lIdx].x) * t;
+        const ly = left[lIdx].y + (left[lNext].y - left[lIdx].y) * t;
+        const rx = right[rIdx].x + (right[rNext].x - right[rIdx].x) * t;
+        const ry = right[rIdx].y + (right[rNext].y - right[rIdx].y) * t;
+        ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(rx, ry); ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
+  }
+
+  // Two rails
+  ctx.strokeStyle = isSelected ? "#0ea5e9" : railColor;
+  ctx.lineWidth = 3.5 / zoom;
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  for (const side of [left, right]) {
+    ctx.beginPath(); drawSmoothPath(ctx, side); ctx.stroke();
+  }
+
+  // Style 5: dashed centre line (double-track look)
+  if (style === 5) {
+    ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2 / zoom;
+    ctx.setLineDash([8 / zoom, 5 / zoom]);
+    ctx.beginPath(); drawSmoothPath(ctx, points); ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+
+export function drawRailway(ctx, obj, isSelected, zoom, C) {
+  if (!obj.points || obj.points.length < 2) return;
+  drawRailwayTracks(ctx, obj.points, obj.width || 24, obj.railwayStyle || 1,
+    { railColor: obj.railColor, tieColor: obj.tieColor }, zoom, isSelected);
+  if (obj.name && zoom > 0.3) {
+    const mid = Math.floor(obj.points.length / 2);
+    const p = obj.points[mid];
+    ctx.save();
+    ctx.fillStyle = "#1e293b";
+    ctx.font = `bold ${scaledFont(11, zoom)}px Rajdhani, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(obj.name, p.x, p.y - (obj.width || 24) / 2 - 3 / zoom);
+    ctx.restore();
+  }
+}
+
+export function drawRailwayDraft(ctx, railwayDraft, snapPos, zoom, C) {
+  if (!railwayDraft || railwayDraft.length === 0) return;
+  const draftPts = [...railwayDraft];
+  if (snapPos) draftPts.push(snapPos);
+  const halfW = 12;
+  const left = getParallelPolyline(draftPts, -halfW);
+  const right = getParallelPolyline(draftPts, halfW);
+  ctx.strokeStyle = "#6366f1"; ctx.lineWidth = 2 / zoom;
+  ctx.setLineDash([6 / zoom, 4 / zoom]);
+  for (const side of [left, right]) {
+    ctx.beginPath(); ctx.moveTo(side[0].x, side[0].y);
+    for (const p of side) ctx.lineTo(p.x, p.y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  for (const pt of railwayDraft) {
+    ctx.fillStyle = "#6366f1";
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 4 / zoom, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// ============================================================
 // LAYER 4: Outlet / Moga
 // ============================================================
 export function drawOutlet(ctx, obj, isSelected, zoom, C) {
