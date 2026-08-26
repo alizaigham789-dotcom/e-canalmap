@@ -134,7 +134,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       const kv = killaVisibility || { mustateel: true, muraba: true };
       if (obj.type === "acre") drawAcre(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "mustateel") drawMustateel(ctx, obj, isSelected, zoom, C, obj.excluded || (obj.showKillaNumbers !== false && kv.mustateel !== false), getMustateelMouzaSplit(obj, mouzaObjects), kv.acreUseLabels !== false);
-      else if (obj.type === "muraba") drawMuraba(ctx, obj, isSelected, zoom, C, obj.showKillaNumbers !== false && kv.muraba !== false, getMustateelMouzaSplit(obj, mouzaObjects));
+      else if (obj.type === "muraba") drawMuraba(ctx, obj, isSelected, zoom, C, obj.showKillaNumbers !== false && kv.muraba !== false, getMustateelMouzaSplit(obj, mouzaObjects), kv.acreUseLabels !== false);
       else if (obj.type === "canal") drawCanal(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "khal") drawKhal(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "road") drawRoad(ctx, obj, isSelected, zoom, C);
@@ -580,7 +580,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       setBoxSelectDraft({ x1: boxSelectStart.current.x, y1: boxSelectStart.current.y, x2: worldRaw.x, y2: worldRaw.y });
       return;
     }
-    if (isMoving.current && movingObjId.current && (activeTool === "canalMove" || activeTool === "move")) {
+    if (isMoving.current && movingObjId.current && (activeTool === "canalMove" || activeTool === "move" || activeTool === "select")) {
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
@@ -859,22 +859,38 @@ const GISCanvas = forwardRef(function GISCanvas(
           return;
         }
       }
-      // Select tool = selection + vertex/node editing only. Whole-object moving is
-      // done with the Canal Move tool. (Touch: tap to select; mouse: click to select.)
-      if (isTouchRef.current) {
-        const hit = hitTest(worldRaw.x, worldRaw.y, objects);
-        if (hit?.type === "damageMarker" && onDamageMarkerClick) onDamageMarkerClick(hit);
-        onSelect(hit ? hit.id : null);
-      } else {
-        // Select tool — selection only (no whole-object move). Use Canal Move tool to move.
-        const hit = hitTest(worldRaw.x, worldRaw.y, objects);
-        if (hit?.type === "damageMarker" && onDamageMarkerClick) {
-          onDamageMarkerClick(hit);
-          onSelect(hit.id);
-          return;
-        }
-        onSelect(hit ? hit.id : null);
+      // Select tool — selection + vertex/node editing + move mustateel/muraba
+      // parcels (same as the Move tool). Other objects are selection-only.
+      const hit = hitTest(worldRaw.x, worldRaw.y, objects);
+      if (hit && hit.mogaGroup) {
+        const groupObjs = objects.filter(o => o.mogaGroup === hit.mogaGroup);
+        movingGroupRef.current = {
+          groupId: hit.mogaGroup,
+          originals: groupObjs.map(o => ({
+            id: o.id, x: o.x, y: o.y,
+            points: o.points ? o.points.map(p => ({ x: p.x, y: p.y })) : null,
+            start: o.start ? { x: o.start.x, y: o.start.y } : null,
+            end: o.end ? { x: o.end.x, y: o.end.y } : null,
+          })),
+        };
+        isMoving.current = true; movingObjId.current = hit.id;
+        moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
+        onSelect(hit.id);
+        return;
       }
+      if (hit && ["mustateel", "muraba"].includes(hit.type)) {
+        isMoving.current = true; movingObjId.current = hit.id;
+        moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
+        movingObjOrigPoints.current = null;
+        onSelect(hit.id);
+        return;
+      }
+      if (hit?.type === "damageMarker" && onDamageMarkerClick) {
+        onDamageMarkerClick(hit);
+        onSelect(hit.id);
+        return;
+      }
+      onSelect(hit ? hit.id : null);
     } else if (activeTool === "eraser") {
       const hit = hitTest(worldRaw.x, worldRaw.y, objects, true); // true = eraser mode (boundary-aware)
       if (hit) onAddObject("__delete__", { id: hit.id });

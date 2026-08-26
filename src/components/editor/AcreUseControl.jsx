@@ -26,7 +26,8 @@ export default function AcreUseControl({ local, commit }) {
     commit("acreUses", next);
   };
 
-  const clearAll = () => commit("acreUses", Array(10).fill(null));
+  const totalKillas = local.type === "muraba" ? 25 : 10;
+  const clearAll = () => commit("acreUses", Array(totalKillas).fill(null));
 
   return (
     <div className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
@@ -69,9 +70,9 @@ export default function AcreUseControl({ local, commit }) {
 
       {/* Killa grid 1–10 */}
       <div>
-        <label className="text-[9px] text-slate-400 uppercase tracking-wider block mb-1">Killa (1–10) — کلک کر کے رنگ لگائیں</label>
+        <label className="text-[9px] text-slate-400 uppercase tracking-wider block mb-1">Killa (1–{totalKillas}) — کلک کر کے رنگ لگائیں</label>
         <div className="grid grid-cols-5 gap-1">
-          {Array.from({ length: 10 }, (_, i) => {
+          {Array.from({ length: totalKillas }, (_, i) => {
             const u = uses[i];
             return (
               <button key={i} onClick={() => assign(i)}

@@ -12,7 +12,7 @@ import CanalStyleControl from "@/components/editor/CanalStyleControl";
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
 const KILLA_STROKE_STYLES = ["solid", "dashed", "dotted"];
 
-export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate, onDelete, onClose, deleteVertexMode = false, onToggleDeleteVertexMode = null, onUpdateAllMustateels = null, onResetAllMustateels = null, maxBodyHeight = 420 }) {
+export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate, onDelete, onClose, deleteVertexMode = false, onToggleDeleteVertexMode = null, onUpdateAllMustateels = null, onResetAllMustateels = null, onUpdateAllMurabas = null, onResetAllMurabas = null, maxBodyHeight = 420 }) {
   const [local, setLocal] = useState({});
   const [collapsed, setCollapsed] = useState(true);
 
@@ -155,8 +155,17 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
               </div>
               <ExclusionToggle local={local} commit={commit} />
-              <SpacingControl label="Boundary Thickness" value={local.boundaryThickness || 5} min={1} max={10} step={1} onChange={v => commit("boundaryThickness", v)} />
-              <FillControl local={local} commit={commit} />
+              <MustateelStyleControl local={local} onApplyAll={onUpdateAllMurabas} onResetAll={onResetAllMurabas} type="muraba" />
+              <AcreUseControl local={local} commit={commit} />
+              {(() => {
+                const hasMurabaFill = !!(local.fillColor && local.fillColor.trim() && local.fillColor.startsWith("#")) || (local.acreUses && local.acreUses.some(u => u && u.color));
+                return hasMurabaFill ? (
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-600">Show Acre Numbers</label>
+                    <Switch checked={local.showKillaWhenFilled !== false} onCheckedChange={v => commit("showKillaWhenFilled", v)} className="scale-75" />
+                  </div>
+                ) : null;
+              })()}
               <div className="text-[10px] text-slate-400 font-mono">1100 ft × 990 ft • 25 Killas</div>
             </>
           )}
@@ -691,13 +700,14 @@ function KillaStyleControl({ local, commit }) {
 
 // Combined Mustateel Style — applies boundary thickness + fill colour/opacity
 // to ALL mustateels at once (not per-mustateel). Includes a Reset button.
-function MustateelStyleControl({ local, onApplyAll, onResetAll }) {
+function MustateelStyleControl({ local, onApplyAll, onResetAll, type = "mustateel" }) {
   const hexColor = (c) => (c && c.startsWith("#")) ? c : "#ef4444";
   if (!onApplyAll) return null;
+  const label = type === "muraba" ? "Muraba Style (All)" : "Mustateel Style (All)";
   return (
     <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Mustateel Style (All)</span>
+        <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">{label}</span>
         {onResetAll && (
           <Button size="sm" variant="outline" className="h-5 px-2 text-[9px] border-blue-300 text-blue-700 hover:bg-blue-100"
             onClick={onResetAll}>

@@ -986,6 +986,28 @@ export default function Editor() {
     toast.success("All mustateels reset to default");
   };
 
+  // Apply a style change to ALL murabas at once (combined muraba option)
+  const handleUpdateAllMurabas = (changes) => {
+    const updates = dsmRef.current.objects
+      .filter(o => o.type === "muraba")
+      .map(o => ({ id: o.id, changes }));
+    if (updates.length === 0) return;
+    dsmRef.current.bulkUpdate(updates);
+    syncObjects();
+  };
+
+  // Reset ALL murabas to default styling
+  const handleResetAllMurabas = () => {
+    const defaults = { boundaryThickness: 5, fillColor: "", fillOpacity: 0.08, fillStyle: "solid" };
+    const updates = dsmRef.current.objects
+      .filter(o => o.type === "muraba")
+      .map(o => ({ id: o.id, changes: defaults }));
+    if (updates.length === 0) return;
+    dsmRef.current.bulkUpdate(updates);
+    syncObjects();
+    toast.success("All murabas reset to default");
+  };
+
   const handleDeleteObject = (id) => {
     const obj = dsmRef.current.objects.find(o => o.id === id);
     const wasMustateel = obj?.type === "mustateel";
@@ -1554,6 +1576,8 @@ export default function Editor() {
                   onToggleDeleteVertexMode={() => setDeleteVertexMode(v => !v)}
                   onUpdateAllMustateels={handleUpdateAllMustateels}
                   onResetAllMustateels={handleResetAllMustateels}
+                  onUpdateAllMurabas={handleUpdateAllMurabas}
+                  onResetAllMurabas={handleResetAllMurabas}
                   maxBodyHeight={maxBodyH}
                 />
               </div>
@@ -1575,7 +1599,9 @@ export default function Editor() {
                 onToggleDeleteVertexMode={() => setDeleteVertexMode(v => !v)}
                 onUpdateAllMustateels={handleUpdateAllMustateels}
                 onResetAllMustateels={handleResetAllMustateels}
-              />
+                onUpdateAllMurabas={handleUpdateAllMurabas}
+                onResetAllMurabas={handleResetAllMurabas}
+                />
             </div>
           );
         })()}

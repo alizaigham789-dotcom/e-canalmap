@@ -280,7 +280,7 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
   }
 }
 
-export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = true, mouzaSplit = null) {
+export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = true, mouzaSplit = null, showAcreUseLabels = true) {
   // Exclusion hatch — drawn first, above fill, below boundary
   if (obj.excluded) drawExclusionHatchOnCanvas(ctx, obj, zoom);
   const ks = obj.killaStyle || {};
@@ -328,18 +328,59 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Killa numbers — toggled by showKillaNumbers
-    if (showKillaNumbers) {
-      const grid = getMurabaKillaGrid();
-      ctx.save();
-      ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
-      ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.85)";
-      const killaFontSize = screenClampedFont(Math.min(cellW, cellH) * 0.26, zoom, 14, 20);
-      ctx.font = `bold ${killaFontSize}px Rajdhani, sans-serif`;
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    // Layer 2b: Acre (killa) land-use fills — coloured per-acre cells (آبادی/قبرستان/فیکٹری/...)
+    const acreUses = obj.acreUses ? obj.acreUses : [];
+    const gridUses = getMurabaKillaGrid();
+    if (acreUses.some(u => u && u.color)) {
       for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 5; c++) {
-          ctx.fillText(String(grid[r][c]), obj.x + c * cellW + cellW/2, obj.y + r * cellH + cellH/2);
+          const use = acreUses[gridUses[r][c] - 1];
+          if (!use || !use.color) continue;
+          const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
+          ctx.save();
+          ctx.globalAlpha = 0.80;
+          ctx.fillStyle = use.color;
+          ctx.fillRect(cx, cy, cellW, cellH);
+          ctx.restore();
+          ctx.strokeStyle = use.color;
+          ctx.lineWidth = 1.5 / zoom;
+          ctx.strokeRect(cx, cy, cellW, cellH);
+        }
+      }
+    }
+
+    // Layer 5: Killa numbers + land-use labels
+    const effectiveShowKilla = effectiveKillaVisible(obj, showKillaNumbers);
+    if (effectiveShowKilla || (showAcreUseLabels && acreUses.some(u => u && u.label))) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(obj.x, obj.y, obj.w, obj.h); ctx.clip();
+      const killaFontSize = screenClampedFont(Math.min(cellW, cellH) * 0.26, zoom, 14, 20);
+      const labelFont = screenClampedFont(Math.min(cellW, cellH) * 0.22, zoom, 9, 16);
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          const kn = gridUses[r][c];
+          const use = acreUses[kn - 1];
+          const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
+          if (use && use.label && showAcreUseLabels) {
+            try { ctx.direction = "rtl"; } catch {}
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.font = `bold ${labelFont}px 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif`;
+            ctx.fillStyle = "#0f172a";
+            ctx.fillText(use.label, cx + cellW / 2, cy + cellH / 2);
+            if (effectiveShowKilla) {
+              try { ctx.direction = "ltr"; } catch {}
+              ctx.textAlign = "left"; ctx.textBaseline = "top";
+              ctx.font = `bold ${Math.max(8, killaFontSize * 0.65)}px Rajdhani, sans-serif`;
+              ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.85)";
+              ctx.fillText(String(kn), cx + 3 / zoom, cy + 2 / zoom);
+            }
+          } else if (effectiveShowKilla) {
+            try { ctx.direction = "ltr"; } catch {}
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.font = `bold ${killaFontSize}px Rajdhani, sans-serif`;
+            ctx.fillStyle = ks.labelColor || "rgba(220,38,38,0.85)";
+            ctx.fillText(String(kn), cx + cellW / 2, cy + cellH / 2);
+          }
         }
       }
       ctx.restore();

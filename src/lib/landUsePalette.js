@@ -17,19 +17,25 @@ export const LAND_USE_PRESETS = [
   { id: "banjar", label: "بنجر", color: "#78716c" },      // stone — wasteland
 ];
 
-// Always returns a length-10 array (one entry per killa) of null | {color, label}.
+// Total killa cells for a parcel type — mustateel = 10, muraba = 25.
+export function killaCountFor(obj) {
+  return obj && obj.type === "muraba" ? 25 : 10;
+}
+
+// Always returns an array (one entry per killa) of null | {color, label}.
 export function getAcreUses(obj) {
-  if (!obj || !Array.isArray(obj.acreUses)) return Array(10).fill(null);
-  const u = obj.acreUses.slice(0, 10);
-  while (u.length < 10) u.push(null);
+  const total = killaCountFor(obj);
+  if (!obj || !Array.isArray(obj.acreUses)) return Array(total).fill(null);
+  const u = obj.acreUses.slice(0, total);
+  while (u.length < total) u.push(null);
   return u.map(x => (x && x.color ? { color: x.color, label: x.label || "" } : null));
 }
 
-// Collect every distinct land-use {color, label} used across all mustateels.
+// Collect every distinct land-use {color, label} used across all parcels.
 export function collectLandUses(objects) {
   const seen = new Map();
   for (const o of objects || []) {
-    if (o.type !== "mustateel") continue;
+    if (o.type !== "mustateel" && o.type !== "muraba") continue;
     for (const u of getAcreUses(o)) {
       if (!u || !u.color || !u.label) continue;
       const key = u.color + "|" + u.label;
