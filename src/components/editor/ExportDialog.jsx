@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
-import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas, svgAcreUses, acreUseHasLabel, drawAcreUsesOnCanvas } from "@/lib/printRenderHelpers";
-import { drawExclusionHatchOnCanvas } from "@/components/editor/GISRenderer";
+import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas, svgAcreUses, acreUseHasLabel, drawAcreUsesOnCanvas, svgRailwayTracks } from "@/lib/printRenderHelpers";
+import { drawExclusionHatchOnCanvas, drawRailwayTracks } from "@/components/editor/GISRenderer";
 import { drawSideBoundaryCanvas, drawCanalStyleCanvas, buildSideBoundarySVG, buildCanalStyleSVG, isNewCanalStyle } from "@/lib/canalStyles";
 import { collectLandUses } from "@/lib/landUsePalette";
 import { canvasToPdfBlob, downloadBlob, shareBlob } from "@/lib/pdfExport";
@@ -262,6 +262,14 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y); ctx.closePath(); ctx.fill();
       ctx.strokeStyle=C.roadStroke || "#b45309"; ctx.lineWidth=2/zoom;
       for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
+      if (o.railway && o.railway.enabled) {
+        const rwHalfW = 12;
+        const offset = (o.railway.side === "left" ? -1 : 1) * (halfW + rwHalfW + 4);
+        const rwPath = getParallelPolyline(o.points, offset);
+        drawRailwayTracks(ctx, rwPath, 24, o.railway.style || 1, {}, zoom, false);
+      }
+    } else if (o.type === "railway" && o.points?.length >= 2) {
+      drawRailwayTracks(ctx, o.points, o.width || 24, o.railwayStyle || 1, { railColor: o.railColor, tieColor: o.tieColor }, zoom, false);
     } else if (o.type === "chakbandi" && o.points?.length >= 2) {
       // Bold line + X crosses — colour & thickness match editor/print exactly
       const chColor = C.chakbandiStroke || "#000000";
@@ -439,7 +447,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     }
 
     const svgObjs = [...objects].sort((a,b)=>{
-      const order=["mouza","muraba","mustateel","acre","road","canal","khal","chakbandi","outlet","damageMarker"];
+      const order=["mouza","muraba","mustateel","acre","road","railway","canal","khal","chakbandi","outlet","damageMarker"];
       return order.indexOf(a.type)-order.indexOf(b.type);
     }).map(o => objToSVG(o, bbox)).filter(Boolean).join("\n");
 
@@ -583,7 +591,17 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
       const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
       const centerPts = o.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-      return `<g><polygon points="${fillPts}" fill="#3a3a3a"/><polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="10,6" stroke-linecap="round"/></g>`;
+      let railwaySvg = "";
+      if (o.railway && o.railway.enabled) {
+        const rwHalfW = 12;
+        const offset = (o.railway.side === "left" ? -1 : 1) * ((o.width||DIMENSIONS.ROAD_WIDTH)/2 + rwHalfW + 4);
+        const rwPath = getParallelPolyline(o.points, offset);
+        railwaySvg = svgRailwayTracks(rwPath, 24, o.railway.style || 1, {});
+      }
+      return `<g><polygon points="${fillPts}" fill="#3a3a3a"/><polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="10,6" stroke-linecap="round"/>${railwaySvg}</g>`;
+    }
+    if (o.type==="railway" && o.points?.length >= 2) {
+      return `<g>${svgRailwayTracks(o.points, o.width || 24, o.railwayStyle || 1, { railColor: o.railColor, tieColor: o.tieColor })}</g>`;
     }
     if (o.type==="chakbandi" && o.points?.length>=2) {
       // Bold line + X crosses — colour & thickness match editor/print exactly

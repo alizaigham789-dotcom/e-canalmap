@@ -782,6 +782,14 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
   ctx.stroke();
   ctx.setLineDash([]);
 
+  // Road-attached railway track (left/right side) — drawn parallel to the road
+  if (obj.railway && obj.railway.enabled) {
+    const rwHalfW = 12;
+    const offset = (obj.railway.side === "left" ? -1 : 1) * (halfW + rwHalfW + 4);
+    const rwPath = getParallelPolyline(obj.points, offset);
+    drawRailwayTracks(ctx, rwPath, 24, obj.railway.style || 1, {}, zoom, false);
+  }
+
   if (obj.name) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid];

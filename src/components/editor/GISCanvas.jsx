@@ -12,8 +12,8 @@ import { drawCCAGCAFractionBoxOnCanvas, getOutletLabelPos, getChakbandiLabelPos,
 import { applyOrthoConstraint, segmentAngleDeg, findNearbyEndpoint, isLineTool } from "@/lib/drawingAssist";
 import {
   drawGrid, drawAcre, drawMustateel, drawMuraba,
-  drawCanal, drawKhal, drawRoad, drawBridge, drawOutlet, drawChakbandi, drawMouza, drawDamageMarker,
-  drawCanalDraft, drawKhalDraft, drawRoadDraft, drawBridgeDraft, drawChakbandiDraft, drawMouzaDraft, drawOutletDraft,
+  drawCanal, drawKhal, drawRoad, drawRailway, drawBridge, drawOutlet, drawChakbandi, drawMouza, drawDamageMarker,
+  drawCanalDraft, drawKhalDraft, drawRoadDraft, drawRailwayDraft, drawBridgeDraft, drawChakbandiDraft, drawMouzaDraft, drawOutletDraft,
 } from "@/components/editor/GISRenderer";
 
 const GISCanvas = forwardRef(function GISCanvas(
@@ -25,6 +25,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     outletDraft, onOutletStart, onOutletFinish,
     khalDraft, onKhalPointAdd, onKhalFinish,
     roadDraft, onRoadPointAdd, onRoadFinish,
+    railwayDraft, onRailwayPointAdd, onRailwayFinish,
     bridgeDraft, onBridgePointAdd, onBridgeFinish,
     mouzaDraft, onMouzaPointAdd, onMouzaFinish,
     snapPos, onSnapPosChange, onPanChange, onZoomChange,
@@ -99,6 +100,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (activeTool === "canal") return canalDraft?.[canalDraft.length - 1];
     if (activeTool === "khal") return khalDraft?.[khalDraft.length - 1];
     if (activeTool === "road") return roadDraft?.[roadDraft.length - 1];
+    if (activeTool === "railway") return railwayDraft?.[railwayDraft.length - 1];
     if (activeTool === "bridge") return bridgeDraft?.[bridgeDraft.length - 1];
     if (activeTool === "mouza") return mouzaDraft?.[mouzaDraft.length - 1];
     if (activeTool === "chakbandi") return chakbandiDraft?.[chakbandiDraft.length - 1];
@@ -110,7 +112,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   const C = colorSettings || {};
 
   // Z-Index render order: Layer 1(fills)+2(boundaries) → Layer 3(infra) → Layer 4(markers) → Layer 5(labels embedded in draw fns)
-  const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
+  const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "railway", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
   const render = useCallback(() => {
     const canvas = canvasRef.current;
@@ -146,6 +148,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       else if (obj.type === "canal") drawCanal(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "khal") drawKhal(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "road") drawRoad(ctx, obj, isSelected, zoom, C);
+      else if (obj.type === "railway") drawRailway(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "bridge") drawBridge(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "outlet") drawOutlet(ctx, obj, isSelected, zoom, C);
       else if (obj.type === "chakbandi") drawChakbandi(ctx, obj, isSelected, zoom, C, true);
@@ -194,9 +197,9 @@ const GISCanvas = forwardRef(function GISCanvas(
     // Canal start & end show square anchor handles (matching shape on both ends);
     // intermediate vertices stay circular. Edit-only — never drawn in print/preview.
     const selObj = objects.find(o => o.id === selectedId);
-    if (selObj && ["chakbandi", "canal", "khal", "road", "bridge", "mouza"].includes(selObj.type) && selObj.points) {
+    if (selObj && ["chakbandi", "canal", "khal", "road", "railway", "bridge", "mouza"].includes(selObj.type) && selObj.points) {
       const pts = selObj.points;
-      const squareEnds = selObj.type === "canal" || selObj.type === "road" || selObj.type === "bridge";
+      const squareEnds = selObj.type === "canal" || selObj.type === "road" || selObj.type === "railway" || selObj.type === "bridge";
       for (let i = 0; i < pts.length; i++) {
         const p = pts[i];
         ctx.fillStyle = "#3b82f6";
@@ -238,6 +241,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     drawCanalDraft(ctx, canalDraft, snapPos, zoom, C);
     drawKhalDraft(ctx, khalDraft, snapPos, zoom, C);
     drawRoadDraft(ctx, roadDraft, snapPos, zoom, C);
+    drawRailwayDraft(ctx, railwayDraft, snapPos, zoom, C);
     drawBridgeDraft(ctx, bridgeDraft, snapPos, zoom, C);
     drawChakbandiDraft(ctx, chakbandiDraft, snapPos, zoom, C);
     drawMouzaDraft(ctx, mouzaDraft, snapPos, zoom, C);
@@ -881,7 +885,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         moveOffset.current = { x: worldRaw.x - hit.x, y: worldRaw.y - hit.y };
         movingObjOrigPoints.current = null;
         onSelect(hit.id);
-      } else if (hit && ["canal", "khal", "road", "bridge", "mouza"].includes(hit.type) && hit.points) {
+      } else if (hit && ["canal", "khal", "road", "railway", "bridge", "mouza"].includes(hit.type) && hit.points) {
         isMoving.current = true; movingObjId.current = hit.id;
         moveOffset.current = { x: worldRaw.x, y: worldRaw.y };
         movingObjOrigPoints.current = hit.points.map(p => ({ ...p }));
@@ -934,6 +938,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       } else onOutletFinish(worldRaw);
     } else if (activeTool === "khal") onKhalPointAdd(snapped);
     else if (activeTool === "road") onRoadPointAdd(snapped);
+    else if (activeTool === "railway") onRailwayPointAdd(snapped);
     else if (activeTool === "bridge") onBridgePointAdd(snapped);
     else if (activeTool === "mouza") onMouzaPointAdd(snapped);
     else if (activeTool === "boxSelect") {
@@ -962,7 +967,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
       // 1. Vertex handle on the selected line object (drag a single anchor point)
       const selectedObj = selectedId ? objects.find(o => o.id === selectedId) : null;
-      if (selectedObj && ["chakbandi", "canal", "khal", "road", "bridge", "mouza"].includes(selectedObj.type) && selectedObj.points) {
+      if (selectedObj && ["chakbandi", "canal", "khal", "road", "railway", "bridge", "mouza"].includes(selectedObj.type) && selectedObj.points) {
         // Bigger hit area on touch so chakbandi endpoints/nodes are easy to grab
         // and drag onto a canal (finger targets need more room than a mouse cursor).
         const vThresh = (isTouchRef.current ? 30 : 10) / zoom;
@@ -1115,7 +1120,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       // Double-click on a line of the selected chakbandi/canal (not on an existing vertex)
       // auto-inserts a new draggable anchor point right there — no need to redraw.
       const selectedObj = selectedId ? objectsRef.current.find(o => o.id === selectedId) : null;
-      if (selectedObj && ["chakbandi", "canal", "khal", "road", "bridge", "mouza"].includes(selectedObj.type) && selectedObj.points) {
+      if (selectedObj && ["chakbandi", "canal", "khal", "road", "railway", "bridge", "mouza"].includes(selectedObj.type) && selectedObj.points) {
         const vThresh = 10 / zoom;
         const vIdx = selectedObj.points.findIndex(p => Math.hypot(p.x - worldRaw.x, p.y - worldRaw.y) < vThresh);
         if (vIdx !== -1) {

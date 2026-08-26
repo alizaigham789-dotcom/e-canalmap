@@ -61,6 +61,15 @@ const BridgeIcon = ({ className }) => (
   </svg>
 );
 
+// Railway (ریلوے): two rails with perpendicular sleepers
+const RailwayIcon = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 4v16" />
+    <path d="M19 4v16" />
+    <path d="M5 8h14M5 13h14M5 18h14" strokeWidth="1.4" strokeOpacity="0.7" />
+  </svg>
+);
+
 // Each tool carries a short English `name` shown under the icon.
 const TOOLS = [
   { id: "select", name: "Select", label: "Select / Move (V) — click to select, drag to move", icon: MousePointer2, group: "nav" },
@@ -76,6 +85,7 @@ const TOOLS = [
   { id: "outlet", name: "Moga", label: "Outlet / Moga (O)", icon: MogaIcon, group: "draw", color: "text-cyan-400" },
   { id: "khal", name: "Khal", label: "Watercourse (W)", icon: Waves, group: "draw", color: "text-blue-500" },
   { id: "road", name: "Road", label: "Road (R)", icon: RoadIcon, group: "draw", color: "text-amber-400" },
+  { id: "railway", name: "Railway", label: "Railway Track / ریلوے (T)", icon: RailwayIcon, group: "draw", color: "text-slate-600" },
   { id: "bridge", name: "Bridge", label: "Bridge / پل (P)", icon: BridgeIcon, group: "draw", color: "text-red-400" },
   { id: "mouza", name: "Mouza", label: "Mouza Boundary (U)", icon: MouzaIcon, group: "draw", color: "text-slate-700" },
   { id: "damageMarker", name: "Damage", label: "Canal Damage Marker (G)", icon: AlertTriangle, group: "draw", color: "text-red-500" },

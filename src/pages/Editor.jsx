@@ -22,7 +22,7 @@ import { collectLandUses } from "@/lib/landUsePalette";
 import { storeDrawingData, loadDrawingData, isDrawingDataUrl } from "@/lib/drawingDataStorage";
 import {
   DrawingStateManager,
-  createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createOutlet, createChakbandi, createMouza,
+  createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createRailway, createOutlet, createChakbandi, createMouza,
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
   saveToClipboard, loadFromClipboard, hasClipboard, worldToScreen,
 } from "@/lib/gisEngine";
@@ -106,6 +106,7 @@ export default function Editor() {
   const [outletDraft, setOutletDraft] = useState(null);
   const [khalDraft, setKhalDraft] = useState(null);
   const [roadDraft, setRoadDraft] = useState(null);
+  const [railwayDraft, setRailwayDraft] = useState(null);
   const [bridgeDraft, setBridgeDraft] = useState(null);
   const [mouzaDraft, setMouzaDraft] = useState(null);
   const [objects, setObjects] = useState([]);
@@ -137,6 +138,7 @@ export default function Editor() {
   const chakbandiDraftRef = useRef(null);
   const khalDraftRef = useRef(null);
   const roadDraftRef = useRef(null);
+  const railwayDraftRef = useRef(null);
   const bridgeDraftRef = useRef(null);
   const mouzaDraftRef = useRef(null);
   const outletDraftRef = useRef(null);
@@ -144,6 +146,7 @@ export default function Editor() {
   chakbandiDraftRef.current = chakbandiDraft;
   khalDraftRef.current = khalDraft;
   roadDraftRef.current = roadDraft;
+  railwayDraftRef.current = railwayDraft;
   bridgeDraftRef.current = bridgeDraft;
   mouzaDraftRef.current = mouzaDraft;
   outletDraftRef.current = outletDraft;
@@ -162,7 +165,7 @@ export default function Editor() {
 
   // Always-current save function — avoids stale closures in debounced autosave & unmount
   const saveRef = useRef(() => {});
-  const NON_PARCEL_TYPES = ["canal", "chakbandi", "khal", "road", "mouza", "outlet", "damageMarker"];
+  const NON_PARCEL_TYPES = ["canal", "chakbandi", "khal", "road", "railway", "mouza", "outlet", "damageMarker"];
   const countNonParcels = (objs) => objs.filter(o => NON_PARCEL_TYPES.includes(o.type)).length;
 
   saveRef.current = async () => {
@@ -775,6 +778,22 @@ export default function Editor() {
     }
   }, []);
 
+  const handleRailwayPointAdd = useCallback((pt) => {
+    setRailwayDraft(prev => prev ? [...prev, pt] : [pt]);
+  }, []);
+
+  const handleRailwayFinish = useCallback(() => {
+    const draft = railwayDraftRef.current;
+    setRailwayDraft(null);
+    if (draft && draft.length >= 2) {
+      const railway = createRailway(draft);
+      dsmRef.current.add(railway);
+      setSelectedId(railway.id);
+      syncObjects();
+      saveRef.current();
+    }
+  }, []);
+
   const handleMouzaPointAdd = useCallback((pt) => {
     setMouzaDraft(prev => prev ? [...prev, pt] : [pt]);
   }, []);
@@ -876,6 +895,8 @@ export default function Editor() {
     else if (activeTool === "khal") setKhalDraft(null);
     if (activeTool === "road" && roadDraft && roadDraft.length >= 2) handleRoadFinish();
     else if (activeTool === "road") setRoadDraft(null);
+    if (activeTool === "railway" && railwayDraft && railwayDraft.length >= 2) handleRailwayFinish();
+    else if (activeTool === "railway") setRailwayDraft(null);
     if (activeTool === "mouza" && mouzaDraft && mouzaDraft.length >= 2) handleMouzaFinish();
     else if (activeTool === "mouza") setMouzaDraft(null);
     setActiveTool(tool);
@@ -890,6 +911,8 @@ export default function Editor() {
     else setKhalDraft(null);
     if (activeTool === "road" && roadDraft && roadDraft.length >= 2) handleRoadFinish();
     else setRoadDraft(null);
+    if (activeTool === "railway" && railwayDraft && railwayDraft.length >= 2) handleRailwayFinish();
+    else setRailwayDraft(null);
     if (activeTool === "mouza" && mouzaDraft && mouzaDraft.length >= 2) handleMouzaFinish();
     else setMouzaDraft(null);
     setOutletDraft(null);
@@ -1248,7 +1271,7 @@ export default function Editor() {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedId) { e.preventDefault(); handleDeleteObject(selectedId); }
       }
-      const shortcuts = { v: "select", h: "pan", d: "select", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", u: "mouza", g: "damageMarker", x: "measure", e: "eraser", f: "fitView", q: "boxSelect" };
+      const shortcuts = { v: "select", h: "pan", d: "select", a: "acre", m: "mustateel", b: "muraba", c: "canal", k: "chakbandi", o: "outlet", w: "khal", r: "road", t: "railway", u: "mouza", g: "damageMarker", x: "measure", e: "eraser", f: "fitView", q: "boxSelect" };
       if (!e.ctrlKey && !e.metaKey && shortcuts[e.key]) {
         if (e.key === "f") handleFitView();
         else handleToolChange(shortcuts[e.key]);
@@ -1258,7 +1281,7 @@ export default function Editor() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selectedId, activeTool, canalDraft, chakbandiDraft, khalDraft, roadDraft, mouzaDraft, zoom, pan]);
+  }, [selectedId, activeTool, canalDraft, chakbandiDraft, khalDraft, roadDraft, railwayDraft, mouzaDraft, zoom, pan]);
 
   // Undo last point of the active line draft (canal/chakbandi/khal/road/mouza)
   const handleUndoPoint = useCallback(() => {
@@ -1266,8 +1289,9 @@ export default function Editor() {
     if (chakbandiDraft) setChakbandiDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
     if (khalDraft) setKhalDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
     if (roadDraft) setRoadDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
+    if (railwayDraft) setRailwayDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
     if (mouzaDraft) setMouzaDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
-  }, [canalDraft, chakbandiDraft, khalDraft, roadDraft, mouzaDraft]);
+  }, [canalDraft, chakbandiDraft, khalDraft, roadDraft, railwayDraft, mouzaDraft]);
 
   if (!mapId) {
     return (
@@ -1291,7 +1315,7 @@ export default function Editor() {
     );
   }
 
-  const draftActive = !!(canalDraft || chakbandiDraft || khalDraft || roadDraft || mouzaDraft);
+  const draftActive = !!(canalDraft || chakbandiDraft || khalDraft || roadDraft || railwayDraft || mouzaDraft);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: bgColor }}>
@@ -1364,6 +1388,9 @@ export default function Editor() {
             roadDraft={roadDraft}
             onRoadPointAdd={handleRoadPointAdd}
             onRoadFinish={handleRoadFinish}
+            railwayDraft={railwayDraft}
+            onRailwayPointAdd={handleRailwayPointAdd}
+            onRailwayFinish={handleRailwayFinish}
             mouzaDraft={mouzaDraft}
             onMouzaPointAdd={handleMouzaPointAdd}
             onMouzaFinish={handleMouzaFinish}

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, buildPrintHeaderHTML, buildPrintFooterHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
-import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, svgMogaInfo, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel } from "@/lib/printRenderHelpers";
+import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, svgMogaInfo, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel, svgRailwayTracks } from "@/lib/printRenderHelpers";
 import { collectLandUses } from "@/lib/landUsePalette";
 import { buildSideBoundarySVG, buildCanalStyleSVG, isNewCanalStyle } from "@/lib/canalStyles";
 import { Move, Download, Share2, Loader2 } from "lucide-react";
@@ -43,7 +43,7 @@ const KHAKA_DASTI_GREY = {
   outletStroke: "#6b6b6b",
 };
 
-const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
+const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "railway", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
 function getObjectsBounds(objects) {
   if (!objects || objects.length === 0) return null;
@@ -502,14 +502,28 @@ function svgRoad(obj, C, idx) {
   const fillColor = greyed ? "#6b6b6b" : (obj.fillColor || "#1a1a1a");
   const centerDash = pointsToSmoothPath(obj.points);
   const nameSvg = obj.name ? svgRoadName(obj.points, obj.name, obj.width || DIMENSIONS.ROAD_WIDTH) : "";
+  let railwaySvg = "";
+  if (obj.railway && obj.railway.enabled) {
+    const rwHalfW = 12;
+    const offset = (obj.railway.side === "left" ? -1 : 1) * ((obj.width || DIMENSIONS.ROAD_WIDTH) / 2 + rwHalfW + 4);
+    const rwPath = getParallelPolyline(obj.points, offset);
+    railwaySvg = svgRailwayTracks(rwPath, 24, obj.railway.style || 1, {});
+  }
   return `
 <g key="road_${idx}">
   <path d="${fillPath}" fill="${fillColor}" />
   <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${edgeColor}" stroke-width="${edgeW}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${edgeColor}" stroke-width="${edgeW}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${centerDash}" fill="none" stroke="#ffffff" stroke-width="3" stroke-dasharray="14,8" stroke-linecap="round"/>
+  ${railwaySvg}
   ${nameSvg}
 </g>`;
+}
+
+function svgRailway(obj, C, idx) {
+  if (!obj.points || obj.points.length < 2) return "";
+  const nameSvg = obj.name ? svgRoadName(obj.points, obj.name, obj.width || 24) : "";
+  return `<g key="railway_${idx}">${svgRailwayTracks(obj.points, obj.width || 24, obj.railwayStyle || 1, { railColor: obj.railColor, tieColor: obj.tieColor })}${nameSvg}</g>`;
 }
 
 function svgBridge(obj, C, idx) {
@@ -752,6 +766,7 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
       case "canal":     svgParts.push(svgCanal(obj, C, idx, allOutlets)); break;
       case "khal":      svgParts.push(svgKhal(obj, C, idx)); break;
       case "road":      svgParts.push(svgRoad(obj, C, idx)); break;
+      case "railway":   svgParts.push(svgRailway(obj, C, idx)); break;
       case "bridge":    svgParts.push(svgBridge(obj, C, idx)); break;
       case "mouza":     svgParts.push(svgMouza(obj, C, idx)); break;
       case "outlet":    svgParts.push(svgOutlet(obj, C, idx, mogaScale)); break;

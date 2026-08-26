@@ -41,14 +41,14 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
   const typeLabel = {
     acre: "Acre Block", mustateel: "Mustateel Parcel", muraba: "Muraba Block",
     canal: "Canal", chakbandi: "Chakbandi Line", outlet: "Outlet / Moga",
-    khal: "Watercourse", road: "Road", mouza: "Mouza Boundary",
+    khal: "Watercourse", road: "Road", railway: "Railway Track (ریلوے)", mouza: "Mouza Boundary",
     bridge: "Bridge (پل)", damageMarker: "Canal Damage Marker",
   }[selectedObj.type] || selectedObj.type;
 
   const typeColor = {
     acre: "text-amber-600", mustateel: "text-red-600", muraba: "text-red-700",
     canal: "text-blue-600", chakbandi: "text-green-600", outlet: "text-cyan-600",
-    khal: "text-blue-500", road: "text-amber-500", mouza: "text-slate-700",
+    khal: "text-blue-500", road: "text-amber-500", railway: "text-slate-600", mouza: "text-slate-700",
     bridge: "text-red-500", damageMarker: "text-red-600",
   }[selectedObj.type] || "text-slate-500";
 
@@ -67,7 +67,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
           <span className={`text-[11px] font-bold font-heading tracking-wider uppercase truncate ${typeColor}`}>{typeLabel}</span>
         </div>
         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-          {["canal", "khal", "road", "bridge", "chakbandi", "mouza"].includes(selectedObj.type) && onToggleDeleteVertexMode && (
+          {["canal", "khal", "road", "railway", "bridge", "chakbandi", "mouza"].includes(selectedObj.type) && onToggleDeleteVertexMode && (
             <Button variant="ghost" size="icon"
               className={`w-6 h-6 ${deleteVertexMode ? "bg-red-600 text-white hover:bg-red-500" : "text-red-400 hover:text-red-600 hover:bg-red-50"}`}
               onClick={() => onToggleDeleteVertexMode()}
@@ -229,6 +229,26 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 </div>
               </div>
               <SpacingControl label="Side Line Width" value={local.edgeWidth || 2} min={1} max={10} step={1} onChange={v => commit("edgeWidth", v)} unit="ft" />
+              <Separator className="bg-slate-100" />
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-slate-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>ریلوے ٹریک (ساتھ)</label>
+                <Switch checked={!!(local.railway && local.railway.enabled)} onCheckedChange={v => commit("railway", { ...(local.railway || {}), enabled: v, side: (local.railway && local.railway.side) || "right", style: (local.railway && local.railway.style) || 1 })} className="scale-75" />
+              </div>
+              {local.railway && local.railway.enabled && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-500">Side:</span>
+                    <button onClick={() => commit("railway", { ...local.railway, side: "left" })} className={`px-2 h-6 text-[10px] rounded border ${local.railway.side === "left" ? "bg-slate-700 text-white border-slate-700" : "bg-white text-slate-600 border-slate-200"}`}>Left</button>
+                    <button onClick={() => commit("railway", { ...local.railway, side: "right" })} className={`px-2 h-6 text-[10px] rounded border ${local.railway.side === "right" ? "bg-slate-700 text-white border-slate-700" : "bg-white text-slate-600 border-slate-200"}`}>Right</button>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1">
+                    {[1,2,3,4,5].map(s => (
+                      <button key={s} onClick={() => commit("railway", { ...local.railway, style: s })} className={`h-7 text-[10px] rounded border font-bold ${(local.railway.style || 1) === s ? "bg-slate-700 text-white border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"}`}>{s}</button>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-slate-400">1=Wood 2=Concrete 3=Dashed 4=Ballast 5=Double</p>
+                </>
+              )}
               <div className="text-[10px] text-amber-600 font-mono">Black fill • Yellow sides • White center • {selectedObj.points?.length || 0} points</div>
             </>
           )}
@@ -240,6 +260,38 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               <SpacingControl label="Ladder Width" value={local.width || 28} min={8} max={80} step={2} onChange={v => commit("width", v)} unit="ft" />
               <SpacingControl label="Rung Spacing" value={local.rungSpacing || 20} min={8} max={60} step={2} onChange={v => commit("rungSpacing", v)} unit="ft" />
               <div className="text-[10px] text-red-600 font-mono">Red dotted ladder • {selectedObj.points?.length || 0} points</div>
+            </>
+          )}
+
+          {selectedObj.type === "railway" && (
+            <>
+              <Separator className="bg-slate-100" />
+              <Field label="Railway Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Main Line" />
+              <SpacingControl label="Track Width" value={local.width || 24} min={10} max={80} step={2} onChange={v => commit("width", v)} unit="ft" />
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Track Style (1-5)</label>
+                <div className="grid grid-cols-5 gap-1">
+                  {[1,2,3,4,5].map(s => (
+                    <button key={s} onClick={() => commit("railwayStyle", s)} className={`h-7 text-[10px] rounded border font-bold ${(local.railwayStyle || 1) === s ? "bg-slate-700 text-white border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"}`}>{s}</button>
+                  ))}
+                </div>
+                <p className="text-[9px] text-slate-400 mt-0.5">1=Wood ties 2=Concrete 3=Dashed 4=Ballast 5=Double line</p>
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Rail Colour</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={local.railColor || "#4b5563"} onChange={e => commit("railColor", e.target.value)} className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
+                  <span className="text-xs text-slate-600">Rails</span>
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Tie Colour</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={local.tieColor || "#78350f"} onChange={e => commit("tieColor", e.target.value)} className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
+                  <span className="text-xs text-slate-600">Sleepers</span>
+                </div>
+              </div>
+              <div className="text-[10px] text-slate-600 font-mono">Two rails + sleepers • {selectedObj.points?.length || 0} points</div>
             </>
           )}
 
