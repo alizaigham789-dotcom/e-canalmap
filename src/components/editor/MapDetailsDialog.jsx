@@ -8,7 +8,7 @@ import AutocompleteInput from "@/components/editor/AutocompleteInput";
 // Parses a legacy combined value like "L/13223" or "R/13223" into { side, number }.
 function splitMogaValue(value, fallbackSide) {
   if (value) {
-    const m = String(value).match(/^([LR])\/(\d+)$/i);
+    const m = String(value).match(/^([LR]|T\.L|T\.R|T-F\.L|T-F\.R)\/(\d+)$/i);
     if (m) return { side: m[1].toUpperCase(), number: m[2] };
   }
   return { side: fallbackSide || "L", number: value ? String(value).replace(/\D/g, "") : "" };
@@ -118,6 +118,10 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
                 className="w-20 h-10 px-2 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
                 <option value="L">L</option>
                 <option value="R">R</option>
+                <option value="T.L">T.L</option>
+                <option value="T.R">T.R</option>
+                <option value="T-F.R">T-F.R</option>
+                <option value="T-F.L">T-F.L</option>
               </select>
               <AutocompleteInput
                 value={form.moga_number}
