@@ -68,8 +68,8 @@ export default function MapList() {
   const buildAutoTitle = (m) => {
     const parts = [];
     if (m.moga_number) parts.push(`${m.moga_number}${m.mogha_side ? `/${m.mogha_side}` : ""}`);
-    if (m.rajbah) parts.push(`Rajbah ${m.rajbah}`);
-    if (m.village) parts.push(`Mozah ${m.village}`);
+    if (m.rajbah) parts.push(`راجباہ ${m.rajbah}`);
+    if (m.village) parts.push(`موضع ${m.village}`);
     return parts.join(" - ");
   };
   const setField = (key, value) => {
@@ -79,6 +79,15 @@ export default function MapList() {
       return next;
     });
   };
+
+  // Field labels in English + Urdu. Each label switches to Urdu automatically when
+  // the user types Urdu text into that field; otherwise it stays English.
+  const FIELD_LABELS = {
+    en: { moga: "Moga Number", side: "Side (L/R)", rajbah: "Rajbah / Canal Minor", village: "Village", section: "Section", tehsil: "Sub Division", district: "Canal Division", title: "Map Title *" },
+    ur: { moga: "موگہ نمبری", side: "سائیڈ (L/R)", rajbah: "راجباہ", village: "موضع", section: "سیکشن", tehsil: "سب ڈویژن", district: "کینال ڈویژن", title: "نقشہ ٹائٹل *" },
+  };
+  const isUrduText = (s) => /[\u0600-\u06FF]/.test(s || "");
+  const fieldLabel = (key, value) => isUrduText(value) ? FIELD_LABELS.ur[key] : FIELD_LABELS.en[key];
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.LandMap.delete(id),
@@ -427,7 +436,7 @@ export default function MapList() {
             {/* 1. Moga Number + Side (top) */}
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">Moga Number (موگہ نمبری)</label>
+                <label className="text-xs text-slate-500 mb-1 block">{fieldLabel('moga', newMap.moga_number)}</label>
                 <Input
                   placeholder="e.g. 13223"
                   value={newMap.moga_number}
@@ -436,7 +445,7 @@ export default function MapList() {
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">Side (L/R)</label>
+                <label className="text-xs text-slate-500 mb-1 block">{fieldLabel('side', newMap.mogha_side)}</label>
                 <select
                   value={newMap.mogha_side}
                   onChange={e => setField("mogha_side", e.target.value)}
@@ -450,7 +459,7 @@ export default function MapList() {
             </div>
             {/* 2. Rajbah / Canal Minor */}
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">Rajbah / Canal Minor (راجباہ)</label>
+              <label className="text-xs text-slate-500 mb-1 block">{fieldLabel('rajbah', newMap.rajbah)}</label>
               <Input
                 list="rajbah-options"
                 placeholder="e.g. Gunjial Distributry"
@@ -464,7 +473,7 @@ export default function MapList() {
             </div>
             {/* 3. Village (موضع) */}
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">Village (موضع)</label>
+              <label className="text-xs text-slate-500 mb-1 block">{fieldLabel('village', newMap.village)}</label>
               <Input
                 list="village-options"
                 placeholder="e.g. Roda"
@@ -478,7 +487,7 @@ export default function MapList() {
             </div>
             {/* 4. Section (سیکشن) */}
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">Section (سیکشن)</label>
+              <label className="text-xs text-slate-500 mb-1 block">{fieldLabel('section', newMap.section)}</label>
               <Input
                 list="section-options"
                 placeholder="e.g. Roda"
@@ -492,7 +501,7 @@ export default function MapList() {
             </div>
             {/* 5. Sub Division — dropdown from existing moga files */}
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">Sub Division (سب ڈویژن)</label>
+              <label className="text-xs text-slate-500 mb-1 block">{fieldLabel('tehsil', newMap.tehsil)}</label>
               <Input
                 list="subdiv-options"
                 placeholder="e.g. Qaidabad"
@@ -506,7 +515,7 @@ export default function MapList() {
             </div>
             {/* 5. Canal Division — dropdown from existing moga files (renamed from Division) */}
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">Canal Division (ڈویژن)</label>
+              <label className="text-xs text-slate-500 mb-1 block">{fieldLabel('district', newMap.district)}</label>
               <Input
                 list="canaldiv-options"
                 placeholder="e.g. Khushab"
@@ -520,7 +529,7 @@ export default function MapList() {
             </div>
             {/* 6. Map Title — auto-filled from Moga / Rajbah / Village (manual edit stops auto-fill) */}
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">Map Title *</label>
+              <label className="text-xs text-slate-500 mb-1 block">{fieldLabel('title', newMap.title)}</label>
               <Input
                 placeholder="Auto-filled from Moga / Rajbah / Village"
                 value={newMap.title}
