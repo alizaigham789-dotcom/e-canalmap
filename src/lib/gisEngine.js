@@ -133,6 +133,12 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
   const { gridSnap, spineSnap, mogaSnap } = snapSettings;
 
   let bestX = wx, bestY = wy, bestDist = Infinity;
+  // True ONLY when a canal edge/endpoint snap was actually applied this call.
+  // Without this flag, the canal-priority early return below would fire whenever
+  // bestX/bestY were still the raw cursor (canalEdgeDist === 0), skipping the
+  // parcel-boundary (killa + mustateel) snap entirely — so chakbandi nodes would
+  // never follow killa lines unless they happened to sit on a grid intersection.
+  let canalSnapActive = false;
 
   // Grid snap — snap to cadastral grid corners
   if (gridSnap) {
@@ -221,7 +227,7 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
       const endpoints = [o.points[0], o.points[o.points.length - 1]];
       for (const ep of endpoints) {
         const d = Math.hypot(wx - ep.x, wy - ep.y);
-        if (d < canalMagnetRange && d < bestDist) { bestX = ep.x; bestY = ep.y; bestDist = d; }
+        if (d < canalMagnetRange && d < bestDist) { bestX = ep.x; bestY = ep.y; bestDist = d; canalSnapActive = true; }
       }
       // Canal near edge — offset centerline by half-width toward the cursor
       const near = nearestPointOnPolyline(wx, wy, o.points);
@@ -235,7 +241,7 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
       const targetX = near.x + nx * halfCanalW * side;
       const targetY = near.y + ny * halfCanalW * side;
       const d = Math.hypot(wx - targetX, wy - targetY);
-      if (d < bestDist) { bestX = targetX; bestY = targetY; bestDist = d; }
+      if (d < bestDist) { bestX = targetX; bestY = targetY; bestDist = d; canalSnapActive = true; }
     }
   }
 
@@ -245,12 +251,19 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
   // canal's magnetic range, it locks onto the canal edge instead of a parcel boundary line.
   if (["chakbandi", "mouza", "khal"].includes(activeTool)) {
     const canalEdgeDist = Math.hypot(wx - bestX, wy - bestY);
-    if (activeTool === "chakbandi" && canalEdgeDist < threshold * 10) {
+    // Canal priority fires ONLY when a canal snap was actually applied — otherwise
+    // bestX/bestY equal the raw cursor (canalEdgeDist === 0) and we must fall through
+    // to the parcel-boundary snap so chakbandi nodes follow killa + mustateel lines.
+    if (activeTool === "chakbandi" && canalSnapActive && canalEdgeDist < threshold * 10) {
       return { x: bestX, y: bestY };
     }
     const snap = snapToParcelBoundaries(wx, wy, objects, threshold * 2);
     const dParcel = Math.hypot(wx - snap.x, wy - snap.y);
-    return canalEdgeDist < dParcel ? { x: bestX, y: bestY } : snap;
+    // Prefer the previously-computed snap (grid intersection / moga anchor) ONLY when one
+    // actually fired — otherwise bestX/bestY are still the raw cursor, canalEdgeDist === 0,
+    // and we'd wrongly return the unsnapped cursor instead of the killa/mustateel line snap.
+    const anySnapFired = bestDist < Infinity;
+    return (anySnapFired && canalEdgeDist < dParcel) ? { x: bestX, y: bestY } : snap;
   }
 
   return { x: bestX, y: bestY };
