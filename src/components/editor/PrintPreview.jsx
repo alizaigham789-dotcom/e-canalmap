@@ -31,7 +31,7 @@ const PENCIL_COLORS = {
 const KHAKA_DASTI_COLORS = {
   mustateelStroke: "#6b6b6b",
   murabaStroke: "#6b6b6b",
-  gridStroke: "rgba(120,120,120,0.42)",
+  gridStroke: "rgba(110,110,110,0.6)",
   labelColor: "#6b6b6b",
 };
 
@@ -811,8 +811,9 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       };
     }
     if (pencilMode) return { ...(colorSettings || {}), ...PENCIL_COLORS };
+    if (khakaDastiMode) return { ...(colorSettings || {}), ...KHAKA_DASTI_COLORS };
     return colorSettings || {};
-  }, [bwMode, pencilMode, colorSettings]);
+  }, [bwMode, pencilMode, khakaDastiMode, colorSettings]);
 
   const svgData = useMemo(
     () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 0.5, khakaDastiMode),
