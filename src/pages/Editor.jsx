@@ -704,12 +704,15 @@ export default function Editor() {
           }
         }
       }
+      // Auto-pick the canal name from the map header (rajbah = canal/minor name) so the
+      // name shown inside the canal matches the header line without manual entry.
+      if (!canal.name) canal.name = mapData?.rajbah || "";
       dsmRef.current.add(canal);
       setSelectedId(canal.id);
       syncObjects();
       saveRef.current();
     }
-  }, []);
+  }, [mapData]);
 
   const handleChakbandiPointAdd = useCallback((pt) => {
     setChakbandiDraft(prev => prev ? [...prev, pt] : [pt]);

@@ -104,14 +104,10 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
           </span>
         </div>
 
-        {/* Form fields */}
+        {/* Form fields — order: moga number/side → rajbah → mozah →
+            zilladar section → sub-division → division → map title (auto = moga no.) */}
         <div className="px-5 py-4 space-y-4 overflow-y-auto">
-          <Field label="Map Title *">
-            <input value={form.title} onChange={e => f("title", e.target.value)}
-              className={inputClass} placeholder="Map name" />
-          </Field>
-
-          {/* Moga number: side dropdown + number, same row */}
+          {/* Moga number: side dropdown + number, same row — top of form */}
           <Field label="موگہ نمبری">
             <div className="flex gap-2">
               <select value={form.mogha_side} onChange={e => f("mogha_side", e.target.value)}
@@ -121,7 +117,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
               </select>
               <AutocompleteInput
                 value={form.moga_number}
-                onChange={v => f("moga_number", v)}
+                onChange={v => { f("moga_number", v); f("title", v); }}
                 suggestions={suggestions.moga_number}
                 inputMode="numeric"
                 numeric
@@ -157,6 +153,13 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
           <Field label="ڈویژن">
             <AutocompleteInput value={form.district} onChange={v => f("district", v)}
               suggestions={suggestions.district} placeholder="Division / District" className={inputClass} />
+          </Field>
+
+          {/* Map Title — at the end, auto-filled with the moga number */}
+          <Field label="Map Title *">
+            <input value={form.title} onChange={e => f("title", e.target.value)}
+              className={inputClass} placeholder="Auto-filled from moga number" />
+            <p className="text-[11px] text-slate-400 mt-1">Auto-set to moga number — editable</p>
           </Field>
         </div>
 
