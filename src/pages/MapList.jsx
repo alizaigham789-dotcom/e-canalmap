@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Link, useNavigate } from "react-router-dom";
@@ -61,6 +61,24 @@ export default function MapList() {
   const fileInputRef = useRef(null);
   const [uploadTitle, setUploadTitle] = useState("");
   const [importing, setImporting] = useState(false);
+  const titleTouched = useRef(false);
+
+  // Auto-build the map title from Moga number/side + Rajbah + Village. Stops
+  // overwriting once the user manually edits the title field (titleTouched ref).
+  const buildAutoTitle = (m) => {
+    const parts = [];
+    if (m.moga_number) parts.push(`Moga ${m.moga_number}${m.mogha_side ? `/${m.mogha_side}` : ""}`);
+    if (m.rajbah) parts.push(m.rajbah);
+    if (m.village) parts.push(m.village);
+    return parts.join(" - ");
+  };
+  const setField = (key, value) => {
+    setNewMap(prev => {
+      const next = { ...prev, [key]: value };
+      if (!titleTouched.current) next.title = buildAutoTitle(next);
+      return next;
+    });
+  };
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.LandMap.delete(id),
@@ -120,6 +138,11 @@ export default function MapList() {
     queryKey: ["maps"],
     queryFn: () => base44.entities.LandMap.list("-created_date", 50),
   });
+
+  // Sub Division + Canal Division names previously entered in existing moga files —
+  // shown as dropdown suggestions so users pick instead of re-typing.
+  const subDivisions = useMemo(() => [...new Set(maps.map(m => m.tehsil).filter(Boolean))].sort(), [maps]);
+  const canalDivisions = useMemo(() => [...new Set(maps.map(m => m.district).filter(Boolean))].sort(), [maps]);
 
   const updateMapMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.LandMap.update(id, data),
@@ -275,7 +298,7 @@ export default function MapList() {
               {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} Import
             </Button>
             <input ref={fileInputRef} type="file" accept=".json,.chakbandi.json,application/json" onChange={handleUploadMap} className="sr-only" tabIndex={-1} />
-            <Button onClick={() => setShowCreate(true)} size="sm" className="bg-blue-600 hover:bg-blue-500 text-white gap-1.5 text-xs">
+            <Button onClick={() => { titleTouched.current = false; setShowCreate(true); }} size="sm" className="bg-blue-600 hover:bg-blue-500 text-white gap-1.5 text-xs">
               <Plus className="w-3.5 h-3.5" /> New
             </Button>
           </div>
@@ -324,7 +347,7 @@ export default function MapList() {
               {maps.length === 0 ? "No maps yet." : "No maps match your search."}
             </p>
             {maps.length === 0 && (
-              <Button onClick={() => setShowCreate(true)} className="bg-blue-600 hover:bg-blue-500 gap-2">
+              <Button onClick={() => { titleTouched.current = false; setShowCreate(true); }} className="bg-blue-600 hover:bg-blue-500 gap-2">
                 <Plus className="w-4 h-4" /> Create Map
               </Button>
             )}
@@ -398,28 +421,14 @@ export default function MapList() {
             <DialogTitle className="font-heading text-lg">New Cadastral Map</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            {[
-              { key: "title", label: "Map Title *", placeholder: "e.g., Nurpur Canal Survey 2024" },
-              { key: "village", label: "Village (موضع)", placeholder: "Village name" },
-            ].map(({ key, label, placeholder }) => (
-              <div key={key}>
-                <label className="text-xs text-slate-500 mb-1 block">{label}</label>
-                <Input
-                  placeholder={placeholder}
-                  value={newMap[key]}
-                  onChange={e => setNewMap(p => ({ ...p, [key]: e.target.value }))}
-                  className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
-                />
-              </div>
-            ))}
-            {/* Moga number + L/R side */}
+            {/* 1. Moga Number + Side (top) */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs text-slate-500 mb-1 block">Moga Number (موگہ نمبری)</label>
                 <Input
                   placeholder="e.g. 13223"
                   value={newMap.moga_number}
-                  onChange={e => setNewMap(p => ({ ...p, moga_number: e.target.value }))}
+                  onChange={e => setField("moga_number", e.target.value)}
                   className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 font-mono"
                 />
               </div>
@@ -427,7 +436,7 @@ export default function MapList() {
                 <label className="text-xs text-slate-500 mb-1 block">Side (L/R)</label>
                 <select
                   value={newMap.mogha_side}
-                  onChange={e => setNewMap(p => ({ ...p, mogha_side: e.target.value }))}
+                  onChange={e => setField("mogha_side", e.target.value)}
                   className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
                 >
                   <option value="">—</option>
@@ -436,22 +445,64 @@ export default function MapList() {
                 </select>
               </div>
             </div>
-            {[
-              { key: "rajbah", label: "Rajbah / Canal Minor (راجباہ)", placeholder: "e.g. Roda Minor" },
-              { key: "zilladar_section", label: "Zilladar Section (ضلعداری سیکشن)", placeholder: "e.g. Roda" },
-              { key: "tehsil", label: "Sub Division (سب ڈویژن)", placeholder: "e.g. Qaidabad" },
-              { key: "district", label: "Division (ڈویژن)", placeholder: "e.g. Khushab" },
-            ].map(({ key, label, placeholder }) => (
-              <div key={key}>
-                <label className="text-xs text-slate-500 mb-1 block">{label}</label>
-                <Input
-                  placeholder={placeholder}
-                  value={newMap[key]}
-                  onChange={e => setNewMap(p => ({ ...p, [key]: e.target.value }))}
-                  className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
-                />
-              </div>
-            ))}
+            {/* 2. Rajbah / Canal Minor */}
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Rajbah / Canal Minor (راجباہ)</label>
+              <Input
+                placeholder="e.g. Roda Minor"
+                value={newMap.rajbah}
+                onChange={e => setField("rajbah", e.target.value)}
+                className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
+              />
+            </div>
+            {/* 3. Village (موضع) */}
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Village (موضع)</label>
+              <Input
+                placeholder="Village name"
+                value={newMap.village}
+                onChange={e => setField("village", e.target.value)}
+                className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
+              />
+            </div>
+            {/* 4. Sub Division — dropdown from existing moga files */}
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Sub Division (سب ڈویژن)</label>
+              <Input
+                list="subdiv-options"
+                placeholder="e.g. Qaidabad"
+                value={newMap.tehsil}
+                onChange={e => setField("tehsil", e.target.value)}
+                className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
+              />
+              <datalist id="subdiv-options">
+                {subDivisions.map(s => <option key={s} value={s} />)}
+              </datalist>
+            </div>
+            {/* 5. Canal Division — dropdown from existing moga files (renamed from Division) */}
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Canal Division (ڈویژن)</label>
+              <Input
+                list="canaldiv-options"
+                placeholder="e.g. Khushab"
+                value={newMap.district}
+                onChange={e => setField("district", e.target.value)}
+                className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
+              />
+              <datalist id="canaldiv-options">
+                {canalDivisions.map(s => <option key={s} value={s} />)}
+              </datalist>
+            </div>
+            {/* 6. Map Title — auto-filled from Moga / Rajbah / Village (manual edit stops auto-fill) */}
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Map Title *</label>
+              <Input
+                placeholder="Auto-filled from Moga / Rajbah / Village"
+                value={newMap.title}
+                onChange={e => { titleTouched.current = true; setNewMap(p => ({ ...p, title: e.target.value })); }}
+                className="bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500"
+              />
+            </div>
           </div>
           <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => setShowCreate(false)} className="text-slate-500">Cancel</Button>
