@@ -1082,15 +1082,22 @@ export function drawMogaInfoOnCanvas(ctx, obj, fontPx) {
   const fam = urdu ? "'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,sans-serif" : "Rajdhani,Arial,sans-serif";
   let cy = lp.y;
   if (name) {
+    const nf = fontPx * 1.1;
     ctx.save();
     try { if (urdu) ctx.direction = "rtl"; } catch {}
-    ctx.fillStyle = "#0c4a6e";
-    ctx.font = `bold ${fontPx}px ${fam}`;
+    ctx.font = `bold ${nf}px ${fam}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
+    ctx.lineJoin = "round";
+    ctx.textAlign = "center";
+    // White halo — crisp, beautiful contrast on any map background (kills blur)
+    ctx.strokeStyle = "rgba(255,255,255,0.95)";
+    ctx.lineWidth = Math.max(2.5, nf * 0.18);
+    ctx.strokeText(name, lp.x, cy);
+    ctx.fillStyle = "#0c4a6e";
     ctx.fillText(name, lp.x, cy);
     ctx.restore();
-    cy += fontPx * 0.5;
+    cy += nf * 0.5;
   }
   if (hasCCA || hasGCA) {
     drawCCAGCAFractionBoxOnCanvas(ctx, String(obj.cca ?? ""), String(obj.gca ?? ""), lp.x, cy + fontPx * 0.9, fontPx);
@@ -1110,8 +1117,10 @@ export function svgMogaInfo(obj, fontPx) {
   let svg = "";
   let cy = lp.y;
   if (name) {
-    svg += `<text x="${lp.x.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="bottom" font-family="${fam}" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="#0c4a6e"${dir}>${escapeHtml(name)}</text>`;
-    cy += fontPx * 0.5;
+    const nf = fontPx * 1.1;
+    // White halo outline (paint-order: stroke) for crisp, beautiful contrast
+    svg += `<text x="${lp.x.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="bottom" font-family="${fam}" font-weight="bold" font-size="${nf.toFixed(1)}" fill="#0c4a6e" stroke="rgba(255,255,255,0.95)" stroke-width="${Math.max(2.5, nf * 0.18).toFixed(1)}" stroke-linejoin="round" paint-order="stroke"${dir}>${escapeHtml(name)}</text>`;
+    cy += nf * 0.5;
   }
   if (hasCCA || hasGCA) {
     svg += svgCCAGCAFractionBox(String(obj.cca ?? ""), String(obj.gca ?? ""), lp.x, cy + fontPx * 0.9, fontPx);
