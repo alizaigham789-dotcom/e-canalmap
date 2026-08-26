@@ -637,17 +637,26 @@ function buildBackgroundGridSVG(viewX, viewY, viewW, viewH) {
 // and 1 mustateel top/bottom beyond the drawn parcels, aligned to the global
 // mustateel grid. Lead-pencil grey so it reads as a light pencil guide a surveyor
 // can pencil-draw a missed mustateel onto.
-function buildKhakaDastiGuideGridSVG(bounds, targetAspect) {
+function buildKhakaDastiGuideGridSVG(parcelBounds, allBounds, targetAspect) {
   const mustW = DIMENSIONS.MUSTATEEL.width;
   const mustH = DIMENSIONS.MUSTATEEL.height;
-  // Margins: 1 dummy mustateel at top, 2 undrawn mustateels each side (left/right),
-  // 1 at bottom. The drawn map sits inside this guide grid; the grid starts right
-  // below the header (no white gap) so the page is fully used.
+  // The guide grid is anchored on the drawn PARCELS — 2 blank mustateels each side
+  // (left/right), 1 at top, 1 at bottom. Roads and canals are NOT the anchor, so the
+  // blank mustateels sit beyond the parcels (not beyond the road/canal).
   const leftCount = 2, rightCount = 2, topMust = 1, bottomMust = 1;
-  const startX = bounds.minX - leftCount * mustW;
-  const endX = bounds.maxX + rightCount * mustW;
-  const startY = bounds.minY - topMust * mustH;
-  let endY = bounds.maxY + bottomMust * mustH;
+  const base = parcelBounds || allBounds;
+  let startX = base.minX - leftCount * mustW;
+  let endX = base.maxX + rightCount * mustW;
+  let startY = base.minY - topMust * mustH;
+  let endY = base.maxY + bottomMust * mustH;
+  // Only if canals/roads extend BEYOND those blank mustateels, grow the grid on
+  // that side to cover them. The parcel area stays the visual anchor.
+  if (allBounds) {
+    startX = Math.min(startX, allBounds.minX);
+    endX = Math.max(endX, allBounds.maxX);
+    startY = Math.min(startY, allBounds.minY);
+    endY = Math.max(endY, allBounds.maxY);
+  }
   // Fill the page: extend the BOTTOM with empty guide rows until the grid's aspect
   // matches the printable content area (targetAspect = contentW/contentH). The
   // drawn map stays at the top (1 dumi mustateel above it); the extra space fills
@@ -701,7 +710,8 @@ function buildSVG(objects, colorSettings, filterMoga, killaVisibility = {}, moga
   const pad = 20;
   let viewX, viewY, viewW, viewH, guideGridSvg = "";
   if (khakaDasti) {
-    const guide = buildKhakaDastiGuideGridSVG(bounds, targetAspect);
+    const parcelBounds = getObjectsBounds(objects.filter(o => ["acre","mustateel","muraba"].includes(o.type)));
+    const guide = buildKhakaDastiGuideGridSVG(parcelBounds || bounds, bounds, targetAspect);
     guideGridSvg = guide.lines;
     viewX = guide.startX - pad;
     viewY = guide.startY - pad;
@@ -785,10 +795,24 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [khakaDastiMode, setKhakaDastiMode] = useState(false);
   // Per-element colourful toggle in Khaka Dasti — default all grey (pencil sketch),
   // user ticks to keep specific element types colourful.
-  const [khakaColorful, setKhakaColorful] = useState({
-    mustateel: false, muraba: false, canal: false, khal: false,
-    road: false, chakbandi: false, mouza: false, outlet: false,
+  // Khaka Dasti colourful toggles persist across sessions — once the user ticks an
+  // element colourful, that choice is remembered for later (not reset to grey each time).
+  const KHAKA_COLORFUL_KEY = "khaka_dasti_colorful_prefs";
+  const [khakaColorful, setKhakaColorful] = useState(() => {
+    const base = { mustateel: false, muraba: false, canal: false, khal: false, road: false, chakbandi: false, mouza: false, outlet: false };
+    try {
+      const saved = localStorage.getItem(KHAKA_COLORFUL_KEY);
+      if (saved) return { ...base, ...JSON.parse(saved) };
+    } catch {}
+    return base;
   });
+  const updateKhakaColorful = useCallback((updater) => {
+    setKhakaColorful(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      try { localStorage.setItem(KHAKA_COLORFUL_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
   const [pageOrientation, setPageOrientation] = useState("portrait");
   const [pageSize, setPageSize] = useState("A4");
   const [printMargin, setPrintMargin] = useState(0); // side margin removed per request
@@ -1217,7 +1241,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
                   <input
                     type="checkbox"
                     checked={khakaColorful[key]}
-                    onChange={e => setKhakaColorful(prev => ({ ...prev, [key]: e.target.checked }))}
+                    onChange={e => updateKhakaColorful(prev => ({ ...prev, [key]: e.target.checked }))}
                     className="w-3 h-3 accent-stone-600"
                   />
                   <span
