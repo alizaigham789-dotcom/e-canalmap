@@ -5,7 +5,7 @@
 // ============================================================
 
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
-import { drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, getOutletLabelPos, isUrduText } from "@/lib/printRenderHelpers";
+import { drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, getOutletLabelPos, isUrduText, drawRailwayTracksCanvas } from "@/lib/printRenderHelpers";
 import { drawSideBoundaryCanvas, drawCanalStyleCanvas, isNewCanalStyle } from "@/lib/canalStyles";
 
 // ---- Anti-aliased zoom-clamped font size ----
@@ -781,10 +781,12 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
 
   // Road-attached railway track (left/right side) — drawn parallel to the road
   if (obj.railway && obj.railway.enabled) {
-    const rwHalfW = 12;
+    const rwGauge = obj.railway.gaugeWidth || 24;
+    const rwHalfW = (obj.railway.style === 2 ? rwGauge : rwGauge) / 2;
     const offset = (obj.railway.side === "left" ? -1 : 1) * (halfW + rwHalfW + 4);
     const rwPath = getParallelPolyline(obj.points, offset);
-    drawRailwayTracks(ctx, rwPath, 24, obj.railway.style || 1, {}, zoom, false);
+    drawRailwayTracks(ctx, rwPath, obj.railway.gaugeWidth || 24, obj.railway.style || 1,
+      { tieSpacing: obj.railway.tieSpacing, gaugeWidth: obj.railway.gaugeWidth }, zoom, false);
   }
 
   if (obj.name) {
@@ -895,74 +897,68 @@ export function drawBridgeDraft(ctx, bridgeDraft, snapPos, zoom, C) {
 }
 
 // ============================================================
-// LAYER 3c: Railway Track (ریلوے) — 5 professional styles
-// Used standalone and for road-attached railway (offset parallel to road).
+// LAYER 3c: Railway Track (ریلوے) — 2 survey-accurate styles
+// style=1: single center line + perpendicular ticks (comb / single-rail survey style)
+// style=2: two parallel rails + perpendicular ties between them (double-rail / ladder)
+// tieSpacing & gaugeWidth come from the object's own properties (scrollbar controlled).
+// Used standalone and for road-attached railway.
 // ============================================================
-export function drawRailwayTracks(ctx, points, width, style, colors, zoom, isSelected) {
+export function drawRailwayTracks(ctx, points, width, style, opts, zoom, isSelected) {
   if (!points || points.length < 2) return;
-  const w = width || 24;
-  const halfW = w / 2;
-  const railColor = colors.railColor || "#4b5563";
-  const tieColor = colors.tieColor || "#78350f";
-  const left = getParallelPolyline(points, -halfW);
-  const right = getParallelPolyline(points, halfW);
+  const tieSpacing = (opts && opts.tieSpacing) || 28;
+  const gaugeWidth = (opts && opts.gaugeWidth !== undefined) ? opts.gaugeWidth : (width || 24) * 0.7;
+  const railColor = (opts && opts.railColor) || "#1a1a1a";
+  const tieColor = (opts && opts.tieColor) || "#1a1a1a";
+  const lineW = Math.max(1.5, (width || 24) * 0.12) / zoom;
+  const tieLen = (style === 2 ? gaugeWidth : (width || 24)) * 0.5;
 
-  // Style 4: ballast fill band between the rails
-  if (style === 4) {
-    ctx.fillStyle = "#cbd5e1";
-    ctx.beginPath();
-    drawSmoothPath(ctx, left);
-    ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
-    drawSmoothPath(ctx, [...right].reverse());
-    ctx.closePath(); ctx.fill();
-  }
-
-  // Ties (sleepers) — perpendicular bars at regular intervals (styles 1, 2, 3)
-  if (style === 1 || style === 2 || style === 3) {
-    const tieSpacing = 18;
-    const tieW = style === 2 ? 8 : 5; // concrete ties wider
-    ctx.strokeStyle = style === 2 ? "#9ca3af" : tieColor;
-    ctx.lineWidth = tieW / zoom;
-    ctx.lineCap = "round";
-    if (style === 3) ctx.setLineDash([6 / zoom, 4 / zoom]);
-    for (let i = 0; i < points.length - 1; i++) {
-      const a = points[i], b = points[i + 1];
-      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
-      const steps = Math.max(1, Math.floor(segLen / tieSpacing));
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps;
-        const lIdx = Math.min(i, left.length - 1), lNext = Math.min(i + 1, left.length - 1);
-        const rIdx = Math.min(i, right.length - 1), rNext = Math.min(i + 1, right.length - 1);
-        const lx = left[lIdx].x + (left[lNext].x - left[lIdx].x) * t;
-        const ly = left[lIdx].y + (left[lNext].y - left[lIdx].y) * t;
-        const rx = right[rIdx].x + (right[rNext].x - right[rIdx].x) * t;
-        const ry = right[rIdx].y + (right[rNext].y - right[rIdx].y) * t;
-        ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(rx, ry); ctx.stroke();
-      }
-    }
-    ctx.setLineDash([]);
-  }
-
-  // Two rails
-  ctx.strokeStyle = isSelected ? "#0ea5e9" : railColor;
-  ctx.lineWidth = 3.5 / zoom;
   ctx.lineCap = "round"; ctx.lineJoin = "round";
-  for (const side of [left, right]) {
-    ctx.beginPath(); drawSmoothPath(ctx, side); ctx.stroke();
+
+  if (style === 1) {
+    // Single center spine
+    ctx.strokeStyle = isSelected ? "#0ea5e9" : railColor;
+    ctx.lineWidth = lineW;
+    ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y);
+    for (const p of points) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  } else {
+    // Two parallel rails
+    const halfG = gaugeWidth / 2;
+    const left = getParallelPolyline(points, -halfG);
+    const right = getParallelPolyline(points, halfG);
+    ctx.strokeStyle = isSelected ? "#0ea5e9" : railColor;
+    ctx.lineWidth = lineW;
+    for (const rail of [left, right]) {
+      ctx.beginPath(); ctx.moveTo(rail[0].x, rail[0].y);
+      for (const p of rail) ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
   }
 
-  // Style 5: dashed centre line (double-track look)
-  if (style === 5) {
-    ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2 / zoom;
-    ctx.setLineDash([8 / zoom, 5 / zoom]);
-    ctx.beginPath(); drawSmoothPath(ctx, points); ctx.stroke(); ctx.setLineDash([]);
+  // Perpendicular ties along the path
+  ctx.strokeStyle = tieColor; ctx.lineWidth = lineW * 0.9;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1];
+    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+    if (segLen < 1) continue;
+    const ux = (b.x - a.x) / segLen, uy = (b.y - a.y) / segLen;
+    const nx = -uy, ny = ux;
+    const steps = Math.max(1, Math.floor(segLen / tieSpacing));
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+      ctx.beginPath();
+      ctx.moveTo(cx - nx * tieLen, cy - ny * tieLen);
+      ctx.lineTo(cx + nx * tieLen, cy + ny * tieLen);
+      ctx.stroke();
+    }
   }
 }
 
 export function drawRailway(ctx, obj, isSelected, zoom, C) {
   if (!obj.points || obj.points.length < 2) return;
   drawRailwayTracks(ctx, obj.points, obj.width || 24, obj.railwayStyle || 1,
-    { railColor: obj.railColor, tieColor: obj.tieColor }, zoom, isSelected);
+    { railColor: obj.railColor, tieColor: obj.tieColor, tieSpacing: obj.tieSpacing, gaugeWidth: obj.gaugeWidth }, zoom, isSelected);
   if (obj.name && zoom > 0.3) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid];

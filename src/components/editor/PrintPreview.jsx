@@ -504,10 +504,10 @@ function svgRoad(obj, C, idx) {
   const nameSvg = obj.name ? svgRoadName(obj.points, obj.name, obj.width || DIMENSIONS.ROAD_WIDTH) : "";
   let railwaySvg = "";
   if (obj.railway && obj.railway.enabled) {
-    const rwHalfW = 12;
-    const offset = (obj.railway.side === "left" ? -1 : 1) * ((obj.width || DIMENSIONS.ROAD_WIDTH) / 2 + rwHalfW + 4);
+    const rwGauge = obj.railway.gaugeWidth || 24;
+    const offset = (obj.railway.side === "left" ? -1 : 1) * ((obj.width || DIMENSIONS.ROAD_WIDTH) / 2 + rwGauge / 2 + 4);
     const rwPath = getParallelPolyline(obj.points, offset);
-    railwaySvg = svgRailwayTracks(rwPath, 24, obj.railway.style || 1, {});
+    railwaySvg = svgRailwayTracks(rwPath, rwGauge, obj.railway.style || 1, { tieSpacing: obj.railway.tieSpacing, gaugeWidth: obj.railway.gaugeWidth });
   }
   return `
 <g key="road_${idx}">
@@ -523,7 +523,7 @@ function svgRoad(obj, C, idx) {
 function svgRailway(obj, C, idx) {
   if (!obj.points || obj.points.length < 2) return "";
   const nameSvg = obj.name ? svgRoadName(obj.points, obj.name, obj.width || 24) : "";
-  return `<g key="railway_${idx}">${svgRailwayTracks(obj.points, obj.width || 24, obj.railwayStyle || 1, { railColor: obj.railColor, tieColor: obj.tieColor })}${nameSvg}</g>`;
+  return `<g key="railway_${idx}">${svgRailwayTracks(obj.points, obj.width || 24, obj.railwayStyle || 1, { railColor: obj.railColor, tieColor: obj.tieColor, tieSpacing: obj.tieSpacing, gaugeWidth: obj.gaugeWidth })}${nameSvg}</g>`;
 }
 
 function svgBridge(obj, C, idx) {

@@ -288,53 +288,6 @@ export function svgRoadName(points, text, roadWidth) {
   return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="${fontFamily}" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="white" stroke="rgba(0,0,0,0.6)" stroke-width="${(fontPx*0.12).toFixed(1)}" paint-order="stroke"${direction} transform="rotate(${deg.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)})">${text}</text>`;
 }
 
-// ─── SVG: railway tracks — 5 professional styles ────────────────────────
-// `points` is the railway centreline (already offset when road-attached).
-export function svgRailwayTracks(points, width, style, colors) {
-  if (!points || points.length < 2) return "";
-  const w = width || 24;
-  const halfW = w / 2;
-  const railColor = (colors && colors.railColor) || "#4b5563";
-  const tieColor = (colors && colors.tieColor) || "#78350f";
-  const left = getParallelPolyline(points, -halfW);
-  const right = getParallelPolyline(points, halfW);
-  let svg = "";
-  if (style === 4) {
-    const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-    svg += `<polygon points="${fillPts}" fill="#cbd5e1"/>`;
-  }
-  if (style === 1 || style === 2 || style === 3) {
-    const tieSpacing = 18;
-    const tieW = style === 2 ? 8 : 5;
-    const tieStroke = style === 2 ? "#9ca3af" : tieColor;
-    const dash = style === 3 ? ` stroke-dasharray="6,4"` : "";
-    for (let i = 0; i < points.length - 1; i++) {
-      const a = points[i], b = points[i + 1];
-      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
-      const steps = Math.max(1, Math.floor(segLen / tieSpacing));
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps;
-        const lIdx = Math.min(i, left.length - 1), lNext = Math.min(i + 1, left.length - 1);
-        const rIdx = Math.min(i, right.length - 1), rNext = Math.min(i + 1, right.length - 1);
-        const lx = left[lIdx].x + (left[lNext].x - left[lIdx].x) * t;
-        const ly = left[lIdx].y + (left[lNext].y - left[lIdx].y) * t;
-        const rx = right[rIdx].x + (right[rNext].x - right[rIdx].x) * t;
-        const ry = right[rIdx].y + (right[rNext].y - right[rIdx].y) * t;
-        svg += `<line x1="${lx.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${rx.toFixed(1)}" y2="${ry.toFixed(1)}" stroke="${tieStroke}" stroke-width="${tieW}" stroke-linecap="round"${dash}/>`;
-      }
-    }
-  }
-  const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  svg += `<polyline points="${leftPts}" fill="none" stroke="${railColor}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
-  svg += `<polyline points="${rightPts}" fill="none" stroke="${railColor}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
-  if (style === 5) {
-    const ctrPts = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-    svg += `<polyline points="${ctrPts}" fill="none" stroke="#fbbf24" stroke-width="2" stroke-dasharray="8,5" stroke-linecap="round"/>`;
-  }
-  return svg;
-}
-
 // ─── SVG: moga number as a fraction (number over line over R/L) ──────────
 // Positioned at (x, y). Returns SVG markup.
 export function svgMogaFraction(num, side, x, y, fontPx, color) {
@@ -638,6 +591,106 @@ export function getCCAGCAText(chakbandi, gcaValue) {
   // chakbandi is completed, matching the editor display.
   if (gcaValue > 0) return { cca: gcaText, gca: gcaText };
   return { cca: "", gca: gcaText };
+}
+
+// ─── RAILWAY TRACKS — 2 canonical survey styles ──────────────────────────────
+// style=1 (single-line comb): one center line + perpendicular ticks on both sides
+// style=2 (double-rail ladder): two parallel rails + perpendicular ties between them
+// Both accept tieSpacing (distance between ticks) and gaugeWidth (rail separation for style 2).
+// These are used by PrintPreview SVG, ExportDialog SVG, ExportDialog canvas, and GISRenderer canvas.
+export function svgRailwayTracks(points, width, style, opts = {}) {
+  if (!points || points.length < 2) return "";
+  const railColor = opts.railColor || "#1a1a1a";
+  const tieColor = opts.tieColor || "#1a1a1a";
+  const lineW = Math.max(2, (width || 24) * 0.12);
+  const tieSpacing = opts.tieSpacing || 28;
+  const gaugeWidth = opts.gaugeWidth !== undefined ? opts.gaugeWidth : (width || 24) * 0.7;
+  const tieLen = (style === 2 ? gaugeWidth : (width || 24)) * 0.5;
+
+  let railSvg = "";
+  let tieSvg = "";
+
+  if (style === 1) {
+    // Single center line
+    const pts = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    railSvg = `<polyline points="${pts}" fill="none" stroke="${railColor}" stroke-width="${lineW.toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  } else {
+    // Two parallel rails
+    const halfG = gaugeWidth / 2;
+    const left = getParallelPolyline(points, -halfG);
+    const right = getParallelPolyline(points, halfG);
+    const lPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    const rPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    railSvg = `<polyline points="${lPts}" fill="none" stroke="${railColor}" stroke-width="${lineW.toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    railSvg += `<polyline points="${rPts}" fill="none" stroke="${railColor}" stroke-width="${lineW.toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+
+  // Perpendicular ties along the path
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1];
+    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+    if (segLen < 1) continue;
+    const ux = (b.x - a.x) / segLen, uy = (b.y - a.y) / segLen;
+    const nx = -uy, ny = ux;
+    const steps = Math.max(1, Math.floor(segLen / tieSpacing));
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+      const x1 = (cx - nx * tieLen).toFixed(1), y1 = (cy - ny * tieLen).toFixed(1);
+      const x2 = (cx + nx * tieLen).toFixed(1), y2 = (cy + ny * tieLen).toFixed(1);
+      tieSvg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${tieColor}" stroke-width="${(lineW * 0.9).toFixed(1)}" stroke-linecap="round"/>`;
+    }
+  }
+
+  return railSvg + tieSvg;
+}
+
+// ─── CANVAS version of railway tracks (same logic, ctx-based) ──────────────
+export function drawRailwayTracksCanvas(ctx, points, width, style, opts = {}, zoom = 1) {
+  if (!points || points.length < 2) return;
+  const railColor = opts.railColor || "#1a1a1a";
+  const tieColor = opts.tieColor || "#1a1a1a";
+  const lineW = Math.max(1.5, (width || 24) * 0.12);
+  const tieSpacing = opts.tieSpacing || 28;
+  const gaugeWidth = opts.gaugeWidth !== undefined ? opts.gaugeWidth : (width || 24) * 0.7;
+  const tieLen = (style === 2 ? gaugeWidth : (width || 24)) * 0.5;
+
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+
+  if (style === 1) {
+    ctx.strokeStyle = railColor; ctx.lineWidth = lineW;
+    ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y);
+    for (const p of points) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  } else {
+    const halfG = gaugeWidth / 2;
+    const left = getParallelPolyline(points, -halfG);
+    const right = getParallelPolyline(points, halfG);
+    ctx.strokeStyle = railColor; ctx.lineWidth = lineW;
+    for (const rail of [left, right]) {
+      ctx.beginPath(); ctx.moveTo(rail[0].x, rail[0].y);
+      for (const p of rail) ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
+  }
+
+  ctx.strokeStyle = tieColor; ctx.lineWidth = lineW * 0.9;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1];
+    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+    if (segLen < 1) continue;
+    const ux = (b.x - a.x) / segLen, uy = (b.y - a.y) / segLen;
+    const nx = -uy, ny = ux;
+    const steps = Math.max(1, Math.floor(segLen / tieSpacing));
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+      ctx.beginPath();
+      ctx.moveTo(cx - nx * tieLen, cy - ny * tieLen);
+      ctx.lineTo(cx + nx * tieLen, cy + ny * tieLen);
+      ctx.stroke();
+    }
+  }
 }
 
 // ─── Helper: does killa number `kn` on this mustateel have a land-use label? ─

@@ -646,9 +646,11 @@ export function createRailway(points, name = "") {
     id: `railway_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "railway", points: points.map(p => ({ ...p })), name,
     width: DIMENSIONS.RAILWAY_WIDTH,
-    railwayStyle: 1, // 1=Wood ties, 2=Concrete ties, 3=Dashed ties, 4=Ballast, 5=Double line
-    railColor: "#4b5563",
-    tieColor: "#78350f",
+    railwayStyle: 1, // 1=Single comb, 2=Double ladder
+    tieSpacing: 28,  // distance between perpendicular ticks (feet)
+    gaugeWidth: 17,  // rail separation for style 2 (feet)
+    railColor: "#1a1a1a",
+    tieColor: "#1a1a1a",
   };
 }
 

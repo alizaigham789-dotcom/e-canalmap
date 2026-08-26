@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
-import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas, svgAcreUses, acreUseHasLabel, drawAcreUsesOnCanvas, svgRailwayTracks } from "@/lib/printRenderHelpers";
-import { drawExclusionHatchOnCanvas, drawRailwayTracks } from "@/components/editor/GISRenderer";
+import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas, svgAcreUses, acreUseHasLabel, drawAcreUsesOnCanvas, svgRailwayTracks, drawRailwayTracksCanvas as drawRailwayTracks } from "@/lib/printRenderHelpers";
+import { drawExclusionHatchOnCanvas } from "@/components/editor/GISRenderer";
 import { drawSideBoundaryCanvas, drawCanalStyleCanvas, buildSideBoundarySVG, buildCanalStyleSVG, isNewCanalStyle } from "@/lib/canalStyles";
 import { collectLandUses } from "@/lib/landUsePalette";
 import { canvasToPdfBlob, downloadBlob, shareBlob } from "@/lib/pdfExport";
@@ -263,13 +263,13 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.strokeStyle=C.roadStroke || "#b45309"; ctx.lineWidth=2/zoom;
       for(const s of [left,right]){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);for(const p of s)ctx.lineTo(p.x,p.y);ctx.stroke();}
       if (o.railway && o.railway.enabled) {
-        const rwHalfW = 12;
-        const offset = (o.railway.side === "left" ? -1 : 1) * (halfW + rwHalfW + 4);
+        const rwGauge = o.railway.gaugeWidth || 24;
+        const offset = (o.railway.side === "left" ? -1 : 1) * (halfW + rwGauge / 2 + 4);
         const rwPath = getParallelPolyline(o.points, offset);
-        drawRailwayTracks(ctx, rwPath, 24, o.railway.style || 1, {}, zoom, false);
+        drawRailwayTracks(ctx, rwPath, rwGauge, o.railway.style || 1, { tieSpacing: o.railway.tieSpacing, gaugeWidth: o.railway.gaugeWidth }, zoom, false);
       }
     } else if (o.type === "railway" && o.points?.length >= 2) {
-      drawRailwayTracks(ctx, o.points, o.width || 24, o.railwayStyle || 1, { railColor: o.railColor, tieColor: o.tieColor }, zoom, false);
+      drawRailwayTracks(ctx, o.points, o.width || 24, o.railwayStyle || 1, { railColor: o.railColor, tieColor: o.tieColor, tieSpacing: o.tieSpacing, gaugeWidth: o.gaugeWidth }, zoom, false);
     } else if (o.type === "chakbandi" && o.points?.length >= 2) {
       // Bold line + X crosses — colour & thickness match editor/print exactly
       const chColor = C.chakbandiStroke || "#000000";
@@ -593,15 +593,15 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const centerPts = o.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
       let railwaySvg = "";
       if (o.railway && o.railway.enabled) {
-        const rwHalfW = 12;
-        const offset = (o.railway.side === "left" ? -1 : 1) * ((o.width||DIMENSIONS.ROAD_WIDTH)/2 + rwHalfW + 4);
+        const rwGauge = o.railway.gaugeWidth || 24;
+        const offset = (o.railway.side === "left" ? -1 : 1) * ((o.width||DIMENSIONS.ROAD_WIDTH)/2 + rwGauge/2 + 4);
         const rwPath = getParallelPolyline(o.points, offset);
-        railwaySvg = svgRailwayTracks(rwPath, 24, o.railway.style || 1, {});
+        railwaySvg = svgRailwayTracks(rwPath, rwGauge, o.railway.style || 1, { tieSpacing: o.railway.tieSpacing, gaugeWidth: o.railway.gaugeWidth });
       }
       return `<g><polygon points="${fillPts}" fill="#3a3a3a"/><polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="10,6" stroke-linecap="round"/>${railwaySvg}</g>`;
     }
     if (o.type==="railway" && o.points?.length >= 2) {
-      return `<g>${svgRailwayTracks(o.points, o.width || 24, o.railwayStyle || 1, { railColor: o.railColor, tieColor: o.tieColor })}</g>`;
+      return `<g>${svgRailwayTracks(o.points, o.width || 24, o.railwayStyle || 1, { railColor: o.railColor, tieColor: o.tieColor, tieSpacing: o.tieSpacing, gaugeWidth: o.gaugeWidth })}</g>`;
     }
     if (o.type==="chakbandi" && o.points?.length>=2) {
       // Bold line + X crosses — colour & thickness match editor/print exactly
