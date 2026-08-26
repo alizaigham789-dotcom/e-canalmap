@@ -786,7 +786,7 @@ export function drawRoad(ctx, obj, isSelected, zoom, C) {
     const offset = (obj.railway.side === "left" ? -1 : 1) * (halfW + rwHalfW + 4);
     const rwPath = getParallelPolyline(obj.points, offset);
     drawRailwayTracks(ctx, rwPath, obj.railway.gaugeWidth || 24, obj.railway.style || 1,
-      { tieSpacing: obj.railway.tieSpacing, gaugeWidth: obj.railway.gaugeWidth, lineWidthScale: 0.5 }, zoom, false);
+      { tieSpacing: obj.railway.tieSpacing, gaugeWidth: obj.railway.gaugeWidth }, zoom, false);
   }
 
   if (obj.name) {
@@ -909,8 +909,7 @@ export function drawRailwayTracks(ctx, points, width, style, opts, zoom, isSelec
   const gaugeWidth = (opts && opts.gaugeWidth !== undefined) ? opts.gaugeWidth : (width || 24) * 0.7;
   const railColor = (opts && opts.railColor) || "#1a1a1a";
   const tieColor = (opts && opts.tieColor) || "#1a1a1a";
-  const lwScale = (opts && opts.lineWidthScale) || 1;
-  const lineW = Math.max(1.5, (width || 24) * 0.12 * lwScale) / zoom;
+  const lineW = Math.max(1.5, (width || 24) * 0.12) / zoom;
   // Style 2 (double ladder): ties extend slightly BEYOND the two rails (overhang)
   const tieLen = (style === 2 ? gaugeWidth * 0.5 + gaugeWidth * 0.3 : (width || 24) * 0.5);
 

@@ -266,7 +266,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const rwGauge = o.railway.gaugeWidth || 24;
         const offset = (o.railway.side === "left" ? -1 : 1) * (halfW + rwGauge / 2 + 4);
         const rwPath = getParallelPolyline(o.points, offset);
-        drawRailwayTracks(ctx, rwPath, rwGauge, o.railway.style || 1, { tieSpacing: o.railway.tieSpacing, gaugeWidth: o.railway.gaugeWidth, lineWidthScale: 0.5 }, zoom, false);
+        drawRailwayTracks(ctx, rwPath, rwGauge, o.railway.style || 1, { tieSpacing: o.railway.tieSpacing, gaugeWidth: o.railway.gaugeWidth }, zoom, false);
       }
     } else if (o.type === "railway" && o.points?.length >= 2) {
       drawRailwayTracks(ctx, o.points, o.width || 24, o.railwayStyle || 1, { railColor: o.railColor, tieColor: o.tieColor, tieSpacing: o.tieSpacing, gaugeWidth: o.gaugeWidth }, zoom, false);
@@ -596,7 +596,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const rwGauge = o.railway.gaugeWidth || 24;
         const offset = (o.railway.side === "left" ? -1 : 1) * ((o.width||DIMENSIONS.ROAD_WIDTH)/2 + rwGauge/2 + 4);
         const rwPath = getParallelPolyline(o.points, offset);
-        railwaySvg = svgRailwayTracks(rwPath, rwGauge, o.railway.style || 1, { tieSpacing: o.railway.tieSpacing, gaugeWidth: o.railway.gaugeWidth, lineWidthScale: 0.5 });
+        railwaySvg = svgRailwayTracks(rwPath, rwGauge, o.railway.style || 1, { tieSpacing: o.railway.tieSpacing, gaugeWidth: o.railway.gaugeWidth });
       }
       return `<g><polygon points="${fillPts}" fill="#3a3a3a"/><polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="10,6" stroke-linecap="round"/>${railwaySvg}</g>`;
     }

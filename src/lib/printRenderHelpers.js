@@ -602,8 +602,7 @@ export function svgRailwayTracks(points, width, style, opts = {}) {
   if (!points || points.length < 2) return "";
   const railColor = opts.railColor || "#1a1a1a";
   const tieColor = opts.tieColor || "#1a1a1a";
-  const lwScale = opts.lineWidthScale || 1;
-  const lineW = Math.max(2, (width || 24) * 0.12 * lwScale);
+  const lineW = Math.max(2, (width || 24) * 0.12);
   const tieSpacing = opts.tieSpacing || 28;
   const gaugeWidth = opts.gaugeWidth !== undefined ? opts.gaugeWidth : (width || 24) * 0.7;
   // Style 2 (double ladder): ties extend slightly BEYOND the two rails (overhang)
@@ -652,8 +651,7 @@ export function drawRailwayTracksCanvas(ctx, points, width, style, opts = {}, zo
   if (!points || points.length < 2) return;
   const railColor = opts.railColor || "#1a1a1a";
   const tieColor = opts.tieColor || "#1a1a1a";
-  const lwScale = opts.lineWidthScale || 1;
-  const lineW = Math.max(1.5, (width || 24) * 0.12 * lwScale);
+  const lineW = Math.max(1.5, (width || 24) * 0.12);
   const tieSpacing = opts.tieSpacing || 28;
   const gaugeWidth = opts.gaugeWidth !== undefined ? opts.gaugeWidth : (width || 24) * 0.7;
   // Style 2 (double ladder): ties extend slightly BEYOND the two rails (overhang)
