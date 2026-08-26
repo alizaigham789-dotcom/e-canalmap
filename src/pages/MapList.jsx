@@ -454,6 +454,10 @@ export default function MapList() {
                   <option value="">—</option>
                   <option value="L">L</option>
                   <option value="R">R</option>
+                  <option value="T.L">T.L</option>
+                  <option value="T.R">T.R</option>
+                  <option value="T-F.R">T-F.R</option>
+                  <option value="T-F.L">T-F.L</option>
                 </select>
               </div>
             </div>

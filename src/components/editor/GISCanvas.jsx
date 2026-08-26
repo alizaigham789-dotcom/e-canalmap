@@ -55,6 +55,7 @@ const GISCanvas = forwardRef(function GISCanvas(
   const movingGroupRef = useRef(null); // { groupId, originals } — whole moga group drag (merged maps)
   const vertexDrag = useRef(null); // { id, index } — dragging a single vertex of the selected chakbandi/canal
   const outletNodeDrag = useRef(null); // { id, which: "start"|"end" } — dragging a start/end node of the selected outlet/moga
+  const outletRotDrag = useRef(null); // { id, start, len } — rotating the outlet end around its start (length fixed)
   const movingLabelType = useRef(null); // "outlet" | "chakbandi" — dragging a label box
   const lastMouse = useRef({ x: 0, y: 0 });
   const longPressTimer = useRef(null);
@@ -220,6 +221,17 @@ const GISCanvas = forwardRef(function GISCanvas(
         ctx.lineWidth = 1.5 / zoom;
         ctx.beginPath(); ctx.rect(pt.x - s / 2, pt.y - s / 2, s, s); ctx.fill(); ctx.stroke();
       }
+      // Rotation handle — green circle offset perpendicular from the end. Drag it to
+      // swing the arrow (end rotates around start, length preserved).
+      const rdx = selObj.end.x - selObj.start.x, rdy = selObj.end.y - selObj.start.y;
+      const rdl = Math.hypot(rdx, rdy) || 1;
+      const rhx = selObj.end.x + (-rdy / rdl) * 28, rhy = selObj.end.y + (rdx / rdl) * 28;
+      ctx.strokeStyle = "rgba(22,163,74,0.7)"; ctx.lineWidth = 1.5 / zoom;
+      ctx.setLineDash([3/zoom, 3/zoom]);
+      ctx.beginPath(); ctx.moveTo(selObj.end.x, selObj.end.y); ctx.lineTo(rhx, rhy); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#22c55e"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5 / zoom;
+      ctx.beginPath(); ctx.arc(rhx, rhy, 7/zoom, 0, Math.PI*2); ctx.fill(); ctx.stroke();
     }
 
     // Draft previews
@@ -553,6 +565,16 @@ const GISCanvas = forwardRef(function GISCanvas(
         const newPoints = obj.points.map((p, i) => i === vertexDrag.current.index ? { x: snapped.x, y: snapped.y } : p);
         onUpdateObject(obj.id, { points: newPoints });
       }
+      return;
+    }
+    // Rotating the selected outlet/moga — swing the end around the start (length fixed)
+    if (outletRotDrag.current) {
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const worldRaw = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, pan.x, pan.y, zoom);
+      const r = outletRotDrag.current;
+      const ang = Math.atan2(worldRaw.y - r.start.y, worldRaw.x - r.start.x);
+      onUpdateObject(r.id, { end: { x: r.start.x + Math.cos(ang) * r.len, y: r.start.y + Math.sin(ang) * r.len } });
       return;
     }
     // Dragging a start/end node of the selected outlet/moga — change direction/length
@@ -956,9 +978,19 @@ const GISCanvas = forwardRef(function GISCanvas(
           return;
         }
       }
-      // Outlet/moga node handles — drag start or end to change direction/length
+      // Outlet/moga node handles — drag start/end to change direction/length, or grab
+      // the green rotation handle to swing the arrow around the start (length fixed).
       if (selectedObj && selectedObj.type === "outlet" && selectedObj.start && selectedObj.end) {
         const vThresh = (isTouchRef.current ? 30 : 10) / zoom;
+        // Rotation handle (green circle, perpendicular offset from the end)
+        const hdx = selectedObj.end.x - selectedObj.start.x, hdy = selectedObj.end.y - selectedObj.start.y;
+        const hdl = Math.hypot(hdx, hdy) || 1;
+        const rhx = selectedObj.end.x + (-hdy / hdl) * 28, rhy = selectedObj.end.y + (hdx / hdl) * 28;
+        if (Math.hypot(worldRaw.x - rhx, worldRaw.y - rhy) < vThresh) {
+          const len = Math.hypot(selectedObj.end.x - selectedObj.start.x, selectedObj.end.y - selectedObj.start.y);
+          outletRotDrag.current = { id: selectedObj.id, start: { ...selectedObj.start }, len };
+          return;
+        }
         if (Math.hypot(worldRaw.x - selectedObj.start.x, worldRaw.y - selectedObj.start.y) < vThresh) {
           outletNodeDrag.current = { id: selectedObj.id, which: "start" };
           return;
@@ -1029,6 +1061,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     }
     vertexDrag.current = null;
     outletNodeDrag.current = null;
+    outletRotDrag.current = null;
     isPanning.current = false; isMoving.current = false; movingObjId.current = null;
     movingLabelType.current = null;
     movingGroupRef.current = null;

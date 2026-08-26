@@ -412,8 +412,11 @@ function svgCanal(obj, C, idx, outlets) {
   // Vivid full-blue water (opaque, saturated, bright) — replaces the old translucent powder blue.
   // In B&W print mode these resolve to black/grey so the canal renders black & white
   // like every other tool (gradient stops use the same colours, not hardcoded blue).
-  const fillColor = C.canalFill || "#29A9E8";
-  const strokeColor = C.canalStroke || "#1688C7";
+  // Flat canal: vivid editor blue (matches the on-canvas look) unless a grey/B&W
+  // print mode is active — then fall back to the greyed colours from C.
+  const canalGreyed = C.bw || C._greyTypes?.has('canal');
+  const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#29A9E8";
+  const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#1688C7";
   if (obj.canalStyle === "flat") {
     const halfW = w / 2;
     const fillPath = parallelSmoothClosedPath(obj.points, halfW);
