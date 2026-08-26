@@ -5,6 +5,7 @@ import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, ge
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, svgMogaInfo, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel } from "@/lib/printRenderHelpers";
 import { collectLandUses } from "@/lib/landUsePalette";
+import { buildSideBoundarySVG, buildCanalStyleSVG, isNewCanalStyle } from "@/lib/canalStyles";
 import { Move, Download, Share2, Loader2 } from "lucide-react";
 import { canvasToPdfBlob, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdfExport";
 import { toast } from "sonner";
@@ -387,13 +388,17 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
 
 function svgCanal(obj, C, idx, outlets) {
   if (!obj.points || obj.points.length < 2) return "";
+  const boundarySvg = buildSideBoundarySVG(obj);
+  const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH);
+  const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf, outlets) : "";
+  if (isNewCanalStyle(obj.canalStyle)) {
+    return `<g>${boundarySvg}${buildCanalStyleSVG(obj, obj.canalStyle, C)}${nameSvg}</g>`;
+  }
   const w = (obj.width || DIMENSIONS.CANAL_WIDTH);
   const centerPath = pointsToSmoothPath(obj.points);
   // Vivid full-blue water (opaque, saturated, bright) — replaces the old translucent powder blue
   const fillColor = C.canalFill || "#29A9E8";
   const strokeColor = C.canalStroke || "#1688C7";
-  const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH);
-  const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf, outlets) : "";
   if (obj.canalStyle === "flat") {
     const halfW = w / 2;
     const fillPath = parallelSmoothClosedPath(obj.points, halfW);
@@ -410,6 +415,7 @@ function svgCanal(obj, C, idx, outlets) {
     const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="#1688C7"/><stop offset="0.5" stop-color="#29A9E8"/><stop offset="1" stop-color="#1688C7"/></linearGradient></defs>`;
     return `
 <g key="canal_${idx}">
+  ${boundarySvg}
   ${gradDef}
   <path d="${fillPath}" fill="url(#${gradId})" />
   <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
@@ -419,6 +425,7 @@ function svgCanal(obj, C, idx, outlets) {
   }
   return `
 <g key="canal_${idx}">
+  ${boundarySvg}
   <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${centerPath}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="${Math.max(1, w * 0.12).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>

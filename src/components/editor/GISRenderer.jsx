@@ -6,6 +6,7 @@
 
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, getOutletLabelPos, isUrduText } from "@/lib/printRenderHelpers";
+import { drawSideBoundaryCanvas, drawCanalStyleCanvas, isNewCanalStyle } from "@/lib/canalStyles";
 
 // ---- Anti-aliased zoom-clamped font size ----
 // For print: use a larger effective min so labels are always readable regardless of zoom
@@ -396,6 +397,14 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
 // ============================================================
 export function drawCanal(ctx, obj, isSelected, zoom, C) {
   if (obj.points.length < 2) return;
+  // Side boundary strips — drawn under the canal body, follow the full canal geometry
+  drawSideBoundaryCanvas(ctx, obj, zoom);
+  const _cs = obj.canalStyle;
+  if (isNewCanalStyle(_cs)) {
+    drawCanalStyleCanvas(ctx, obj, _cs, zoom, C);
+    if (obj.name) drawTextOnCanalPath(ctx, obj.points, obj.name, zoom);
+    return;
+  }
   const w = Math.max(2, obj.width);
   // Vivid full-blue water (opaque, saturated, bright) — replaces the old translucent powder blue.
   // Used by the 3D ribbon body; the flat style renders its own blue gradient below.

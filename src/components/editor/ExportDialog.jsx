@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas, svgAcreUses, acreUseHasLabel, drawAcreUsesOnCanvas } from "@/lib/printRenderHelpers";
 import { drawExclusionHatchOnCanvas } from "@/components/editor/GISRenderer";
+import { drawSideBoundaryCanvas, drawCanalStyleCanvas, buildSideBoundarySVG, buildCanalStyleSVG, isNewCanalStyle } from "@/lib/canalStyles";
 import { collectLandUses } from "@/lib/landUsePalette";
 import { canvasToPdfBlob, downloadBlob, shareBlob } from "@/lib/pdfExport";
 
@@ -197,6 +198,11 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       if (o.excluded) drawExclusionHatchOnCanvas(ctx, o, zoom);
       ctx.strokeStyle = C.acreStroke || "#eab308"; ctx.lineWidth = 1.5/zoom; ctx.strokeRect(o.x,o.y,o.w,o.h);
     } else if (o.type === "canal" && o.points?.length >= 2) {
+      // Side boundary strips under the canal body
+      drawSideBoundaryCanvas(ctx, o, zoom);
+      if (isNewCanalStyle(o.canalStyle)) {
+        drawCanalStyleCanvas(ctx, o, o.canalStyle, zoom, C);
+      } else {
       // Canal — 3D ribbon: rounded thick stroke + darker outline + soft halo
       const w = Math.max(2, o.width || DIMENSIONS.CANAL_WIDTH);
       const fillC = C.canalFill || "#29A9E8";
@@ -221,6 +227,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         ctx.strokeStyle = strokeC; ctx.lineWidth = w + 3; drawCenter(); ctx.stroke();
         ctx.strokeStyle = fillC; ctx.lineWidth = w; drawCenter(); ctx.stroke();
         ctx.strokeStyle = "rgba(255,255,255,0.30)"; ctx.lineWidth = Math.max(1, w * 0.12); drawCenter(); ctx.stroke();
+      }
       }
       if (o.name) {
         const cf = canalNameFont(o.width || DIMENSIONS.CANAL_WIDTH);
@@ -521,16 +528,20 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       return `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="${C.acreStroke || "#555"}" stroke-width="1"/>${hatch}`;
     }
     if (o.type === "canal" && o.points?.length >= 2) {
-      // Canal — smooth 3D ribbon: rounded thick stroke + darker outline + soft halo
-      const w = Math.max(2, o.width || DIMENSIONS.CANAL_WIDTH);
-      const fillColor = C.canalFill || "rgba(163,218,244,0.70)";
-      const strokeColor = C.canalStroke || "#2B7AB8";
-      const centerPts = o.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      const _boundarySvg = buildSideBoundarySVG(o);
       let nameSvg = "";
       if (o.name) {
         const cf = canalNameFont(o.width || DIMENSIONS.CANAL_WIDTH);
         nameSvg = svgCanalNameOnPath(o.points, o.name, cf);
       }
+      if (isNewCanalStyle(o.canalStyle)) {
+        return `<g>${_boundarySvg}${buildCanalStyleSVG(o, o.canalStyle, C)}${nameSvg}</g>`;
+      }
+      // Canal — smooth 3D ribbon: rounded thick stroke + darker outline + soft halo
+      const w = Math.max(2, o.width || DIMENSIONS.CANAL_WIDTH);
+      const fillColor = C.canalFill || "rgba(163,218,244,0.70)";
+      const strokeColor = C.canalStroke || "#2B7AB8";
+      const centerPts = o.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
       if (o.canalStyle === "flat") {
         const halfW = w / 2;
         const left = getParallelPolyline(o.points, -halfW);
@@ -538,9 +549,9 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         const fillPts = [...left, ...[...right].reverse()].map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
         const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
         const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-        return `<g><polygon points="${fillPts}" fill="${fillColor}"/><polyline points="${leftPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>${nameSvg}</g>`;
+        return `<g>${_boundarySvg}<polygon points="${fillPts}" fill="${fillColor}"/><polyline points="${leftPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/><polyline points="${rightPts}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>${nameSvg}</g>`;
       }
-      return `<g><polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 8}" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"/><polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="${Math.max(1, w * 0.12).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
+      return `<g>${_boundarySvg}<polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 8}" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"/><polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="${Math.max(1, w * 0.12).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
     }
     if (o.type === "khal" && o.points?.length >= 2) {
       // Khal — bilateral buffer + flow arrow at end
