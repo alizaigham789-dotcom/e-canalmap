@@ -605,7 +605,8 @@ export function svgRailwayTracks(points, width, style, opts = {}) {
   const lineW = Math.max(2, (width || 24) * 0.12);
   const tieSpacing = opts.tieSpacing || 28;
   const gaugeWidth = opts.gaugeWidth !== undefined ? opts.gaugeWidth : (width || 24) * 0.7;
-  const tieLen = (style === 2 ? gaugeWidth : (width || 24)) * 0.5;
+  // Style 2 (double ladder): ties extend slightly BEYOND the two rails (overhang)
+  const tieLen = style === 2 ? gaugeWidth * 0.5 + gaugeWidth * 0.3 : (width || 24) * 0.5;
 
   let railSvg = "";
   let tieSvg = "";
@@ -653,7 +654,8 @@ export function drawRailwayTracksCanvas(ctx, points, width, style, opts = {}, zo
   const lineW = Math.max(1.5, (width || 24) * 0.12);
   const tieSpacing = opts.tieSpacing || 28;
   const gaugeWidth = opts.gaugeWidth !== undefined ? opts.gaugeWidth : (width || 24) * 0.7;
-  const tieLen = (style === 2 ? gaugeWidth : (width || 24)) * 0.5;
+  // Style 2 (double ladder): ties extend slightly BEYOND the two rails (overhang)
+  const tieLen = style === 2 ? gaugeWidth * 0.5 + gaugeWidth * 0.3 : (width || 24) * 0.5;
 
   ctx.lineCap = "round"; ctx.lineJoin = "round";
 

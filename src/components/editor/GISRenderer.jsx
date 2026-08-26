@@ -910,7 +910,8 @@ export function drawRailwayTracks(ctx, points, width, style, opts, zoom, isSelec
   const railColor = (opts && opts.railColor) || "#1a1a1a";
   const tieColor = (opts && opts.tieColor) || "#1a1a1a";
   const lineW = Math.max(1.5, (width || 24) * 0.12) / zoom;
-  const tieLen = (style === 2 ? gaugeWidth : (width || 24)) * 0.5;
+  // Style 2 (double ladder): ties extend slightly BEYOND the two rails (overhang)
+  const tieLen = (style === 2 ? gaugeWidth * 0.5 + gaugeWidth * 0.3 : (width || 24) * 0.5);
 
   ctx.lineCap = "round"; ctx.lineJoin = "round";
 
