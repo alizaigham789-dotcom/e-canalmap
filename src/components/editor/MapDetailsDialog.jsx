@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { X, Save } from "lucide-react";
@@ -12,6 +12,16 @@ function splitMogaValue(value, fallbackSide) {
     if (m) return { side: m[1].toUpperCase(), number: m[2] };
   }
   return { side: fallbackSide || "L", number: value ? String(value).replace(/\D/g, "") : "" };
+}
+
+// Auto-build the map title from Moga number/side + Rajbah + Village — mirrors the
+// create-dialog logic. Stops overwriting once the user manually edits the title.
+function buildAutoTitle(m) {
+  const parts = [];
+  if (m.moga_number) parts.push(`${m.moga_number}${m.mogha_side ? `/${m.mogha_side}` : ""}`);
+  if (m.rajbah) parts.push(`راجباہ ${m.rajbah}`);
+  if (m.village) parts.push(`موضع ${m.village}`);
+  return parts.join(" - ");
 }
 
 function Field({ label, children }) {
@@ -33,6 +43,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
     title: "", moga_number: "", rajbah: "", village: "",
     zilladar_section: "", tehsil: "", district: "", mogha_side: "L",
   });
+  const titleTouched = useRef(false);
 
   // Fetch existing maps once — shared/cached with MapList via the same query key
   const { data: maps = [] } = useQuery({
@@ -52,7 +63,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
   useEffect(() => {
     if (mapData) {
       const { side, number } = splitMogaValue(mapData.moga_number, mapData.mogha_side);
-      setForm({
+      const next = {
         title: mapData.title || "",
         moga_number: number,
         rajbah: mapData.rajbah || "",
@@ -61,13 +72,24 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
         tehsil: mapData.tehsil || "",
         district: mapData.district || "",
         mogha_side: side,
-      });
+      };
+      // If the saved title is custom (≠ auto-derived), don't overwrite it on field changes.
+      titleTouched.current = !!mapData.title && mapData.title !== buildAutoTitle(next);
+      setForm(next);
     }
   }, [mapData, open]);
 
   if (!open) return null;
 
-  const f = (key, val) => setForm(p => ({ ...p, [key]: val }));
+  const f = (key, val) => setForm(p => {
+    const next = { ...p, [key]: val };
+    // Rebuild the auto title when moga number/side/rajbah/village change, unless
+    // the user has manually customized the title.
+    if ((key === "moga_number" || key === "mogha_side" || key === "rajbah" || key === "village") && !titleTouched.current) {
+      next.title = buildAutoTitle(next);
+    }
+    return next;
+  });
 
   const handleSave = () => {
     onSave({ ...form, moga_number: form.moga_number.replace(/\D/g, "") });
@@ -107,7 +129,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
         {/* Form fields */}
         <div className="px-5 py-4 space-y-4 overflow-y-auto">
           <Field label="Map Title *">
-            <input value={form.title} onChange={e => f("title", e.target.value)}
+            <input value={form.title} onChange={e => { titleTouched.current = true; f("title", e.target.value); }}
               className={inputClass} placeholder="Map name" />
           </Field>
 

@@ -4,7 +4,7 @@
 // and canal name text-on-path — used by PrintPreview & ExportDialog
 // ============================================================
 
-import { getParallelPolyline, DIMENSIONS, getMustateeelKillaGrid, escapeHtml } from "@/lib/gisEngine";
+import { getParallelPolyline, DIMENSIONS, getMustateeelKillaGrid, escapeHtml, pointInPolygon } from "@/lib/gisEngine";
 
 // Detect Urdu/Arabic script — switches canal name rendering to a connected
 // RTL label in Jameel Noori Nastaleeq (char-by-char on-path breaks the joins).
@@ -340,16 +340,51 @@ export function drawMogaFractionOnCanvas(ctx, num, side, x, y, fontPx, color) {
   }
 }
 
-// ─── GCA/CCA label position: above the chakbandi (top of bounding box) ───
+// ─── GCA/CCA label position: inside the chakbandi closed loop ───────────
+// The label sits at the polygon centroid (a suitable place inside the loop),
+// not above the boundary. Falls back to an interior point found by spiral scan
+// if the centroid lands outside a concave loop, then to the top of the bounds.
 export function chakbandiLabelPosition(chakbandi) {
-  if (!chakbandi.points || chakbandi.points.length === 0) return null;
-  let minY = Infinity, cx = 0;
-  for (const p of chakbandi.points) {
-    if (p.y < minY) minY = p.y;
-    cx += p.x;
+  const pts = chakbandi.points;
+  if (!pts || pts.length === 0) return null;
+  if (pts.length < 3) {
+    let cx = 0, cy = 0;
+    for (const p of pts) { cx += p.x; cy += p.y; }
+    return { x: cx / pts.length, y: cy / pts.length };
   }
-  cx /= chakbandi.points.length;
-  return { x: cx, y: minY };
+  // Area-weighted centroid of the closed loop
+  let area = 0, cx = 0, cy = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length;
+    const cross = pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+    area += cross;
+    cx += (pts[i].x + pts[j].x) * cross;
+    cy += (pts[i].y + pts[j].y) * cross;
+  }
+  let cen;
+  if (Math.abs(area) > 1e-9) {
+    area *= 0.5;
+    cen = { x: cx / (6 * area), y: cy / (6 * area) };
+  } else {
+    let ax = 0, ay = 0;
+    for (const p of pts) { ax += p.x; ay += p.y; }
+    cen = { x: ax / pts.length, y: ay / pts.length };
+  }
+  if (pointInPolygon(cen, pts)) return cen;
+  // Concave loop — spiral outward from the centroid to find an interior point
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of pts) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
+  const step = Math.max(8, Math.min(maxX - minX, maxY - minY) / 24);
+  for (let r = 1; r < 60; r++) {
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+      const tx = cen.x + Math.cos(a) * r * step, ty = cen.y + Math.sin(a) * r * step;
+      if (pointInPolygon({ x: tx, y: ty }, pts)) return { x: tx, y: ty };
+    }
+  }
+  // Last resort: top of bounding box (old behaviour)
+  let topY = Infinity, tcx = 0;
+  for (const p of pts) { if (p.y < topY) topY = p.y; tcx += p.x; }
+  return { x: tcx / pts.length, y: topY };
 }
 
 // ─── Default outlet label position (near the moga HEAD) ──────────────────

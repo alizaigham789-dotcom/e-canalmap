@@ -161,8 +161,8 @@ const GISCanvas = forwardRef(function GISCanvas(
       const _parcels = objects.filter(o => ["acre", "mustateel", "muraba"].includes(o.type));
       const _canals = objects.filter(o => o.type === "canal");
       const _chakbandis = objects.filter(o => o.type === "chakbandi");
-      const gcaFontWorld = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.30;
-      const gcaFont = Math.max(12, Math.min(24, gcaFontWorld * zoom)) / zoom;
+      const gcaFontWorld = Math.min(DIMENSIONS.MUSTATEEL.width, DIMENSIONS.MUSTATEEL.height) * 0.45; // 1.5× bigger (was 0.30)
+      const gcaFont = Math.max(18, Math.min(36, gcaFontWorld * zoom)) / zoom; // 1.5× bigger cap (was 12–24)
       const interacting = isPanning.current || isMoving.current || !!vertexDrag.current;
       for (const ch of _chakbandis) {
         if (ch.points?.length >= 3) {
