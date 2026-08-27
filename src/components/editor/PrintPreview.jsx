@@ -838,6 +838,13 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     const dim = PAGE_DIMENSIONS[pageSize] || PAGE_DIMENSIONS.A4;
     return pageOrientation === "portrait" ? dim.w / dim.h : dim.h / dim.w;
   }, [pageSize, pageOrientation]);
+  // Page width in mm — used to convert the left/right print margin into a percentage
+  // for the on-screen preview (the print window uses mm directly).
+  const pageWidthMm = useMemo(() => {
+    const dim = PAGE_DIMENSIONS[pageSize] || PAGE_DIMENSIONS.A4;
+    return pageOrientation === "portrait" ? dim.w : dim.h;
+  }, [pageSize, pageOrientation]);
+  const marginPct = pageWidthMm > 0 ? (printMargin / pageWidthMm) * 100 : 0;
   // Khaka Dasti: target aspect of the printable content area (page minus the
   // compact header). The guide grid is extended downward with empty rows so its
   // aspect matches this — the grid then fills the whole page (starting right below
@@ -1075,7 +1082,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       </style>
     </head><body>
       ${headerHTML}
-      <div class="map-wrap">
+      <div class="map-wrap" style="padding-left:${printMargin}mm; padding-right:${printMargin}mm;">
         <svg xmlns="http://www.w3.org/2000/svg"
              viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
              preserveAspectRatio="xMidYMid meet"
@@ -1280,6 +1287,16 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               className="w-3 h-3 accent-blue-500" />
             <span className="text-[10px] text-slate-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>علامات دکھائیں</span>
           </label>
+          {/* Page margin (left/right) — 0 = full page, no margin */}
+          <div className="flex items-center gap-1.5 bg-white rounded-lg px-2 py-1 border border-slate-300">
+            <span className="text-[10px] text-slate-600 whitespace-nowrap" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>پیج مارجن</span>
+            <input
+              type="range" min={0} max={40} step={1} value={printMargin}
+              onChange={e => setPrintMargin(parseInt(e.target.value))}
+              className="w-16 h-1 accent-blue-500 cursor-pointer"
+            />
+            <span className="text-[10px] font-mono text-slate-500 w-10">{printMargin}mm</span>
+          </div>
           {/* Page border toggle */}
           <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <input type="checkbox" checked={showPageBorder} onChange={e => setShowPageBorder(e.target.checked)}
@@ -1318,8 +1335,9 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             onClick={handlePreviewClick}
           >
             <PrintHeaderBox mapData={mapData} compact={khakaDastiMode} />
-            {/* SVG Map — pure inline vector, fills remaining space between header & footer */}
-            <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-center">
+            {/* SVG Map — pure inline vector, fills remaining space between header & footer.
+                Left/right page margin applies here only (header & footer stay full-width). */}
+            <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-center" style={{ paddingLeft: `${marginPct}%`, paddingRight: `${marginPct}%` }}>
               {inlineSvgMarkup ? (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
