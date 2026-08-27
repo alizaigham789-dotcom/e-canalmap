@@ -241,8 +241,16 @@ export function computeSnapPosition(wx, wy, activeTool, objects, snapSettings) {
     return (anySnapFired && canalEdgeDist < dParcel) ? { x: bestX, y: bestY } : snap;
   }
 
-  // Mouza / khal — follow killa & mustateel boundary lines (no canal priority).
-  if (activeTool === "mouza" || activeTool === "khal") {
+  // Mouza — auto-follow killa & mustateel boundary lines while drawing.
+  // Parcel boundaries ALWAYS win (no canal/spine interference) so the mouza line
+  // traces the cadastral grid edges exactly. Generous threshold makes the point
+  // lock onto the nearest boundary and slide along it as the cursor moves.
+  if (activeTool === "mouza") {
+    return snapToParcelBoundaries(wx, wy, objects, threshold * 3);
+  }
+  // Khal — follows killa & mustateel boundary lines but may still connect to a
+  // canal endpoint/spine when genuinely close (watercourses join canals).
+  if (activeTool === "khal") {
     const snap = snapToParcelBoundaries(wx, wy, objects, threshold * 2);
     const anySnapFired = bestDist < Infinity;
     const canalEdgeDist = Math.hypot(wx - bestX, wy - bestY);

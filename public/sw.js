@@ -3,7 +3,7 @@
 // always gets the latest deployed version — including app name, icon, and
 // manifest changes. Cache is only a fallback for offline use.
 // Old caches are wiped on activation so stale favicons/manifests are purged.
-const CACHE = 'ecanal-app-v4';
+const CACHE = 'ecanal-app-v5';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
