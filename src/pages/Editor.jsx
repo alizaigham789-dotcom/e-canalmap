@@ -27,7 +27,7 @@ import {
   saveToClipboard, loadFromClipboard, hasClipboard, worldToScreen,
 } from "@/lib/gisEngine";
 import { Layers, BookOpen, Palette, Printer, Magnet, Pen, Grid3x3, Group, Save, Camera, Download, Loader2, X, Eye, EyeOff, Copy, Clipboard, SquareStack, BoxSelect, Upload, FileDown, Frame, LayoutGrid, Type, Trash2 } from "lucide-react";
-import { saveBackup, getBackup, setLastMapId } from "@/lib/mapBackup";
+import { saveBackup, getBackup, getBestBackup, setLastMapId } from "@/lib/mapBackup";
 import { saveMaxSnapshot, getMaxSnapshot } from "@/lib/serverSnapshot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -128,6 +128,7 @@ export default function Editor() {
   const forceSaveRef = useRef(false); // when true, skip the data-loss safeguard
   const explicitDeleteRef = useRef(false); // set true on user-initiated delete — lowers the safeguard baseline
   const serverMaxNonParcelRef = useRef(0); // all-time peak non-parcel count — gates server snapshot upserts (only ever rises)
+  const dirtyRef = useRef(false); // true when there are unsaved edits — gates the periodic 10s idle save
   const clipboardRef = useRef([]);
   const zoomRef = useRef(zoom);
   const panRef = useRef(pan);
@@ -186,6 +187,7 @@ export default function Editor() {
       return;
     }
     forceSaveRef.current = false; // reset force flag after one save
+    dirtyRef.current = false; // edits flushed — clear the dirty flag so the idle save skips until the next edit
     const parcels = dsmRef.current.getByType("mustateel").length +
       dsmRef.current.getByType("muraba").length;
     const payload = {
@@ -317,7 +319,9 @@ export default function Editor() {
       } catch {}
 
       // Source B: IndexedDB (async — crash / phone reboot recovery)
-      const idbBackup = await getBackup(mapData.id);
+      // Use getBestBackup so a transient glitch that wrote an empty latest version
+      // doesn't poison recovery — the most complete historical version is used.
+      const idbBackup = await getBestBackup(mapData.id);
       const idbObjs = idbBackup?.objects || null;
       const idbViewport = idbBackup?.viewport || null;
       const idbSettings = idbBackup?.editorSettings || null;
@@ -411,6 +415,7 @@ export default function Editor() {
     // cause of the editor freezing on large merged maps. Now it runs once, a short
     // delay after the user stops actively editing. The unmount + beforeunload
     // handlers still write synchronously when leaving, so no data is lost.
+    dirtyRef.current = true; // mark unsaved edits so the periodic idle save can flush them
     scheduleSyncBackup();
     scheduleAutoSave();
   };
@@ -420,6 +425,16 @@ export default function Editor() {
   const syncBackup = () => {
     const currentMapId = mapIdRef.current;
     if (!currentMapId || !loadedMapIdRef.current) return;
+    // DATA-LOSS SAFEGUARD: never overwrite the persistent backups (sessionStorage +
+    // IndexedDB) with a catastrophically-wiped state (all non-parcel objects gone
+    // without an explicit delete). The React Query cache is still updated (it's
+    // in-memory only and rebuilt on reload), but the durable backups that recovery
+    // depends on are preserved. This stops a transient glitch from destroying the
+    // good backup that the next load needs to restore from.
+    const currentNonParcel = countNonParcels(dsmRef.current.objects);
+    if (!explicitDeleteRef.current && loadedNonParcelCountRef.current > 0 && currentNonParcel === 0) {
+      return;
+    }
     const drawingData = dsmRef.current.serialize();
     const vp = JSON.stringify({ zoom: zoomRef.current, pan: panRef.current });
     const settings = settingsRef.current();
@@ -465,7 +480,7 @@ export default function Editor() {
   // auto-save timer was cleared or a save silently failed
   useEffect(() => {
     const interval = setInterval(() => {
-      if (loadedMapIdRef.current && mapIdRef.current && dsmRef.current.objects.length > 0) {
+      if (loadedMapIdRef.current && mapIdRef.current && dsmRef.current.objects.length > 0 && dirtyRef.current) {
         saveRef.current();
       }
     }, 10000);

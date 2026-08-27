@@ -94,6 +94,28 @@ export async function getBackup(mapId) {
   }
 }
 
+// Get the BEST backup version for a map — the one with the most non-parcel
+// objects (canals/chakbandis/khals/mouzas/outlets/roads), scanning ALL stored
+// versions. This protects recovery: if a transient glitch wrote an empty/partial
+// state as the latest version, getBestBackup still returns the most complete
+// historical version instead of the corrupted latest one.
+const NON_PARCEL_TYPES = ["canal", "chakbandi", "khal", "road", "railway", "mouza", "outlet", "damageMarker", "bridge"];
+function nonParcelCount(objs) { return (objs || []).filter(o => NON_PARCEL_TYPES.includes(o.type)).length; }
+export async function getBestBackup(mapId) {
+  if (!mapId) return null;
+  const versions = await getAllBackups(mapId);
+  if (!versions || versions.length === 0) return null;
+  let best = versions[0], bestNp = nonParcelCount(best.objects);
+  for (const v of versions) {
+    const np = nonParcelCount(v.objects);
+    // Prefer the version with the most non-parcel objects; tiebreak by total count
+    if (np > bestNp || (np === bestNp && (v.objects || []).length > (best.objects || []).length)) {
+      best = v; bestNp = np;
+    }
+  }
+  return best;
+}
+
 // Get all backup versions (newest first) for crash recovery / version history
 export async function getAllBackups(mapId) {
   if (!mapId) return [];

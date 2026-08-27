@@ -1464,23 +1464,52 @@ export function canalNameFont(width = 100) {
 // ============================================================
 export function hitTest(wx, wy, objects, eraser = false) {
   const BORDER_THRESH = eraser ? 20 : 0; // eraser hits on boundary edge click
-  for (let i = objects.length - 1; i >= 0; i--) {
-    const o = objects[i];
-    if (["acre", "mustateel", "muraba"].includes(o.type)) {
-      if (eraser) {
-        // Eraser: ONLY hit when clicking near the boundary EDGE (not interior).
-        // This lets you erase canals/khals drawn on top of a mustateel without
-        // accidentally erasing the parcel below.
+  // Two-pass hit test (non-eraser): line/outlet objects are checked FIRST so a
+  // click directly on a canal/chakbandi/khal/road/mouza/outlet always selects that
+  // line — never the parcel drawn underneath it. Only when no line is hit do we
+  // fall through to parcel interior selection. This stops the chakbandi tool from
+  // accidentally selecting the mustateel beneath, which lost the chakbandi
+  // selection + popped the mustateel properties panel every time.
+  // Eraser keeps the original single pass (boundary-aware parcel edge hits).
+  if (eraser) {
+    for (let i = objects.length - 1; i >= 0; i--) {
+      const o = objects[i];
+      if (["acre", "mustateel", "muraba"].includes(o.type)) {
         const nearEdge =
           (wx >= o.x - BORDER_THRESH && wx <= o.x + o.w + BORDER_THRESH &&
            wy >= o.y - BORDER_THRESH && wy <= o.y + o.h + BORDER_THRESH) &&
           (wx <= o.x + BORDER_THRESH || wx >= o.x + o.w - BORDER_THRESH ||
            wy <= o.y + BORDER_THRESH || wy >= o.y + o.h - BORDER_THRESH);
         if (nearEdge) return o;
-      } else {
-        if (wx >= o.x && wx <= o.x + o.w && wy >= o.y && wy <= o.y + o.h) return o;
+      } else if (o.type === "damageMarker") {
+        if (Math.hypot(wx - o.x, wy - o.y) < 12) return o;
+        if (o.points?.length >= 2) {
+          for (let j = 0; j < o.points.length - 1; j++) {
+            if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < 12) return o;
+          }
+        }
+      } else if (["canal", "chakbandi", "khal", "road", "railway"].includes(o.type)) {
+        const lineWidth = o.width || (o.type === "canal" ? 14 : o.type === "khal" ? 8 : o.type === "road" ? 28 : o.type === "railway" ? 24 : 14);
+        const thresh = Math.max(25, lineWidth / 2 + 15);
+        for (let j = 0; j < o.points.length - 1; j++) {
+          if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < thresh) return o;
+        }
+      } else if (o.type === "outlet") {
+        if (distToLineSegment(wx, wy, o.start.x, o.start.y, o.end.x, o.end.y) < 15) return o;
+      } else if (o.type === "mouza") {
+        const thresh = 25;
+        for (let j = 0; j < o.points.length - 1; j++) {
+          if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < thresh) return o;
+        }
       }
-    } else if (o.type === "damageMarker") {
+    }
+    return null;
+  }
+
+  // Non-eraser: PASS 1 — line / outlet / marker objects (top of z-stack first)
+  for (let i = objects.length - 1; i >= 0; i--) {
+    const o = objects[i];
+    if (o.type === "damageMarker") {
       if (Math.hypot(wx - o.x, wy - o.y) < 12) return o;
       if (o.points?.length >= 2) {
         for (let j = 0; j < o.points.length - 1; j++) {
@@ -1488,16 +1517,8 @@ export function hitTest(wx, wy, objects, eraser = false) {
         }
       }
     } else if (["canal", "chakbandi", "khal", "road", "railway"].includes(o.type)) {
-      // Eraser: wider threshold + account for line width so overlapping lines
-      // can each be erased one at a time (top first, then bottom on next click).
-      // Non-eraser: threshold scales with actual line width so clicking on the
-      // canal body always hits the canal, not the parcel underneath.
       const lineWidth = o.width || (o.type === "canal" ? 14 : o.type === "khal" ? 8 : o.type === "road" ? 28 : o.type === "railway" ? 24 : 14);
-      // Chakbandi: tighter non-eraser threshold so clicking a parcel interior
-      // selects the parcel, not a chakbandi line passing nearby. Only direct
-      // clicks on the line itself select the chakbandi (showing its edit nodes).
-      const thresh = eraser ? Math.max(25, lineWidth / 2 + 15)
-        : o.type === "chakbandi" ? Math.max(7, lineWidth / 2 + 1)
+      const thresh = o.type === "chakbandi" ? Math.max(7, lineWidth / 2 + 1)
         : Math.max(15, lineWidth / 2 + 8);
       for (let j = 0; j < o.points.length - 1; j++) {
         if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < thresh) return o;
@@ -1505,10 +1526,18 @@ export function hitTest(wx, wy, objects, eraser = false) {
     } else if (o.type === "outlet") {
       if (distToLineSegment(wx, wy, o.start.x, o.start.y, o.end.x, o.end.y) < 15) return o;
     } else if (o.type === "mouza") {
-      const thresh = eraser ? 25 : 12;
+      const thresh = 12;
       for (let j = 0; j < o.points.length - 1; j++) {
         if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < thresh) return o;
       }
+    }
+  }
+
+  // Non-eraser: PASS 2 — parcel interiors (only if no line was hit)
+  for (let i = objects.length - 1; i >= 0; i--) {
+    const o = objects[i];
+    if (["acre", "mustateel", "muraba"].includes(o.type)) {
+      if (wx >= o.x && wx <= o.x + o.w && wy >= o.y && wy <= o.y + o.h) return o;
     }
   }
   return null;
