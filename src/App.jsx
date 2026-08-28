@@ -2,41 +2,43 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
-
-// Page imports
-import Dashboard from './pages/Dashboard';
-import MapList from './pages/MapList';
-import Editor from './pages/Editor';
-import AdminPanel from './pages/AdminPanel';
-import CanalForms from './pages/CanalForms';
-import ParatWarabandi from './pages/ParatWarabandi';
-import FormSettings from './pages/FormSettings';
-import KhalMismari from './pages/KhalMismari';
-import Warashikni from './pages/Warashikni';
-import TawanCase from './pages/TawanCase';
-import TAForm from './pages/TAForm';
-import GeoMap from './pages/GeoMap';
-import MogaMerge from './pages/MogaMerge';
-import Form1Register from './pages/Form1Register';
-import DeputyCollectorDocs from './pages/DeputyCollectorDocs';
-import Form33C from './pages/Form33C';
-
-import ZilladarDocs from './pages/ZilladarDocs';
-import GroupChat from './pages/GroupChat';
-import CanalPatwari from './pages/CanalPatwari';
-import Naqsha27B from './pages/Naqsha27B';
-import ChakbandiIkhrajCase from './pages/ChakbandiIkhrajCase';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Subscription from './pages/Subscription';
-import Account from './pages/Account';
 import SubscriptionGate from '@/components/SubscriptionGate';
+
+// Route-level code splitting — each page loads in its own chunk so the
+// initial bundle stays small and the app opens fast. Heavy libs (three.js,
+// jspdf, leaflet, html2canvas…) only load when their page is opened.
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const MapList = lazy(() => import('./pages/MapList'));
+const Editor = lazy(() => import('./pages/Editor'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+const CanalForms = lazy(() => import('./pages/CanalForms'));
+const ParatWarabandi = lazy(() => import('./pages/ParatWarabandi'));
+const FormSettings = lazy(() => import('./pages/FormSettings'));
+const KhalMismari = lazy(() => import('./pages/KhalMismari'));
+const Warashikni = lazy(() => import('./pages/Warashikni'));
+const TawanCase = lazy(() => import('./pages/TawanCase'));
+const TAForm = lazy(() => import('./pages/TAForm'));
+const GeoMap = lazy(() => import('./pages/GeoMap'));
+const MogaMerge = lazy(() => import('./pages/MogaMerge'));
+const Form1Register = lazy(() => import('./pages/Form1Register'));
+const DeputyCollectorDocs = lazy(() => import('./pages/DeputyCollectorDocs'));
+const Form33C = lazy(() => import('./pages/Form33C'));
+const ZilladarDocs = lazy(() => import('./pages/ZilladarDocs'));
+const GroupChat = lazy(() => import('./pages/GroupChat'));
+const CanalPatwari = lazy(() => import('./pages/CanalPatwari'));
+const Naqsha27B = lazy(() => import('./pages/Naqsha27B'));
+const ChakbandiIkhrajCase = lazy(() => import('./pages/ChakbandiIkhrajCase'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const Account = lazy(() => import('./pages/Account'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -107,7 +109,13 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
-          <AuthenticatedApp />
+          <Suspense fallback={
+            <div className="fixed inset-0 flex items-center justify-center bg-[#0a0f1a]">
+              <div className="w-8 h-8 border-2 border-slate-700 border-t-blue-500 rounded-full animate-spin"></div>
+            </div>
+          }>
+            <AuthenticatedApp />
+          </Suspense>
         </Router>
         <Toaster />
       </QueryClientProvider>
