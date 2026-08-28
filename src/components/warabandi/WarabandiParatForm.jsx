@@ -117,6 +117,20 @@ function calcKhalisWaari(row) {
   return { khalis_waari_minute: m, khalis_waari_ghante: h };
 }
 
+// آٹو موڈ: واری بحساب رقبہ = 1 ایکڑ وقت × خالص رقبہ + زائد وصولی
+function calcWaari(row, minutesPerAcre) {
+  const acres = parseFloat(row.khalis_raqba) || 0;
+  const zaidMin = (parseFloat(row.zaidah_ghante) || 0) * 60 + (parseFloat(row.zaidah_minute) || 0);
+  return minsToStr(acres * minutesPerAcre + zaidMin);
+}
+
+// خالص واری = واری بحساب رقبہ − وضگی
+function calcKhalisFromWaari(row) {
+  const waariMin = (parseFloat(row.waari_ghante) || 0) * 60 + (parseFloat(row.waari_minute) || 0);
+  const wazgiMin = (parseFloat(row.wazgi_ghante) || 0) * 60 + (parseFloat(row.wazgi_minute) || 0);
+  return minsToStr(Math.max(0, waariMin - wazgiMin));
+}
+
 function calcKhalis(total, ghair) {
   const t = parseFloat(total) || 0;
   const g = parseFloat(ghair) || 0;
@@ -234,13 +248,14 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [printColSr, setPrintColSr] = useState(false);
   // Automation toggle
   const [autoOn, setAutoOn] = useState(true);
-  // واری حساب: 1 ایکڑ کا وقت = (7*24*60 − وضگی − زائد وصولی) ÷ CCA
-  // زائد وصولی اور وضگی قطاروں سے خود بخود جمع ہو کر اوپرے خانوں میں آتے ہیں
+  // واری حساب: 1 ایکڑ کا وقت = (7*24*60) ÷ CCA
+  // واری بحساب رقبہ = 1 ایکڑ وقت × خالص رقبہ + زائد وصولی
+  // خالص واری = واری بحساب رقبہ − وضگی
   const [cca, setCca] = useState("");
   const ccaNum = parseFloat(cca) || 0;
   const zaidWasoliMins = useMemo(() => rows.reduce((s, r) => s + ((parseFloat(r.zaidah_ghante) || 0) * 60 + (parseFloat(r.zaidah_minute) || 0)), 0), [rows]);
   const wazgiMins = useMemo(() => rows.reduce((s, r) => s + ((parseFloat(r.wazgi_ghante) || 0) * 60 + (parseFloat(r.wazgi_minute) || 0)), 0), [rows]);
-  const minutesPerAcre = ccaNum > 0 ? Math.max(0, (10080 - wazgiMins - zaidWasoliMins) / ccaNum) : 0;
+  const minutesPerAcre = ccaNum > 0 ? (10080 / ccaNum) : 0;
   // تشریح اوقات: دن/رات شروع وقت (گھنٹے + منٹ + صبح/شام)
   const [tashreehDayHour, setTashreehDayHour] = useState("");
   const [tashreehDayMin, setTashreehDayMin] = useState("");
@@ -308,16 +323,24 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
     }
   };
 
-  // جب CCA / لیڈ / وضگی بدلیں تو تمام قطاروں کی خالص واری خود بخود دوبارہ حساب ہو
+  // جب CCA بدلے تو تمام قطاروں کی واری بحساب رقبہ اور خالص واری خود بخود دوبارہ حساب ہو
   useEffect(() => {
     if (!autoOn || ccaNum <= 0) return;
     setRows(prev => prev.map(row => {
       const acres = parseFloat(row.khalis_raqba) || 0;
-      if (acres <= 0) return row;
-      const { h, m } = minsToStr(acres * minutesPerAcre);
-      return { ...row, khalis_waari_minute: m, khalis_waari_ghante: h, khalis_waari2_minute: m, khalis_waari2_ghante: h };
+      const zaidMin = (parseFloat(row.zaidah_ghante) || 0) * 60 + (parseFloat(row.zaidah_minute) || 0);
+      const wazgiMin = (parseFloat(row.wazgi_ghante) || 0) * 60 + (parseFloat(row.wazgi_minute) || 0);
+      if (acres <= 0 && zaidMin === 0 && wazgiMin === 0) return row;
+      const w = calcWaari(row, minutesPerAcre);
+      const k = calcKhalisFromWaari({ ...row, waari_minute: w.m, waari_ghante: w.h });
+      return {
+        ...row,
+        waari_minute: w.m, waari_ghante: w.h,
+        khalis_waari_minute: k.m, khalis_waari_ghante: k.h,
+        khalis_waari2_minute: k.m, khalis_waari2_ghante: k.h,
+      };
     }));
-  }, [cca, zaidWasoliMins, wazgiMins, autoOn, ccaNum, minutesPerAcre]);
+  }, [cca, autoOn, ccaNum, minutesPerAcre]);
 
   // وقت یکساں چیک ہو تو رات کا وقت دن کے برابر رکھیں
   useEffect(() => {
@@ -374,25 +397,28 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       }
       if (key === "ghair_mumkin") row.khalis_raqba = calcKhalis(row.total_area, val);
 
-      // خالص واری auto-calc from خالص رقبہ × (1 ایکڑ وقت) جب CCA درج ہو
-      if (ccaNum > 0 && ["khalis_raqba", "total_area", "total_area2", "ghair_mumkin"].includes(key)) {
-        const acres = parseFloat(row.khalis_raqba) || 0;
-        if (acres > 0) {
-          const { h, m } = minsToStr(acres * minutesPerAcre);
-          row.khalis_waari_minute = m;
-          row.khalis_waari_ghante = h;
-          row.khalis_waari2_minute = m;
-          row.khalis_waari2_ghante = h;
+      // آٹو موڈ (autoOn + CCA): واری بحساب رقبہ = 1 ایکڑ وقت × خالص رقبہ + زائد وصولی
+      // خالص واری = واری بحساب رقبہ − وضگی
+      const autoMode = autoOn && ccaNum > 0;
+      if (autoMode) {
+        const waariKeys = ["khalis_raqba", "total_area", "total_area2", "ghair_mumkin", "zaidah_minute", "zaidah_ghante"];
+        const khalisOnlyKeys = ["wazgi_minute", "wazgi_ghante", "waari_minute", "waari_ghante"];
+        if (waariKeys.includes(key)) {
+          const w = calcWaari(row, minutesPerAcre);
+          row.waari_minute = w.m; row.waari_ghante = w.h;
+          const k = calcKhalisFromWaari(row);
+          row.khalis_waari_minute = k.m; row.khalis_waari_ghante = k.h;
+          row.khalis_waari2_minute = k.m; row.khalis_waari2_ghante = k.h;
+        } else if (khalisOnlyKeys.includes(key)) {
+          const k = calcKhalisFromWaari(row);
+          row.khalis_waari_minute = k.m; row.khalis_waari_ghante = k.h;
+          row.khalis_waari2_minute = k.m; row.khalis_waari2_ghante = k.h;
         }
-      }
-
-      // خالص واری calc from واری + زائدہ − وضگی
-      const needsKhalisRecalc = ["waari_minute","waari_ghante","zaidah_minute","zaidah_ghante","wazgi_minute","wazgi_ghante"].includes(key);
-      if (needsKhalisRecalc) {
+      } else if (["waari_minute","waari_ghante","zaidah_minute","zaidah_ghante","wazgi_minute","wazgi_ghante"].includes(key)) {
+        // مینوئل موڈ: خالص واری = واری + زائدہ − وضگی
         const kw = calcKhalisWaari(row);
         row.khalis_waari_minute = kw.khalis_waari_minute;
         row.khalis_waari_ghante = kw.khalis_waari_ghante;
-        // mirror to summary side
         row.khalis_waari2_minute = kw.khalis_waari_minute;
         row.khalis_waari2_ghante = kw.khalis_waari_ghante;
       }
