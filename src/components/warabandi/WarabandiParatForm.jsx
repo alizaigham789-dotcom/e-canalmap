@@ -270,6 +270,9 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [picker, setPicker] = useState(null); // { row, field }
   const [recordId, setRecordId] = useState(record?.id || null);
   const [saving, setSaving] = useState(false);
+  const [activeRow, setActiveRow] = useState(null);
+  const [setupDone, setSetupDone] = useState(false);
+  const hasMap = !!header.map_id;
   const pdfRef = useRef();
   const queryClient = useQueryClient();
 
@@ -283,6 +286,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       if (data.notes) setNotes(data.notes);
       if (data.docType !== undefined) setDocType(data.docType);
       if (data.cca !== undefined) setCca(data.cca);
+      setSetupDone(!!data.cca);
       if (data.autoOn !== undefined) setAutoOn(data.autoOn);
       if (data.tashreehDayHour !== undefined) setTashreehDayHour(data.tashreehDayHour);
       if (data.tashreehDayMin !== undefined) setTashreehDayMin(data.tashreehDayMin);
@@ -825,6 +829,12 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               1 ایکڑ = {minutesPerAcre.toFixed(2)} منٹ
             </div>
           )}
+          {!setupDone && (
+            <Button size="sm" disabled={ccaNum <= 0} onClick={() => setSetupDone(true)}
+              className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1">
+              آگے بڑھیں
+            </Button>
+          )}
         </div>
 
         {/* تشریح اوقات: دن/رات شروع وقت + خالص واری سے خود بخود شیڈول */}
@@ -890,9 +900,22 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
       </div>
 
       {/* Table + action column (number-shumar side) */}
-      <div className="flex">
+      {setupDone ? (
+      <div className="flex flex-col">
+        {/* Active row indicator — name + khata number of the row being edited */}
+        {activeRow !== null && rows[activeRow] && (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-[11px] rounded-t-md" dir="rtl">
+            <span className="font-mono bg-white/20 rounded px-1.5 py-0.5">#{activeRow + 1}</span>
+            <span style={{ fontFamily: "serif" }}>کھاتہ: <b>{rows[activeRow].khatoni || "—"}</b></span>
+            <span className="truncate" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{rows[activeRow].owner_name || "—"}</span>
+          </div>
+        )}
         {/* Scrollable table */}
-        <div ref={scrollRef} className="overflow-auto flex-1" style={{ maxHeight: "220px" }}>
+        <div ref={scrollRef} className="overflow-auto flex-1" style={{ maxHeight: "220px" }}
+          onFocus={(e) => {
+            const tr = e.target.closest && e.target.closest('tr[data-row]');
+            if (tr) setActiveRow(parseInt(tr.dataset.row, 10));
+          }}>
           <table style={{ borderCollapse: "collapse", minWidth: "1700px", width: "100%", direction: "rtl" }}>
             <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
               {showColSr && (
@@ -950,7 +973,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr key={i} className="hover:bg-blue-50/30">
+                <tr key={i} data-row={i} className={activeRow === i ? "bg-blue-100/60" : "hover:bg-blue-50/30"}>
                   <td className={tdCls} style={{ width: 32 }}>
                     <div className="flex flex-col items-center gap-0.5">
                       <button onClick={() => insertRowAfter(i - 1)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded p-0.5" title="اوپر قطار شامل کریں">
@@ -973,7 +996,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                     <FractionCell
                       value={row.bandubast2}
                       onChange={(v) => updateRow(i, "bandubast2", v)}
-                      onPicker={() => setPicker({ row: i, field: "bandubast2" })}
+                      onPicker={hasMap ? () => setPicker({ row: i, field: "bandubast2" }) : undefined}
                       placeholder="555/5-10"
                     />
                   </td>
@@ -985,8 +1008,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   </td>
                   <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} onPicker={() => setPicker({ row: i, field: "nikha2_lega" })} /></td>
-                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} onPicker={() => setPicker({ row: i, field: "nikha2_dega" })} /></td>
+                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_lega" }) : undefined} /></td>
+                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_dega" }) : undefined} /></td>
                   </>}
                   <td className={tdCls}><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
                   <td className={tdCls} style={{ minWidth: 80 }}>
@@ -998,7 +1021,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                     <FractionCell
                       value={row.bandubast}
                       onChange={(v) => updateRow(i, "bandubast", v)}
-                      onPicker={() => setPicker({ row: i, field: "bandubast" })}
+                      onPicker={hasMap ? () => setPicker({ row: i, field: "bandubast" }) : undefined}
                       placeholder="555/5-10"
                     />
                   </td>
@@ -1006,14 +1029,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                     <FractionCell
                       value={row.nikha_lega}
                       onChange={(v) => updateRow(i, "nikha_lega", v)}
-                      onPicker={() => setPicker({ row: i, field: "nikha_lega" })}
+                      onPicker={hasMap ? () => setPicker({ row: i, field: "nikha_lega" }) : undefined}
                     />
                   </td>
                   <td className={tdCls} style={{ minWidth: 70 }}>
                     <FractionCell
                       value={row.nikha_dega}
                       onChange={(v) => updateRow(i, "nikha_dega", v)}
-                      onPicker={() => setPicker({ row: i, field: "nikha_dega" })}
+                      onPicker={hasMap ? () => setPicker({ row: i, field: "nikha_dega" }) : undefined}
                     />
                   </td>
                   <td className={tdCls} style={{ position: "relative" }}>
@@ -1081,9 +1104,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             </tbody>
           </table>
         </div>
-
-
       </div>
+      ) : (
+        <div className="px-4 py-10 text-center bg-amber-50 border-y border-amber-200" dir="rtl">
+          <p className="text-sm text-amber-700 font-semibold" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+            سب سے پہلے CCA اور تشریح اوقات درج کر کے "آگے بڑھیں" پر کلک کریں
+          </p>
+        </div>
+      )}
 
       {/* جناب عالیٰ Notes Section */}
       <div className="border-t border-slate-200 px-4 py-4 bg-white" dir="rtl">
