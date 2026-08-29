@@ -733,7 +733,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
   const headerParts = [isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی", "موگہ نمبری", moghaFull];
   if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
-  if (header.mouza) headerParts.push(`موضع ${header.mouza}`);
+  if (header.mouza) headerParts.push(header.mouza.includes("/") ? "موضعات" : `موضع ${header.mouza}`);
   if (header.section) headerParts.push(`سیکشن ${header.section}`);
   if (header.sub_division) headerParts.push(`سب ڈویژن ${header.sub_division}`);
   if (header.canal_division) headerParts.push(`کینال ڈویژن ${header.canal_division}`);
@@ -750,7 +750,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
     </>
   );
 
-  const inp = "w-full bg-transparent outline-none text-[8px] text-slate-800 text-center px-0.5 py-0.5 placeholder:text-slate-300";
+  const inp = "w-full bg-transparent outline-none text-center text-slate-800 placeholder:text-slate-300 text-[16px] px-1.5 py-1.5 md:text-[8px] md:px-0.5 md:py-0.5";
   const thCls = "border border-slate-500 text-center bg-blue-100 px-1.5 py-1.5 text-[12px] font-bold leading-snug text-blue-900";
   const thSubCls = "border border-slate-500 text-center bg-[#eff6ff] px-1 py-1 text-[9px] font-bold leading-snug text-blue-900";
   const tdCls = "border border-slate-300 text-center px-0 py-0 text-[8px]";
@@ -1061,8 +1061,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   {/* خالص واری — auto-calculated, shown in green */}
                   <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_minute} onChange={e => updateRow(i, "khalis_waari_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_ghante} onChange={e => updateRow(i, "khalis_waari_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_din} onChange={e => updateRow(i, "tashreeh_din", e.target.value)} className={inp} style={{ fontSize: "8px", fontFamily: "serif" }} dir="rtl" /></td>
-                  <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_raat} onChange={e => updateRow(i, "tashreeh_raat", e.target.value)} className={inp} style={{ fontSize: "8px", fontFamily: "serif" }} dir="rtl" /></td>
+                  <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_din} onChange={e => updateRow(i, "tashreeh_din", e.target.value)} className={inp} style={{ fontFamily: "serif" }} dir="rtl" /></td>
+                  <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_raat} onChange={e => updateRow(i, "tashreeh_raat", e.target.value)} className={inp} style={{ fontFamily: "serif" }} dir="rtl" /></td>
                   <td className={tdCls} style={{ width: 28 }}>
                     <button onClick={() => removeRow(i)} className="text-slate-300 hover:text-red-500 p-0.5">
                       <Trash2 className="w-3 h-3" />
@@ -1103,6 +1103,11 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               </tr>
             </tbody>
           </table>
+        </div>
+        <div className="flex justify-center py-2 border-t border-slate-200 bg-white">
+          <Button size="sm" onClick={() => insertRowAfter(rows.length - 1)} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1.5 px-3">
+            <Plus className="w-3.5 h-3.5" /> قطار شامل کریں
+          </Button>
         </div>
       </div>
       ) : (
