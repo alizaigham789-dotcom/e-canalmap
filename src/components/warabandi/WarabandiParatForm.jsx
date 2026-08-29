@@ -716,15 +716,16 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
 
   // ڈیفالٹ اسکرول نمبرشمار (سٹارٹ) سائڈ پر — ٹشریح اینڈ پر نہیں
+  // جدول نمبرشمار سائڈ ہمیشہ دائیں (right) رہے — table ظاہر ہونے یا قطار بڑھنے پر دوبارہ اسکرول
   const scrollRef = useRef(null);
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || !setupDone) return;
     const raf = requestAnimationFrame(() => {
       el.scrollLeft = el.scrollWidth - el.clientWidth;
     });
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [setupDone, rows.length]);
 
   const updateNote = (i, val) => setNotes(prev => { const n = [...prev]; n[i] = val; return n; });
   const addNote = () => setNotes(prev => [...prev, ""]);
