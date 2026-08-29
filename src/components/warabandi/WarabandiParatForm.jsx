@@ -733,7 +733,10 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const moghaFull = `${header.mogha_number}/${header.mogha_side}`;
   const headerParts = [isJadeed ? "پرت وارابندی" : "کیس ترمیم وارابندی", "موگہ نمبری", moghaFull];
   if (header.rajbaha) headerParts.push(`راجباہ ${header.rajbaha}`);
-  if (header.mouza) headerParts.push(header.mouza.includes("/") ? "موضعات" : `موضع ${header.mouza}`);
+  if (header.mouza) {
+    const isPlural = header.mouza.includes("/") || header.mouza.includes(",");
+    headerParts.push(isPlural ? `موضعات ${header.mouza}` : `موضع ${header.mouza}`);
+  }
   if (header.section) headerParts.push(`سیکشن ${header.section}`);
   if (header.sub_division) headerParts.push(`سب ڈویژن ${header.sub_division}`);
   if (header.canal_division) headerParts.push(`کینال ڈویژن ${header.canal_division}`);
@@ -864,7 +867,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         </div>
 
 
-        <div dir="rtl" className="mt-3 text-center text-[16px] text-blue-700 font-bold whitespace-nowrap"
+        <div dir="rtl" className="mt-3 text-center text-[32px] text-blue-700 font-bold whitespace-nowrap overflow-x-auto"
           style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 1.5, letterSpacing: "0.5px", wordSpacing: "0.3em" }}>
           {headerLine}
         </div>
