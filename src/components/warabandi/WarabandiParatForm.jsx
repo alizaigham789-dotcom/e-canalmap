@@ -299,6 +299,29 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
     } catch {}
   }, [record?.id]);
 
+  // اگر میپ کنیکٹ ہو تو CCA خود بخود میپ سے حاصل کریں
+  useEffect(() => {
+    if (!header.map_id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const map = await base44.entities.LandMap.get(header.map_id);
+        if (cancelled || !map?.drawing_data) return;
+        const objects = JSON.parse(map.drawing_data);
+        if (!Array.isArray(objects)) return;
+        let total = 0, found = false;
+        for (const o of objects) {
+          if (o.type === "chakbandi" && o.cca != null && o.cca !== "") {
+            const n = parseFloat(o.cca);
+            if (!isNaN(n)) { total += n; found = true; }
+          }
+        }
+        if (found && !cancelled) setCca(String(Math.round(total)));
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [header.map_id]);
+
   // مستقل محفوظ — پرت وارہ بندی ریکارڈ
   const handleSave = async () => {
     if (!recordId) { toast.error("ریکارڈ محفوظ نہیں ہے"); return; }
@@ -809,6 +832,23 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           </span>
         </div>
 
+        {/* Setup Form — shown first, before the table */}
+        {!setupDone && (
+          <div className="mb-3 p-3 bg-blue-50/70 rounded-lg border border-blue-200" dir="rtl">
+            <div className="text-xs font-bold text-blue-800 mb-2" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>سیٹ اپ فارم</div>
+            <label className="text-[10px] text-slate-600 font-semibold block mb-1" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>قسم (پرت / ترمیم وارہ بندی)</label>
+            <div className="flex gap-2">
+              {["پرت وارہ بندی", "کیس ترمیم وارہ بندی"].map(opt => (
+                <button key={opt} type="button" onClick={() => setDocType(opt)}
+                  className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-colors ${docType === opt ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-700 border-slate-300 hover:border-blue-400"}`}
+                  style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* واری حساب: CCA / زائد وصولی / وضگی — 1 ایکڑ کا وقت خود بخود (not printed) */}
         <div className="flex items-center gap-3 mb-3 p-2 bg-amber-50 rounded border border-amber-200 flex-wrap" dir="rtl">
           <div className="flex items-center gap-1">
@@ -833,6 +873,12 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             <Button size="sm" disabled={ccaNum <= 0} onClick={() => setSetupDone(true)}
               className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1">
               آگے بڑھیں
+            </Button>
+          )}
+          {setupDone && (
+            <Button size="sm" onClick={() => setSetupDone(false)}
+              className="h-7 text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 gap-1">
+              سیٹ اپ ایڈٹ
             </Button>
           )}
         </div>
@@ -871,6 +917,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
       </div>
 
       {/* Table toolbar */}
+      {setupDone && (
       <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-white">
         <span className="text-[10px] text-slate-500 font-semibold">تفصیل حصہ داران</span>
         <div className="flex gap-2 items-center">
@@ -898,6 +945,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           </Button>
         </div>
       </div>
+      )}
 
       {/* Table + action column (number-shumar side) */}
       {setupDone ? (
@@ -1105,15 +1153,10 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           </table>
         </div>
       </div>
-      ) : (
-        <div className="px-4 py-10 text-center bg-amber-50 border-y border-amber-200" dir="rtl">
-          <p className="text-sm text-amber-700 font-semibold" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-            سب سے پہلے CCA اور تشریح اوقات درج کر کے "آگے بڑھیں" پر کلک کریں
-          </p>
-        </div>
-      )}
+      ) : null}
 
       {/* جناب عالیٰ Notes Section */}
+      {setupDone && (
       <div className="border-t border-slate-200 px-4 py-4 bg-white" dir="rtl">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-base font-bold text-slate-800" style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 2 }}>
@@ -1139,6 +1182,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           ))}
         </div>
       </div>
+      )}
 
       {(pdfLoading || pdfPreview) && (
         <PdfUploadPreview
