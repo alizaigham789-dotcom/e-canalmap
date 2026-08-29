@@ -907,8 +907,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
       <div className="flex flex-col">
         {/* Active row indicator — name + khata number of the row being edited */}
         {activeRow !== null && rows[activeRow] && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-[11px] rounded-t-md" dir="rtl">
-            <span className="font-mono bg-white/20 rounded px-1.5 py-0.5">#{activeRow + 1}</span>
+          <div className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-[22px] rounded-t-md" dir="rtl">
+            <span className="font-mono bg-white/20 rounded px-2 py-0.5">#{activeRow + 1}</span>
             <span style={{ fontFamily: "serif" }}>کھاتہ: <b>{rows[activeRow].khatoni || "—"}</b></span>
             <span className="truncate" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{rows[activeRow].owner_name || "—"}</span>
           </div>
