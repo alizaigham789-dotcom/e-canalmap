@@ -150,7 +150,7 @@ const PRINT_CSS = `
   .print-page-wrap { box-sizing: border-box; }
   .parat-page { box-sizing: border-box; }
   .notes-block { direction: rtl; margin-top: 1em; }
-  .final-block { box-sizing: border-box; display: flex; flex-direction: column; page-break-inside: avoid; break-inside: avoid; }
+  .final-block { box-sizing: border-box; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
   th { font-weight: bold; }
@@ -160,7 +160,7 @@ const PRINT_CSS = `
   .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
   .tashreeh-table th { font-size: 7px; padding: 2px; }
   .tashreeh-table td { font-size: 7px; padding: 2px; }
-  .signatures { margin-top: auto !important; margin-bottom: 10mm; page-break-inside: avoid; break-inside: avoid; }
+  .signatures { margin-top: 10mm; margin-bottom: 10mm; page-break-inside: avoid; break-inside: avoid; }
 `;
 
 const BW_CSS = `
@@ -1373,7 +1373,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
           </div>
 
           {/* جناب عالیٰ + Notes + Signatures stay together; signatures pinned to bottom of the page */}
-          <div className="final-block" style={{ display: "flex", flexDirection: "column" }}>
+          <div className="final-block">
             <div className="notes-block" style={{ direction: "rtl", marginTop: "1em" }}>
               <div style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
               <div style={{ fontSize: "14px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
@@ -1382,7 +1382,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
                 ))}
               </div>
             </div>
-            <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "auto", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+            <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "10mm", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
               <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط نہری پٹواری</div>
               <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط ضلعدار</div>
               <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: "4px", width: "200px", whiteSpace: "nowrap" }}>دستخط سب ڈویژنل کینال آفیسر</div>
