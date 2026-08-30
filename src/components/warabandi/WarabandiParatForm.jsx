@@ -41,20 +41,23 @@ const DEFAULT_NOTES = [
   "وارہ بندی CCA/GCA پر مرتب کی گئی ہے۔",
 ];
 
-const emptyRow = () => ({
-  khatoni2: "", owner_name2: "", total_area2: "",
-  khalis_waari2_minute: "", khalis_waari2_ghante: "",
-  nikha2_lega: "", nikha2_dega: "",
-  bandubast2: "",
-  khatoni: "", owner_name: "", bandubast: "", total_area: "", ghair_mumkin: "", khalis_raqba: "",
-  waari_minute: "", waari_ghante: "",
-  zaidah_minute: "", zaidah_ghante: "",
-  wazgi_minute: "", wazgi_ghante: "",
-  khalis_waari_minute: "", khalis_waari_ghante: "",
-  nikha_lega: "", nikha_dega: "",
-  tashreeh_din: "",
-  tashreeh_raat: "",
-});
+const emptyRow = (idx) => {
+  const kn = (typeof idx === "number") ? String(idx + 1) : "";
+  return {
+    khatoni2: kn, owner_name2: "", total_area2: "",
+    khalis_waari2_minute: "", khalis_waari2_ghante: "",
+    nikha2_lega: "", nikha2_dega: "",
+    bandubast2: "",
+    khatoni: kn, owner_name: "", bandubast: "", total_area: "", ghair_mumkin: "", khalis_raqba: "",
+    waari_minute: "", waari_ghante: "",
+    zaidah_minute: "", zaidah_ghante: "",
+    wazgi_minute: "", wazgi_ghante: "",
+    khalis_waari_minute: "", khalis_waari_ghante: "",
+    nikha_lega: "", nikha_dega: "",
+    tashreeh_din: "",
+    tashreeh_raat: "",
+  };
+};
 
 function sumCol(rows, key) {
   const s = rows.reduce((acc, r) => acc + (parseFloat(r[key]) || 0), 0);
@@ -384,11 +387,9 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
 
       let row = { ...next[i] };
 
-      // === MIRROR RULES ===
+      // === MIRROR RULES (one-way: pehly/summary → agy/main) ===
       if (key === "khatoni2") row.khatoni = val;
-      if (key === "khatoni") row.khatoni2 = val;
       if (key === "owner_name2") row.owner_name = val;
-      if (key === "owner_name") row.owner_name2 = val;
 
       // کل رقبہ mirror and خالص رقبہ calc
       if (key === "total_area2") {
@@ -433,9 +434,8 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       if (key === "khalis_waari2_ghante") { row.khalis_waari_ghante = val; }
       if (key === "khalis_waari_ghante") { row.khalis_waari2_ghante = val; }
 
-      // بندوبست mirror (summary ↔ main)
+      // بندوبست mirror (one-way: pehly/summary → agy/main)
       if (key === "bandubast2") row.bandubast = val;
-      if (key === "bandubast") row.bandubast2 = val;
 
       // نکہ جات mirror (summary ↔ main)
       if (key === "nikha2_lega") row.nikha_lega = val;
@@ -708,7 +708,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const insertRowAfter = (i) => {
     setRows(prev => {
       const next = [...prev];
-      next.splice(i + 1, 0, emptyRow());
+      next.splice(i + 1, 0, emptyRow(i + 1));
       return next;
     });
   };
