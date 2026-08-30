@@ -397,7 +397,6 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
         row.khalis_raqba = calcKhalis(val, row.ghair_mumkin);
       }
       if (key === "total_area") {
-        row.total_area2 = val;
         row.khalis_raqba = calcKhalis(val, row.ghair_mumkin);
       }
       if (key === "ghair_mumkin") row.khalis_raqba = calcKhalis(row.total_area, val);
@@ -428,20 +427,16 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
         row.khalis_waari2_ghante = kw.khalis_waari_ghante;
       }
 
-      // خالص واری mirror (summary ↔ main)
+      // خالص واری mirror (one-way: pehly/summary → agy/main)
       if (key === "khalis_waari2_minute") { row.khalis_waari_minute = val; }
-      if (key === "khalis_waari_minute") { row.khalis_waari2_minute = val; }
       if (key === "khalis_waari2_ghante") { row.khalis_waari_ghante = val; }
-      if (key === "khalis_waari_ghante") { row.khalis_waari2_ghante = val; }
 
       // بندوبست mirror (one-way: pehly/summary → agy/main)
       if (key === "bandubast2") row.bandubast = val;
 
-      // نکہ جات mirror (summary ↔ main)
+      // نکہ جات mirror (one-way: pehly/summary → agy/main)
       if (key === "nikha2_lega") row.nikha_lega = val;
-      if (key === "nikha_lega") row.nikha2_lega = val;
       if (key === "nikha2_dega") row.nikha_dega = val;
-      if (key === "nikha_dega") row.nikha2_dega = val;
 
       next[i] = row;
 
