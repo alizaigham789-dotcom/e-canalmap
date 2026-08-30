@@ -412,19 +412,19 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
           row.waari_minute = w.m; row.waari_ghante = w.h;
           const k = calcKhalisFromWaari(row);
           row.khalis_waari_minute = k.m; row.khalis_waari_ghante = k.h;
-          row.khalis_waari2_minute = k.m; row.khalis_waari2_ghante = k.h;
+          // summary کا اپنا خالص واری صرف summary فیلڈ (total_area2) تبدیل ہو تو update ہو
+          if (key === "total_area2") {
+            row.khalis_waari2_minute = k.m; row.khalis_waari2_ghante = k.h;
+          }
         } else if (khalisOnlyKeys.includes(key)) {
           const k = calcKhalisFromWaari(row);
           row.khalis_waari_minute = k.m; row.khalis_waari_ghante = k.h;
-          row.khalis_waari2_minute = k.m; row.khalis_waari2_ghante = k.h;
         }
       } else if (["waari_minute","waari_ghante","zaidah_minute","zaidah_ghante","wazgi_minute","wazgi_ghante"].includes(key)) {
-        // مینوئل موڈ: خالص واری = واری + زائدہ − وضگی
+        // مینوئل موڈ: خالص واری = واری + زائدہ − وضگی (صرف main side)
         const kw = calcKhalisWaari(row);
         row.khalis_waari_minute = kw.khalis_waari_minute;
         row.khalis_waari_ghante = kw.khalis_waari_ghante;
-        row.khalis_waari2_minute = kw.khalis_waari_minute;
-        row.khalis_waari2_ghante = kw.khalis_waari_ghante;
       }
 
       // خالص واری mirror (one-way: pehly/summary → agy/main)
