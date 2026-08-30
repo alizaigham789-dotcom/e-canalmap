@@ -33,6 +33,18 @@ function isEnglishOrDigit(val) {
   return /^[\x00-\x7F\d\s\.\-\/]+$/.test(val.trim());
 }
 
+// Tarmeem: the main/agy side (columns I–Z) stays locked until the row's
+// summary side (columns A–H) is filled. A = khatoni2 (auto-serial, always set),
+// B = owner_name2, C = bandubast2, D = total_area2, E/F = khalis_waari2, G/H = nikha2.
+function summaryComplete(row) {
+  if (!row) return false;
+  return Boolean(
+    row.owner_name2 && row.bandubast2 && row.total_area2
+    && row.khalis_waari2_minute && row.khalis_waari2_ghante
+    && row.nikha2_lega && row.nikha2_dega
+  );
+}
+
 const DEFAULT_NOTES = [
   "تصدیق کی جاتی ہے کہ نقل مطابق اصل درست ہے۔",
   "پرت وارہ بندی سائل کی درخواست پر مرتب کی گئی ہے۔",
@@ -650,7 +662,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         }
         return row;
       });
-      setRows(mapped.map(normalizeRowDigits));
+      setRows(renumberRows(mapped.map(normalizeRowDigits)));
     }
     setPdfPreview(null);
   };
@@ -998,7 +1010,9 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, i) => (
+              {rows.map((row, i) => {
+                const mainLocked = !isJadeed && !summaryComplete(row);
+                return (
                 <tr key={i} data-row={i} className={activeRow === i ? "bg-blue-100/60" : "hover:bg-blue-50/30"}>
                   <td className={tdCls} style={{ width: 32 }}>
                     <div className="flex flex-col items-center gap-0.5">
@@ -1012,7 +1026,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   </td>
                   {showRowSr && <td className={tdCls} style={{ fontSize: "9px", color: "#1d4ed8", minWidth: 28, textAlign: "center", fontWeight: "bold" }}>{i + 1}</td>}
                   {showSummary && <>
-                  <td className={tdCls}><input value={row.khatoni2} onChange={e => updateRow(i, "khatoni2", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
+                  <td className={tdCls}><input value={String(i + 1)} readOnly tabIndex={-1} className={inp + " bg-slate-50 text-slate-500"} dir={isUrduMode ? "rtl" : "ltr"} /></td>
                   <td className={tdCls} style={{ minWidth: 80 }}>
                     <input value={row.owner_name2} onChange={e => updateRow(i, "owner_name2", e.target.value)} className={inp}
                       dir={isUrduMode ? "rtl" : "ltr"}
@@ -1037,10 +1051,10 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_lega" }) : undefined} /></td>
                   <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_dega" }) : undefined} /></td>
                   </>}
-                  <td className={tdCls}><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp} dir={isUrduMode ? "rtl" : "ltr"} /></td>
+                  <td className={tdCls}><input value={String(i + 1)} readOnly tabIndex={-1} className={inp + " bg-slate-50 text-slate-500"} dir={isUrduMode ? "rtl" : "ltr"} /></td>
                   <td className={tdCls} style={{ minWidth: 80 }}>
                     <input value={row.owner_name} onChange={e => updateRow(i, "owner_name", e.target.value)} className={inp}
-                      dir={isUrduMode ? "rtl" : "ltr"}
+                      dir={isUrduMode ? "rtl" : "ltr"} disabled={mainLocked}
                       style={{ fontFamily: isUrduMode ? "'Noto Nastaliq Urdu', serif" : undefined, textAlign: isUrduMode ? "right" : "left" }} />
                   </td>
                   <td className={tdCls} style={{ minWidth: 90 }}>
@@ -1049,6 +1063,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                       onChange={(v) => updateRow(i, "bandubast", v)}
                       onPicker={hasMap ? () => setPicker({ row: i, field: "bandubast" }) : undefined}
                       placeholder="555/5-10"
+                      disabled={mainLocked}
                     />
                   </td>
                   <td className={tdCls} style={{ minWidth: 70 }}>
@@ -1056,6 +1071,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                       value={row.nikha_lega}
                       onChange={(v) => updateRow(i, "nikha_lega", v)}
                       onPicker={hasMap ? () => setPicker({ row: i, field: "nikha_lega" }) : undefined}
+                      disabled={mainLocked}
                     />
                   </td>
                   <td className={tdCls} style={{ minWidth: 70 }}>
@@ -1063,39 +1079,41 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                       value={row.nikha_dega}
                       onChange={(v) => updateRow(i, "nikha_dega", v)}
                       onPicker={hasMap ? () => setPicker({ row: i, field: "nikha_dega" }) : undefined}
+                      disabled={mainLocked}
                     />
                   </td>
                   <td className={tdCls} style={{ position: "relative" }}>
-                    <input value={row.total_area} onChange={e => updateRow(i, "total_area", e.target.value)} className={inp} dir="ltr" />
+                    <input value={row.total_area} onChange={e => updateRow(i, "total_area", e.target.value)} className={inp} dir="ltr" disabled={mainLocked} />
                     {!isUrduMode && row.total_area && isEnglishOrDigit(row.total_area) && (
                       <div className="text-[7px] text-blue-600 text-center font-mono leading-none pb-0.5">{formatAreaMB(row.total_area)}</div>
                     )}
                   </td>
-                  <td className={tdCls}><input value={row.ghair_mumkin} onChange={e => updateRow(i, "ghair_mumkin", e.target.value)} className={inp} /></td>
+                  <td className={tdCls}><input value={row.ghair_mumkin} onChange={e => updateRow(i, "ghair_mumkin", e.target.value)} className={inp} disabled={mainLocked} /></td>
                   <td className={tdCls} style={{ backgroundColor: "#f0fdf4", position: "relative" }}>
-                    <input value={row.khalis_raqba} onChange={e => updateRow(i, "khalis_raqba", e.target.value)} className={inp} style={{ color: "#166534" }} dir="ltr" />
+                    <input value={row.khalis_raqba} onChange={e => updateRow(i, "khalis_raqba", e.target.value)} className={inp} style={{ color: "#166534" }} dir="ltr" disabled={mainLocked} />
                     {!isUrduMode && row.khalis_raqba && isEnglishOrDigit(row.khalis_raqba) && (
                       <div className="text-[7px] text-emerald-600 text-center font-mono leading-none pb-0.5">{formatAreaMB(row.khalis_raqba)}</div>
                     )}
                   </td>
-                  <td className={tdCls}><input value={row.waari_minute} onChange={e => updateRow(i, "waari_minute", e.target.value)} className={inp} /></td>
-                  <td className={tdCls}><input value={row.waari_ghante} onChange={e => updateRow(i, "waari_ghante", e.target.value)} className={inp} /></td>
-                  <td className={tdCls}><input value={row.zaidah_minute} onChange={e => updateRow(i, "zaidah_minute", e.target.value)} className={inp} /></td>
-                  <td className={tdCls}><input value={row.zaidah_ghante} onChange={e => updateRow(i, "zaidah_ghante", e.target.value)} className={inp} /></td>
-                  <td className={tdCls}><input value={row.wazgi_minute} onChange={e => updateRow(i, "wazgi_minute", e.target.value)} className={inp} /></td>
-                  <td className={tdCls}><input value={row.wazgi_ghante} onChange={e => updateRow(i, "wazgi_ghante", e.target.value)} className={inp} /></td>
+                  <td className={tdCls}><input value={row.waari_minute} onChange={e => updateRow(i, "waari_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
+                  <td className={tdCls}><input value={row.waari_ghante} onChange={e => updateRow(i, "waari_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
+                  <td className={tdCls}><input value={row.zaidah_minute} onChange={e => updateRow(i, "zaidah_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
+                  <td className={tdCls}><input value={row.zaidah_ghante} onChange={e => updateRow(i, "zaidah_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
+                  <td className={tdCls}><input value={row.wazgi_minute} onChange={e => updateRow(i, "wazgi_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
+                  <td className={tdCls}><input value={row.wazgi_ghante} onChange={e => updateRow(i, "wazgi_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
                   {/* خالص واری — auto-calculated, shown in green */}
-                  <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_minute} onChange={e => updateRow(i, "khalis_waari_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_ghante} onChange={e => updateRow(i, "khalis_waari_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_din} onChange={e => updateRow(i, "tashreeh_din", e.target.value)} className={inp} style={{ fontFamily: "serif" }} dir="rtl" /></td>
-                  <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_raat} onChange={e => updateRow(i, "tashreeh_raat", e.target.value)} className={inp} style={{ fontFamily: "serif" }} dir="rtl" /></td>
+                  <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_minute} onChange={e => updateRow(i, "khalis_waari_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} disabled={mainLocked} /></td>
+                  <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_ghante} onChange={e => updateRow(i, "khalis_waari_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} disabled={mainLocked} /></td>
+                  <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_din} onChange={e => updateRow(i, "tashreeh_din", e.target.value)} className={inp} style={{ fontFamily: "serif" }} dir="rtl" disabled={mainLocked} /></td>
+                  <td className={tdCls} style={{ minWidth: 150 }}><input value={row.tashreeh_raat} onChange={e => updateRow(i, "tashreeh_raat", e.target.value)} className={inp} style={{ fontFamily: "serif" }} dir="rtl" disabled={mainLocked} /></td>
                   <td className={tdCls} style={{ width: 28 }}>
                     <button onClick={() => removeRow(i)} className="text-slate-300 hover:text-red-500 p-0.5">
                       <Trash2 className="w-3 h-3" />
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {/* میزان row */}
               <tr style={{ backgroundColor: "#fef9e7" }}>
                 <td className={totalCls} style={{ width: 32 }}></td>

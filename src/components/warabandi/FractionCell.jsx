@@ -27,7 +27,7 @@ export function FractionDisplay({ value, fontSize = "9px", lineColor = "#334155"
 
 // Always-editable cell: input is always rendered so backspace/delete always works.
 // Shows fraction display as a live preview below the input when a value exists.
-export default function FractionCell({ value, onChange, onPicker, placeholder }) {
+export default function FractionCell({ value, onChange, onPicker, placeholder, disabled }) {
   return (
     <div className="flex items-center gap-0.5 w-full">
       <input
@@ -35,10 +35,12 @@ export default function FractionCell({ value, onChange, onPicker, placeholder })
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         dir="ltr"
-        className="w-full bg-transparent outline-none text-[10px] text-slate-800 text-center px-0.5 py-0.5 placeholder:text-slate-300"
+        readOnly={disabled}
+        disabled={disabled}
+        className="w-full bg-transparent outline-none text-[10px] text-slate-800 text-center px-0.5 py-0.5 placeholder:text-slate-300 disabled:opacity-50"
         style={{ fontFamily: "serif" }}
       />
-      {onPicker && (
+      {onPicker && !disabled && (
         <button onClick={onPicker} className="text-emerald-600 hover:text-emerald-700 shrink-0">
           <LayoutGrid className="w-3 h-3" />
         </button>
