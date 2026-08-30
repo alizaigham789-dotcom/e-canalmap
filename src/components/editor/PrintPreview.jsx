@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, calculateChakbandiLoopGCA, buildPrintHeaderHTML, buildPrintFooterHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
@@ -864,6 +864,54 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [pdfLoading, setPdfLoading] = useState(false);
   const svgWrapRef = useRef(null);
 
+  // Mustateel print size (cm) — lock each mustateel to an exact cm width; height
+  // follows the real 440×990 mustateel aspect (no distortion). Default = Auto =
+  // current fit-to-page, so leaving it untouched keeps the existing print exactly.
+  const MUST_W = DIMENSIONS.MUSTATEEL.width;
+  const MUST_ASPECT_H = DIMENSIONS.MUSTATEEL.height / DIMENSIONS.MUSTATEEL.width; // 990/440 = 2.25
+  const [mustOverride, setMustOverride] = useState(false); // false → current auto-fit
+  const [mustCmW, setMustCmW] = useState(""); // mustateel width in cm (source of truth; height derived)
+  const [heightEditing, setHeightEditing] = useState(null); // raw height text while typing (avoids decimal fight)
+  const svgMeasureRef = useRef(null);
+  const [measuredMustCm, setMeasuredMustCm] = useState({ w: 0, h: 0 });
+  const [pagePxPerMm, setPagePxPerMm] = useState(0);
+
+  // Measure the mustateel cm that the current auto-fit (meet) actually produces,
+  // straight from the live preview DOM — so the default shown always matches print.
+  useEffect(() => {
+    const recompute = () => {
+      const pb = svgWrapRef.current, svg = svgMeasureRef.current, sd = svgData;
+      if (!pb || !svg || !sd) return;
+      const ppmm = pb.clientWidth / pageWidthMm;
+      if (ppmm > 0) setPagePxPerMm(ppmm);
+      if (!ppmm || ppmm <= 0) return;
+      const meetScale = Math.min(svg.clientWidth / sd.viewW, svg.clientHeight / sd.viewH);
+      if (!meetScale || meetScale <= 0) return;
+      const wCm = (MUST_W * meetScale) / ppmm / 10;
+      setMeasuredMustCm({ w: +wCm.toFixed(2), h: +(wCm * MUST_ASPECT_H).toFixed(2) });
+    };
+    recompute();
+    let ro;
+    if (svgWrapRef.current && window.ResizeObserver) {
+      ro = new ResizeObserver(recompute);
+      ro.observe(svgWrapRef.current);
+    }
+    return () => ro && ro.disconnect();
+  }, [svgData, scale, pageWidthMm, MUST_W, MUST_ASPECT_H, mustOverride]);
+
+  // mm-per-world-unit when overriding; null = keep current auto-fit (meet)
+  const overrideMmPerWorld = (mustOverride && mustCmW && parseFloat(mustCmW) > 0)
+    ? (parseFloat(mustCmW) * 10) / MUST_W
+    : null;
+  // Preview px size of the SVG when overriding (uses measured px-per-mm of the page)
+  const overridePreviewStyle = (overrideMmPerWorld && pagePxPerMm > 0)
+    ? {
+        width: `${(svgData.viewW * overrideMmPerWorld * pagePxPerMm).toFixed(1)}px`,
+        height: `${(svgData.viewH * overrideMmPerWorld * pagePxPerMm).toFixed(1)}px`,
+        display: "block",
+      }
+    : { width: "100%", height: "100%", display: "block" };
+
   // Persist legend position per-map in localStorage so it survives close/reopen
   const legendKey = mapData?.id ? `legend_pos_${mapData.id}` : null;
   const [legendCustomPos, setLegendCustomPos] = useState(() => {
@@ -1061,6 +1109,11 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
     const win = window.open("", "_blank");
     if (!win) { return; }
+    // Mustateel-print-size override: render the SVG at an exact physical mm size so
+    // each mustateel measures mustCmW cm wide (height follows the 440×990 aspect).
+    const mapSvgStyle = overrideMmPerWorld
+      ? `width:${(svgData.viewW * overrideMmPerWorld).toFixed(2)}mm;height:${(svgData.viewH * overrideMmPerWorld).toFixed(2)}mm;display:block;`
+      : `width:100%;height:100%;display:block;`;
     const printLegendSVG = (showLegendInPrint && !khakaDastiMode) ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses, objects) : "";
     win.document.write(`<!DOCTYPE html><html><head>
       <title>Khaka Dasti</title>
@@ -1086,7 +1139,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         <svg xmlns="http://www.w3.org/2000/svg"
              viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
              preserveAspectRatio="xMidYMid meet"
-              style="width:100%;height:100%;display:block;">
+              style="${mapSvgStyle}">
           <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
           ${printSvgData.svgBody}
           ${gcaLabels}
@@ -1297,6 +1350,36 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             />
             <span className="text-[10px] font-mono text-slate-500 w-10">{printMargin}mm</span>
           </div>
+          {/* Mustateel print size (cm) — length/width linked by real 440×990 aspect */}
+          <div className="flex items-center gap-1.5 bg-white rounded-lg px-2 py-1 border border-slate-300 flex-wrap">
+            <span className="text-[10px] text-slate-600 whitespace-nowrap" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>مستطیل پرنٹ سائز</span>
+            <label className="flex items-center gap-1 cursor-pointer select-none" title="Auto = current fit-to-page (unchanged print)">
+              <input type="checkbox" checked={!mustOverride} onChange={e => setMustOverride(!e.target.checked)} className="w-3 h-3 accent-blue-500" />
+              <span className="text-[9px] text-slate-500" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>آٹو</span>
+            </label>
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] text-slate-500" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>چوڑائی</span>
+              <input type="number" min={1} max={5} step={0.1}
+                value={mustOverride ? mustCmW : (measuredMustCm.w ? String(+measuredMustCm.w.toFixed(2)) : "")}
+                onChange={e => { setMustOverride(true); setMustCmW(e.target.value); setHeightEditing(null); }}
+                className="w-14 h-6 text-[10px] text-center border border-slate-200 rounded font-mono bg-white focus:border-blue-500 outline-none" />
+              <span className="text-[8px] text-slate-400">cm</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] text-slate-500" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>لمبائی</span>
+              <input type="number" min={1} max={5} step={0.1}
+                value={heightEditing !== null
+                  ? heightEditing
+                  : (mustOverride
+                      ? (mustCmW && !isNaN(parseFloat(mustCmW)) ? String(+(parseFloat(mustCmW) * MUST_ASPECT_H).toFixed(2)) : "")
+                      : (measuredMustCm.h ? String(+measuredMustCm.h.toFixed(2)) : ""))}
+                onChange={e => { setMustOverride(true); setHeightEditing(e.target.value); const n = parseFloat(e.target.value); if (!isNaN(n)) setMustCmW(n / MUST_ASPECT_H); }}
+                onBlur={() => setHeightEditing(null)}
+                className="w-14 h-6 text-[10px] text-center border border-slate-200 rounded font-mono bg-white focus:border-blue-500 outline-none" />
+              <span className="text-[8px] text-slate-400">cm</span>
+            </div>
+            <span className="text-[8px] text-slate-400" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>1–5 سینٹی میٹر · دونوں باہمی جڑے ہوئے</span>
+          </div>
           {/* Page border toggle */}
           <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <input type="checkbox" checked={showPageBorder} onChange={e => setShowPageBorder(e.target.checked)}
@@ -1340,10 +1423,11 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-center" style={{ paddingLeft: `${marginPct}%`, paddingRight: `${marginPct}%` }}>
               {inlineSvgMarkup ? (
                 <svg
+                  ref={svgMeasureRef}
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox={`${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}`}
                   preserveAspectRatio="xMidYMid meet"
-                  style={{ width:"100%", height:"100%", display:"block" }}
+                  style={overridePreviewStyle}
                   dangerouslySetInnerHTML={{ __html: inlineSvgMarkup }}
                 />
               ) : (
