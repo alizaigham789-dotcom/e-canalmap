@@ -285,7 +285,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
     setRecordId(record.id);
     try {
       const data = JSON.parse(record.data_json || "{}");
-      if (data.rows) setRows(data.rows.map(normalizeRowDigits));
+      if (data.rows) setRows(renumberRows(data.rows.map(normalizeRowDigits)));
       if (data.notes) setNotes(data.notes);
       if (data.docType !== undefined) setDocType(data.docType);
       if (data.cca !== undefined) setCca(data.cca);
@@ -700,15 +700,41 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
     setRows(mapped.map(normalizeRowDigits));
   };
 
+  // Khata number auto-numbers like the serial (نمبرشمار) column: every row's
+// کھاتہ نمبر equals its position index+1, kept in sync on insert / delete.
+  const renumberRows = (rows) => rows.map((r, i) => ({ ...r, khatoni2: String(i + 1), khatoni: String(i + 1) }));
+
   const insertRowAfter = (i) => {
     setRows(prev => {
       const next = [...prev];
       next.splice(i + 1, 0, emptyRow(i + 1));
-      return next;
+      return renumberRows(next);
     });
   };
 
-  const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
+  const removeRow = (i) => setRows(prev => renumberRows(prev.filter((_, idx) => idx !== i)));
+
+  // Enter advances focus to the next cell in column order (A→B→…→H→I→J→…→Z),
+  // then to the first cell of the next row — giving the desired A-then-I flow.
+  const handleTableKeyDown = (e) => {
+    if (e.key !== "Enter") return;
+    const tag = e.target.tagName;
+    if (tag !== "INPUT" && tag !== "TEXTAREA") return;
+    const tr = e.target.closest("tr[data-row]");
+    if (!tr) return;
+    const rowIndex = parseInt(tr.dataset.row, 10);
+    const inputs = Array.from(tr.querySelectorAll("input, textarea"));
+    const cur = inputs.indexOf(e.target);
+    if (cur === -1) return;
+    e.preventDefault();
+    let next = inputs[cur + 1];
+    if (!next) {
+      const nextTr = document.querySelector(`tr[data-row="${rowIndex + 1}"]`);
+      if (!nextTr) return; // last cell of last row — stop
+      next = nextTr.querySelector("input, textarea");
+    }
+    if (next) { next.focus(); if (typeof next.select === "function") next.select(); }
+  };
 
   // ڈیفالٹ اسکرول نمبرشمار (سٹارٹ) سائڈ پر — ٹشریح اینڈ پر نہیں
   // جدول نمبرشمار سائڈ ہمیشہ دائیں (right) رہے — table ظاہر ہونے یا قطار بڑھنے پر دوبارہ اسکرول
@@ -911,6 +937,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         )}
         {/* Scrollable table */}
         <div ref={scrollRef} className="overflow-auto flex-1" style={{ maxHeight: "220px" }}
+          onKeyDown={handleTableKeyDown}
           onFocus={(e) => {
             const tr = e.target.closest && e.target.closest('tr[data-row]');
             if (tr) setActiveRow(parseInt(tr.dataset.row, 10));
