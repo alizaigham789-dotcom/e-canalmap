@@ -1141,6 +1141,12 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               )}
             </div>
           ))}
+          {/* نوٹ شامل کریں button at the end of the notes list (after 5th point) */}
+          <div className="flex justify-center pt-2">
+            <Button size="sm" onClick={addNote} className="h-6 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white gap-1 px-2">
+              <Plus className="w-3 h-3" /> نوٹ شامل کریں
+            </Button>
+          </div>
         </div>
       </div>
 
