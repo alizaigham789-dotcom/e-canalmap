@@ -1107,16 +1107,14 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       }
     }
 
-    const win = window.open("", "_blank");
-    if (!win) { return; }
     // Mustateel-print-size override: render the SVG at an exact physical mm size so
     // each mustateel measures mustCmW cm wide (height follows the 440×990 aspect).
     const mapSvgStyle = overrideMmPerWorld
       ? `width:${(svgData.viewW * overrideMmPerWorld).toFixed(2)}mm;height:${(svgData.viewH * overrideMmPerWorld).toFixed(2)}mm;display:block;`
       : `width:100%;height:100%;display:block;`;
     const printLegendSVG = (showLegendInPrint && !khakaDastiMode) ? buildLegendSVG(svgData.viewX, svgData.viewY, svgData.viewW, svgData.viewH, effectiveColors, getObjectsBounds(objects), legendCustomPos, landUses, objects) : "";
-    win.document.write(`<!DOCTYPE html><html><head>
-      <title>Khaka Dasti</title>
+    const printDocHtml = `<!DOCTYPE html><html><head>
+      <title>${mapData?.title || "Map Print"}</title>
       <style>
         @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
         @page { margin: 0; size: ${pageSize} ${pageOrientation}; }
@@ -1124,7 +1122,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         html, body { width:100%; height:100%; overflow:hidden; background:#fff; font-family: Rajdhani, Arial, sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
         body { display: flex; flex-direction: column;${showPageBorder ? ` border:2px solid #3b82f6;` : ""} }
         .map-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
-        .map-wrap svg { width:100%; height:100%; display:block; }
+        .map-wrap svg { ${mapSvgStyle} }
         .map-wrap svg * { -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
         @media print {
           @page { margin: 0; size: ${pageSize} ${pageOrientation}; }
@@ -1138,8 +1136,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       <div class="map-wrap" style="padding-left:${printMargin}mm; padding-right:${printMargin}mm;">
         <svg xmlns="http://www.w3.org/2000/svg"
              viewBox="${svgData.viewX} ${svgData.viewY} ${svgData.viewW} ${svgData.viewH}"
-             preserveAspectRatio="xMidYMid meet"
-              style="${mapSvgStyle}">
+             preserveAspectRatio="xMidYMid meet">
           <rect x="${svgData.viewX}" y="${svgData.viewY}" width="${svgData.viewW}" height="${svgData.viewH}" fill="white"/>
           ${printSvgData.svgBody}
           ${gcaLabels}
@@ -1147,12 +1144,38 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
         </svg>
       </div>
       ${khakaDastiMode ? "" : footerHTML}
-    </body></html>`);
-    win.document.close();
+    </body></html>`;
+
+    // Print via a hidden iframe — avoids the about:blank white-tab / popup-blocker
+    // problem that left the user with a blank screen instead of a print preview.
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+    document.body.appendChild(iframe);
     let printed = false;
-    const doPrint = () => { if (printed) return; printed = true; setTimeout(() => win.print(), 400); };
-    win.onload = () => setTimeout(doPrint, 600);
-    setTimeout(doPrint, 1500);
+    const cleanup = () => { setTimeout(() => { try { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); } catch {} }, 500); };
+    const triggerPrint = () => {
+      if (printed) return; printed = true;
+      try {
+        const cw = iframe.contentWindow;
+        if (cw && typeof cw.addEventListener === "function") {
+          cw.addEventListener("afterprint", cleanup, { once: true });
+        }
+        if (cw) { cw.focus(); cw.print(); }
+        else cleanup();
+      } catch { cleanup(); }
+      // Fallback cleanup if the afterprint event never fires.
+      setTimeout(cleanup, 45000);
+    };
+    iframe.onload = () => {
+      const doc = iframe.contentDocument;
+      const fontsReady = (doc && doc.fonts && doc.fonts.ready) ? doc.fonts.ready : Promise.resolve();
+      Promise.race([fontsReady, new Promise(r => setTimeout(r, 1200))])
+        .then(() => setTimeout(triggerPrint, 100));
+    };
+    iframe.srcdoc = printDocHtml;
+    // Safety net: if onload never fires (e.g. font CDN slow), still print.
+    setTimeout(() => { if (!printed) triggerPrint(); }, 2200);
   };
 
   // ─── SVG DOWNLOAD ────────────────────────────────────────────────────────────
