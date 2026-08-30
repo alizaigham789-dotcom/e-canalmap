@@ -876,42 +876,6 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [measuredMustCm, setMeasuredMustCm] = useState({ w: 0, h: 0 });
   const [pagePxPerMm, setPagePxPerMm] = useState(0);
 
-  // Measure the mustateel cm that the current auto-fit (meet) actually produces,
-  // straight from the live preview DOM — so the default shown always matches print.
-  useEffect(() => {
-    const recompute = () => {
-      const pb = svgWrapRef.current, svg = svgMeasureRef.current, sd = svgData;
-      if (!pb || !svg || !sd) return;
-      const ppmm = pb.clientWidth / pageWidthMm;
-      if (ppmm > 0) setPagePxPerMm(ppmm);
-      if (!ppmm || ppmm <= 0) return;
-      const meetScale = Math.min(svg.clientWidth / sd.viewW, svg.clientHeight / sd.viewH);
-      if (!meetScale || meetScale <= 0) return;
-      const wCm = (MUST_W * meetScale) / ppmm / 10;
-      setMeasuredMustCm({ w: +wCm.toFixed(2), h: +(wCm * MUST_ASPECT_H).toFixed(2) });
-    };
-    recompute();
-    let ro;
-    if (svgWrapRef.current && window.ResizeObserver) {
-      ro = new ResizeObserver(recompute);
-      ro.observe(svgWrapRef.current);
-    }
-    return () => ro && ro.disconnect();
-  }, [svgData, scale, pageWidthMm, MUST_W, MUST_ASPECT_H, mustOverride]);
-
-  // mm-per-world-unit when overriding; null = keep current auto-fit (meet)
-  const overrideMmPerWorld = (mustOverride && mustCmW && parseFloat(mustCmW) > 0)
-    ? (parseFloat(mustCmW) * 10) / MUST_W
-    : null;
-  // Preview px size of the SVG when overriding (uses measured px-per-mm of the page)
-  const overridePreviewStyle = (overrideMmPerWorld && pagePxPerMm > 0)
-    ? {
-        width: `${(svgData.viewW * overrideMmPerWorld * pagePxPerMm).toFixed(1)}px`,
-        height: `${(svgData.viewH * overrideMmPerWorld * pagePxPerMm).toFixed(1)}px`,
-        display: "block",
-      }
-    : { width: "100%", height: "100%", display: "block" };
-
   // Persist legend position per-map in localStorage so it survives close/reopen
   const legendKey = mapData?.id ? `legend_pos_${mapData.id}` : null;
   const [legendCustomPos, setLegendCustomPos] = useState(() => {
@@ -998,6 +962,42 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
     () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 1, khakaDastiMode, khakaTargetAspect),
     [objects, effectiveColors, mogaFilter, killaVisibility, khakaDastiMode, khakaTargetAspect]
   );
+
+  // Measure the mustateel cm that the current auto-fit (meet) actually produces,
+  // straight from the live preview DOM — so the default shown always matches print.
+  useEffect(() => {
+    const recompute = () => {
+      const pb = svgWrapRef.current, svg = svgMeasureRef.current, sd = svgData;
+      if (!pb || !svg || !sd) return;
+      const ppmm = pb.clientWidth / pageWidthMm;
+      if (ppmm > 0) setPagePxPerMm(ppmm);
+      if (!ppmm || ppmm <= 0) return;
+      const meetScale = Math.min(svg.clientWidth / sd.viewW, svg.clientHeight / sd.viewH);
+      if (!meetScale || meetScale <= 0) return;
+      const wCm = (MUST_W * meetScale) / ppmm / 10;
+      setMeasuredMustCm({ w: +wCm.toFixed(2), h: +(wCm * MUST_ASPECT_H).toFixed(2) });
+    };
+    recompute();
+    let ro;
+    if (svgWrapRef.current && window.ResizeObserver) {
+      ro = new ResizeObserver(recompute);
+      ro.observe(svgWrapRef.current);
+    }
+    return () => ro && ro.disconnect();
+  }, [svgData, scale, pageWidthMm, MUST_W, MUST_ASPECT_H, mustOverride]);
+
+  // mm-per-world-unit when overriding; null = keep current auto-fit (meet)
+  const overrideMmPerWorld = (mustOverride && mustCmW && parseFloat(mustCmW) > 0)
+    ? (parseFloat(mustCmW) * 10) / MUST_W
+    : null;
+  // Preview px size of the SVG when overriding (uses measured px-per-mm of the page)
+  const overridePreviewStyle = (overrideMmPerWorld && pagePxPerMm > 0)
+    ? {
+        width: `${(svgData.viewW * overrideMmPerWorld * pagePxPerMm).toFixed(1)}px`,
+        height: `${(svgData.viewH * overrideMmPerWorld * pagePxPerMm).toFixed(1)}px`,
+        display: "block",
+      }
+    : { width: "100%", height: "100%", display: "block" };
 
   // Convert screen coordinates to SVG world coordinates (must be after svgData)
   const screenToSVG = useCallback((clientX, clientY) => {
