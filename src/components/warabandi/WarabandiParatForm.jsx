@@ -99,6 +99,20 @@ function normalizeRowDigits(row) {
   return out;
 }
 
+// تفصیل ترمیم: ایک قطار کے لیے خودکار "جناب عالیٰ" لائن — نام / رقبہ / دونوں کی
+// تقسیم کے مطابق۔ null اگر کوئی ترمیم نہیں۔ (خودکار + edit-able دونوں کے لیے استعمال)
+function autoTarmeemLineFor(row, i) {
+  const nameChanged = !!(row.owner_name2 && row.owner_name && row.owner_name2.trim() !== row.owner_name.trim());
+  const cVal = parseFloat(row.total_area2);
+  const uVal = parseFloat(row.total_area);
+  const raqbaChanged = !isNaN(cVal) && !isNaN(uVal) && cVal !== uVal;
+  if (!nameChanged && !raqbaChanged) return null;
+  const khata = row.khatoni || String(i + 1);
+  if (nameChanged && raqbaChanged) return `کھاتہ نمبر ${khata} میں مشترکہ کھاتہ نمبر کی تقسیم کر کے علیحدہ نام و رقبہ درج کر دیا گیا ہے۔`;
+  if (nameChanged) return `کھاتہ نمبر ${khata} میں قابض کے نام کی ترمیم کر کے درج کر دیا گیا ہے۔`;
+  return `کھاتہ نمبر ${khata} میں رقبہ کی ترمیم کر کے درج کر دیا گیا ہے۔`;
+}
+
 // Convert total minutes to hours+minutes string
 function minsToStr(totalMins) {
   const m = Math.round(totalMins);
@@ -217,28 +231,13 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
 
   // ترمیم کی گئی قطاروں کے لیے خودکار "جناب عالیٰ" نوٹس — خانہ نمبر کے ساتھ
   // نام کی ترمیم / رقبہ کی ترمیم / دونوں کی تقسیم کے مطابق خوبصورت اردو لائن
-  const autoTarmeemNotes = useMemo(() => {
-    if (!showSummary) return [];
-    const out = [];
-    rows.forEach((row, i) => {
-      const nameChanged = !!(row.owner_name2 && row.owner_name && row.owner_name2.trim() !== row.owner_name.trim());
-      const cVal = parseFloat(row.total_area2);
-      const uVal = parseFloat(row.total_area);
-      const raqbaChanged = !isNaN(cVal) && !isNaN(uVal) && cVal !== uVal;
-      if (!nameChanged && !raqbaChanged) return;
-      const khata = row.khatoni || String(i + 1);
-      let line;
-      if (nameChanged && raqbaChanged) {
-        line = `کھاتہ نمبر ${khata} میں مشترکہ کھاتہ نمبر کی تقسیم کر کے علیحدہ نام و رقبہ درج کر دیا گیا ہے۔`;
-      } else if (nameChanged) {
-        line = `کھاتہ نمبر ${khata} میں قابض کے نام کی ترمیم کر کے درج کر دیا گیا ہے۔`;
-      } else {
-        line = `کھاتہ نمبر ${khata} میں رقبہ کی ترمیم کر کے درج کر دیا گیا ہے۔`;
-      }
-      out.push(line);
-    });
-    return out;
-  }, [rows, showSummary]);
+  // تفصیل ترمیم کی خودکار لائنوں میں ہاتھ سے کی گئی تبدیلیاں (per-row index key)
+  const [tarmeemEdits, setTarmeemEdits] = useState({});
+  // خودکار لائنیں (reference / read-only preview)
+  const autoTarmeemNotes = useMemo(() => showSummary ? rows.map((r, i) => autoTarmeemLineFor(r, i)).filter(Boolean) : [], [rows, showSummary]);
+  // وہی لائنیں جناب عالیٰ کے پوائنٹس میں — edit kar saken (per-row index key)
+  const tarmeemRows = useMemo(() => showSummary ? rows.map((r, i) => ({ i, line: autoTarmeemLineFor(r, i) })).filter(x => x.line) : [], [rows, showSummary]);
+  const resolvedTarmeemNotes = useMemo(() => tarmeemRows.map(({ i, line }) => (tarmeemEdits[i] !== undefined ? tarmeemEdits[i] : line)), [tarmeemRows, tarmeemEdits]);
   // تشریح اوقات: دن/رات شروع وقت (گھنٹے + منٹ + صبح/شام)
   const [tashreehDayHour, setTashreehDayHour] = useState("");
   const [tashreehDayMin, setTashreehDayMin] = useState("");
@@ -285,6 +284,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       if (data.tashreehNightMin !== undefined) setTashreehNightMin(data.tashreehNightMin);
       if (data.tashreehNightMeridian !== undefined) setTashreehNightMeridian(data.tashreehNightMeridian);
       if (data.sameTime !== undefined) setSameTime(data.sameTime);
+      if (data.tarmeemEdits !== undefined) setTarmeemEdits(data.tarmeemEdits);
       if (data.header) setHeader((prev) => ({ ...prev, ...data.header }));
     } catch {}
   }, [record?.id]);
@@ -296,7 +296,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
     const data_json = JSON.stringify({
       header, rows, notes, docType, cca, autoOn,
       showRowSr, showColSr, printRowSr, printColSr, printCols, isUrduMode,
-      tashreehDayHour, tashreehDayMin, tashreehDayMeridian, tashreehNightHour, tashreehNightMin, tashreehNightMeridian, sameTime, step: stepOverride !== undefined ? stepOverride : step,
+      tashreehDayHour, tashreehDayMin, tashreehDayMeridian, tashreehNightHour, tashreehNightMin, tashreehNightMeridian, sameTime, tarmeemEdits, step: stepOverride !== undefined ? stepOverride : step,
     });
     const payload = {
       mogha_number: header.mogha_number,
@@ -784,7 +784,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const tdCls = "border border-slate-300 text-center px-0 py-0 text-[8px]";
   const totalCls = "border border-slate-400 text-center px-0.5 py-1 text-[8px] font-bold bg-amber-50";
 
-  const printData = { docType, headerLine, rows, notes, autoTarmeemNotes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, printCols, setPrintCols, variant: isJadeed ? "jadeed" : "tarmeem" };
+  const printData = { docType, headerLine, rows, notes, autoTarmeemNotes: resolvedTarmeemNotes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, printCols, setPrintCols, variant: isJadeed ? "jadeed" : "tarmeem" };
 
 
 
@@ -1266,13 +1266,26 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               )}
             </div>
           ))}
+          {/* خودکار تفصیل ترمیم لائنیں — جناب عالیٰ کے پوائنٹس میں edit ho saken */}
+          {tarmeemRows.map(({ i: ridx, line }, tIdx) => (
+            <div key={`t-${ridx}`} className="flex items-start gap-2">
+              <span className="text-[10px] text-emerald-600 mt-1.5 shrink-0" style={{ fontFamily: "serif" }}>{notes.length + tIdx + 1}-</span>
+              <textarea
+                value={tarmeemEdits[ridx] !== undefined ? tarmeemEdits[ridx] : line}
+                onChange={e => setTarmeemEdits(prev => ({ ...prev, [ridx]: e.target.value }))}
+                rows={2} dir="rtl"
+                className="flex-1 border border-emerald-300 rounded px-2 py-1 text-[14px] text-emerald-900 bg-emerald-50/50 focus:outline-none focus:border-emerald-500 resize-none"
+                style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 1.8 }}
+              />
+            </div>
+          ))}
           {/* نوٹ شامل کریں button at the end of the notes list (after 5th point) */}
           <div className="flex justify-center pt-2">
             <Button size="sm" onClick={addNote} className="h-6 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white gap-1 px-2">
               <Plus className="w-3 h-3" /> نوٹ شامل کریں
             </Button>
           </div>
-        </div>
+          </div>
 
         {/* خودکار ترمیم نوٹس — جناب عالیٰ کے نکات میں خانہ وار تفصیل */}
         {autoTarmeemNotes.length > 0 && (
