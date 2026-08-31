@@ -975,9 +975,9 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <th className={thCls}>کل رقبہ</th>
                 <th className={thCls} rowSpan={2} style={{ backgroundColor: "#f0fdf4" }}>خالص رقبہ</th>
                 <th className={thCls} rowSpan={2} style={{ backgroundColor: "#f0fdf4" }}>غیر ممکن رقبہ</th>
-                <th className={thCls} colSpan={2}>خالص واری</th>
                 <th className={thCls} colSpan={2}>زائدہ وصولی</th>
                 <th className={thCls} colSpan={2}>وضگی</th>
+                <th className={thCls} colSpan={2}>خالص واری</th>
                 <th className={thCls} colSpan={2}>نکہ جات</th>
                 </>}
                 {showSummary ? <></> : <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>}
@@ -1054,12 +1054,12 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   <td className={tdCls} style={{ backgroundColor: "#f0fdf4" }}>
                     <input value={row.ghair_mumkin} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
                   </td>
-                  <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls}><input value={row.zaidah_minute} onChange={e => updateRow(i, "zaidah_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
                   <td className={tdCls}><input value={row.zaidah_ghante} onChange={e => updateRow(i, "zaidah_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
                   <td className={tdCls}><input value={row.wazgi_minute} onChange={e => updateRow(i, "wazgi_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
                   <td className={tdCls}><input value={row.wazgi_ghante} onChange={e => updateRow(i, "wazgi_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
+                  <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
+                  <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_lega" }) : undefined} /></td>
                   <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_dega" }) : undefined} /></td>
                   </>}
@@ -1139,12 +1139,12 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <td className={totalCls}>{sumCol(rows, "total_area2")}</td>
                 <td className={totalCls}>{sumCol(rows, "khalis_raqba")}</td>
                 <td className={totalCls}>{sumCol(rows, "ghair_mumkin")}</td>
-                <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").m}</td>
-                <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
                 <td className={totalCls}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").m}</td>
                 <td className={totalCls}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").h}</td>
                 <td className={totalCls}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").m}</td>
                 <td className={totalCls}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").h}</td>
+                <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").m}</td>
+                <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
                 <td className={totalCls}>—</td><td className={totalCls}>—</td>
                 </>}
                 {showSummary && <></>}
@@ -1284,9 +1284,9 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         <th style={thP}>کل رقبہ</th>
         <th style={thP} rowSpan={2}>خالص رقبہ</th>
         <th style={thP} rowSpan={2}>غیر ممکن رقبہ</th>
-        <th style={thP} colSpan={2}>خالص واری</th>
         <th style={thP} colSpan={2}>زائدہ وصولی</th>
         <th style={thP} colSpan={2}>وضگی</th>
+        <th style={thP} colSpan={2}>خالص واری</th>
         <th style={thP} colSpan={2}>نکہ جات</th>
         </>}
         <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
@@ -1339,12 +1339,12 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <td style={tdP}>{d(row.total_area2)}</td>
       <td style={tdP}>{d(row.khalis_raqba)}</td>
       <td style={tdP}>{d(row.ghair_mumkin)}</td>
-      <td style={tdP}>{d(row.khalis_waari2_minute)}</td>
-      <td style={tdP}>{d(row.khalis_waari2_ghante)}</td>
       <td style={tdP}>{d(row.zaidah_minute)}</td>
       <td style={tdP}>{d(row.zaidah_ghante)}</td>
       <td style={tdP}>{d(row.wazgi_minute)}</td>
       <td style={tdP}>{d(row.wazgi_ghante)}</td>
+      <td style={tdP}>{d(row.khalis_waari2_minute)}</td>
+      <td style={tdP}>{d(row.khalis_waari2_ghante)}</td>
       <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_lega ? fracHtml(row.nikha2_lega) : "-" }} />
       <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_dega ? fracHtml(row.nikha2_dega) : "-" }} />
       </>}
@@ -1379,12 +1379,12 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <td style={tdTotal}>{sumCol(rows, "total_area2")}</td>
       <td style={tdTotal}>{sumCol(rows, "khalis_raqba")}</td>
       <td style={tdTotal}>{sumCol(rows, "ghair_mumkin")}</td>
-      <td style={tdTotal}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").m}</td>
-      <td style={tdTotal}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
       <td style={tdTotal}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").m}</td>
       <td style={tdTotal}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").h}</td>
       <td style={tdTotal}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").m}</td>
       <td style={tdTotal}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").h}</td>
+      <td style={tdTotal}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").m}</td>
+      <td style={tdTotal}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
       <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
       </>}
       <td style={tdTotal}>—</td>
