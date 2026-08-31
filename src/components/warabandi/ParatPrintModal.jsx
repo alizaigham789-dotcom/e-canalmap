@@ -8,11 +8,9 @@ import { openPrintWindow } from "@/lib/paratPrint";
 // H/I (زائدہ وصولی), J/K (وضگی).
 const TOGGLE_COLS = ["C", "D", "F", "G", "H", "I", "J", "K"];
 
-export default function ParatPrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, onClose, variant }) {
+export default function ParatPrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, printCols, setPrintCols, onClose, variant }) {
   const [pageSize, setPageSize] = useState("A4");
   const [bw, setBw] = useState(false);
-  // Per-column print visibility — default OFF (hidden in print).
-  const [printCols, setPrintCols] = useState({ C:false, D:false, F:false, G:false, H:false, I:false, J:false, K:false });
 
   const isJadeed = variant === "jadeed";
   const showSummary = !isJadeed;
@@ -56,7 +54,7 @@ export default function ParatPrintModal({ docType, headerLine, rows, notes, prin
   const headerRows = (
     <>
       {printColSr && (
-        <tr>
+        <tr className="col-letters-row">
           {printRowSr && <th style={{ ...thLetters, fontSize: "7px" }}>#</th>}
           {printVisibleLetters.map((l, i) => <th key={i} style={{ ...thLetters, fontSize: "7px" }}>{l}</th>)}
         </tr>
@@ -75,7 +73,6 @@ export default function ParatPrintModal({ docType, headerLine, rows, notes, prin
         <th style={thP} colSpan={2}>خالص واری</th>
         <th style={thP} colSpan={2}>نکہ جات</th>
         </>}
-        {showSummary && <th style={thP} rowSpan={2}>کھاتہ نمبر</th>}
         <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
         <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نام مالک معہ والدیت</th>
         <th style={{ ...thP, minWidth: 80 }} rowSpan={2}>نمبران بندوبست</th>
@@ -145,7 +142,6 @@ export default function ParatPrintModal({ docType, headerLine, rows, notes, prin
       <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_lega ? fracHtml(row.nikha2_lega) : "-" }} />
       <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha2_dega ? fracHtml(row.nikha2_dega) : "-" }} />
       </>}
-      {showSummary && <td style={tdP}>{d(row.khatoni2)}</td>}
       <td style={tdP}>{d(row.khatoni)}</td>
       <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name)}</td>
       <td style={tdP} dangerouslySetInnerHTML={{ __html: row.bandubast ? fracHtml(row.bandubast) : "-" }} />
@@ -190,7 +186,6 @@ export default function ParatPrintModal({ docType, headerLine, rows, notes, prin
       <td style={tdTotal}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
       <td style={tdTotal}>—</td><td style={tdTotal}>—</td>
       </>}
-      {showSummary && <td style={tdTotal}>—</td>}
       <td style={tdTotal}>—</td>
       <td style={{ ...tdTotal, textAlign: "right" }}>میزان</td>
       <td style={tdTotal}>—</td>

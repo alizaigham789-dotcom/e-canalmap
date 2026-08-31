@@ -43,6 +43,7 @@ export const PRINT_CSS = `
   .tashreeh-table th { font-size: 7px; padding: 2px; }
   .tashreeh-table td { font-size: 7px; padding: 2px; }
   .signatures { margin-top: 10mm; margin-bottom: 10mm; page-break-inside: avoid; break-inside: avoid; }
+  @media print { .col-letters-row { display: none !important; } }
 `;
 
 export const BW_CSS = `

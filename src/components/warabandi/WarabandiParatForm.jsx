@@ -202,7 +202,8 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [showRowSr, setShowRowSr] = useState(true);
   const [showColSr, setShowColSr] = useState(true);
   const [printRowSr, setPrintRowSr] = useState(false);
-  const [printColSr, setPrintColSr] = useState(false);
+  const [printColSr, setPrintColSr] = useState(true);
+  const [printCols, setPrintCols] = useState({ C:false, D:false, F:false, G:false, H:false, I:false, J:false, K:false });
   // Automation toggle
   const [autoOn, setAutoOn] = useState(true);
   // واری حساب: 1 ایکڑ کا وقت = (7*24*60) ÷ CCA
@@ -245,6 +246,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       if (data.cca !== undefined) setCca(data.cca);
       setSetupDone(!!data.cca);
       if (data.autoOn !== undefined) setAutoOn(data.autoOn);
+      if (data.printCols !== undefined) setPrintCols(data.printCols);
       if (data.tashreehDayHour !== undefined) setTashreehDayHour(data.tashreehDayHour);
       if (data.tashreehDayMin !== undefined) setTashreehDayMin(data.tashreehDayMin);
       if (data.tashreehDayMeridian !== undefined) setTashreehDayMeridian(data.tashreehDayMeridian);
@@ -262,7 +264,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
     setSaving(true);
     const data_json = JSON.stringify({
       header, rows, notes, docType, cca, autoOn,
-      showRowSr, showColSr, printRowSr, printColSr, isUrduMode,
+      showRowSr, showColSr, printRowSr, printColSr, printCols, isUrduMode,
       tashreehDayHour, tashreehDayMin, tashreehDayMeridian, tashreehNightHour, tashreehNightMin, tashreehNightMeridian, sameTime,
     });
     const payload = {
@@ -735,7 +737,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const tdCls = "border border-slate-300 text-center px-0 py-0 text-[8px]";
   const totalCls = "border border-slate-400 text-center px-0.5 py-1 text-[8px] font-bold bg-amber-50";
 
-  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, variant: isJadeed ? "jadeed" : "tarmeem" };
+  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, printCols, setPrintCols, variant: isJadeed ? "jadeed" : "tarmeem" };
 
 
 
@@ -877,6 +879,19 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           </Button>
         </div>
       </div>
+      {/* Column visibility checkboxes (shared with print) */}
+      {showSummary && (
+        <div className="flex items-center gap-2 px-4 py-1.5 border-b border-slate-100 bg-slate-50 flex-wrap" dir="rtl">
+          <span className="text-[10px] font-semibold text-slate-600" style={{ fontFamily: "serif" }}>پرنٹ کالم:</span>
+          {["C","D","F","G","H","I","J","K"].map(col => (
+            <label key={col} className="flex items-center gap-1 text-[10px] text-slate-600 cursor-pointer bg-white border border-slate-200 rounded px-1.5 py-0.5">
+              <input type="checkbox" checked={printCols[col]} onChange={e => setPrintCols(prev => ({ ...prev, [col]: e.target.checked }))} className="w-3 h-3 accent-blue-600" />
+              <span className="font-mono font-bold text-slate-700">{col}</span>
+            </label>
+          ))}
+          <span className="text-[9px] text-slate-400" style={{ fontFamily: "serif" }}>(پرنٹ میں دکھانے کے لیے آن کریں)</span>
+        </div>
+      )}
 
       {/* Table + action column (number-shumar side) */}
       {setupDone ? (
