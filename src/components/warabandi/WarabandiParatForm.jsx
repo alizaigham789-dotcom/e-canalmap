@@ -229,11 +229,11 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       const khata = row.khatoni || String(i + 1);
       let line;
       if (nameChanged && raqbaChanged) {
-        line = `خانہ نمبر ${khata} میں مشترکہ خانے کی تقسیم کر کے علیحدہ نام و رقبہ درج کر دیا گیا ہے۔`;
+        line = `کھاتہ نمبر ${khata} میں مشترکہ خانے کی تقسیم کر کے علیحدہ نام و رقبہ درج کر دیا گیا ہے۔`;
       } else if (nameChanged) {
-        line = `خانہ نمبر ${khata} میں قابض کے نام کی ترمیم کر کے درج کر دیا گیا ہے۔`;
+        line = `کھاتہ نمبر ${khata} میں قابض کے نام کی ترمیم کر کے درج کر دیا گیا ہے۔`;
       } else {
-        line = `خانہ نمبر ${khata} میں رقبہ کی ترمیم کر کے درج کر دیا گیا ہے۔`;
+        line = `کھاتہ نمبر ${khata} میں رقبہ کی ترمیم کر کے درج کر دیا گیا ہے۔`;
       }
       out.push(line);
     });
