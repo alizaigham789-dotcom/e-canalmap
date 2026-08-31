@@ -8,7 +8,7 @@ import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
 import BandubastPicker from "./BandubastPicker";
 import FractionCell from "./FractionCell";
-import { COL_LETTERS, sumCol, sumPair, d, PRINT_CSS, BW_CSS, fracHtml } from "@/lib/paratHelpers";
+import { COL_LETTERS, sumCol, sumPair, d, PRINT_CSS, BW_CSS, fracHtml, tarmeemMarker } from "@/lib/paratHelpers";
 import { openPrintWindow } from "@/lib/paratPrint";
 import ParatPrintModal from "./ParatPrintModal";
 
@@ -1075,7 +1075,12 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} disabled={summaryLocked} /></td>
                   <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} disabled={summaryLocked} /></td>
                   </>}
-                  {showSummary && <td className={tdCls} data-main-start><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp + " bg-slate-50 text-slate-500"} dir={isUrduMode ? "rtl" : "ltr"} disabled={mainLocked} /></td>}
+                  {showSummary && <td className={tdCls} data-main-start>
+                    <input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp + " bg-slate-50 text-slate-500"} dir={isUrduMode ? "rtl" : "ltr"} disabled={mainLocked} />
+                    {step === "tarmeem" && tarmeemMarker(row) && (
+                      <div className="text-[8px] text-red-600 text-center font-bold leading-tight pb-0.5" style={{ fontFamily: "serif" }}>{tarmeemMarker(row)}</div>
+                    )}
+                  </td>}
                   {showSummary && <></>}
                   {!showSummary && <td className={tdCls}><input value={String(i + 1)} readOnly tabIndex={-1} className={inp + " bg-slate-50 text-slate-500"} dir={isUrduMode ? "rtl" : "ltr"} /></td>}
                   <td className={tdCls} style={{ minWidth: 80 }}>

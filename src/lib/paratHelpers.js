@@ -55,6 +55,21 @@ export const BW_CSS = `
   .bw-mode .signatures, .bw-mode .sig-item { border-color:#000 !important; color:#000 !important; background:transparent !important; }
 `;
 
+// Tarmeem annotation for a row: returns "ترمیم" if the owner name changed
+// between the summary side (B = owner_name2) and the main side (Q = owner_name),
+// or "ترمیم رقبہ" if the khalis raqba (E = khalis_raqba) differs from the main
+// total area (U = total_area). Raqba takes precedence when both changed.
+export function tarmeemMarker(row) {
+  if (!row) return "";
+  const nameChanged = !!(row.owner_name2 && row.owner_name && row.owner_name2.trim() !== row.owner_name.trim());
+  const eVal = parseFloat(row.khalis_raqba);
+  const uVal = parseFloat(row.total_area);
+  const raqbaChanged = !isNaN(eVal) && !isNaN(uVal) && eVal !== uVal;
+  if (raqbaChanged) return "ترمیم رقبہ";
+  if (nameChanged) return "ترمیم";
+  return "";
+}
+
 export function fracHtml(val) {
   if (!val) return "-";
   const entries = val.split(",").map(e => e.trim()).filter(Boolean);
