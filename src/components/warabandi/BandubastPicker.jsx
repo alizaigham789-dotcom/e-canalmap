@@ -63,6 +63,7 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
   const [loadingObjs, setLoadingObjs] = useState(false);
   const [draft, setDraft] = useState(value || "");
   const [search, setSearch] = useState("");
+  const [manualMust, setManualMust] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -137,18 +138,42 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
           {!mapId ? (
             <div className="border border-emerald-200 rounded-lg p-2.5 bg-emerald-50/60">
               <label className="text-[9px] font-bold text-emerald-700 uppercase block mb-1.5" dir="rtl" style={{ fontFamily: "serif" }}>
-                دستی اندراج — مستطیل/کلہ درج کریں
+                دستی اندراج — مستطیل نمبر لکھیں، نیچے ایکڑ منتخب کریں
               </label>
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+              <input
+                value={manualMust}
+                onChange={(e) => setManualMust(e.target.value)}
                 dir="ltr"
-                rows={2}
-                placeholder="مثال: 87/3-5 92/1 55/3"
-                className="w-full text-xs px-2 py-1.5 border border-emerald-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono bg-white resize-none"
+                inputMode="numeric"
+                placeholder="مستطیل نمبر"
+                className="w-full h-8 text-xs px-2 border border-emerald-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono bg-white"
               />
-              <div className="text-[9px] text-slate-400 mt-1" dir="rtl" style={{ fontFamily: "serif" }}>
-                مستطیل لکھیں، slash (/) کے بعد کلہ، پھر اسپیس دے کر اگلا مستطیل
+              <div className="flex flex-wrap gap-1 mt-2">
+                {Array.from({ length: 25 }, (_, k) => k + 1).map((acre) => {
+                  const sel = selection.has(`${manualMust.trim()}/${acre}`);
+                  return (
+                    <button
+                      key={acre}
+                      onClick={() => manualMust.trim() && toggle(manualMust.trim(), acre)}
+                      disabled={!manualMust.trim()}
+                      className={`w-6 h-6 text-[10px] rounded font-bold border ${
+                        sel
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-emerald-100 disabled:opacity-40 disabled:hover:bg-white"
+                      }`}
+                    >
+                      {acre}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between mt-1.5">
+                <div className="text-[9px] text-slate-400" dir="rtl" style={{ fontFamily: "serif" }}>
+                  اگلا مستطیل: نمبر بدل کر ایکڑ منتخب کریں — slash خود بخود
+                </div>
+                {draft && (
+                  <button onClick={() => setDraft("")} className="text-[9px] text-red-500 hover:text-red-700" dir="rtl" style={{ fontFamily: "serif" }}>صاف کریں</button>
+                )}
               </div>
               {draft && (
                 <div className="mt-2 p-2 bg-white rounded border border-slate-200 flex items-center justify-center min-h-[40px]">
