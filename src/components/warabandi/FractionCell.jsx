@@ -35,7 +35,7 @@ export default function FractionCell({ value, onChange, onPicker, placeholder, d
   const hasValue = !!(value && String(value).trim());
   const showFraction = !editing && hasValue && String(value).includes("/");
   return (
-    <div className="relative w-full flex items-center justify-center" style={{ minHeight: "15px" }}>
+    <div className="relative w-full flex items-center justify-center min-h-[44px] md:min-h-[15px]">
       {showFraction && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-3">
           <FractionDisplay value={value} fontSize="9px" lineColor={disabled ? "#94a3b8" : "#1f2937"} />
@@ -50,8 +50,8 @@ export default function FractionCell({ value, onChange, onPicker, placeholder, d
         dir="ltr"
         readOnly={disabled}
         disabled={disabled}
-        className={`w-full bg-transparent outline-none text-center px-0.5 py-0.5 placeholder:text-slate-300 disabled:opacity-50 ${showFraction ? "placeholder:text-slate-300 text-transparent" : "text-slate-800"}`}
-        style={{ fontFamily: "serif", fontSize: "9px" }}
+        className={`w-full bg-transparent outline-none text-center px-0.5 py-2 md:py-0.5 min-h-[44px] md:min-h-0 text-[16px] md:text-[9px] placeholder:text-slate-300 disabled:opacity-50 ${showFraction ? "text-transparent" : "text-slate-800"}`}
+        style={{ fontFamily: "serif" }}
       />
       {onPicker && !disabled && (
         <button onClick={onPicker} className="text-emerald-600 hover:text-emerald-700 shrink-0 absolute right-0 top-0">

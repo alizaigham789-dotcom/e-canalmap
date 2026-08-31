@@ -229,7 +229,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       const khata = row.khatoni || String(i + 1);
       let line;
       if (nameChanged && raqbaChanged) {
-        line = `کھاتہ نمبر ${khata} میں مشترکہ خانے کی تقسیم کر کے علیحدہ نام و رقبہ درج کر دیا گیا ہے۔`;
+        line = `کھاتہ نمبر ${khata} میں مشترکہ کھاتہ نمبر کی تقسیم کر کے علیحدہ نام و رقبہ درج کر دیا گیا ہے۔`;
       } else if (nameChanged) {
         line = `کھاتہ نمبر ${khata} میں قابض کے نام کی ترمیم کر کے درج کر دیا گیا ہے۔`;
       } else {
@@ -776,7 +776,9 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
     </>
   );
 
-  const inp = "w-full bg-transparent outline-none text-center text-slate-800 placeholder:text-slate-300 text-[16px] px-1.5 py-1.5 md:text-[8px] md:px-0.5 md:py-0.5";
+  // Mobile: bade touch targets (44px min) aur 16px font — mobile par bharne aasaan.
+  // Desktop (md+): compact 8px taake dense table print layout ke mutabiq rahe.
+  const inp = "w-full bg-transparent outline-none text-center text-slate-800 placeholder:text-slate-300 text-[16px] px-2 py-2.5 min-h-[44px] md:text-[8px] md:px-0.5 md:py-0.5 md:min-h-0";
   const thCls = "border border-slate-500 text-center bg-blue-100 px-1.5 py-1.5 text-[12px] font-bold leading-snug text-blue-900";
   const thSubCls = "border border-slate-500 text-center bg-[#eff6ff] px-1 py-1 text-[9px] font-bold leading-snug text-blue-900";
   const tdCls = "border border-slate-300 text-center px-0 py-0 text-[8px]";
@@ -982,7 +984,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         <div ref={scrollRef} className="overflow-auto flex-1" style={{ maxHeight: "220px" }}
           onKeyDown={handleTableKeyDown}
           onFocus={(e) => {
-            const tr = e.target.closest && e.target.closest('tr[data-row]');
+            const t = e.target;
+            // Pehli click par cursor text ke end par jaye; dobara click (already focused) par
+            // browser caret ko click position par rakh de (= jahan marzi insert ho).
+            if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA") && typeof t.setSelectionRange === "function") {
+              const len = t.value ? t.value.length : 0;
+              try { t.setSelectionRange(len, len); } catch {}
+            }
+            const tr = t && t.closest && t.closest('tr[data-row]');
             if (tr) setActiveRow(parseInt(tr.dataset.row, 10));
           }}>
           <table style={{ borderCollapse: "collapse", minWidth: "1700px", width: "100%", direction: "rtl" }}>
