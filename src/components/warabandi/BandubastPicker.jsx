@@ -62,6 +62,7 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
   const [loadingObjs, setLoadingObjs] = useState(false);
   const [draft, setDraft] = useState(value || "");
   const [search, setSearch] = useState("");
+  const [manualMust, setManualMust] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -96,6 +97,14 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
   }, [mustateels, search]);
 
   const selection = useMemo(() => parseSelection(draft), [draft]);
+
+  // دستی اندراج: مستطیل نمبر کے مطابق کلہ تعداد — نقشے میں ملے تو وہ، ورنہ 25 (ایک مربعہ)
+  const manualAcreCount = useMemo(() => {
+    const v = manualMust.trim();
+    if (!v) return 0;
+    const found = mustateels.find((m) => String(m.mustNo) === v);
+    return found ? found.acreCount : 25;
+  }, [manualMust, mustateels]);
 
   const toggle = (mustNo, acre) => {
     const tok = `${mustNo}/${acre}`;
@@ -133,13 +142,51 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
         </div>
 
         <div className="p-3 space-y-3 overflow-y-auto">
+          {/* دستی اندراج — مستطیل نمبر خود لکھیں، کلہ نمبر منتخب کریں */}
+          <div className="border border-emerald-200 rounded-lg p-2.5 bg-emerald-50/60">
+            <label className="text-[9px] font-bold text-emerald-700 uppercase block mb-1.5" dir="rtl" style={{ fontFamily: "serif" }}>
+              دستی اندراج — مستطیل نمبر لکھیں، کلہ نمبر منتخب کریں
+            </label>
+            <input
+              value={manualMust}
+              onChange={(e) => setManualMust(e.target.value)}
+              dir="ltr"
+              inputMode="numeric"
+              placeholder="مستطیل نمبر"
+              className="w-full h-8 text-xs px-2 border border-emerald-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono bg-white"
+            />
+            {manualAcreCount > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {Array.from({ length: manualAcreCount }, (_, k) => k + 1).map((acre) => {
+                  const sel = selection.has(`${manualMust.trim()}/${acre}`);
+                  return (
+                    <button
+                      key={acre}
+                      onClick={() => toggle(manualMust.trim(), acre)}
+                      className={`w-7 h-7 text-[10px] rounded font-bold border ${
+                        sel
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-emerald-100"
+                      }`}
+                    >
+                      {acre}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {manualMust.trim() && manualAcreCount === 0 && (
+              <div className="text-[9px] text-slate-400 mt-1" dir="rtl" style={{ fontFamily: "serif" }}>نمبر درج کریں</div>
+            )}
+          </div>
+
           {loadingObjs || isLoading ? (
             <div className="flex items-center justify-center py-8 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           ) : mustateels.length === 0 ? (
-            <div className="text-center py-6 text-[11px] text-slate-400" dir="rtl" style={{ fontFamily: "serif" }}>
-              {mapId ? "اس موگہ کا نقشہ ڈیٹا دستیاب نہیں" : "پہلے ہیڈر سے موگہ منتخب کریں"}
+            <div className="text-center py-4 text-[11px] text-slate-400" dir="rtl" style={{ fontFamily: "serif" }}>
+              {mapId ? "اس موگہ کا نقشہ ڈیٹا دستیاب نہیں — اوپر دستی اندراج استعمال کریں" : "نقشہ جڑا نہیں — اوپر دستی اندراج استعمال کریں"}
             </div>
           ) : (
             <>
