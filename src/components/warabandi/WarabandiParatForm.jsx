@@ -233,6 +233,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [step, setStep] = useState("summary");
   const hasMap = !!header.map_id;
   const canAdvance = showSummary && rows.some(r => r.owner_name2 && r.total_area2) && rows.every(r => (!r.owner_name2 && !r.total_area2) || (r.owner_name2 && r.total_area2));
+  const TARMEEM_LETTERS = ["A","B","N","O","C","D","H","I","J","K","E","F","G","L","M", ...COL_LETTERS.slice(15, 33)];
   const pdfRef = useRef();
   const queryClient = useQueryClient();
 
@@ -951,7 +952,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <tr style={{ backgroundColor: "#f0f4ff" }}>
                   <th className={thCls} style={{ fontSize: "8px", width: 32 }}></th>
                   {showRowSr && <th className={thCls} style={{ fontSize: "8px", width: 28 }}>#</th>}
-                  {COL_LETTERS.slice(isJadeed ? 7 : 0, isJadeed ? 26 : 33).map((l, i) => (
+                  {(isJadeed ? COL_LETTERS.slice(7, 26) : TARMEEM_LETTERS).map((l, i) => (
                     <th key={i} className={thCls} style={{ fontSize: "8px" }}>{l}</th>
                   ))}
                   <th className={thCls} style={{ width: 28 }}></th>
@@ -963,14 +964,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 {showSummary && <>
                 <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 80 }}>نام مالک معہ والدیت</th>
+                <th className={thCls} colSpan={2}>نکہ جات</th>
                 <th className={thCls}>کل رقبہ</th>
                 <th className={thCls} style={{ backgroundColor: "#f0fdf4" }}>غیر ممکن رقبہ</th>
-                <th className={thCls} style={{ backgroundColor: "#f0fdf4" }}>خالص رقبہ</th>
-                <th className={thCls} colSpan={2}>واری بحساب رقبہ</th>
                 <th className={thCls} colSpan={2}>زائدہ وصولی</th>
                 <th className={thCls} colSpan={2}>وضگی</th>
+                <th className={thCls} style={{ backgroundColor: "#f0fdf4" }}>خالص رقبہ</th>
+                <th className={thCls} colSpan={2}>واری بحساب رقبہ</th>
                 <th className={thCls} colSpan={2}>خالص واری</th>
-                <th className={thCls} colSpan={2}>نکہ جات</th>
                 </>}
                 {showSummary && <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>}
                 {showSummary ? <></> : <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>}
@@ -996,14 +997,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               </tr>
               <tr style={{ backgroundColor: "#eff6ff" }}>
                 {showSummary && <>
-                <th className={thSubCls}>ایکڑ</th>
-                <th className={thSubCls}>ایکڑ</th>
-                <th className={thSubCls}>ایکڑ</th>
-                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
-                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
-                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
-                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
                 <th className={thSubCls}>لیگا</th><th className={thSubCls}>دیگا</th>
+                <th className={thSubCls}>ایکڑ</th>
+                <th className={thSubCls}>ایکڑ</th>
+                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
+                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
+                <th className={thSubCls}>ایکڑ</th>
+                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
+                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
                 </>}
                 {showSummary && <></>}
                 <th className={thSubCls}>لیگا</th><th className={thSubCls}>دیگا</th>
@@ -1046,6 +1047,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                       dir={isUrduMode ? "rtl" : "ltr"}
                       style={{ fontFamily: isUrduMode ? "'Noto Nastaliq Urdu', serif" : undefined, textAlign: isUrduMode ? "right" : "left" }} />
                   </td>
+                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_lega" }) : undefined} /></td>
+                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_dega" }) : undefined} /></td>
                   <td className={tdCls} style={{ position: "relative" }}>
                     <input value={row.total_area2} onChange={e => updateRow(i, "total_area2", e.target.value)} className={inp} dir="ltr" />
                     {!isUrduMode && row.total_area2 && isEnglishOrDigit(row.total_area2) && (
@@ -1055,6 +1058,10 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   <td className={tdCls} style={{ backgroundColor: "#f0fdf4" }}>
                     <input value={row.ghair_mumkin} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
                   </td>
+                  <td className={tdCls}><input value={row.zaidah_minute} onChange={e => updateRow(i, "zaidah_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
+                  <td className={tdCls}><input value={row.zaidah_ghante} onChange={e => updateRow(i, "zaidah_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
+                  <td className={tdCls}><input value={row.wazgi_minute} onChange={e => updateRow(i, "wazgi_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
+                  <td className={tdCls}><input value={row.wazgi_ghante} onChange={e => updateRow(i, "wazgi_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
                   <td className={tdCls} style={{ backgroundColor: "#f0fdf4" }}>
                     <input value={row.khalis_raqba} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
                   </td>
@@ -1064,14 +1071,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}>
                     <input value={row.waari_ghante} readOnly tabIndex={-1} className={inp} style={{ color: "#1d4ed8" }} dir="ltr" />
                   </td>
-                  <td className={tdCls}><input value={row.zaidah_minute} onChange={e => updateRow(i, "zaidah_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
-                  <td className={tdCls}><input value={row.zaidah_ghante} onChange={e => updateRow(i, "zaidah_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
-                  <td className={tdCls}><input value={row.wazgi_minute} onChange={e => updateRow(i, "wazgi_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
-                  <td className={tdCls}><input value={row.wazgi_ghante} onChange={e => updateRow(i, "wazgi_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
                   <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
-                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_lega" }) : undefined} /></td>
-                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_dega" }) : undefined} /></td>
                   </>}
                   {showSummary && <td className={tdCls}><input value={String(i + 1)} readOnly tabIndex={-1} className={inp + " bg-slate-50 text-slate-500"} dir={isUrduMode ? "rtl" : "ltr"} /></td>}
                   {showSummary && <></>}
@@ -1153,18 +1154,18 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 {showSummary && <>
                 <td className={totalCls}>—</td>
                 <td className={totalCls} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>میزان</td>
+                <td className={totalCls}>—</td><td className={totalCls}>—</td>
                 <td className={totalCls}>{sumCol(rows, "total_area2")}</td>
                 <td className={totalCls}>{sumCol(rows, "ghair_mumkin")}</td>
-                <td className={totalCls}>{sumCol(rows, "khalis_raqba")}</td>
-                <td className={totalCls}>{sumPair(rows, "waari_minute", "waari_ghante").m}</td>
-                <td className={totalCls}>{sumPair(rows, "waari_minute", "waari_ghante").h}</td>
                 <td className={totalCls}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").m}</td>
                 <td className={totalCls}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").h}</td>
                 <td className={totalCls}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").m}</td>
                 <td className={totalCls}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").h}</td>
+                <td className={totalCls}>{sumCol(rows, "khalis_raqba")}</td>
+                <td className={totalCls}>{sumPair(rows, "waari_minute", "waari_ghante").m}</td>
+                <td className={totalCls}>{sumPair(rows, "waari_minute", "waari_ghante").h}</td>
                 <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").m}</td>
                 <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
-                <td className={totalCls}>—</td><td className={totalCls}>—</td>
                 </>}
                 {showSummary && <td className={totalCls}>—</td>}
                 {showSummary && <></>}
