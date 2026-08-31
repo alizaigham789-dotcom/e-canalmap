@@ -8,7 +8,7 @@ import { openPrintWindow } from "@/lib/paratPrint";
 // H/I (زائدہ وصولی), J/K (وضگی).
 const TOGGLE_COLS = ["C", "D", "F", "G", "H", "I", "J", "K"];
 
-export default function ParatPrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, printCols, setPrintCols, onClose, variant }) {
+export default function ParatPrintModal({ docType, headerLine, rows, notes, autoTarmeemNotes = [], printRowSr, printColSr, setPrintRowSr, setPrintColSr, printCols, setPrintCols, onClose, variant }) {
   const [pageSize, setPageSize] = useState("A4");
   const [bw, setBw] = useState(false);
 
@@ -290,9 +290,13 @@ export default function ParatPrintModal({ docType, headerLine, rows, notes, prin
             <div className="notes-block" style={{ direction: "rtl", marginTop: "1em" }}>
               <div style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Noto Nastaliq Urdu', serif", marginBottom: "8px" }}>جناب عالیٰ</div>
               <div style={{ fontSize: "14px", lineHeight: 2.2, fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-                {notes.filter(n => n.trim()).map((note, i) => (
-                  <div key={i} style={{ marginBottom: "2px" }}>{i + 1}- {note}</div>
-                ))}
+                {(() => {
+                  const cleanNotes = notes.filter(n => n.trim());
+                  const items = [...cleanNotes, ...autoTarmeemNotes];
+                  return items.map((line, i) => (
+                    <div key={i} style={{ marginBottom: "2px" }}>{i + 1}- {line}</div>
+                  ));
+                })()}
               </div>
             </div>
             <div className="signatures" style={{ display: "flex", justifyContent: "space-between", marginTop: "10mm", fontSize: "12px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>

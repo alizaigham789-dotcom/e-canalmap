@@ -214,6 +214,31 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const zaidWasoliMins = useMemo(() => rows.reduce((s, r) => s + ((parseFloat(r.zaidah_ghante) || 0) * 60 + (parseFloat(r.zaidah_minute) || 0)), 0), [rows]);
   const wazgiMins = useMemo(() => rows.reduce((s, r) => s + ((parseFloat(r.wazgi_ghante) || 0) * 60 + (parseFloat(r.wazgi_minute) || 0)), 0), [rows]);
   const minutesPerAcre = ccaNum > 0 ? (10080 / ccaNum) : 0;
+
+  // ترمیم کی گئی قطاروں کے لیے خودکار "جناب عالیٰ" نوٹس — خانہ نمبر کے ساتھ
+  // نام کی ترمیم / رقبہ کی ترمیم / دونوں کی تقسیم کے مطابق خوبصورت اردو لائن
+  const autoTarmeemNotes = useMemo(() => {
+    if (!showSummary) return [];
+    const out = [];
+    rows.forEach((row, i) => {
+      const nameChanged = !!(row.owner_name2 && row.owner_name && row.owner_name2.trim() !== row.owner_name.trim());
+      const cVal = parseFloat(row.total_area2);
+      const uVal = parseFloat(row.total_area);
+      const raqbaChanged = !isNaN(cVal) && !isNaN(uVal) && cVal !== uVal;
+      if (!nameChanged && !raqbaChanged) return;
+      const khata = row.khatoni || String(i + 1);
+      let line;
+      if (nameChanged && raqbaChanged) {
+        line = `خانہ نمبر ${khata} میں مشترکہ خانے کی تقسیم کر کے علیحدہ نام و رقبہ درج کر دیا گیا ہے۔`;
+      } else if (nameChanged) {
+        line = `خانہ نمبر ${khata} میں قابض کے نام کی ترمیم کر کے درج کر دیا گیا ہے۔`;
+      } else {
+        line = `خانہ نمبر ${khata} میں رقبہ کی ترمیم کر کے درج کر دیا گیا ہے۔`;
+      }
+      out.push(line);
+    });
+    return out;
+  }, [rows, showSummary]);
   // تشریح اوقات: دن/رات شروع وقت (گھنٹے + منٹ + صبح/شام)
   const [tashreehDayHour, setTashreehDayHour] = useState("");
   const [tashreehDayMin, setTashreehDayMin] = useState("");
@@ -757,7 +782,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   const tdCls = "border border-slate-300 text-center px-0 py-0 text-[8px]";
   const totalCls = "border border-slate-400 text-center px-0.5 py-1 text-[8px] font-bold bg-amber-50";
 
-  const printData = { docType, headerLine, rows, notes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, printCols, setPrintCols, variant: isJadeed ? "jadeed" : "tarmeem" };
+  const printData = { docType, headerLine, rows, notes, autoTarmeemNotes, printRowSr, printColSr, setPrintRowSr, setPrintColSr, printCols, setPrintCols, variant: isJadeed ? "jadeed" : "tarmeem" };
 
 
 
@@ -831,9 +856,9 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             </div>
           )}
           {!setupDone && (
-            <Button size="sm" disabled={ccaNum <= 0} onClick={() => setSetupDone(true)}
+            <Button size="sm" disabled={ccaNum <= 0 || saving} onClick={() => { setSetupDone(true); handleSave(); }}
               className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1">
-              آگے بڑھیں
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : null} آگے بڑھیں (محفوظ)
             </Button>
           )}
         </div>
@@ -1239,6 +1264,24 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             </Button>
           </div>
         </div>
+
+        {/* خودکار ترمیم نوٹس — جناب عالیٰ کے نکات میں خانہ وار تفصیل */}
+        {autoTarmeemNotes.length > 0 && (
+          <div className="mt-3 p-3 rounded-lg border border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50" dir="rtl">
+            <div className="text-[11px] font-bold text-emerald-800 mb-1.5 flex items-center gap-1.5" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              تفصیل ترمیم (خودکار)
+            </div>
+            <div className="space-y-1">
+              {autoTarmeemNotes.map((line, i) => (
+                <div key={i} className="text-[13px] text-emerald-900 leading-relaxed flex items-start gap-1.5" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                  <span className="text-emerald-600 font-bold mt-0.5 shrink-0">•</span>
+                  <span>{line}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {(pdfLoading || pdfPreview) && (
