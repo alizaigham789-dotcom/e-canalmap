@@ -1,21 +1,24 @@
 import React, { useState } from "react";
 import { LayoutGrid } from "lucide-react";
+import { parseBandubastEntries } from "@/lib/paratHelpers";
 
 // Renders a value as stacked fractions: mustateel on top, killa/acre on bottom,
 // with a straight horizontal line (fraction bar) between.
 // Supports comma-separated multiple pairs: "555/5-10, 511/5, 512/7-9"
 export function FractionDisplay({ value, fontSize = "9px", lineColor = "#334155" }) {
   if (!value) return <span className="text-slate-300" style={{ fontSize }}>-</span>;
-  const entries = String(value).split(",").map(e => e.trim()).filter(Boolean);
+  const entries = parseBandubastEntries(value);
   return (
     <div className="flex items-center gap-1.5 justify-center flex-wrap" dir="ltr">
       {entries.map((entry, i) => {
-        const parts = entry.split("/");
-        if (parts.length >= 2) {
+        const idx = entry.indexOf("/");
+        if (idx !== -1) {
+          const mustateel = entry.slice(0, idx);
+          const killaPart = entry.slice(idx + 1);
           return (
             <span key={i} className="inline-flex flex-col items-center leading-none">
-              <span style={{ fontSize, borderBottom: `1.5px solid ${lineColor}`, padding: "0 2px" }}>{parts[0]}</span>
-              <span style={{ fontSize, padding: "0 2px" }}>{parts.slice(1).join("/")}</span>
+              <span style={{ fontSize, borderBottom: `1.5px solid ${lineColor}`, padding: "0 2px" }}>{mustateel}</span>
+              <span style={{ fontSize, padding: "0 2px" }}>{killaPart}</span>
             </span>
           );
         }

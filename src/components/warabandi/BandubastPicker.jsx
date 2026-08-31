@@ -63,8 +63,6 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
   const [loadingObjs, setLoadingObjs] = useState(false);
   const [draft, setDraft] = useState(value || "");
   const [search, setSearch] = useState("");
-  const [manualMust, setManualMust] = useState("");
-  const [manualAcreInput, setManualAcreInput] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -99,12 +97,6 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
   }, [mustateels, search]);
 
   const selection = useMemo(() => parseSelection(draft), [draft]);
-
-  // دستی اندراج: صارف کے درج کردہ ایکڑ تعداد کے مطابق کلہ بٹن
-  const manualAcreCount = useMemo(() => {
-    const v = parseInt(manualAcreInput, 10);
-    return isNaN(v) || v <= 0 ? 0 : Math.min(v, 200);
-  }, [manualAcreInput]);
 
   const toggle = (mustNo, acre) => {
     const tok = `${mustNo}/${acre}`;
@@ -145,52 +137,22 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
           {!mapId ? (
             <div className="border border-emerald-200 rounded-lg p-2.5 bg-emerald-50/60">
               <label className="text-[9px] font-bold text-emerald-700 uppercase block mb-1.5" dir="rtl" style={{ fontFamily: "serif" }}>
-                دستی اندراج — مستطیل نمبر اور ایکڑ تعداد درج کریں
+                دستی اندراج — مستطیل/کلہ درج کریں
               </label>
-              <div className="flex gap-2">
-                <input
-                  value={manualMust}
-                  onChange={(e) => setManualMust(e.target.value)}
-                  dir="ltr"
-                  inputMode="numeric"
-                  placeholder="مستطیل نمبر"
-                  className="flex-1 h-8 text-xs px-2 border border-emerald-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono bg-white"
-                />
-                <input
-                  value={manualAcreInput}
-                  onChange={(e) => setManualAcreInput(e.target.value)}
-                  dir="ltr"
-                  inputMode="numeric"
-                  placeholder="ایکڑ تعداد"
-                  className="w-24 h-8 text-xs px-2 border border-emerald-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono bg-white"
-                />
-              </div>
-              {manualAcreCount > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {Array.from({ length: manualAcreCount }, (_, k) => k + 1).map((acre) => {
-                    const sel = selection.has(`${manualMust.trim()}/${acre}`);
-                    return (
-                      <button
-                        key={acre}
-                        onClick={() => toggle(manualMust.trim(), acre)}
-                        className={`w-7 h-7 text-[10px] rounded font-bold border ${
-                          sel
-                            ? "bg-emerald-600 text-white border-emerald-600"
-                            : "bg-white text-slate-600 border-slate-200 hover:bg-emerald-100"
-                        }`}
-                      >
-                        {acre}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="text-[9px] text-slate-400 mt-1.5" dir="rtl" style={{ fontFamily: "serif" }}>
-                ایک سے زیادہ مستطیل: نمبر بدل کر کلہ منتخب کریں — سب جمع ہو جائیں گے
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                dir="ltr"
+                rows={2}
+                placeholder="مثال: 87/3-5 92/1 55/3"
+                className="w-full text-xs px-2 py-1.5 border border-emerald-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono bg-white resize-none"
+              />
+              <div className="text-[9px] text-slate-400 mt-1" dir="rtl" style={{ fontFamily: "serif" }}>
+                مستطیل لکھیں، slash (/) کے بعد کلہ، پھر اسپیس دے کر اگلا مستطیل
               </div>
               {draft && (
                 <div className="mt-2 p-2 bg-white rounded border border-slate-200 flex items-center justify-center min-h-[40px]">
-                  <FractionDisplay value={draft} fontSize="11px" />
+                  <FractionDisplay value={draft} fontSize="11px" lineColor="#1e3a5f" />
                 </div>
               )}
             </div>

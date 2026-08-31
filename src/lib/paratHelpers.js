@@ -108,12 +108,31 @@ function expandKillaRanges(part) {
 // mustateels are separated by space and/or comma in the input, and rendered as
 // SEPARATE fractions (never merged). Killa ranges expand: "4567/1-5" →
 // "4567" over "1,2,3,4,5".
-// Bandubast print formatter — form کے مطابق: مستطیل نمبر اوپر، کلہ نمبر نیچے،
-// سیدھی افقی لکیر۔ رینج (1-5) کو پھیلا نہیں — جیسا فارم میں دکھائی دیتی ہے۔
-// ایک سے زیادہ مستطیل کاما (,) سے الگ، ہر ایک الگ fraction۔
+// مستطیل/کلہ اندراج کو entries میں توڑیں۔ اسپیس (space) یا کاما (,) دونوں
+// مستطیل الگ کرتے ہیں — لیکن کاما صرف مستطیل الگ کرتا ہے اگر ٹوکن میں ایک سے
+// زیادہ "/" ہوں (یعنی "87/3,92/1" دو مستطیل ہیں، "87/3,4,5" ایک مستطیل ہے)۔
+// رینج (1-5) پھیلا نہیں — جیسا فارم میں دکھائی دیتی ہے۔
+export function parseBandubastEntries(val) {
+  if (!val) return [];
+  const tokens = String(val).split(/\s+/).map(t => t.trim()).filter(Boolean);
+  const entries = [];
+  for (const tok of tokens) {
+    const slashCount = (tok.match(/\//g) || []).length;
+    if (slashCount > 1) {
+      for (const e of tok.split(",")) { const ee = e.trim(); if (ee) entries.push(ee); }
+    } else {
+      const stripped = tok.replace(/^[,]+|[,]+$/g, "");
+      if (stripped) entries.push(stripped);
+    }
+  }
+  return entries;
+}
+
+// Bandubast print formatter — form اور preview کے مطابق: مستطیل نمبر اوپر، کلہ
+// نمبر نیچے، سیدھی افقی لکیر۔ parseBandubastEntries سے entries لیتا ہے۔
 export function bandubastHtml(val) {
-  if (!val) return "-";
-  const entries = String(val).split(",").map(e => e.trim()).filter(Boolean);
+  const entries = parseBandubastEntries(val);
+  if (entries.length === 0) return "-";
   return entries.map(entry => {
     const idx = entry.indexOf("/");
     if (idx === -1) return `<span>${entry}</span>`;

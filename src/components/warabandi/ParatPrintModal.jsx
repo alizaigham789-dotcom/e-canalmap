@@ -269,6 +269,10 @@ export default function ParatPrintModal({ docType, headerLine, rows, notes, auto
           </div>
         )}
 
+        <style>{`
+          #parat-print-content .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 8px; }
+          #parat-print-content .frac .num { border-bottom: 1.5px solid #1e3a5f; padding: 0 2px 1px; }
+        `}</style>
         {bw && <style>{BW_CSS}</style>}
         <div id="parat-print-content" className={`p-6 overflow-x-auto ${bw ? "bw-mode" : ""}`} style={{ direction: "rtl", fontFamily: "'Noto Nastaliq Urdu', serif" }}>
           <div className="parat-page">
