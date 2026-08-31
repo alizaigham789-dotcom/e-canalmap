@@ -1056,12 +1056,12 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                     )}
                   </td>
                   <td className={tdCls} style={{ backgroundColor: "#f0fdf4" }}>
-                    <input value={row.ghair_mumkin} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
+                    <input value={row.ghair_mumkin} onChange={e => updateRow(i, "ghair_mumkin", e.target.value)} className={inp} style={{ color: "#166534" }} dir="ltr" />
                   </td>
-                  <td className={tdCls}><input value={row.zaidah_minute} onChange={e => updateRow(i, "zaidah_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
-                  <td className={tdCls}><input value={row.zaidah_ghante} onChange={e => updateRow(i, "zaidah_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
-                  <td className={tdCls}><input value={row.wazgi_minute} onChange={e => updateRow(i, "wazgi_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
-                  <td className={tdCls}><input value={row.wazgi_ghante} onChange={e => updateRow(i, "wazgi_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
+                  <td className={tdCls}><input value={row.zaidah_minute} onChange={e => updateRow(i, "zaidah_minute", e.target.value)} className={inp} /></td>
+                  <td className={tdCls}><input value={row.zaidah_ghante} onChange={e => updateRow(i, "zaidah_ghante", e.target.value)} className={inp} /></td>
+                  <td className={tdCls}><input value={row.wazgi_minute} onChange={e => updateRow(i, "wazgi_minute", e.target.value)} className={inp} /></td>
+                  <td className={tdCls}><input value={row.wazgi_ghante} onChange={e => updateRow(i, "wazgi_ghante", e.target.value)} className={inp} /></td>
                   <td className={tdCls} style={{ backgroundColor: "#f0fdf4" }}>
                     <input value={row.khalis_raqba} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
                   </td>
