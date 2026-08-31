@@ -108,26 +108,17 @@ function expandKillaRanges(part) {
 // mustateels are separated by space and/or comma in the input, and rendered as
 // SEPARATE fractions (never merged). Killa ranges expand: "4567/1-5" →
 // "4567" over "1,2,3,4,5".
+// Bandubast print formatter — form کے مطابق: مستطیل نمبر اوپر، کلہ نمبر نیچے،
+// سیدھی افقی لکیر۔ رینج (1-5) کو پھیلا نہیں — جیسا فارم میں دکھائی دیتی ہے۔
+// ایک سے زیادہ مستطیل کاما (,) سے الگ، ہر ایک الگ fraction۔
 export function bandubastHtml(val) {
   if (!val) return "-";
-  const tokens = String(val).split(/\s+/).map(t => t.trim()).filter(Boolean);
-  const entries = [];
-  for (const tok of tokens) {
-    // A single token may itself pack comma-separated mustateels if it contains
-    // more than one "/". A lone slash means the commas inside belong to the
-    // killa list — keep them intact.
-    const slashCount = (tok.match(/\//g) || []).length;
-    if (slashCount > 1) {
-      for (const e of tok.split(",")) { const ee = e.trim(); if (ee) entries.push(ee); }
-    } else {
-      entries.push(tok);
-    }
-  }
+  const entries = String(val).split(",").map(e => e.trim()).filter(Boolean);
   return entries.map(entry => {
     const idx = entry.indexOf("/");
     if (idx === -1) return `<span>${entry}</span>`;
     const mustateel = entry.slice(0, idx);
-    const killaPart = expandKillaRanges(entry.slice(idx + 1));
+    const killaPart = entry.slice(idx + 1);
     return `<span class="frac"><span class="num">${mustateel}</span><span>${killaPart}</span></span>`;
   }).join("&nbsp;&nbsp;");
 }

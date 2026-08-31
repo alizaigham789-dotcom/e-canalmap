@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { X, Loader2 } from "lucide-react";
 import { loadDrawingData } from "@/lib/drawingDataStorage";
 import { parcelKillaCells } from "@/lib/allocationEngine";
+import { FractionDisplay } from "./FractionCell";
 
 // Parse a bandubast value string into a Set of "mustNo/acre" tokens.
 // Supports "87/3", "87/(3-4)", comma/space separated.
@@ -62,7 +63,6 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
   const [loadingObjs, setLoadingObjs] = useState(false);
   const [draft, setDraft] = useState(value || "");
   const [search, setSearch] = useState("");
-  const [manualMust, setManualMust] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -98,14 +98,6 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
 
   const selection = useMemo(() => parseSelection(draft), [draft]);
 
-  // دستی اندراج: مستطیل نمبر کے مطابق کلہ تعداد — نقشے میں ملے تو وہ، ورنہ 25 (ایک مربعہ)
-  const manualAcreCount = useMemo(() => {
-    const v = manualMust.trim();
-    if (!v) return 0;
-    const found = mustateels.find((m) => String(m.mustNo) === v);
-    return found ? found.acreCount : 25;
-  }, [manualMust, mustateels]);
-
   const toggle = (mustNo, acre) => {
     const tok = `${mustNo}/${acre}`;
     const next = new Set(selection);
@@ -131,7 +123,7 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
 
   return (
     <div className="fixed inset-0 z-[1150] bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 h-11 bg-gradient-to-r from-emerald-600 to-green-600 text-white shrink-0">
           <span className="text-sm font-bold" dir="rtl" style={{ fontFamily: "serif" }}>
             {title}{mogaNumber ? ` — موگہ ${mogaNumber}` : ""}
@@ -142,51 +134,35 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
         </div>
 
         <div className="p-3 space-y-3 overflow-y-auto">
-          {/* دستی اندراج — مستطیل نمبر خود لکھیں، کلہ نمبر منتخب کریں */}
-          <div className="border border-emerald-200 rounded-lg p-2.5 bg-emerald-50/60">
-            <label className="text-[9px] font-bold text-emerald-700 uppercase block mb-1.5" dir="rtl" style={{ fontFamily: "serif" }}>
-              دستی اندراج — مستطیل نمبر لکھیں، کلہ نمبر منتخب کریں
-            </label>
-            <input
-              value={manualMust}
-              onChange={(e) => setManualMust(e.target.value)}
-              dir="ltr"
-              inputMode="numeric"
-              placeholder="مستطیل نمبر"
-              className="w-full h-8 text-xs px-2 border border-emerald-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono bg-white"
-            />
-            {manualAcreCount > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {Array.from({ length: manualAcreCount }, (_, k) => k + 1).map((acre) => {
-                  const sel = selection.has(`${manualMust.trim()}/${acre}`);
-                  return (
-                    <button
-                      key={acre}
-                      onClick={() => toggle(manualMust.trim(), acre)}
-                      className={`w-7 h-7 text-[10px] rounded font-bold border ${
-                        sel
-                          ? "bg-emerald-600 text-white border-emerald-600"
-                          : "bg-white text-slate-600 border-slate-200 hover:bg-emerald-100"
-                      }`}
-                    >
-                      {acre}
-                    </button>
-                  );
-                })}
+          {!mapId ? (
+            <div className="border border-emerald-200 rounded-lg p-2.5 bg-emerald-50/60">
+              <label className="text-[9px] font-bold text-emerald-700 uppercase block mb-1.5" dir="rtl" style={{ fontFamily: "serif" }}>
+                دستی اندراج — مستطیل/کلہ نمبر درج کریں
+              </label>
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                dir="ltr"
+                rows={3}
+                placeholder="مثال: 4567/1-5, 92/1, 55/3"
+                className="w-full text-xs px-2 py-1.5 border border-emerald-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono bg-white resize-none"
+              />
+              <div className="text-[9px] text-slate-400 mt-1" dir="rtl" style={{ fontFamily: "serif" }}>
+                ایک سے زیادہ مستطیل کاما (,) سے الگ کریں — مستطیل/کلہ یا مستطیل/کلہ۱-کلہ۲
               </div>
-            )}
-            {manualMust.trim() && manualAcreCount === 0 && (
-              <div className="text-[9px] text-slate-400 mt-1" dir="rtl" style={{ fontFamily: "serif" }}>نمبر درج کریں</div>
-            )}
-          </div>
-
-          {loadingObjs || isLoading ? (
+              {draft && (
+                <div className="mt-2 p-2 bg-white rounded border border-slate-200 flex items-center justify-center min-h-[40px]">
+                  <FractionDisplay value={draft} fontSize="11px" />
+                </div>
+              )}
+            </div>
+          ) : loadingObjs || isLoading ? (
             <div className="flex items-center justify-center py-8 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           ) : mustateels.length === 0 ? (
             <div className="text-center py-4 text-[11px] text-slate-400" dir="rtl" style={{ fontFamily: "serif" }}>
-              {mapId ? "اس موگہ کا نقشہ ڈیٹا دستیاب نہیں — اوپر دستی اندراج استعمال کریں" : "نقشہ جڑا نہیں — اوپر دستی اندراج استعمال کریں"}
+              اس موگہ کا نقشہ ڈیٹا دستیاب نہیں
             </div>
           ) : (
             <>
