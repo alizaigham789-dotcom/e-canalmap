@@ -973,8 +973,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 80 }}>نام مالک معہ والدیت</th>
                 <th className={thCls}>کل رقبہ</th>
-                <th className={thCls} rowSpan={2} style={{ backgroundColor: "#f0fdf4" }}>غیر ممکن رقبہ</th>
-                <th className={thCls} rowSpan={2} style={{ backgroundColor: "#f0fdf4" }}>خالص رقبہ</th>
+                <th className={thCls} style={{ backgroundColor: "#f0fdf4" }}>غیر ممکن رقبہ</th>
+                <th className={thCls} style={{ backgroundColor: "#f0fdf4" }}>خالص رقبہ</th>
                 <th className={thCls} rowSpan={2} style={{ backgroundColor: "#f0fdf4" }}>خالص رقبہ</th>
                 <th className={thCls} rowSpan={2}>واری منٹ</th>
                 <th className={thCls} colSpan={2}>زائدہ وصولی</th>
@@ -1001,6 +1001,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               </tr>
               <tr style={{ backgroundColor: "#eff6ff" }}>
                 {showSummary && <>
+                <th className={thSubCls}>ایکڑ</th>
+                <th className={thSubCls}>ایکڑ</th>
                 <th className={thSubCls}>ایکڑ</th>
                 <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
                 <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
@@ -1292,8 +1294,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
         <th style={{ ...thP, minWidth: 70 }} rowSpan={2}>نام مالک معہ والدیت</th>
         <th style={thP}>کل رقبہ</th>
-        <th style={thP} rowSpan={2}>غیر ممکن رقبہ</th>
-        <th style={thP} rowSpan={2}>خالص رقبہ</th>
+        <th style={thP}>غیر ممکن رقبہ</th>
+        <th style={thP}>خالص رقبہ</th>
         <th style={thP} rowSpan={2}>خالص رقبہ</th>
         <th style={thP} rowSpan={2}>واری منٹ</th>
         <th style={thP} colSpan={2}>زائدہ وصولی</th>
@@ -1319,6 +1321,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       </tr>
       <tr>
         {showSummary && <>
+        <th style={thSub}>ایکڑ</th>
+        <th style={thSub}>ایکڑ</th>
         <th style={thSub}>ایکڑ</th>
         <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
         <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
