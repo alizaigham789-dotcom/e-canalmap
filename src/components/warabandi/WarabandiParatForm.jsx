@@ -993,6 +993,9 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <th className={thCls} colSpan={2}>زائدہ وصولی</th>
                 <th className={thCls} colSpan={2}>وضگی</th>
                 </>}
+                {showSummary && <>
+                <th className={thCls} colSpan={2}>وضگی</th>
+                </>}
                 <th className={thCls} colSpan={2}>خالص واری</th>
                 <th className={thCls} rowSpan={2}>تشریح اوقات دن</th>
                 <th className={thCls} rowSpan={2}>تشریح اوقات رات</th>
@@ -1017,6 +1020,9 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
                 {!showSummary && <>
                 <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
+                <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
+                </>}
+                {showSummary && <>
                 <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
                 </>}
                 <th className={thSubCls}>منٹ</th><th className={thSubCls}>گھنٹے</th>
@@ -1126,6 +1132,10 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   <td className={tdCls}><input value={row.wazgi_minute} onChange={e => updateRow(i, "wazgi_minute", e.target.value)} className={inp} disabled={mainLocked} /></td>
                   <td className={tdCls}><input value={row.wazgi_ghante} onChange={e => updateRow(i, "wazgi_ghante", e.target.value)} className={inp} disabled={mainLocked} /></td>
                   </>}
+                  {showSummary && <>
+                  <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.wazgi_minute} readOnly tabIndex={-1} className={inp} style={{ color: "#1d4ed8" }} dir="ltr" /></td>
+                  <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.wazgi_ghante} readOnly tabIndex={-1} className={inp} style={{ color: "#1d4ed8" }} dir="ltr" /></td>
+                  </>}
                   {/* خالص واری — auto-calculated, shown in green */}
                   <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_minute} onChange={e => updateRow(i, "khalis_waari_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} disabled={mainLocked} /></td>
                   <td className={tdCls} style={{ backgroundColor: "#eff6ff" }}><input value={row.khalis_waari_ghante} onChange={e => updateRow(i, "khalis_waari_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} disabled={mainLocked} /></td>
@@ -1172,6 +1182,10 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 {!showSummary && <>
                 <td className={totalCls}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").m}</td>
                 <td className={totalCls}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").h}</td>
+                <td className={totalCls}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").m}</td>
+                <td className={totalCls}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").h}</td>
+                </>}
+                {showSummary && <>
                 <td className={totalCls}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").m}</td>
                 <td className={totalCls}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").h}</td>
                 </>}
@@ -1313,6 +1327,9 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         <th style={thP} colSpan={2}>زائدہ وصولی</th>
         <th style={thP} colSpan={2}>وضگی</th>
         </>}
+        {showSummary && <>
+        <th style={thP} colSpan={2}>وضگی</th>
+        </>}
         <th style={thP} colSpan={2}>خالص واری</th>
         <th style={thP} colSpan={2}>نکہ جات</th>
         <th style={thP} rowSpan={2}>تشریح اوقات دن</th>
@@ -1335,6 +1352,9 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
         {!showSummary && <>
         <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
+        <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
+        </>}
+        {showSummary && <>
         <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
         </>}
         <th style={thSub}>منٹ</th><th style={thSub}>گھنٹے</th>
@@ -1378,6 +1398,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <td style={tdP}>{d(row.zaidah_ghante)}</td>
       <td style={tdP}>{d(row.wazgi_minute)}</td>
       <td style={tdP}>{d(row.wazgi_ghante)}</td></>}
+      {showSummary && <><td style={tdP}>{d(row.wazgi_minute)}</td>
+      <td style={tdP}>{d(row.wazgi_ghante)}</td></>}
       <td style={tdP}>{d(row.khalis_waari_minute)}</td>
       <td style={tdP}>{d(row.khalis_waari_ghante)}</td>
       <td style={tdP} dangerouslySetInnerHTML={{ __html: row.nikha_lega ? fracHtml(row.nikha_lega) : "-" }} />
@@ -1418,6 +1440,10 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       {!showSummary && <>
       <td style={tdTotal}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").m}</td>
       <td style={tdTotal}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").h}</td>
+      <td style={tdTotal}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").m}</td>
+      <td style={tdTotal}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").h}</td>
+      </>}
+      {showSummary && <>
       <td style={tdTotal}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").m}</td>
       <td style={tdTotal}>{sumPair(rows, "wazgi_minute", "wazgi_ghante").h}</td>
       </>}
