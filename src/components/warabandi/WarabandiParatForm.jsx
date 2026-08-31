@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste, LayoutGrid, Save, Pencil } from "lucide-react";
+import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste, LayoutGrid, Save, Pencil, Info } from "lucide-react";
 import { toast } from "sonner";
 import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
@@ -230,7 +230,9 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [saving, setSaving] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
   const [setupDone, setSetupDone] = useState(false);
+  const [step, setStep] = useState("summary");
   const hasMap = !!header.map_id;
+  const canAdvance = showSummary && rows.some(r => r.owner_name2 && r.total_area2) && rows.every(r => (!r.owner_name2 && !r.total_area2) || (r.owner_name2 && r.total_area2));
   const pdfRef = useRef();
   const queryClient = useQueryClient();
 
@@ -247,6 +249,7 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       setSetupDone(!!data.cca);
       if (data.autoOn !== undefined) setAutoOn(data.autoOn);
       if (data.printCols !== undefined) setPrintCols(data.printCols);
+      if (data.step !== undefined) setStep(data.step);
       if (data.tashreehDayHour !== undefined) setTashreehDayHour(data.tashreehDayHour);
       if (data.tashreehDayMin !== undefined) setTashreehDayMin(data.tashreehDayMin);
       if (data.tashreehDayMeridian !== undefined) setTashreehDayMeridian(data.tashreehDayMeridian);
@@ -260,12 +263,12 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
 
   // مستقل محفوظ — پرت وارہ بندی ریکارڈ
   const handleSave = async () => {
-    if (!recordId) { toast.error("ریکارڈ محفوظ نہیں ہے"); return; }
+    if (!recordId) { toast.error("ریکارڈ محفوظ نہیں ہے"); return false; }
     setSaving(true);
     const data_json = JSON.stringify({
       header, rows, notes, docType, cca, autoOn,
       showRowSr, showColSr, printRowSr, printColSr, printCols, isUrduMode,
-      tashreehDayHour, tashreehDayMin, tashreehDayMeridian, tashreehNightHour, tashreehNightMin, tashreehNightMeridian, sameTime,
+      tashreehDayHour, tashreehDayMin, tashreehDayMeridian, tashreehNightHour, tashreehNightMin, tashreehNightMeridian, sameTime, step,
     });
     const payload = {
       mogha_number: header.mogha_number,
@@ -279,11 +282,18 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       await base44.entities.ParatWarabandiRecord.update(recordId, payload);
       queryClient.invalidateQueries({ queryKey: ["parat-records"] });
       toast.success("مستقل محفوظ ہو گیا");
+      return true;
     } catch (e) {
       toast.error("محفوظ نہیں ہوا");
+      return false;
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveAndNext = async () => {
+    const ok = await handleSave();
+    if (ok) setStep("tarmeem");
   };
 
   // جب CCA بدلے تو تمام قطاروں کی واری بحساب رقبہ اور خالص واری خود بخود دوبارہ حساب ہو
@@ -849,6 +859,14 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           style={{ fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: 1.5, letterSpacing: "0.5px", wordSpacing: "0.3em" }}>
           {headerLine}
         </div>
+        {showSummary && (
+          <div className="mt-3 p-3 rounded-lg bg-gradient-to-l from-blue-50 to-indigo-50 border border-blue-200 flex items-start gap-2.5" dir="rtl">
+            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+            <p className="text-[11px] text-blue-800 leading-relaxed" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+              یہ پرت دو مراحل میں مرتب ہو گی — پہلے <b>کالم A سے O</b> تک سابقہ پرت کا data درج کریں، مکمل ہونے پر <b>"محفوظ اور آگے"</b> دبائیں، پھر <b>کالم P سے آگے</b> ترمیم مکمل کر کے data درج کریں۔
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Table toolbar */}
@@ -890,6 +908,22 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             </label>
           ))}
           <span className="text-[9px] text-slate-400" style={{ fontFamily: "serif" }}>(پرنٹ میں دکھانے کے لیے آن کریں)</span>
+        </div>
+      )}
+      {showSummary && (
+        <div className="mx-4 my-2 p-2.5 rounded-lg border flex items-center justify-between gap-2" dir="rtl"
+          style={{ backgroundColor: step === "summary" ? "#eff6ff" : "#f0fdf4", borderColor: step === "summary" ? "#bfdbfe" : "#bbf7d0" }}>
+          <div className="flex items-center gap-2">
+            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${step === "summary" ? "bg-blue-600" : "bg-emerald-600"}`}>{step === "summary" ? "۱" : "۲"}</span>
+            <span className="text-[12px] font-bold" style={{ fontFamily: "'Noto Nastaliq Urdu', serif", color: step === "summary" ? "#1e40af" : "#166534" }}>
+              {step === "summary" ? "سابقہ پرت وارہ بندی کا data درج کریں — پرت کے شروع والے کالم (A تا O)" : "جہاں پر ترمیم کرنی ہے وہ کر کے data درج کریں — کالم P سے آگے"}
+            </span>
+          </div>
+          {step === "summary" && (
+            <Button size="sm" onClick={handleSaveAndNext} disabled={!canAdvance || saving} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1 shrink-0" title={canAdvance ? "محفوظ کر کے اگلا مرحلہ" : "پہلے data مکمل کریں"}>
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} محفوظ اور آگے
+            </Button>
+          )}
         </div>
       )}
 
@@ -991,7 +1025,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
             </thead>
             <tbody>
               {rows.map((row, i) => {
-                const mainLocked = !isJadeed && !summaryComplete(row);
+                const mainLocked = !isJadeed && step === "summary";
                 return (
                 <tr key={i} data-row={i} className={activeRow === i ? "bg-blue-100/60" : "hover:bg-blue-50/30"}>
                   <td className={tdCls} style={{ width: 32 }}>
