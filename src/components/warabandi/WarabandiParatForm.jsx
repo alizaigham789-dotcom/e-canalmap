@@ -945,11 +945,6 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
       {/* Table + action column (number-shumar side) */}
       {setupDone ? (
       <div className="flex flex-col">
-        {showSummary && step === "tarmeem" && (
-          <div className="px-4 py-1.5 text-center text-red-600 font-bold text-sm border-b border-red-200 bg-red-50" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-            سابقہ پرت وارہ بندی
-          </div>
-        )}
         {/* Active row indicator — name + khata number of the row being edited */}
         {activeRow !== null && rows[activeRow] && (
           <div className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-[22px] rounded-t-md" dir="rtl">
@@ -967,6 +962,11 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
           }}>
           <table style={{ borderCollapse: "collapse", minWidth: "1700px", width: "100%", direction: "rtl" }}>
             <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
+              <tr>
+                <th colSpan={1 + (showRowSr ? 1 : 0)} className={thCls} style={{ backgroundColor: "#f8fafc", fontSize: "8px" }}></th>
+                {showSummaryCols && <th colSpan={15} className={thCls} style={{ backgroundColor: "#dbeafe", color: "#1e40af", fontSize: "11px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>سابقا پرت وارہ بندی</th>}
+                <th colSpan={18} className={thCls} style={{ backgroundColor: "#dcfce7", color: "#166534", fontSize: "11px", fontFamily: "'Noto Nastaliq Urdu', serif" }}>ترمیم وارہ بندی</th>
+              </tr>
               {showColSr && (
                 <tr style={{ backgroundColor: "#f0f4ff" }}>
                   <th className={thCls} style={{ fontSize: "8px", width: 32 }}></th>
