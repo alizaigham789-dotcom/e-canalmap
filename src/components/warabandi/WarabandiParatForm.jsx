@@ -960,7 +960,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <tr style={{ backgroundColor: "#f0f4ff" }}>
                   <th className={thCls} style={{ fontSize: "8px", width: 32 }}></th>
                   {showRowSr && <th className={thCls} style={{ fontSize: "8px", width: 28 }}>#</th>}
-                  {COL_LETTERS.slice(isJadeed ? 7 : 0, isJadeed ? 26 : 24).map((l, i) => (
+                  {COL_LETTERS.slice(isJadeed ? 7 : 0, isJadeed ? 26 : 26).map((l, i) => (
                     <th key={i} className={thCls} style={{ fontSize: "8px" }}>{l}</th>
                   ))}
                   <th className={thCls} style={{ width: 28 }}></th>
@@ -973,6 +973,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 80 }}>نام مالک معہ والدیت</th>
                 <th className={thCls}>کل رقبہ</th>
+                <th className={thCls} rowSpan={2} style={{ backgroundColor: "#f0fdf4" }}>خالص رقبہ</th>
+                <th className={thCls} rowSpan={2} style={{ backgroundColor: "#f0fdf4" }}>غیر ممکن رقبہ</th>
                 <th className={thCls} colSpan={2}>خالص واری</th>
                 <th className={thCls} colSpan={2}>زائدہ وصولی</th>
                 <th className={thCls} colSpan={2}>وضگی</th>
@@ -1045,6 +1047,12 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                     {!isUrduMode && row.total_area2 && isEnglishOrDigit(row.total_area2) && (
                       <div className="text-[7px] text-blue-600 text-center font-mono leading-none pb-0.5">{formatAreaMB(row.total_area2)}</div>
                     )}
+                  </td>
+                  <td className={tdCls} style={{ backgroundColor: "#f0fdf4" }}>
+                    <input value={row.khalis_raqba} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
+                  </td>
+                  <td className={tdCls} style={{ backgroundColor: "#f0fdf4" }}>
+                    <input value={row.ghair_mumkin} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
                   </td>
                   <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
                   <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} /></td>
@@ -1129,6 +1137,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <td className={totalCls}>—</td>
                 <td className={totalCls} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>میزان</td>
                 <td className={totalCls}>{sumCol(rows, "total_area2")}</td>
+                <td className={totalCls}>{sumCol(rows, "khalis_raqba")}</td>
+                <td className={totalCls}>{sumCol(rows, "ghair_mumkin")}</td>
                 <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").m}</td>
                 <td className={totalCls}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
                 <td className={totalCls}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").m}</td>
@@ -1263,7 +1273,7 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       {printColSr && (
         <tr>
           {printRowSr && <th style={{ ...thLetters, fontSize: "7px" }}>#</th>}
-          {COL_LETTERS.slice(isJadeed ? 7 : 0, isJadeed ? 26 : 25).map((l, i) => <th key={i} style={{ ...thLetters, fontSize: "7px" }}>{l}</th>)}
+          {COL_LETTERS.slice(isJadeed ? 7 : 0, isJadeed ? 26 : 27).map((l, i) => <th key={i} style={{ ...thLetters, fontSize: "7px" }}>{l}</th>)}
         </tr>
       )}
       <tr>
@@ -1272,6 +1282,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
         <th style={{ ...thP, minWidth: 70 }} rowSpan={2}>نام مالک معہ والدیت</th>
         <th style={thP}>کل رقبہ</th>
+        <th style={thP} rowSpan={2}>خالص رقبہ</th>
+        <th style={thP} rowSpan={2}>غیر ممکن رقبہ</th>
         <th style={thP} colSpan={2}>خالص واری</th>
         <th style={thP} colSpan={2}>زائدہ وصولی</th>
         <th style={thP} colSpan={2}>وضگی</th>
@@ -1325,6 +1337,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <td style={tdP}>{d(row.khatoni2)}</td>
       <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name2)}</td>
       <td style={tdP}>{d(row.total_area2)}</td>
+      <td style={tdP}>{d(row.khalis_raqba)}</td>
+      <td style={tdP}>{d(row.ghair_mumkin)}</td>
       <td style={tdP}>{d(row.khalis_waari2_minute)}</td>
       <td style={tdP}>{d(row.khalis_waari2_ghante)}</td>
       <td style={tdP}>{d(row.zaidah_minute)}</td>
@@ -1363,6 +1377,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <td style={tdTotal}>—</td>
       <td style={{ ...tdTotal, textAlign: "right" }}>میزان</td>
       <td style={tdTotal}>{sumCol(rows, "total_area2")}</td>
+      <td style={tdTotal}>{sumCol(rows, "khalis_raqba")}</td>
+      <td style={tdTotal}>{sumCol(rows, "ghair_mumkin")}</td>
       <td style={tdTotal}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").m}</td>
       <td style={tdTotal}>{sumPair(rows, "khalis_waari2_minute", "khalis_waari2_ghante").h}</td>
       <td style={tdTotal}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").m}</td>
