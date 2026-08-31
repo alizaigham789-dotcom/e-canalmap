@@ -231,6 +231,8 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
   const [activeRow, setActiveRow] = useState(null);
   const [setupDone, setSetupDone] = useState(false);
   const [step, setStep] = useState("summary");
+  // Tarmeem step mein summary-side columns (A–O) chhupa dein, sirf P+ rahein
+  const showSummaryCols = showSummary && step === "summary";
   const hasMap = !!header.map_id;
   const canAdvance = showSummary && rows.some(r => r.owner_name2 && r.total_area2) && rows.every(r => (!r.owner_name2 && !r.total_area2) || (r.owner_name2 && r.total_area2));
   const TARMEEM_LETTERS = ["A","B","N","O","C","D","H","I","J","K","E","F","G","L","M","P","Q","R","S","T","U","V","Z","AA","AB","AC","W","X","Y","AD","AE","AF","AG"];
@@ -943,6 +945,11 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
       {/* Table + action column (number-shumar side) */}
       {setupDone ? (
       <div className="flex flex-col">
+        {showSummary && step === "tarmeem" && (
+          <div className="px-4 py-1.5 text-center text-red-600 font-bold text-sm border-b border-red-200 bg-red-50" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+            سابقہ پرت وارہ بندی
+          </div>
+        )}
         {/* Active row indicator — name + khata number of the row being edited */}
         {activeRow !== null && rows[activeRow] && (
           <div className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-[22px] rounded-t-md" dir="rtl">
@@ -964,7 +971,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <tr style={{ backgroundColor: "#f0f4ff" }}>
                   <th className={thCls} style={{ fontSize: "8px", width: 32 }}></th>
                   {showRowSr && <th className={thCls} style={{ fontSize: "8px", width: 28 }}>#</th>}
-                  {(isJadeed ? COL_LETTERS.slice(7, 26) : TARMEEM_LETTERS).map((l, i) => (
+                  {(isJadeed ? COL_LETTERS.slice(7, 26) : (step === "tarmeem" ? TARMEEM_LETTERS.slice(15) : TARMEEM_LETTERS)).map((l, i) => (
                     <th key={i} className={thCls} style={{ fontSize: "8px" }}>{l}</th>
                   ))}
                   <th className={thCls} style={{ width: 28 }}></th>
@@ -973,7 +980,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               <tr style={{ backgroundColor: "#dbeafe" }}>
                 <th className={thCls} rowSpan={2} style={{ width: 32 }}></th>
                 {showRowSr && <th className={thCls} rowSpan={2} style={{ width: 28 }}>نمبرشمار</th>}
-                {showSummary && <>
+                {showSummaryCols && <>
                 <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 80 }}>نام مالک معہ والدیت</th>
                 <th className={thCls} colSpan={2}>نکہ جات</th>
@@ -1002,7 +1009,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <th className={thCls} rowSpan={2} style={{ width: 28 }}></th>
               </tr>
               <tr style={{ backgroundColor: "#eff6ff" }}>
-                {showSummary && <>
+                {showSummaryCols && <>
                 <th className={thSubCls}>لیگا</th><th className={thSubCls}>دیگا</th>
                 <th className={thSubCls}>ایکڑ</th>
                 <th className={thSubCls}>ایکڑ</th>
@@ -1041,7 +1048,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                     </div>
                   </td>
                   {showRowSr && <td className={tdCls} style={{ fontSize: "9px", color: "#1d4ed8", minWidth: 28, textAlign: "center", fontWeight: "bold" }}>{i + 1}</td>}
-                  {showSummary && <>
+                  {showSummaryCols && <>
                   <td className={tdCls}><input value={String(i + 1)} readOnly tabIndex={-1} className={inp + " bg-slate-50 text-slate-500"} dir={isUrduMode ? "rtl" : "ltr"} /></td>
                   <td className={tdCls} style={{ minWidth: 80 }}>
                     <input value={row.owner_name2} onChange={e => updateRow(i, "owner_name2", e.target.value)} className={inp}
@@ -1148,7 +1155,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
               <tr style={{ backgroundColor: "#fef9e7" }}>
                 <td className={totalCls} style={{ width: 32 }}></td>
                 {showRowSr && <td className={totalCls}>—</td>}
-                {showSummary && <>
+                {showSummaryCols && <>
                 <td className={totalCls}>—</td>
                 <td className={totalCls} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>میزان</td>
                 <td className={totalCls}>—</td><td className={totalCls}>—</td>

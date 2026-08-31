@@ -57,14 +57,15 @@ export const BW_CSS = `
 
 // Tarmeem annotation for a row: returns "ترمیم" if the owner name changed
 // between the summary side (B = owner_name2) and the main side (Q = owner_name),
-// or "ترمیم رقبہ" if the khalis raqba (E = khalis_raqba) differs from the main
-// total area (U = total_area). Raqba takes precedence when both changed.
+// or "ترمیم رقبہ" if the kull raqba (C = total_area2) differs from the main
+// total area (U = total_area) — i.e. the raqba was amended after save. Raqba
+// takes precedence when both changed.
 export function tarmeemMarker(row) {
   if (!row) return "";
   const nameChanged = !!(row.owner_name2 && row.owner_name && row.owner_name2.trim() !== row.owner_name.trim());
-  const eVal = parseFloat(row.khalis_raqba);
+  const cVal = parseFloat(row.total_area2);
   const uVal = parseFloat(row.total_area);
-  const raqbaChanged = !isNaN(eVal) && !isNaN(uVal) && eVal !== uVal;
+  const raqbaChanged = !isNaN(cVal) && !isNaN(uVal) && cVal !== uVal;
   if (raqbaChanged) return "ترمیم رقبہ";
   if (nameChanged) return "ترمیم";
   return "";
