@@ -8,7 +8,9 @@ import PdfUploadPreview from "./PdfUploadPreview";
 import PasteDataDialog, { PASTE_COLUMNS } from "./PasteDataDialog";
 import BandubastPicker from "./BandubastPicker";
 import FractionCell from "./FractionCell";
+import { COL_LETTERS, sumCol, sumPair, d, PRINT_CSS, BW_CSS, fracHtml } from "@/lib/paratHelpers";
 import { openPrintWindow } from "@/lib/paratPrint";
+import ParatPrintModal from "./ParatPrintModal";
 
 // ====== Area format helpers ======
 function formatAreaMB(totalAcres) {
@@ -71,23 +73,7 @@ const emptyRow = (idx) => {
   };
 };
 
-function sumCol(rows, key) {
-  const s = rows.reduce((acc, r) => acc + (parseFloat(r[key]) || 0), 0);
-  return s === 0 ? "-" : String(s % 1 === 0 ? s : s.toFixed(2));
-}
-
-// منٹ + گھنٹے کا مجموعہ — 60 منٹ = 1 گھنٹہ carry
-function sumPair(rows, minKey, hrKey) {
-  let total = 0;
-  for (const r of rows) {
-    total += (parseFloat(r[hrKey]) || 0) * 60 + (parseFloat(r[minKey]) || 0);
-  }
-  if (total === 0) return { m: "-", h: "-" };
-  return { m: String(total % 60), h: String(Math.floor(total / 60)) };
-}
-
-function d(val) { return (val === "" || val === null || val === undefined) ? "-" : val; }
-
+// sumCol, sumPair, d, COL_LETTERS — moved to @/lib/paratHelpers
 // Convert Eastern Arabic / Urdu digits (۱۲۳ ٠١٢) → Western (123) for numeric fields.
 // Also strips stray thousands separators (، ,) that OCR sometimes keeps.
 const EAST_DIGIT_MAP = { '۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9','٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
@@ -154,51 +140,7 @@ function calcKhalis(total, ghair) {
   return result % 1 === 0 ? String(result) : result.toFixed(2);
 }
 
-const COL_LETTERS = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
-
-const PRINT_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-  @page { size: 297mm 210mm; margin: 10mm 10mm 10mm 10mm; @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; } @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: counter(page) " / " counter(pages); direction: ltr; unicode-bidi: embed; font-family: sans-serif; font-size: 9px; color: #555; padding: 0 6mm 4mm 0; } }
-  html, body { width: 100%; }
-  body { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; margin:0; padding:0; direction:rtl; color:#000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  .print-page-wrap { box-sizing: border-box; }
-  .parat-page { box-sizing: border-box; }
-  .notes-block { direction: rtl; margin-top: 1em; }
-  .final-block { box-sizing: border-box; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1.5px solid #333; padding: 2px 3px; text-align: center; font-size: 7.5px; font-family: 'Noto Nastaliq Urdu', serif; }
-  th { font-weight: bold; }
-  .total-row td { font-weight: bold; }
-  tr { page-break-inside: avoid; }
-  .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 7px; }
-  .frac .num { border-bottom: 1.5px solid #000; padding-bottom: 1px; }
-  .tashreeh-table th { font-size: 7px; padding: 2px; }
-  .tashreeh-table td { font-size: 7px; padding: 2px; }
-  .signatures { margin-top: 10mm; margin-bottom: 10mm; page-break-inside: avoid; break-inside: avoid; }
-`;
-
-const BW_CSS = `
-  .bw-mode caption { color:#000 !important; background:transparent !important; }
-  .bw-mode th { background:#fff !important; color:#000 !important; border-color:#000 !important; }
-  .bw-mode td { background:#fff !important; color:#000 !important; border-color:#000 !important; }
-  .bw-mode .total-row td { background:#fff !important; color:#000 !important; font-weight:bold !important; }
-  .bw-mode .frac .num { border-bottom-color:#000 !important; }
-  .bw-mode .signatures, .bw-mode .sig-item { border-color:#000 !important; color:#000 !important; background:transparent !important; }
-`;
-
-function fracHtml(val) {
-  if (!val) return "-";
-  // Comma-separated mustateel/killa pairs → multiple stacked fractions
-  const entries = val.split(",").map(e => e.trim()).filter(Boolean);
-  return entries.map(entry => {
-    const parts = entry.split("/");
-    if (parts.length >= 2) {
-      return `<span class="frac"><span class="num">${parts[0]}</span><span>${parts.slice(1).join("/")}</span></span>`;
-    }
-    return `<span>${entry}</span>`;
-  }).join(", ");
-}
+// PRINT_CSS, BW_CSS, fracHtml, COL_LETTERS — moved to @/lib/paratHelpers
 
 // ====== تشریح اوقات helpers ======
 const URDU_DAYS = ["سوموار", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ", "اتوار"];
@@ -960,7 +902,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <tr style={{ backgroundColor: "#f0f4ff" }}>
                   <th className={thCls} style={{ fontSize: "8px", width: 32 }}></th>
                   {showRowSr && <th className={thCls} style={{ fontSize: "8px", width: 28 }}>#</th>}
-                  {COL_LETTERS.slice(isJadeed ? 7 : 0, isJadeed ? 26 : 26).map((l, i) => (
+                  {COL_LETTERS.slice(isJadeed ? 7 : 0, isJadeed ? 26 : 33).map((l, i) => (
                     <th key={i} className={thCls} style={{ fontSize: "8px" }}>{l}</th>
                   ))}
                   <th className={thCls} style={{ width: 28 }}></th>
@@ -1279,7 +1221,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
         onClose={() => setPicker(null)}
       />
 
-      {showPrint && <PrintModal {...printData} onClose={() => setShowPrint(false)} />}
+      {showPrint && <ParatPrintModal {...printData} onClose={() => setShowPrint(false)} />}
     </div>
   );
 }
