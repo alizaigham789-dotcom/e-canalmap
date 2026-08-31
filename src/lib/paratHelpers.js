@@ -66,3 +66,52 @@ export function fracHtml(val) {
     return `<span>${entry}</span>`;
   }).join(", ");
 }
+
+// Expand a killa range token "1-5" → "1,2,3,4,5". Pass-through for plain numbers
+// and already-comma-separated lists. "1-3,7-9" → "1,2,3,7,8,9".
+function expandKillaRanges(part) {
+  const tokens = String(part).split(",");
+  const out = [];
+  for (const t of tokens) {
+    const tr = t.trim();
+    const m = tr.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (m) {
+      const a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+      if (a <= b && b - a < 200) {
+        for (let i = a; i <= b; i++) out.push(String(i));
+        continue;
+      }
+    }
+    if (tr) out.push(tr);
+  }
+  return out.join(",");
+}
+
+// Bandubast print formatter: each mustateel ("4567/1-5") becomes its own fraction
+// (mustateel on top, killa numbers below, slash as the fraction bar). Multiple
+// mustateels are separated by space and/or comma in the input, and rendered as
+// SEPARATE fractions (never merged). Killa ranges expand: "4567/1-5" →
+// "4567" over "1,2,3,4,5".
+export function bandubastHtml(val) {
+  if (!val) return "-";
+  const tokens = String(val).split(/\s+/).map(t => t.trim()).filter(Boolean);
+  const entries = [];
+  for (const tok of tokens) {
+    // A single token may itself pack comma-separated mustateels if it contains
+    // more than one "/". A lone slash means the commas inside belong to the
+    // killa list — keep them intact.
+    const slashCount = (tok.match(/\//g) || []).length;
+    if (slashCount > 1) {
+      for (const e of tok.split(",")) { const ee = e.trim(); if (ee) entries.push(ee); }
+    } else {
+      entries.push(tok);
+    }
+  }
+  return entries.map(entry => {
+    const idx = entry.indexOf("/");
+    if (idx === -1) return `<span>${entry}</span>`;
+    const mustateel = entry.slice(0, idx);
+    const killaPart = expandKillaRanges(entry.slice(idx + 1));
+    return `<span class="frac"><span class="num">${mustateel}</span><span>${killaPart}</span></span>`;
+  }).join("&nbsp;&nbsp;");
+}

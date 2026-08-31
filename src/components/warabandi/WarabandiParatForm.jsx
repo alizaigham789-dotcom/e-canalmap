@@ -705,16 +705,22 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
   };
 
   // ڈیفالٹ اسکرول نمبرشمار (سٹارٹ) سائڈ پر — ٹشریح اینڈ پر نہیں
-  // جدول نمبرشمار سائڈ ہمیشہ دائیں (right) رہے — table ظاہر ہونے یا قطار بڑھنے پر دوبارہ اسکرول
+  // جدول نمبرشمار سائڈ ہمیشہ دائیں (right) رہے — table ظاہر ہونے، قطار بڑھنے یا مرحلے بدلنے پر دوبارہ اسکرول
   const scrollRef = useRef(null);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || !setupDone) return;
     const raf = requestAnimationFrame(() => {
+      if (step === "tarmeem") {
+        // 2nd form: P (first data-entry column) ko start (right) par la کر دکھائیں
+        const pCell = el.querySelector("[data-main-start]");
+        if (pCell) { pCell.scrollIntoView({ inline: "end", block: "nearest" }); return; }
+      }
+      // 1st form: نمبرشمار سائڈ (right/start) دکھائیں
       el.scrollLeft = el.scrollWidth - el.clientWidth;
     });
     return () => cancelAnimationFrame(raf);
-  }, [setupDone, rows.length]);
+  }, [setupDone, rows.length, step]);
 
   const updateNote = (i, val) => setNotes(prev => { const n = [...prev]; n[i] = val; return n; });
   const addNote = () => setNotes(prev => [...prev, ""]);
@@ -1069,7 +1075,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                   <td className={tdCls}><input value={row.khalis_waari2_minute} onChange={e => updateRow(i, "khalis_waari2_minute", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} disabled={summaryLocked} /></td>
                   <td className={tdCls}><input value={row.khalis_waari2_ghante} onChange={e => updateRow(i, "khalis_waari2_ghante", e.target.value)} className={inp} style={{ color: "#1d4ed8" }} disabled={summaryLocked} /></td>
                   </>}
-                  {showSummary && <td className={tdCls}><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp + " bg-slate-50 text-slate-500"} dir={isUrduMode ? "rtl" : "ltr"} disabled={mainLocked} /></td>}
+                  {showSummary && <td className={tdCls} data-main-start><input value={row.khatoni} onChange={e => updateRow(i, "khatoni", e.target.value)} className={inp + " bg-slate-50 text-slate-500"} dir={isUrduMode ? "rtl" : "ltr"} disabled={mainLocked} /></td>}
                   {showSummary && <></>}
                   {!showSummary && <td className={tdCls}><input value={String(i + 1)} readOnly tabIndex={-1} className={inp + " bg-slate-50 text-slate-500"} dir={isUrduMode ? "rtl" : "ltr"} /></td>}
                   <td className={tdCls} style={{ minWidth: 80 }}>

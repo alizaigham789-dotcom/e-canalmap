@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Pencil } from "lucide-react";
-import { COL_LETTERS, PRINT_CSS, BW_CSS, fracHtml, sumCol, sumPair, d } from "@/lib/paratHelpers";
+import { COL_LETTERS, PRINT_CSS, BW_CSS, fracHtml, bandubastHtml, sumCol, sumPair, d } from "@/lib/paratHelpers";
 import { openPrintWindow } from "@/lib/paratPrint";
 
 // Columns on the summary side that are hidden in print by default and can be
@@ -144,7 +144,7 @@ export default function ParatPrintModal({ docType, headerLine, rows, notes, prin
       </>}
       <td style={tdP}>{d(row.khatoni)}</td>
       <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name)}</td>
-      <td style={tdP} dangerouslySetInnerHTML={{ __html: row.bandubast ? fracHtml(row.bandubast) : "-" }} />
+      <td style={tdP} dangerouslySetInnerHTML={{ __html: row.bandubast ? bandubastHtml(row.bandubast) : "-" }} />
       <td style={tdP}>{d(row.total_area)}</td>
       <td style={tdP}>{d(row.ghair_mumkin)}</td>
       <td style={tdP}>{d(row.khalis_raqba)}</td>
