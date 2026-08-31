@@ -973,8 +973,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <th className={thCls} rowSpan={2}>کھاتہ نمبر</th>
                 <th className={thCls} rowSpan={2} style={{ minWidth: 80 }}>نام مالک معہ والدیت</th>
                 <th className={thCls}>کل رقبہ</th>
-                <th className={thCls} rowSpan={2} style={{ backgroundColor: "#f0fdf4" }}>خالص رقبہ</th>
                 <th className={thCls} rowSpan={2} style={{ backgroundColor: "#f0fdf4" }}>غیر ممکن رقبہ</th>
+                <th className={thCls} rowSpan={2} style={{ backgroundColor: "#f0fdf4" }}>خالص رقبہ</th>
                 <th className={thCls} rowSpan={2} style={{ backgroundColor: "#f0fdf4" }}>خالص رقبہ</th>
                 <th className={thCls} rowSpan={2}>واری منٹ</th>
                 <th className={thCls} colSpan={2}>زائدہ وصولی</th>
@@ -1051,10 +1051,10 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                     )}
                   </td>
                   <td className={tdCls} style={{ backgroundColor: "#f0fdf4" }}>
-                    <input value={row.khalis_raqba} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
+                    <input value={row.ghair_mumkin} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
                   </td>
                   <td className={tdCls} style={{ backgroundColor: "#f0fdf4" }}>
-                    <input value={row.ghair_mumkin} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
+                    <input value={row.khalis_raqba} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
                   </td>
                   <td className={tdCls} style={{ backgroundColor: "#f0fdf4" }}>
                     <input value={row.khalis_raqba} readOnly tabIndex={-1} className={inp} style={{ color: "#166534" }} dir="ltr" />
@@ -1145,8 +1145,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                 <td className={totalCls}>—</td>
                 <td className={totalCls} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>میزان</td>
                 <td className={totalCls}>{sumCol(rows, "total_area2")}</td>
-                <td className={totalCls}>{sumCol(rows, "khalis_raqba")}</td>
                 <td className={totalCls}>{sumCol(rows, "ghair_mumkin")}</td>
+                <td className={totalCls}>{sumCol(rows, "khalis_raqba")}</td>
                 <td className={totalCls}>{sumCol(rows, "khalis_raqba")}</td>
                 <td className={totalCls}>{sumPair(rows, "waari_minute", "waari_ghante").m}</td>
                 <td className={totalCls}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").m}</td>
@@ -1292,8 +1292,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
         <th style={thP} rowSpan={2}>کھاتہ نمبر</th>
         <th style={{ ...thP, minWidth: 70 }} rowSpan={2}>نام مالک معہ والدیت</th>
         <th style={thP}>کل رقبہ</th>
-        <th style={thP} rowSpan={2}>خالص رقبہ</th>
         <th style={thP} rowSpan={2}>غیر ممکن رقبہ</th>
+        <th style={thP} rowSpan={2}>خالص رقبہ</th>
         <th style={thP} rowSpan={2}>خالص رقبہ</th>
         <th style={thP} rowSpan={2}>واری منٹ</th>
         <th style={thP} colSpan={2}>زائدہ وصولی</th>
@@ -1349,8 +1349,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <td style={tdP}>{d(row.khatoni2)}</td>
       <td style={{ ...tdP, textAlign: "right" }}>{d(row.owner_name2)}</td>
       <td style={tdP}>{d(row.total_area2)}</td>
-      <td style={tdP}>{d(row.khalis_raqba)}</td>
       <td style={tdP}>{d(row.ghair_mumkin)}</td>
+      <td style={tdP}>{d(row.khalis_raqba)}</td>
       <td style={tdP}>{d(row.khalis_raqba)}</td>
       <td style={tdP}>{d(row.waari_minute)}</td>
       <td style={tdP}>{d(row.zaidah_minute)}</td>
@@ -1391,8 +1391,8 @@ function PrintModal({ docType, headerLine, rows, notes, printRowSr, printColSr, 
       <td style={tdTotal}>—</td>
       <td style={{ ...tdTotal, textAlign: "right" }}>میزان</td>
       <td style={tdTotal}>{sumCol(rows, "total_area2")}</td>
-      <td style={tdTotal}>{sumCol(rows, "khalis_raqba")}</td>
       <td style={tdTotal}>{sumCol(rows, "ghair_mumkin")}</td>
+      <td style={tdTotal}>{sumCol(rows, "khalis_raqba")}</td>
       <td style={tdTotal}>{sumCol(rows, "khalis_raqba")}</td>
       <td style={tdTotal}>{sumPair(rows, "waari_minute", "waari_ghante").m}</td>
       <td style={tdTotal}>{sumPair(rows, "zaidah_minute", "zaidah_ghante").m}</td>
