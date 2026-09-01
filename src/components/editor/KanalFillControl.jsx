@@ -1,91 +1,188 @@
 import React, { useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { LAND_USE_PRESETS } from "@/lib/landUsePalette";
+import { Trash2 } from "lucide-react";
+import { LAND_USE_PRESETS, getAcreUses, killaCountFor } from "@/lib/landUsePalette";
 import { getKanalFills } from "@/lib/gisEngine";
 
 const URDU = { fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif" };
-const FULL = (color, label) => ({ color, label, boxes: [1, 2, 3, 4, 5, 6, 7, 8] });
+const BOXES = [1, 2, 3, 4, 5, 6, 7, 8];
+const seq = (n) => BOXES.slice(0, Math.max(0, Math.min(8, n)));
+const GREEN = "#16a34a";
 
-// Mustateel / Muraba colour-fill control.
-//   • On/Off toggle at top (like chakbandi ikhraj) — turning ON fills every acre
-//     by default; turning OFF clears all.
-//   • Colour picker + "اپنا لیبل" custom label.
-//   • A small mustateel preview grid (2×5 for mustateel, 5×5 for muraba) where each
-//     cell is an acre number — click to toggle that acre's colour fill on/off.
-//     Nothing else below the custom label.
+// Unified colour-fill control for a mustateel / muraba.
+//   • On/Off toggle at top — turning ON fills every acre by default (full 8 kanal);
+//     turning OFF clears all.
+//   • Image-style layout (only when ON): 8 land-use preset buttons + "اپنا لیبل"
+//     custom label + "منتخب:" selection status + KILLA (1–N) grid.
+//   • Click a killa to toggle a FULL acre fill (8 kanal). Each selected acre gets a
+//     green slider (0–8, default 8). When the slider is at 8 (full) nothing else
+//     opens. When reduced below 8 (partial), an 8-box grid opens for that acre so the
+//     user can pick exactly which kanal are filled.
+// Data: full acres → acreUses (renders colour + legend label); partial acres →
+// kanalFills (renders the specific per-kanal boxes). Both are committed together.
 export default function KanalFillControl({ local, commit }) {
-  const isMuraba = local.type === "muraba";
-  const totalKillas = isMuraba ? 25 : 10;
-  const cols = isMuraba ? 5 : 2;
-  const fills = getKanalFills(local);
-  const enabled = fills.some((f) => f);
+  const total = killaCountFor(local);
+  const acreUses = getAcreUses(local);
+  const kanalFills = getKanalFills(local);
 
-  const [color, setColor] = useState("#28a745");
-  const [label, setLabel] = useState("آبپاشی");
+  const isFilled = (i) => !!(acreUses[i] || kanalFills[i]);
+  const enabled = acreUses.some((u) => u) || kanalFills.some((f) => f);
+  const getCount = (i) => (acreUses[i] ? 8 : kanalFills[i] ? kanalFills[i].boxes.length : 0);
+  const selectedAcres = Array.from({ length: total }, (_, i) => (isFilled(i) ? i + 1 : null)).filter(Boolean);
+
+  const [selColor, setSelColor] = useState(LAND_USE_PRESETS[0].color);
+  const [selLabel, setSelLabel] = useState(LAND_USE_PRESETS[0].label);
+  const [customColor, setCustomColor] = useState("#7c3aed");
+  const [customLabel, setCustomLabel] = useState("");
+
+  const write = (nextUses, nextFills) => commit({ acreUses: nextUses, kanalFills: nextFills });
 
   const toggleOn = (on) => {
-    if (on) commit("kanalFills", Array.from({ length: totalKillas }, () => FULL(color, label)));
-    else commit("kanalFills", Array(totalKillas).fill(null));
-  };
-  const toggleAcre = (a) => {
-    const next = fills.slice();
-    next[a - 1] = next[a - 1] ? null : FULL(color, label);
-    commit("kanalFills", next);
+    if (on) write(Array.from({ length: total }, () => ({ color: selColor, label: selLabel })), Array(total).fill(null));
+    else write(Array(total).fill(null), Array(total).fill(null));
   };
 
+  const toggleAcre = (idx) => {
+    const nu = acreUses.slice(), nf = kanalFills.slice();
+    if (isFilled(idx)) { nu[idx] = null; nf[idx] = null; }
+    else { nu[idx] = { color: selColor, label: selLabel }; nf[idx] = null; }
+    write(nu, nf);
+  };
+
+  const setCount = (idx, n) => {
+    const nu = acreUses.slice(), nf = kanalFills.slice();
+    if (n === 0) { nu[idx] = null; nf[idx] = null; }
+    else if (n === 8) { nu[idx] = { color: selColor, label: selLabel }; nf[idx] = null; }
+    else { nu[idx] = null; nf[idx] = { color: selColor, label: selLabel, boxes: seq(n) }; }
+    write(nu, nf);
+  };
+
+  const toggleBox = (idx, b) => {
+    const f = kanalFills[idx];
+    if (!f) return;
+    const boxes = f.boxes.includes(b) ? f.boxes.filter((x) => x !== b) : [...f.boxes, b].sort((x, y) => x - y);
+    const nu = acreUses.slice(), nf = kanalFills.slice();
+    if (boxes.length === 0) { nf[idx] = null; }
+    else if (boxes.length === 8) { nu[idx] = { color: f.color, label: f.label }; nf[idx] = null; }
+    else { nf[idx] = { ...f, boxes }; }
+    write(nu, nf);
+  };
+
+  const clearAll = () => write(Array(total).fill(null), Array(total).fill(null));
   const mustateelNum = local.num || (local.id ? String(local.id).slice(-4) : "—");
 
   return (
-    <div className="p-2 bg-white border border-slate-200 rounded-lg space-y-2">
-      {/* On/Off toggle */}
+    <div className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+      {/* Header + On/Off toggle */}
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold text-slate-800" style={URDU}>رنگ فِل (Colour Fill)</span>
+        <label className="text-[10px] text-slate-600 flex items-center gap-1" style={URDU}>
+          ایکسٹر استعمال رنگ (Acre Land-Use)
+        </label>
         <Switch checked={enabled} onCheckedChange={toggleOn} />
       </div>
 
       {enabled && (
         <>
-          {/* Colour + custom label ("اپنا لیبل") */}
-          <div className="flex items-center gap-1">
-            <input type="color" value={color} onChange={(e) => setColor(e.target.value)}
-              className="h-5 w-7 rounded cursor-pointer border border-slate-200" />
-            <input type="text" value={label} onChange={(e) => setLabel(e.target.value)} dir="rtl" style={URDU}
-              placeholder="اپنا لیبل" className="flex-1 h-6 text-[10px] bg-white border border-slate-200 rounded px-1 text-slate-700" />
-            <div className="flex gap-0.5">
-              {LAND_USE_PRESETS.slice(0, 4).map((p) => (
-                <button key={p.id} onClick={() => { setColor(p.color); setLabel(p.label); }}
-                  className="w-4 h-4 rounded-sm border border-black/10" style={{ background: p.color }} title={p.label} />
-              ))}
-            </div>
+          {/* Preset category grid (4×2) */}
+          <div className="grid grid-cols-4 gap-1">
+            {LAND_USE_PRESETS.map((p) => {
+              const active = selColor === p.color && selLabel === p.label;
+              return (
+                <button key={p.id} onClick={() => { setSelColor(p.color); setSelLabel(p.label); }}
+                  className={`flex flex-col items-center gap-0.5 p-1 rounded border text-[8px] leading-none ${active ? "border-blue-600 bg-blue-50" : "border-slate-200 bg-white hover:border-slate-300"}`}
+                  title={p.label}>
+                  <span className="w-full h-3 rounded-sm border border-black/10" style={{ background: p.color }} />
+                  <span style={URDU}>{p.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Small mustateel preview — each cell is an acre number, click to toggle fill */}
+          {/* Custom colour + "اپنا لیبل" */}
+          <div className="flex items-center gap-1">
+            <input type="color" value={customColor} onChange={(e) => setCustomColor(e.target.value)}
+              className="h-5 w-7 rounded cursor-pointer border border-slate-200" />
+            <input type="text" value={customLabel} onChange={(e) => setCustomLabel(e.target.value)}
+              placeholder="اپنا لیبل" dir="rtl" style={URDU}
+              className="flex-1 h-6 text-[10px] bg-white border border-slate-200 rounded px-1 text-slate-700" />
+            <button onClick={() => { setSelColor(customColor); setSelLabel(customLabel || "استعمال"); }}
+              className="text-[8px] px-1 py-0.5 rounded border border-slate-200 bg-white hover:bg-slate-100 text-slate-600">انتخاب</button>
+          </div>
+
+          {/* Selection status */}
+          <div className="flex items-center gap-1 text-[9px] text-slate-500">
+            <span>منتخب:</span>
+            <span className="w-3 h-3 rounded-sm border border-slate-300" style={{ background: selColor }} />
+            <span style={URDU}>{selLabel}</span>
+          </div>
+
+          {/* KILLA grid — click to toggle full acre fill */}
           <div>
             <label className="text-[9px] text-slate-400 uppercase tracking-wider block mb-1">
-              MUSTATEEL {mustateelNum} — ایکڑ نمبر آن/آف
+              KILLA (1–{total}) — کلک کر کے رنگ لگائیں
             </label>
-            <div className="grid gap-1 w-40 mx-auto" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-              {Array.from({ length: totalKillas }, (_, i) => {
-                const f = fills[i];
-                const on = !!f;
+            <div className="grid grid-cols-5 gap-1">
+              {Array.from({ length: total }, (_, i) => {
+                const u = acreUses[i], f = kanalFills[i];
+                const filled = !!(u || f);
+                const bg = u ? u.color : f ? f.color : null;
                 return (
-                  <button key={i} onClick={() => toggleAcre(i + 1)}
-                    className="relative h-8 rounded border text-[10px] font-bold flex items-center justify-center transition-colors"
-                    style={{
-                      background: on ? (f.color || "#28a745") : "#fff",
-                      borderColor: on ? (f.color || "#28a745") : "#cbd5e1",
-                      color: on ? "#fff" : "#475569",
-                    }}
-                    title={on ? `${f.label} — ایکڑ ${i + 1}` : `ایکڑ ${i + 1} خالی`}>
-                    {i + 1}
+                  <button key={i} onClick={() => toggleAcre(i)}
+                    className="relative h-8 rounded border text-[9px] flex items-center justify-center overflow-hidden"
+                    style={{ background: filled ? (bg + "cc") : "#fff", borderColor: filled ? bg : "#cbd5e1" }}
+                    title={filled ? (u ? u.label : f.label) : `Killa ${i + 1}`}>
+                    <span className="absolute top-0 left-0.5 text-[7px] text-slate-700 font-bold">{i + 1}</span>
+                    {filled && <span style={URDU} className="text-[8px] text-slate-900 leading-none px-0.5 text-center">{u ? u.label : `${f.boxes.length}K`}</span>}
                   </button>
                 );
               })}
             </div>
-            <p className="text-[8px] text-slate-400 text-center mt-1" style={URDU}>
-              جس ایکڑ میں رنگ کرنا ہو، اس نمبر پر کلک کریں
-            </p>
           </div>
+
+          {/* Per-acre green slider rows — 8-box opens only when partial */}
+          {selectedAcres.length > 0 && (
+            <div className="space-y-1.5 max-h-64 overflow-y-auto touch-scroll">
+              {selectedAcres.map((a) => {
+                const idx = a - 1;
+                const cnt = getCount(idx);
+                const partial = cnt > 0 && cnt < 8;
+                const f = kanalFills[idx];
+                const fillCol = acreUses[idx] ? acreUses[idx].color : f ? f.color : GREEN;
+                return (
+                  <div key={a} className="border border-slate-200 rounded p-1.5 bg-white">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] font-bold text-slate-700 w-14">{mustateelNum}/{a}</span>
+                      <input type="range" min={0} max={8} value={cnt} onChange={(e) => setCount(idx, +e.target.value)}
+                        className="flex-1" style={{ accentColor: GREEN }} />
+                      <span className="text-[10px] font-mono font-bold w-8 text-right" style={{ color: fillCol }}>{cnt} K</span>
+                    </div>
+                    {partial && (
+                      <>
+                        <div className="grid grid-cols-8 gap-0.5 mt-1">
+                          {BOXES.map((b) => {
+                            const on = f && f.boxes.includes(b);
+                            return (
+                              <button key={b} onClick={() => toggleBox(idx, b)}
+                                className="relative h-6 rounded-sm border text-[8px] font-bold flex items-center justify-center"
+                                style={{ background: on ? f.color : "#fff", borderColor: on ? f.color : "#cbd5e1", color: on ? "#fff" : "#94a3b8" }}
+                                title={`کنال ${b}`}>
+                                {b}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="text-[8px] text-slate-400 mt-0.5" style={URDU}>جن کنال پر کلک کریں وہ خالی/بھر ہوں گے</p>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <button onClick={clearAll} className="text-[9px] text-red-500 hover:text-red-600 flex items-center gap-1">
+            <Trash2 className="w-2.5 h-2.5" /> سب خالی کریں
+          </button>
         </>
       )}
     </div>

@@ -6,7 +6,6 @@ import { Separator } from "@/components/ui/separator";
 import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, ChevronUp, Calculator, Ban, MousePointerClick, RotateCcw } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { calculateChakbandiGCA, acresToAcreKanalMarla } from "@/lib/gisEngine";
-import AcreUseControl from "@/components/editor/AcreUseControl";
 import KanalFillControl from "@/components/editor/KanalFillControl";
 import CanalStyleControl from "@/components/editor/CanalStyleControl";
 
@@ -131,8 +130,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               </div>
               <ExclusionToggle local={local} commit={commit} />
               <MustateelStyleControl local={local} onApplyAll={onUpdateAllMustateels} onResetAll={onResetAllMustateels} />
-              <AcreUseControl local={local} commit={commit} />
-              <KanalFillControl local={local} commit={commit} />
+              <KanalFillControl local={local} commit={commitMultiple} />
               {(() => {
                 const hasMustateelFill = !!(local.fillColor && local.fillColor.trim() && local.fillColor.startsWith("#")) || (local.acreUses && local.acreUses.some(u => u && u.color));
                 return hasMustateelFill ? (
@@ -158,8 +156,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               </div>
               <ExclusionToggle local={local} commit={commit} />
               <MustateelStyleControl local={local} onApplyAll={onUpdateAllMurabas} onResetAll={onResetAllMurabas} type="muraba" />
-              <AcreUseControl local={local} commit={commit} />
-              <KanalFillControl local={local} commit={commit} />
+              <KanalFillControl local={local} commit={commitMultiple} />
               {(() => {
                 const hasMurabaFill = !!(local.fillColor && local.fillColor.trim() && local.fillColor.startsWith("#")) || (local.acreUses && local.acreUses.some(u => u && u.color));
                 return hasMurabaFill ? (
