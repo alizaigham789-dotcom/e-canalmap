@@ -1614,7 +1614,22 @@ export default function Editor() {
             else if (aboveTop >= margin) top = aboveTop;
             else top = margin;
             top = Math.max(margin, Math.min(top, containerH - estH - margin));
-            const left = Math.max(margin, Math.min(cs.x, containerW - POPUP_W - margin));
+            // For parcels (mustateel/muraba/acre) pin the panel to the SIDE of the
+            // plot (right of its right edge, else left of its left edge) so the whole
+            // plot stays visible while colour-filling. Other objects keep the old clamp.
+            let left;
+            if (isParcel) {
+              const dim = selectedObj.type === "muraba" ? { w: 1100, h: 990 }
+                : selectedObj.type === "mustateel" ? { w: 440, h: 990 }
+                : { w: 220, h: 198 };
+              const rightEdge = cs.x + dim.w * zoom;
+              const leftEdge = cs.x;
+              if (rightEdge + POPUP_W + margin <= containerW) left = rightEdge + margin;
+              else left = Math.max(margin, leftEdge - POPUP_W - margin);
+              left = Math.max(margin, Math.min(left, containerW - POPUP_W - margin));
+            } else {
+              left = Math.max(margin, Math.min(cs.x, containerW - POPUP_W - margin));
+            }
             return (
               <div className="absolute z-30 max-sm:max-w-[calc(100vw-70px)]" style={{ left, top }}>
                 <PropertiesPanel

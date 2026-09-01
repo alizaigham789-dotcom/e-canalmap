@@ -20,7 +20,7 @@ const GREEN = "#16a34a";
 //     user can pick exactly which kanal are filled.
 // Data: full acres → acreUses (renders colour + legend label); partial acres →
 // kanalFills (renders the specific per-kanal boxes). Both are committed together.
-export default function KanalFillControl({ local, commit }) {
+export default function KanalFillControl({ local, commit, title = "Mustateel Colour filling" }) {
   const total = killaCountFor(local);
   const acreUses = getAcreUses(local);
   const kanalFills = getKanalFills(local);
@@ -76,7 +76,7 @@ export default function KanalFillControl({ local, commit }) {
       {/* Header + On/Off toggle */}
       <div className="flex items-center justify-between">
         <label className="text-[10px] text-slate-600 flex items-center gap-1" style={URDU}>
-          ایکسٹر استعمال رنگ (Acre Land-Use)
+          {title}
         </label>
         <Switch checked={enabled} onCheckedChange={toggleOn} />
       </div>
