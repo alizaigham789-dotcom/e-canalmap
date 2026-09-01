@@ -188,7 +188,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
             <>
               <Separator className="bg-slate-100" />
               <Field label="Watercourse Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Watercourse 1" />
-              <KhalWidthControl value={local.width ?? 11} onChange={v => commit("width", v)} />
+              <KhalWidthControl value={local.width ?? 15} onChange={v => commit("width", v)} />
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Fill Colour</label>
                 <div className="flex items-center gap-2">
@@ -559,15 +559,15 @@ function SpacingControl({ label, value, min, max, step, onChange, unit }) {
   );
 }
 
-// Watercourse (khal) width — continuous range 3–15 ft (default 11 ft)
+// Watercourse (khal) width — continuous range 1–30 ft (default 15 ft)
 function KhalWidthControl({ value, onChange }) {
-  const min = 3, max = 15;
-  const clamped = Math.min(max, Math.max(min, value || 11));
+  const min = 1, max = 30;
+  const clamped = Math.min(max, Math.max(min, value || 15));
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
         <label className="text-[10px] text-slate-400 uppercase tracking-wider">Width (ft)</label>
-        <span className="text-[9px] text-blue-500 font-medium">Watercourse · 3–15 ft</span>
+        <span className="text-[9px] text-blue-500 font-medium">Watercourse · 1–30 ft</span>
       </div>
       <div className="flex items-center gap-2">
         <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
