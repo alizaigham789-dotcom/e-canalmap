@@ -5,10 +5,22 @@ import { ArrowLeft, Plus, Trash2, Printer, FileText, Save, Search } from "lucide
 import BandubastPicker from "@/components/warabandi/BandubastPicker";
 import FractionCell from "@/components/warabandi/FractionCell";
 import { printFardRecord } from "@/lib/fardPrint";
-import RateAbianaBox, { computeAbiana, DEFAULT_RATE_CONFIG, cropOptionsFor } from "@/components/tawan/RateAbianaBox";
+import RateAbianaBox, { computeAbiana, DEFAULT_RATE_CONFIG, cropOptionsFor, SEASON_LABEL } from "@/components/tawan/RateAbianaBox";
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
-const EMPTY_ROW = { name: "", khasra: "", area: "", crop: "خریف", abiana: "", signature: "" };
+const EMPTY_ROW = { name: "", khasra: "", area: "", crop: "Khareef", abiana: "", phone: "" };
+
+// Pakistani mobile format: 11 digits, "03" prefix fixed, dash after 4 → 0300-1234567
+function formatPkPhone(raw) {
+  let d = (raw || "").replace(/\D/g, "");
+  if (!d) return "";
+  if (d.startsWith("03")) d = d.slice(2);
+  else if (d.startsWith("0")) d = d.slice(1);
+  d = d.slice(0, 9);
+  const full = ("03" + d).slice(0, 11);
+  if (full.length <= 4) return full;
+  return full.slice(0, 4) + "-" + full.slice(4);
+}
 
 function buildFardHeader(d) {
   const mogha = d.mogha_number ? `${d.mogha_number}${d.mogha_side ? `/${d.mogha_side}` : ""}` : "_____";
@@ -28,8 +40,8 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
   const updateRow = (i, k, v) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
   const addRow = () => {
     const crop = rateConfig.mode === "fasal"
-      ? (rateConfig.selectedCrop || cropOptionsFor(rateConfig)[0] || "")
-      : (rateConfig.selectedSeason === "r" ? "ربیع" : "خریف");
+      ? (rateConfig.selectedCrop || cropOptionsFor(rateConfig).find((c) => c !== SEASON_LABEL.k && c !== SEASON_LABEL.r) || "")
+      : SEASON_LABEL[rateConfig.selectedSeason || "k"];
     setRows((rs) => [...rs, { ...EMPTY_ROW, crop }]);
   };
   const delRow = (i) => setRows((rs) => rs.filter((_, idx) => idx !== i));
@@ -61,9 +73,7 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
 
   const save = () => {
     // Bake computed abiana into rows so print/PDF show correct amounts.
-    const rowsToSave = rateConfig.mode === "manual"
-      ? rows
-      : rows.map((r) => ({ ...r, abiana: String(computeAbiana(r, rateConfig)) }));
+    const rowsToSave = rows.map((r) => ({ ...r, abiana: String(computeAbiana(r, rateConfig)) }));
     onSave({
       rows_json: JSON.stringify(rowsToSave),
       rate_config_json: JSON.stringify(rateConfig),
@@ -112,7 +122,7 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
               <th className="border border-slate-400 px-1 py-1.5 w-20">رقبہ <span className="text-[10px] font-normal text-slate-500">(کنال)</span></th>
               <th className="border border-slate-400 px-1 py-1.5 w-20">فصل</th>
               <th className="border border-slate-400 px-1 py-1.5 w-20">آبیانہ</th>
-              <th className="border border-slate-400 px-1 py-1.5 w-16">دستخط</th>
+              <th className="border border-slate-400 px-1 py-1.5 w-28">فون نمبر<div className="text-[9px] font-normal text-slate-500">Phone Number</div></th>
               <th className="border border-slate-400 px-1 py-1.5 w-8"></th>
             </tr>
           </thead>
@@ -132,7 +142,13 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
                   <td className="border border-slate-400 px-1 py-0.5">
                     <select
                       value={r.crop}
-                      onChange={(e) => updateRow(i, "crop", e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        updateRow(i, "crop", v);
+                        if (rateConfig.mode === "fasal" && v !== SEASON_LABEL.k && v !== SEASON_LABEL.r) {
+                          setRateConfig((rc) => ({ ...rc, selectedCrop: v }));
+                        }
+                      }}
                       dir="rtl"
                       className="h-8 w-full text-sm border border-slate-300 rounded px-1 bg-white"
                       style={{ fontFamily: URDU }}
@@ -143,7 +159,17 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
                     </select>
                   </td>
                   <td className="border border-slate-400 px-1 py-0.5"><Input value={String(computeAbiana(r, rateConfig))} readOnly type="number" className="h-8 text-sm border-0 px-1 text-center bg-slate-100 cursor-not-allowed" /></td>
-                  <td className="border border-slate-400 px-1 py-0.5"><Input value={r.signature} onChange={(e) => updateRow(i, "signature", e.target.value)} className="h-8 text-xs border-0 px-1" /></td>
+                  <td className="border border-slate-400 px-1 py-0.5">
+                    <input
+                      value={r.phone || ""}
+                      onChange={(e) => updateRow(i, "phone", formatPkPhone(e.target.value))}
+                      inputMode="tel"
+                      maxLength={12}
+                      placeholder="03XX-XXXXXXX"
+                      className="h-8 w-full text-xs border border-slate-300 rounded px-1 bg-white text-left"
+                      dir="ltr"
+                    />
+                  </td>
                   <td className="border border-slate-400 text-center"><button onClick={() => delRow(i)} className="text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button></td>
                 </tr>
               );
