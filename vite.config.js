@@ -5,6 +5,12 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   logLevel: 'error', // Suppress warnings, only show errors
+  resolve: {
+    // Force a single React/ReactDOM instance across all deps (Radix, etc.)
+    // to prevent "Cannot read properties of null (reading 'useRef')" crashes
+    // caused by duplicate React copies.
+    dedupe: ['react', 'react-dom'],
+  },
   plugins: [
     base44({
       // Support for legacy code that imports the base44 SDK with @/integrations, @/entities, etc.
