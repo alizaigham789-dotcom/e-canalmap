@@ -289,8 +289,8 @@ export function snapToParcelBoundaries(wx, wy, objects, threshold = 15) {
       const d = Math.abs(wy - ey);
       if (d < bestYDelta) { bestY = ey; bestYDelta = d; }
     }
-    const killaCols = o.type === "muraba" ? 5 : 2;
-    const killaRows = 5;
+    const killaCols = o.type === "muraba" ? 5 : o.type === "mustateel" ? 2 : 1;
+    const killaRows = o.type === "acre" ? 1 : 5;
     const cellW = o.w / killaCols, cellH = o.h / killaRows;
     for (let c = 0; c <= killaCols; c++) {
       const ex = o.x + c * cellW;
@@ -299,6 +299,17 @@ export function snapToParcelBoundaries(wx, wy, objects, threshold = 15) {
     for (let r = 0; r <= killaRows; r++) {
       const ey = o.y + r * cellH;
       if (Math.abs(wy - ey) < bestYDelta) { bestY = ey; bestYDelta = Math.abs(wy - ey); }
+    }
+    // Kanal subdivision — snap to the 8-box-per-acre grid (vertical mid + 3 horizontal quarter-lines)
+    for (let c = 0; c < killaCols; c++) {
+      const ex = o.x + c * cellW + cellW / 2;
+      if (Math.abs(wx - ex) < bestXDelta) { bestX = ex; bestXDelta = Math.abs(wx - ex); }
+    }
+    for (let r = 0; r < killaRows; r++) {
+      for (let k = 1; k < 4; k++) {
+        const ey = o.y + r * cellH + (k * cellH) / 4;
+        if (Math.abs(wy - ey) < bestYDelta) { bestY = ey; bestYDelta = Math.abs(wy - ey); }
+      }
     }
     const corners = [{ x: o.x, y: o.y }, { x: o.x+o.w, y: o.y }, { x: o.x, y: o.y+o.h }, { x: o.x+o.w, y: o.y+o.h }];
     for (const cn of corners) {
@@ -323,6 +334,11 @@ export function getParcelBoundaryLines(objects) {
     const cellW = o.w / killaCols, cellH = o.h / killaRows;
     for (let c = 0; c <= killaCols; c++) verticals.add(o.x + c * cellW);
     for (let r = 0; r <= killaRows; r++) horizontals.add(o.y + r * cellH);
+    // Kanal subdivision lines (8 boxes per killa/acre): vertical mid + 3 horizontal quarter-lines
+    for (let c = 0; c < killaCols; c++) verticals.add(o.x + c * cellW + cellW / 2);
+    for (let r = 0; r < killaRows; r++) {
+      for (let k = 1; k < 4; k++) horizontals.add(o.y + r * cellH + (k * cellH) / 4);
+    }
   }
   return { verticals: [...verticals], horizontals: [...horizontals] };
 }

@@ -196,6 +196,25 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
     ctx.stroke();
     ctx.setLineDash([]);
 
+    // Kanal sub-grid — 8 boxes per killa (acre): 2 cols × 4 rows inside each killa cell.
+    // Visible like the killa grid so each acre's 8-kanal division is shown on the map.
+    ctx.strokeStyle = "rgba(220,38,38,0.12)";
+    ctx.lineWidth = Math.max(0.3, 0.5) / zoom;
+    ctx.setLineDash([3 / zoom, 3 / zoom]);
+    ctx.beginPath();
+    for (let c = 0; c < 2; c++) {
+      const cx = obj.x + c * cellW + cellW / 2;
+      ctx.moveTo(cx, obj.y); ctx.lineTo(cx, obj.y + obj.h);
+    }
+    for (let r = 0; r < 5; r++) {
+      for (let k = 1; k < 4; k++) {
+        const cy = obj.y + r * cellH + (k * cellH) / 4;
+        ctx.moveTo(obj.x, cy); ctx.lineTo(obj.x + obj.w, cy);
+      }
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
     // Layer 2b: Acre (killa) land-use fills — coloured per-acre cells (آبادی/قبرستان/فیکٹری/...)
     const acreUses = obj.acreUses ? obj.acreUses : [];
     const gridUses = getMustateeelKillaGrid();
@@ -343,6 +362,24 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
     ctx.beginPath();
     for (let c = 1; c < 5; c++) { ctx.moveTo(obj.x + c * cellW, obj.y); ctx.lineTo(obj.x + c * cellW, obj.y + obj.h); }
     for (let r = 1; r < 5; r++) { ctx.moveTo(obj.x, obj.y + r * cellH); ctx.lineTo(obj.x + obj.w, obj.y + r * cellH); }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Kanal sub-grid — 8 boxes per killa (acre): 2 cols × 4 rows inside each killa cell.
+    ctx.strokeStyle = "rgba(220,38,38,0.12)";
+    ctx.lineWidth = Math.max(0.3, 0.5) / zoom;
+    ctx.setLineDash([3 / zoom, 3 / zoom]);
+    ctx.beginPath();
+    for (let c = 0; c < 5; c++) {
+      const cx = obj.x + c * cellW + cellW / 2;
+      ctx.moveTo(cx, obj.y); ctx.lineTo(cx, obj.y + obj.h);
+    }
+    for (let r = 0; r < 5; r++) {
+      for (let k = 1; k < 4; k++) {
+        const cy = obj.y + r * cellH + (k * cellH) / 4;
+        ctx.moveTo(obj.x, cy); ctx.lineTo(obj.x + obj.w, cy);
+      }
+    }
     ctx.stroke();
     ctx.setLineDash([]);
 
