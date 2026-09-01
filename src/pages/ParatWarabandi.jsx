@@ -90,6 +90,7 @@ export default function ParatWarabandi() {
       setDeleteTarget(null);
       toast.success("حذف ہو گیا");
     },
+    onError: () => toast.error("حذف نہیں ہوا — اجازت نہیں ہے"),
   });
 
   const updateMutation = useMutation({
