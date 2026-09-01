@@ -1231,9 +1231,9 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
     // edge. Loops stay clean with no line inside them; the connecting line keeps
     // the chakbandi path visible even at large spacing.
     // Loops defaults: line size 2, loops size 6, loops spacing 7.
-    const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 6) * 0.2 / zoom;
+    const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 5) * 0.2 / zoom;
     const rx = loopSize * 1.4, ry = loopSize * 0.8;
-    const loopSpacing = CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 7) / zoom;
+    const loopSpacing = CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 5) / zoom;
     const centers = [];
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];

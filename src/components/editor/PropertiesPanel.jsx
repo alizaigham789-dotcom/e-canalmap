@@ -842,8 +842,8 @@ function ChakbandiStyleControls({ local, commit }) {
       {/* Loops — Loops Size + Loops Spacing (defaults: size 6, spacing 7) */}
       {style === "loops" && (
         <>
-          <SpacingControl label="Loops Size" value={local.loopsSize || 6} min={1} max={10} step={1} onChange={v => commit("loopsSize", v)} />
-          <SpacingControl label="Loops Spacing" value={local.loopsSpacing || 7} min={1} max={10} step={1} onChange={v => commit("loopsSpacing", v)} />
+          <SpacingControl label="Loops Size" value={local.loopsSize || 5} min={1} max={10} step={1} onChange={v => commit("loopsSize", v)} />
+          <SpacingControl label="Loops Spacing" value={local.loopsSpacing || 5} min={1} max={10} step={1} onChange={v => commit("loopsSpacing", v)} />
         </>
       )}
 

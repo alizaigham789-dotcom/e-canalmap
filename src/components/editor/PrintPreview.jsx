@@ -361,9 +361,9 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
     // Spine segments join adjacent loop edges (never crossing the loop interiors),
     // then loops (ellipses) are drawn on top. Matches the canvas editor exactly.
     // Loops defaults: line size 2, loops size 6, loops spacing 7.
-    const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 6);
+    const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 5);
     const rx = loopSize * 1.4, ry = loopSize * 0.8;
-    const loopSpacing = Math.max(4, CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 7));
+    const loopSpacing = Math.max(4, CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 5));
     const centers = [];
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
