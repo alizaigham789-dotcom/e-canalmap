@@ -1,7 +1,5 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
 
@@ -32,6 +30,7 @@ export const DEFAULT_RATE_CONFIG = {
   mode: "manual", // "manual" | "fix" | "fasal"
   fixRate1: 1650, // خریف rate per acre
   fixRate2: 850, // ربیع rate per acre
+  selectedCrop: "", // active fasal picked in fasal-war mode (default for new rows)
   cropRates: [
     ...KHAREEF_CROPS.map((c) => ({ ...c, season: "k" })),
     ...RABEEH_CROPS.map((c) => ({ ...c, season: "r" })),
@@ -69,32 +68,6 @@ export default function RateAbianaBox({ config, onChange }) {
     n[i] = { ...n[i], [key]: key === "rate" ? parseFloat(val) || 0 : val };
     update({ cropRates: n });
   };
-  const delCrop = (i) => update({ cropRates: (cfg.cropRates || []).filter((_, idx) => idx !== i) });
-  const addCrop = (season) => update({ cropRates: [...(cfg.cropRates || []), { crop: "", rate: 0, season }] });
-
-  const CropRow = ({ x }) => (
-    <div className="flex gap-2 items-center text-sm">
-      <Input
-        value={x.c.crop}
-        onChange={(e) => editCrop(x.i, "crop", e.target.value)}
-        dir="rtl"
-        className="h-8 w-32"
-        placeholder="فصل"
-        style={{ fontFamily: URDU }}
-      />
-      <Input
-        type="number"
-        value={x.c.rate}
-        onChange={(e) => editCrop(x.i, "rate", e.target.value)}
-        className="h-8 w-24 text-center"
-        placeholder="ریٹ"
-      />
-      <span className="text-[11px] text-slate-500">فی ایکڑ</span>
-      <button onClick={() => delCrop(x.i)} className="text-red-400 hover:text-red-600">
-        <Trash2 className="w-3.5 h-3.5" />
-      </button>
-    </div>
-  );
 
   return (
     <div dir="rtl" className="border-2 border-slate-300 rounded-lg bg-slate-50 p-3 mb-3" style={{ fontFamily: URDU }}>
@@ -131,28 +104,64 @@ export default function RateAbianaBox({ config, onChange }) {
         </div>
       )}
 
-      {/* Fasal war rate — crops grouped by season, per-acre rates */}
+      {/* Fasal war rate — pick a fasal (crop) first; its rate applies per acre */}
       {cfg.mode === "fasal" && (
         <div className="space-y-3">
           <div>
-            <p className="text-xs font-bold text-slate-600 mb-1.5">خریف فصل</p>
-            <div className="space-y-1.5">
-              {khareefRows.map((x) => <CropRow key={x.i} x={x} />)}
-              <Button onClick={() => addCrop("k")} size="sm" variant="outline" className="gap-1 text-xs h-7">
-                <Plus className="w-3.5 h-3.5" /> فصل شامل کریں
-              </Button>
+            <p className="text-xs font-bold text-slate-600 mb-1.5">خریف فصل — منتخب کریں</p>
+            <div className="flex flex-wrap gap-1.5">
+              {khareefRows.map((x) => (
+                <button
+                  key={x.i}
+                  onClick={() => update({ selectedCrop: x.c.crop })}
+                  className={`px-2.5 py-1 rounded-full text-xs border transition ${cfg.selectedCrop === x.c.crop ? "bg-emerald-600 border-emerald-500 text-white" : "bg-white border-slate-300 text-slate-700 hover:border-emerald-400"}`}
+                  style={{ fontFamily: URDU }}
+                >
+                  {x.c.crop} ({x.c.rate})
+                </button>
+              ))}
             </div>
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-600 mb-1.5">ربیع فصل</p>
-            <div className="space-y-1.5">
-              {rabeehRows.map((x) => <CropRow key={x.i} x={x} />)}
-              <Button onClick={() => addCrop("r")} size="sm" variant="outline" className="gap-1 text-xs h-7">
-                <Plus className="w-3.5 h-3.5" /> فصل شامل کریں
-              </Button>
+            <p className="text-xs font-bold text-slate-600 mb-1.5">ربیع فصل — منتخب کریں</p>
+            <div className="flex flex-wrap gap-1.5">
+              {rabeehRows.map((x) => (
+                <button
+                  key={x.i}
+                  onClick={() => update({ selectedCrop: x.c.crop })}
+                  className={`px-2.5 py-1 rounded-full text-xs border transition ${cfg.selectedCrop === x.c.crop ? "bg-emerald-600 border-emerald-500 text-white" : "bg-white border-slate-300 text-slate-700 hover:border-emerald-400"}`}
+                  style={{ fontFamily: URDU }}
+                >
+                  {x.c.crop} ({x.c.rate})
+                </button>
+              ))}
             </div>
           </div>
-          <p className="text-[11px] text-slate-500">آبیانہ = فصل کا ریٹ × رقبہ ÷ ۸ (کنال سے ایکڑ) — صرف وہ فصل جو قطار میں درج ہو</p>
+
+          {/* Selected fasal — show / edit its per-acre rate */}
+          {cfg.selectedCrop && (() => {
+            const idx = (cfg.cropRates || []).findIndex((c) => c.crop === cfg.selectedCrop);
+            if (idx < 0) return null;
+            const cr = cfg.cropRates[idx];
+            return (
+              <div className="flex flex-wrap gap-2 items-center text-sm border-t border-slate-200 pt-2">
+                <span className="font-semibold text-slate-700">منتخب فصل:</span>
+                <span className="font-bold text-emerald-700" style={{ fontFamily: URDU }}>{cr.crop}</span>
+                <label className="flex items-center gap-1.5">
+                  <span>ریٹ:</span>
+                  <Input
+                    type="number"
+                    value={cr.rate}
+                    onChange={(e) => editCrop(idx, "rate", e.target.value)}
+                    className="h-8 w-24 text-center"
+                  />
+                  <span className="text-[11px] text-slate-500">فی ایکڑ</span>
+                </label>
+              </div>
+            );
+          })()}
+
+          <p className="text-[11px] text-slate-500">آبیانہ = فصل کا ریٹ × رقبہ ÷ ۸ (کنال سے ایکڑ) — نئی قطار میں منتخب فصل خود درج ہو جائے گی</p>
         </div>
       )}
 

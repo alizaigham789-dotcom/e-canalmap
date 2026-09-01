@@ -26,7 +26,7 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
   });
 
   const updateRow = (i, k, v) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
-  const addRow = () => setRows((rs) => [...rs, { ...EMPTY_ROW }]);
+  const addRow = () => setRows((rs) => [...rs, { ...EMPTY_ROW, crop: rateConfig.selectedCrop || "خریف" }]);
   const delRow = (i) => setRows((rs) => rs.filter((_, idx) => idx !== i));
 
   const filteredIdx = useMemo(() => {
