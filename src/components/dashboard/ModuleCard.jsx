@@ -19,20 +19,21 @@ export default function ModuleCard({ mod, locked, subLocked, onClick }) {
         </div>
       )}
 
-      {/* 3D Icon — multiply blend dissolves the white PNG background into the
-          gradient; radial glow + dark base shadow create a "resting on a lit
-          surface" 3D effect. */}
+      {/* 3D Icon — frosted glass disc (light) contrasts with dark icons so they pop.
+          mix-blend-darken dissolves the white PNG background into the disc color
+          without darkening the icon and without any hover white flash. */}
       <div className="relative mb-2 sm:mb-3 w-[56px] h-[56px] sm:w-[72px] sm:h-[72px] flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1">
-        {/* Soft radial glow behind icon — lit surface */}
-        <div className="absolute inset-0 rounded-full bg-white/20 blur-lg" />
-        {/* Dark base shadow — grounding / 3D resting effect */}
-        <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-10 sm:w-14 h-2.5 sm:h-3 rounded-full bg-black/30 blur-sm" />
-        <img
-          src={mod.icon}
-          alt={mod.label}
-          className="relative w-[48px] h-[48px] sm:w-[64px] sm:h-[64px] object-contain mix-blend-multiply"
-          style={{ filter: "brightness(1.25) contrast(1.05)" }}
-        />
+        {/* Dark drop shadow under disc — grounding / 3D depth */}
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-11 sm:w-14 h-2.5 sm:h-3 rounded-full bg-black/35 blur-sm" />
+        {/* Frosted glass disc — light surface for dark icons */}
+        <div className="relative w-[54px] h-[54px] sm:w-[68px] sm:h-[68px] rounded-2xl bg-gradient-to-br from-white/90 to-slate-200/80 ring-1 ring-white/70 shadow-[inset_0_2px_5px_rgba(255,255,255,0.9),inset_0_-3px_6px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.25)] flex items-center justify-center overflow-hidden isolation-isolate">
+          <img
+            src={mod.icon}
+            alt={mod.label}
+            className="w-[40px] h-[40px] sm:w-[52px] sm:h-[52px] object-contain mix-blend-darken"
+            style={{ filter: "brightness(1.08) contrast(1.08)" }}
+          />
+        </div>
       </div>
 
       {/* Title — bold, prominent, with depth shadow */}
