@@ -121,7 +121,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
           {selectedObj.type === "mustateel" && (
             <>
               <Separator className="bg-slate-100" />
-              <KanalFillControl local={local} commit={commitMultiple} title="Mustateel Colour filling" />
+              <KanalFillControl local={local} commit={commitMultiple} title="Mustateel Colour filling" allObjects={allObjects} />
               <Field label="Label / Survey No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 1" hint="Double-click plot on map to edit label at centroid" />
               <Field label="Label 2 (below Mouza line)" value={local.label2 || ""} onChange={v => commit("label2", v)} placeholder="e.g. 1-A" hint="Shown only when a Mouza boundary splits this parcel into 2 mouzas" />
               <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
@@ -156,7 +156,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               </div>
               <ExclusionToggle local={local} commit={commit} />
               <MustateelStyleControl local={local} onApplyAll={onUpdateAllMurabas} onResetAll={onResetAllMurabas} type="muraba" />
-              <KanalFillControl local={local} commit={commitMultiple} title="Muraba Colour filling" />
+              <KanalFillControl local={local} commit={commitMultiple} title="Muraba Colour filling" allObjects={allObjects} />
               {(() => {
                 const hasMurabaFill = !!(local.fillColor && local.fillColor.trim() && local.fillColor.startsWith("#")) || (local.acreUses && local.acreUses.some(u => u && u.color));
                 return hasMurabaFill ? (

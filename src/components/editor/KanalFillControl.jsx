@@ -2,12 +2,66 @@ import React, { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Trash2 } from "lucide-react";
 import { LAND_USE_PRESETS, getAcreUses, killaCountFor } from "@/lib/landUsePalette";
-import { getKanalFills } from "@/lib/gisEngine";
+import { getKanalFills, getMustateelKillaCells, getMurabaKillaCells } from "@/lib/gisEngine";
 
 const URDU = { fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif" };
 const BOXES = [1, 2, 3, 4, 5, 6, 7, 8];
 const seq = (n) => BOXES.slice(0, Math.max(0, Math.min(8, n)));
 const GREEN = "#16a34a";
+
+// Which side of a polyline a point lies on (sign relative to nearest segment).
+// +1 = left of the line, -1 = right, 0 = on it.
+function sideOfPolyline(pts, px, py) {
+  let best = Infinity, bestSign = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+    if (len2 === 0) continue;
+    let t = ((px - a.x) * dx + (py - a.y) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const projx = a.x + t * dx, projy = a.y + t * dy;
+    const d2 = (px - projx) ** 2 + (py - projy) ** 2;
+    if (d2 < best) {
+      best = d2;
+      bestSign = Math.sign(dx * (py - a.y) - dy * (px - a.x));
+    }
+  }
+  return bestSign;
+}
+
+// Per-acre label for a parcel. When the parcel carries two labels (label + label2)
+// and a mouza boundary line crosses it, the mouza line is treated as the boundary:
+// acres on one side show label, acres on the other side show label2.
+// Returns an array indexed by killa-1 (0..total-1).
+function acreLabelsFor(local, allObjects) {
+  const total = killaCountFor(local);
+  const label1 = local.label || "";
+  const label2 = local.label2 || "";
+
+  const cells = local.type === "muraba" ? getMurabaKillaCells(local)
+    : local.type === "mustateel" ? getMustateelKillaCells(local)
+    : [{ killa: 1, x: local.x, y: local.y, w: local.w || 220, h: local.h || 198 }];
+  const byKilla = Array(total).fill(null);
+  cells.forEach((cell) => { if (cell && cell.killa >= 1 && cell.killa <= total) byKilla[cell.killa - 1] = cell; });
+
+  const mouzas = (allObjects || []).filter((o) => o.type === "mouza" && o.points && o.points.length >= 2);
+  const useSplit = !!label2 && mouzas.length > 0;
+  if (!useSplit) return byKilla.map(() => label1 || "—");
+
+  const mx1 = local.x, my1 = local.y;
+  const mx2 = local.x + (local.w || 0), my2 = local.y + (local.h || 0);
+  const mouza = mouzas.find((m) => {
+    const xs = m.points.map((p) => p.x), ys = m.points.map((p) => p.y);
+    return Math.max(...xs) >= mx1 && Math.min(...xs) <= mx2 && Math.max(...ys) >= my1 && Math.min(...ys) <= my2;
+  }) || mouzas[0];
+
+  return byKilla.map((cell) => {
+    if (!cell) return label1 || "—";
+    const cx = cell.x + cell.w / 2, cy = cell.y + cell.h / 2;
+    return sideOfPolyline(mouza.points, cx, cy) >= 0 ? label1 : label2;
+  });
+}
 
 // Unified colour-fill control for a mustateel / muraba.
 //   • On/Off toggle at top — turning ON fills every acre by default (full 8 kanal);
@@ -16,14 +70,16 @@ const GREEN = "#16a34a";
 //     custom label + "منتخب:" selection status + KILLA (1–N) grid.
 //   • Click a killa to toggle a FULL acre fill (8 kanal). Each selected acre gets a
 //     green slider (0–8, default 8). When the slider is at 8 (full) nothing else
-//     opens. When reduced below 8 (partial), an 8-box grid opens for that acre so the
-//     user can pick exactly which kanal are filled.
+//     opens. When reduced below 8 (partial), an acre-shaped 2×4 kanal grid opens for
+//     that acre so the user can pick exactly which kanal are filled — matching the
+//     map's acre division (2 cols × 4 rows).
 // Data: full acres → acreUses (renders colour + legend label); partial acres →
 // kanalFills (renders the specific per-kanal boxes). Both are committed together.
-export default function KanalFillControl({ local, commit, title = "Mustateel Colour filling" }) {
+export default function KanalFillControl({ local, commit, title = "Mustateel Colour filling", allObjects = [] }) {
   const total = killaCountFor(local);
   const acreUses = getAcreUses(local);
   const kanalFills = getKanalFills(local);
+  const acreLabels = acreLabelsFor(local, allObjects);
 
   const isFilled = (i) => !!(acreUses[i] || kanalFills[i]);
   const enabled = acreUses.some((u) => u) || kanalFills.some((f) => f);
@@ -69,7 +125,6 @@ export default function KanalFillControl({ local, commit, title = "Mustateel Col
   };
 
   const clearAll = () => write(Array(total).fill(null), Array(total).fill(null));
-  const mustateelNum = local.num || (local.id ? String(local.id).slice(-4) : "—");
 
   return (
     <div className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
@@ -139,7 +194,7 @@ export default function KanalFillControl({ local, commit, title = "Mustateel Col
             </div>
           </div>
 
-          {/* Per-acre green slider rows — 8-box opens only when partial */}
+          {/* Per-acre green slider rows — acre-shaped 2×4 kanal grid opens when partial */}
           {selectedAcres.length > 0 && (
             <div className="space-y-1.5 max-h-64 overflow-y-auto touch-scroll">
               {selectedAcres.map((a) => {
@@ -148,30 +203,35 @@ export default function KanalFillControl({ local, commit, title = "Mustateel Col
                 const partial = cnt > 0 && cnt < 8;
                 const f = kanalFills[idx];
                 const fillCol = acreUses[idx] ? acreUses[idx].color : f ? f.color : GREEN;
+                const acreLabel = acreLabels[idx] || "—";
                 return (
                   <div key={a} className="border border-slate-200 rounded p-1.5 bg-white">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] font-bold text-slate-700 w-14">{mustateelNum}/{a}</span>
+                      <span className="font-mono text-[10px] font-bold text-slate-700 w-16 truncate" dir="ltr" title={acreLabel}>{acreLabel}/{a}</span>
                       <input type="range" min={0} max={8} value={cnt} onChange={(e) => setCount(idx, +e.target.value)}
                         className="flex-1" style={{ accentColor: GREEN }} />
                       <span className="text-[10px] font-mono font-bold w-8 text-right" style={{ color: fillCol }}>{cnt} K</span>
                     </div>
                     {partial && (
                       <>
-                        <div className="grid grid-cols-8 gap-0.5 mt-1">
-                          {BOXES.map((b) => {
-                            const on = f && f.boxes.includes(b);
-                            return (
-                              <button key={b} onClick={() => toggleBox(idx, b)}
-                                className="relative h-6 rounded-sm border text-[8px] font-bold flex items-center justify-center"
-                                style={{ background: on ? f.color : "#fff", borderColor: on ? f.color : "#cbd5e1", color: on ? "#fff" : "#94a3b8" }}
-                                title={`کنال ${b}`}>
-                                {b}
-                              </button>
-                            );
-                          })}
+                        {/* Acre-shaped kanal grid — 2 cols × 4 rows, matching the map's
+                            acre division. Click a numbered kanal to toggle it. */}
+                        <div className="mt-1.5 flex justify-center">
+                          <div className="grid grid-cols-2 gap-0.5 p-1 bg-slate-100 rounded border border-slate-300" style={{ width: 96 }}>
+                            {BOXES.map((b) => {
+                              const on = f && f.boxes.includes(b);
+                              return (
+                                <button key={b} onClick={() => toggleBox(idx, b)}
+                                  className="relative h-8 rounded-sm border text-[9px] font-bold flex items-center justify-center"
+                                  style={{ background: on ? f.color : "#fff", borderColor: on ? f.color : "#cbd5e1", color: on ? "#fff" : "#94a3b8" }}
+                                  title={`کنال ${b}`}>
+                                  {b}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <p className="text-[8px] text-slate-400 mt-0.5" style={URDU}>جن کنال پر کلک کریں وہ خالی/بھر ہوں گے</p>
+                        <p className="text-[8px] text-slate-400 mt-1 text-center" style={URDU}>ایکڑ کے کنال (2×4) — کلک کر کے منتخب کریں</p>
                       </>
                     )}
                   </div>
