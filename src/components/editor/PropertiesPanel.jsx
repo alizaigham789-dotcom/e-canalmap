@@ -855,9 +855,13 @@ function ChakbandiStyleControls({ local, commit }) {
         </>
       )}
 
-      {/* Dashed — Dash Spacing */}
+      {/* Dashed — continuous spine thickness + dash spacing + dash mark thickness */}
       {style === "dashed" && (
-        <SpacingControl label="Dash Spacing" value={local.dashSpacing || 6} min={2} max={20} step={1} onChange={v => commit("dashSpacing", v)} />
+        <>
+          <SpacingControl label="Dash Spacing" value={local.dashSpacing || 6} min={2} max={20} step={1} onChange={v => commit("dashSpacing", v)} />
+          <SpacingControl label="Dash Thickness" value={local.dashThickness ?? 6} min={1} max={10} step={1} onChange={v => commit("dashThickness", v)} />
+          <p className="text-[9px] text-slate-400">Line Thickness = the thin continuous guide line (keeps the path visible through the gaps); Dash Thickness = the dash marks themselves.</p>
+        </>
       )}
 
       {/* Stitched — Stitch Size + Stitch Spacing */}

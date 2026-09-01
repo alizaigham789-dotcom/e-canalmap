@@ -663,6 +663,7 @@ export const CHAKBANDI_SCALE = {
   ringSize: (level) => (level || 4) * 6,        // ring radius
   ringSpacing: (level) => (level || 3) * 20,   // distance between rings
   dashSpacing: (level) => (level || 6) * 6,    // dash gap length
+  dashThickness: (level) => (level || 6) * 3,   // dash mark thickness (dashed style)
   stitchSize: (level) => (level || 4) * 6,     // stitch tick length
   stitchSpacing: (level) => (level || 4) * 20, // distance between stitches
   dotSize: (level) => (level || 4) * 3,        // dot length

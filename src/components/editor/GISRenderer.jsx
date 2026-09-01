@@ -1147,13 +1147,31 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
     drawSpine(null);
   } else if (style === "dashed") {
     const dashGap = CHAKBANDI_SCALE.dashSpacing(obj.dashSpacing || 6) / zoom;
-    drawSpine([lineW * 2.2, dashGap], "butt");
+    // Thin continuous spine (line thickness) so the path stays visible through the
+    // gaps even at large dash spacing; thick dashes (dash thickness) drawn on top.
+    const dashW = (CHAKBANDI_SCALE.dashThickness(obj.dashThickness ?? defaultThk) * 0.2 + (isSelected ? 2 : 0)) / zoom;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1, lineW * 0.4);
+    ctx.lineCap = "round"; ctx.lineJoin = "miter"; ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(obj.points[0].x, obj.points[0].y);
+    for (const p of obj.points) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.lineWidth = dashW;
+    ctx.lineCap = "butt"; ctx.setLineDash([dashW * 2.2, dashGap]);
+    ctx.beginPath();
+    ctx.moveTo(obj.points[0].x, obj.points[0].y);
+    for (const p of obj.points) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
   } else if (style === "dotted") {
     const dotSize = CHAKBANDI_SCALE.dotSize(obj.dotSize || 4) * 0.2 / zoom;
     const dotSpacing = CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 4) / zoom;
     drawSpine([Math.max(0.5, dotSize), dotSpacing], "round");
   } else if (style === "stitched") {
-    const spineW = Math.max(1, lineW * 0.5);
+    // Full-thickness continuous spine so the chakbandi path stays visible even
+    // at large stitch spacing; ticks cross it perpendicular.
+    const spineW = Math.max(1, lineW);
     ctx.strokeStyle = color; ctx.lineWidth = spineW; ctx.lineCap = "round"; ctx.lineJoin = "miter"; ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(obj.points[0].x, obj.points[0].y);
     for (const p of obj.points) ctx.lineTo(p.x, p.y);
@@ -1177,29 +1195,46 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
       }
     }
   } else if (style === "rings") {
-    // Continuous spine line connects all rings — always present regardless of spacing
-    drawSpine(null);
+    // Spine segments join adjacent ring edges WITHOUT crossing the ring interiors —
+    // each ring sits clean, connected by a short line from its leading edge to the
+    // next ring's trailing edge. The path stays visible even at large spacing.
     const r = CHAKBANDI_SCALE.ringSize(obj.ringSize || 4) * 0.2 / zoom;
     const ringSpacing = CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 3) / zoom;
-    ctx.strokeStyle = color; ctx.lineWidth = lineW; ctx.setLineDash([]);
+    const centers = [];
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
       const steps = Math.max(1, Math.floor(segLen / Math.max(4, ringSpacing)));
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
-        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
-        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+        centers.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
       }
     }
+    ctx.strokeStyle = color; ctx.lineWidth = lineW; ctx.lineCap = "round"; ctx.lineJoin = "miter"; ctx.setLineDash([]);
+    for (let i = 0; i < centers.length - 1; i++) {
+      const p = centers[i], q = centers[i + 1];
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const d = Math.hypot(dx, dy);
+      if (d <= r * 2 + 0.001) continue; // rings touch/overlap → no spine segment
+      const ux = dx / d, uy = dy / d;
+      ctx.beginPath();
+      ctx.moveTo(p.x + ux * r, p.y + uy * r);
+      ctx.lineTo(q.x - ux * r, q.y - uy * r);
+      ctx.stroke();
+    }
+    for (const c of centers) {
+      ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI * 2); ctx.stroke();
+    }
   } else if (style === "loops") {
-    // Continuous spine line connects all loops — always present regardless of spacing.
+    // Spine segments join adjacent loops WITHOUT crossing the loop interiors —
+    // from each loop's leading edge (along the path) to the next loop's trailing
+    // edge. Loops stay clean with no line inside them; the connecting line keeps
+    // the chakbandi path visible even at large spacing.
     // Loops defaults: line size 2, loops size 6, loops spacing 7.
-    drawSpine(null);
     const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 6) * 0.2 / zoom;
     const rx = loopSize * 1.4, ry = loopSize * 0.8;
     const loopSpacing = CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 7) / zoom;
-    ctx.strokeStyle = color; ctx.lineWidth = lineW; ctx.setLineDash([]); ctx.lineCap = "round";
+    const centers = [];
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
@@ -1207,12 +1242,26 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
       const steps = Math.max(1, Math.floor(segLen / Math.max(4, loopSpacing)));
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
-        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
-        ctx.beginPath();
-        if (ctx.ellipse) ctx.ellipse(cx, cy, rx, ry, ang, 0, Math.PI * 2);
-        else { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.scale(rx, ry); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.restore(); }
-        ctx.stroke();
+        centers.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, ang });
       }
+    }
+    ctx.strokeStyle = color; ctx.lineWidth = lineW; ctx.lineCap = "round"; ctx.lineJoin = "miter"; ctx.setLineDash([]);
+    for (let i = 0; i < centers.length - 1; i++) {
+      const p = centers[i], q = centers[i + 1];
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const d = Math.hypot(dx, dy);
+      if (d <= rx * 2 + 0.001) continue; // loops touch/overlap → no spine segment
+      const ux = dx / d, uy = dy / d;
+      ctx.beginPath();
+      ctx.moveTo(p.x + ux * rx, p.y + uy * rx);
+      ctx.lineTo(q.x - ux * rx, q.y - uy * rx);
+      ctx.stroke();
+    }
+    for (const c of centers) {
+      ctx.beginPath();
+      if (ctx.ellipse) ctx.ellipse(c.x, c.y, rx, ry, c.ang, 0, Math.PI * 2);
+      else { ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.ang); ctx.scale(rx, ry); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.restore(); }
+      ctx.stroke();
     }
   } else {
     // Default: Cross (×) pattern — keeps the user's chakbandi colour + thickness

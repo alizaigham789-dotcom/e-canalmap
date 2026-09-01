@@ -284,9 +284,14 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
 </g>`;
   }
   if (style === "dashed") {
+    // Thin continuous spine (line thickness) + thick dashes (dash thickness) on top,
+    // so the path stays visible through the gaps even at large dash spacing.
     const dashGap = CHAKBANDI_SCALE.dashSpacing(obj.dashSpacing || 6);
+    const dashW = CHAKBANDI_SCALE.dashThickness(obj.dashThickness ?? obj.lineThickness ?? defaultThk);
+    const spineW = Math.max(1, lineW * 0.4);
     return `<g>
-  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${lineW}" stroke-dasharray="${(lineW*2.2).toFixed(1)},${dashGap.toFixed(1)}" stroke-linecap="butt" stroke-linejoin="miter"/>
+  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${spineW.toFixed(1)}" stroke-linecap="round" stroke-linejoin="miter"/>
+  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${dashW.toFixed(1)}" stroke-dasharray="${(dashW*2.2).toFixed(1)},${dashGap.toFixed(1)}" stroke-linecap="butt" stroke-linejoin="miter"/>
   ${labelSvg}
 </g>`;
   }
@@ -299,7 +304,7 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
 </g>`;
   }
   if (style === "stitched") {
-    const spineW = Math.max(2, lineW * 0.5);
+    const spineW = Math.max(2, lineW);
     const tickLen = CHAKBANDI_SCALE.stitchSize(obj.stitchSize || 4);
     const tickSpacing = Math.max(4, CHAKBANDI_SCALE.stitchSpacing(obj.stitchSpacing || 4));
     let ticks = "";
@@ -323,44 +328,68 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   }
 
   if (style === "rings") {
-    // Series of empty circles (rings) along a continuous spine line — the spine
-    // always joins the rings regardless of spacing (matches canvas editor exactly).
+    // Spine segments join adjacent ring edges (never crossing the ring interiors),
+    // then rings are drawn on top. Matches the canvas editor exactly.
     const r = CHAKBANDI_SCALE.ringSize(obj.ringSize || 4);
     const ringSpacing = Math.max(4, CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 3));
-    let rings = "";
+    const centers = [];
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
       const steps = Math.max(1, Math.floor(segLen / ringSpacing));
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
-        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
-        rings += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="none" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}"/>`;
+        centers.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
       }
     }
-    return `<g><polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}" stroke-linecap="round" stroke-linejoin="miter"/>${rings}${labelSvg}</g>`;
+    let spine = "";
+    for (let i = 0; i < centers.length - 1; i++) {
+      const p = centers[i], q = centers[i + 1];
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const d = Math.hypot(dx, dy);
+      if (d <= r * 2 + 0.001) continue;
+      const ux = dx / d, uy = dy / d;
+      spine += `<line x1="${(p.x + ux * r).toFixed(1)}" y1="${(p.y + uy * r).toFixed(1)}" x2="${(q.x - ux * r).toFixed(1)}" y2="${(q.y - uy * r).toFixed(1)}" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}" stroke-linecap="round"/>`;
+    }
+    let rings = "";
+    for (const c of centers) {
+      rings += `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${r.toFixed(1)}" fill="none" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}"/>`;
+    }
+    return `<g>${spine}${rings}${labelSvg}</g>`;
   }
   if (style === "loops") {
-    // Pencil-drawn loops (flattened ellipses) sitting on a continuous spine line.
-    // The spine always joins the loops regardless of spacing (matches canvas editor).
+    // Spine segments join adjacent loop edges (never crossing the loop interiors),
+    // then loops (ellipses) are drawn on top. Matches the canvas editor exactly.
     // Loops defaults: line size 2, loops size 6, loops spacing 7.
     const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 6);
     const rx = loopSize * 1.4, ry = loopSize * 0.8;
     const loopSpacing = Math.max(4, CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 7));
-    let loops = "";
+    const centers = [];
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
       const ang = Math.atan2(b.y - a.y, b.x - a.x);
-      const deg = (ang * 180 / Math.PI).toFixed(1);
       const steps = Math.max(1, Math.floor(segLen / loopSpacing));
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
-        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
-        loops += `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}" transform="rotate(${deg} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`;
+        centers.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, ang });
       }
     }
-    return `<g><polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}" stroke-linecap="round" stroke-linejoin="miter"/>${loops}${labelSvg}</g>`;
+    let spine = "";
+    for (let i = 0; i < centers.length - 1; i++) {
+      const p = centers[i], q = centers[i + 1];
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const d = Math.hypot(dx, dy);
+      if (d <= rx * 2 + 0.001) continue;
+      const ux = dx / d, uy = dy / d;
+      spine += `<line x1="${(p.x + ux * rx).toFixed(1)}" y1="${(p.y + uy * rx).toFixed(1)}" x2="${(q.x - ux * rx).toFixed(1)}" y2="${(q.y - uy * rx).toFixed(1)}" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}" stroke-linecap="round"/>`;
+    }
+    let loops = "";
+    for (const c of centers) {
+      const deg = (c.ang * 180 / Math.PI).toFixed(1);
+      loops += `<ellipse cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}" transform="rotate(${deg} ${c.x.toFixed(1)} ${c.y.toFixed(1)})"/>`;
+    }
+    return `<g>${spine}${loops}${labelSvg}</g>`;
   }
 
   // Default: Cross (×) pattern — keeps the user's chakbandi colour + thickness
