@@ -4,7 +4,7 @@
   "properties": {
     "division": {
       "type": "string",
-      "description": "Canal Division (e.g. Khushab)"
+      "description": "Canal Division"
     },
     "subdivision": {
       "type": "string",
@@ -16,7 +16,7 @@
     },
     "section": {
       "type": "string",
-      "description": "Zilladar Section (depends on subdivision)"
+      "description": "Zilladar Section"
     },
     "mouza": {
       "type": "string",
@@ -28,11 +28,15 @@
         "zilladar",
         "patwari"
       ],
-      "description": "Role of the officer being assigned"
+      "description": "Role of assigned officer"
     },
     "officer_name": {
       "type": "string",
-      "description": "Name of the assigned officer (zilladar / patwari)"
+      "description": "Name of the assigned officer"
+    },
+    "officer_user_id": {
+      "type": "string",
+      "description": "User id of assigned officer (if registered)"
     },
     "title": {
       "type": "string",
@@ -44,21 +48,48 @@
     },
     "due_date": {
       "type": "string",
-      "format": "date",
-      "description": "Date by which the officer should complete the task"
+      "format": "date"
     },
     "status": {
       "type": "string",
       "enum": [
         "pending",
-        "accepted",
-        "completed"
+        "in_progress",
+        "review",
+        "forwarded",
+        "approved",
+        "completed",
+        "rejected"
       ],
       "default": "pending"
     },
     "assigned_by_name": {
       "type": "string",
-      "description": "Name of the deputy collector who assigned (denormalized)"
+      "description": "Deputy Collector who assigned"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "Attached document/file URL"
+    },
+    "photo_url": {
+      "type": "string",
+      "description": "Camera photo URL"
+    },
+    "forwarded_to": {
+      "type": "string",
+      "description": "officer_role this was forwarded to (e.g. patwari)"
+    },
+    "forwarded_by": {
+      "type": "string",
+      "description": "Name of officer who forwarded"
+    },
+    "remarks": {
+      "type": "string",
+      "description": "Officer remarks on update/completion"
+    },
+    "history_json": {
+      "type": "string",
+      "description": "JSON array of status change events"
     }
   },
   "required": [
@@ -71,18 +102,7 @@
   "rls": {
     "create": null,
     "read": null,
-    "update": {
-      "$or": [
-        {
-          "created_by_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
+    "update": null,
     "delete": {
       "$or": [
         {
