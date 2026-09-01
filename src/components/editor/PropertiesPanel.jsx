@@ -809,18 +809,43 @@ function FillControl({ local, commit }) {
   );
 }
 
+// Chakbandi default sizes per style — single source of truth for the Reset button
+// and the fallback values shown when a user hasn't customized a field yet.
+export const CHAKBANDI_DEFAULTS = {
+  cross:      { lineThickness: 6, crossSize: 3, crossSpacing: 2 },
+  loops:      { lineThickness: 2, loopsSize: 5, loopsSpacing: 5 },
+  rings:      { lineThickness: 6, ringSize: 4, ringSpacing: 3 },
+  dashed:     { lineThickness: 5, dashSpacing: 5, dashThickness: 6 },
+  stitched:   { lineThickness: 1, stitchSize: 4, stitchSpacing: 2 },
+  dotted:     { lineThickness: 8, dotSize: 10, dotSpacing: 2 },
+  khakaDasti: { lineThickness: 4 },
+};
+
 // Chakbandi style-specific size controls — Line Thickness for all styles,
 // plus style-specific Size & Spacing controls (cross, loops, rings…).
+// A common Reset button restores the default sizes for the active style; any
+// custom value the user sets stays on the object until Reset is pressed.
 function ChakbandiStyleControls({ local, commit }) {
   const style = local.chakbandiStyle || "cross";
+  const defaults = CHAKBANDI_DEFAULTS[style] || CHAKBANDI_DEFAULTS.cross;
 
   // Line Thickness — applies to every style
   const thicknessLabel = style === "loops" ? "Line Size" : "Line Thickness";
   const thicknessKey = "lineThickness";
-  const thickness = local[thicknessKey] ?? (style === "loops" ? 2 : style === "stitched" ? 2 : (style === "khakaDasti" ? 4 : 6));
+  const thickness = local[thicknessKey] ?? defaults.lineThickness;
+
+  // Reset — writes every default for the active style back onto the object
+  const handleReset = () => commit(defaults);
 
   return (
     <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] text-slate-400 uppercase tracking-wider">Default Sizes</span>
+        <Button size="sm" variant="outline" className="h-5 px-2 text-[9px] border-slate-300 text-slate-600 hover:bg-slate-100"
+          onClick={handleReset}>
+          <RotateCcw className="w-3 h-3 mr-1" /> Reset
+        </Button>
+      </div>
       <SpacingControl label={thicknessLabel} value={thickness} min={1} max={10} step={1} onChange={v => commit(thicknessKey, v)} />
 
       {/* Cross — Cross Size + Cross Spacing (+ pattern toggle) */}
@@ -832,34 +857,34 @@ function ChakbandiStyleControls({ local, commit }) {
           </div>
           {local.crossPattern && (
             <>
-              <SpacingControl label="Cross Size" value={local.crossSize || 3} min={1} max={10} step={1} onChange={v => commit("crossSize", v)} />
-              <SpacingControl label="Cross Spacing" value={local.crossSpacing || 2} min={1} max={10} step={1} onChange={v => commit("crossSpacing", v)} />
+              <SpacingControl label="Cross Size" value={local.crossSize ?? defaults.crossSize} min={1} max={10} step={1} onChange={v => commit("crossSize", v)} />
+              <SpacingControl label="Cross Spacing" value={local.crossSpacing ?? defaults.crossSpacing} min={1} max={10} step={1} onChange={v => commit("crossSpacing", v)} />
             </>
           )}
         </>
       )}
 
-      {/* Loops — Loops Size + Loops Spacing (defaults: size 6, spacing 7) */}
+      {/* Loops — Loops Size + Loops Spacing */}
       {style === "loops" && (
         <>
-          <SpacingControl label="Loops Size" value={local.loopsSize || 5} min={1} max={10} step={1} onChange={v => commit("loopsSize", v)} />
-          <SpacingControl label="Loops Spacing" value={local.loopsSpacing || 5} min={1} max={10} step={1} onChange={v => commit("loopsSpacing", v)} />
+          <SpacingControl label="Loops Size" value={local.loopsSize ?? defaults.loopsSize} min={1} max={10} step={1} onChange={v => commit("loopsSize", v)} />
+          <SpacingControl label="Loops Spacing" value={local.loopsSpacing ?? defaults.loopsSpacing} min={1} max={10} step={1} onChange={v => commit("loopsSpacing", v)} />
         </>
       )}
 
       {/* Rings — Ring Size + Ring Spacing */}
       {style === "rings" && (
         <>
-          <SpacingControl label="Ring Size" value={local.ringSize || 4} min={1} max={10} step={1} onChange={v => commit("ringSize", v)} />
-          <SpacingControl label="Ring Spacing" value={local.ringSpacing || 3} min={1} max={10} step={1} onChange={v => commit("ringSpacing", v)} />
+          <SpacingControl label="Ring Size" value={local.ringSize ?? defaults.ringSize} min={1} max={10} step={1} onChange={v => commit("ringSize", v)} />
+          <SpacingControl label="Ring Spacing" value={local.ringSpacing ?? defaults.ringSpacing} min={1} max={10} step={1} onChange={v => commit("ringSpacing", v)} />
         </>
       )}
 
       {/* Dashed — continuous spine thickness + dash spacing + dash mark thickness */}
       {style === "dashed" && (
         <>
-          <SpacingControl label="Dash Spacing" value={local.dashSpacing || 6} min={2} max={20} step={1} onChange={v => commit("dashSpacing", v)} />
-          <SpacingControl label="Dash Thickness" value={local.dashThickness ?? 6} min={1} max={10} step={1} onChange={v => commit("dashThickness", v)} />
+          <SpacingControl label="Dash Spacing" value={local.dashSpacing ?? defaults.dashSpacing} min={2} max={20} step={1} onChange={v => commit("dashSpacing", v)} />
+          <SpacingControl label="Dash Thickness" value={local.dashThickness ?? defaults.dashThickness} min={1} max={10} step={1} onChange={v => commit("dashThickness", v)} />
           <p className="text-[9px] text-slate-400">Line Thickness = the thin continuous guide line (keeps the path visible through the gaps); Dash Thickness = the dash marks themselves.</p>
         </>
       )}
@@ -867,16 +892,16 @@ function ChakbandiStyleControls({ local, commit }) {
       {/* Stitched — Stitch Size + Stitch Spacing */}
       {style === "stitched" && (
         <>
-          <SpacingControl label="Stitch Size" value={local.stitchSize || 5} min={1} max={10} step={1} onChange={v => commit("stitchSize", v)} />
-          <SpacingControl label="Stitch Spacing" value={local.stitchSpacing || 2} min={2} max={20} step={1} onChange={v => commit("stitchSpacing", v)} />
+          <SpacingControl label="Stitch Size" value={local.stitchSize ?? defaults.stitchSize} min={1} max={10} step={1} onChange={v => commit("stitchSize", v)} />
+          <SpacingControl label="Stitch Spacing" value={local.stitchSpacing ?? defaults.stitchSpacing} min={2} max={20} step={1} onChange={v => commit("stitchSpacing", v)} />
         </>
       )}
 
       {/* Dotted — Dot Size + Dot Spacing */}
       {style === "dotted" && (
         <>
-          <SpacingControl label="Dot Size" value={local.dotSize || 4} min={1} max={10} step={1} onChange={v => commit("dotSize", v)} />
-          <SpacingControl label="Dot Spacing" value={local.dotSpacing || 4} min={2} max={20} step={1} onChange={v => commit("dotSpacing", v)} />
+          <SpacingControl label="Dot Size" value={local.dotSize ?? defaults.dotSize} min={1} max={10} step={1} onChange={v => commit("dotSize", v)} />
+          <SpacingControl label="Dot Spacing" value={local.dotSpacing ?? defaults.dotSpacing} min={2} max={20} step={1} onChange={v => commit("dotSpacing", v)} />
         </>
       )}
 

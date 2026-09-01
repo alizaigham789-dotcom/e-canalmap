@@ -270,7 +270,7 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   const midPt = obj.points[Math.floor(obj.points.length/2)];
   // Line thickness — applies to ALL styles (1-10 level → world units via CHAKBANDI_SCALE)
   // Loops style defaults to a thinner line (2) per user preference.
-  const defaultThk = style === "loops" ? 2 : (style === "stitched" ? 2 : 6);
+  const defaultThk = style === "loops" ? 2 : (style === "stitched" ? 1 : (style === "dotted" ? 8 : (style === "dashed" ? 5 : 6)));
   const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness ?? defaultThk);
   const lineColor = C.chakbandiStroke || "#22c55e";
   const labelSvg = label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${lineColor}">${label}</text>` : "";
@@ -286,8 +286,8 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   if (style === "dashed") {
     // Thin continuous spine (line thickness) + thick dashes (dash thickness) on top,
     // so the path stays visible through the gaps even at large dash spacing.
-    const dashGap = CHAKBANDI_SCALE.dashSpacing(obj.dashSpacing || 6);
-    const dashW = CHAKBANDI_SCALE.dashThickness(obj.dashThickness ?? obj.lineThickness ?? defaultThk);
+    const dashGap = CHAKBANDI_SCALE.dashSpacing(obj.dashSpacing || 5);
+    const dashW = CHAKBANDI_SCALE.dashThickness(obj.dashThickness ?? 6);
     const spineW = Math.max(1, lineW * 0.4);
     return `<g>
   <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${spineW.toFixed(1)}" stroke-linecap="round" stroke-linejoin="miter"/>
@@ -296,8 +296,8 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
 </g>`;
   }
   if (style === "dotted") {
-    const dotSize = CHAKBANDI_SCALE.dotSize(obj.dotSize || 4);
-    const dotSpacing = CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 4);
+    const dotSize = CHAKBANDI_SCALE.dotSize(obj.dotSize || 10);
+    const dotSpacing = CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 2);
     return `<g>
   <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${lineW}" stroke-dasharray="${Math.max(2,dotSize).toFixed(1)},${dotSpacing.toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>
   ${labelSvg}
@@ -305,7 +305,7 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   }
   if (style === "stitched") {
     const spineW = Math.max(2, lineW);
-    const tickLen = CHAKBANDI_SCALE.stitchSize(obj.stitchSize || 5);
+    const tickLen = CHAKBANDI_SCALE.stitchSize(obj.stitchSize || 4);
     const tickSpacing = Math.max(4, CHAKBANDI_SCALE.stitchSpacing(obj.stitchSpacing || 2));
     let ticks = "";
     for (let i = 0; i < obj.points.length - 1; i++) {
