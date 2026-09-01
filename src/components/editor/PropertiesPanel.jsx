@@ -411,21 +411,8 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                   );
                 })()}
               </div>
-              {local.chakbandiStyle === "cross" && (
-                <>
-                  <SpacingControl label="Line Thickness" value={local.lineThickness || 6} min={1} max={10} step={1} onChange={v => commit("lineThickness", v)} />
-                  <div className="flex items-center justify-between mt-2">
-                    <label className="text-xs text-slate-600">Cross Pattern (× × ×)</label>
-                    <Switch checked={!!local.crossPattern} onCheckedChange={v => commit("crossPattern", v)} className="scale-75" />
-                  </div>
-                  {local.crossPattern && (
-                    <>
-                      <SpacingControl label="Cross Size" value={local.crossSize || 3} min={1} max={10} step={1} onChange={v => commit("crossSize", v)} />
-                      <SpacingControl label="Cross Spacing" value={local.crossSpacing || 2} min={1} max={10} step={1} onChange={v => commit("crossSpacing", v)} />
-                    </>
-                  )}
-                </>
-              )}
+              {/* Style-specific size controls — appear for ALL styles, below CCA/GCA */}
+              <ChakbandiStyleControls local={local} commit={commit} />
               <p className="text-[9px] text-slate-400">Sizes here apply identically in Print Preview & Export</p>
               <div className="text-[10px] text-green-600 font-mono">{({cross:"Cross pattern",dashed:"Dashed",stitched:"Stitched",dotted:"Dotted",rings:"Rings",loops:"Loops",khakaDasti:"Khaka Dasti line"}[local.chakbandiStyle || "cross"])} • {selectedObj.points?.length || 0} points</div>
             </>
@@ -818,6 +805,75 @@ function FillControl({ local, commit }) {
           className="flex-1 h-1 accent-blue-500 cursor-pointer" />
         <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((local.fillOpacity ?? 0.10) * 100)}%</span>
       </div>
+    </div>
+  );
+}
+
+// Chakbandi style-specific size controls — Line Thickness for all styles,
+// plus style-specific Size & Spacing controls (cross, loops, rings…).
+function ChakbandiStyleControls({ local, commit }) {
+  const style = local.chakbandiStyle || "cross";
+
+  // Line Thickness — applies to every style
+  const thicknessLabel = style === "loops" ? "Line Size" : "Line Thickness";
+  const thicknessKey = "lineThickness";
+  const thickness = local[thicknessKey] ?? (style === "khakaDasti" ? 4 : 6);
+
+  return (
+    <div className="space-y-2">
+      <SpacingControl label={thicknessLabel} value={thickness} min={1} max={10} step={1} onChange={v => commit(thicknessKey, v)} />
+
+      {/* Cross — Cross Size + Cross Spacing (+ pattern toggle) */}
+      {style === "cross" && (
+        <>
+          <div className="flex items-center justify-between mt-1">
+            <label className="text-xs text-slate-600">Cross Pattern (× × ×)</label>
+            <Switch checked={!!local.crossPattern} onCheckedChange={v => commit("crossPattern", v)} className="scale-75" />
+          </div>
+          {local.crossPattern && (
+            <>
+              <SpacingControl label="Cross Size" value={local.crossSize || 3} min={1} max={10} step={1} onChange={v => commit("crossSize", v)} />
+              <SpacingControl label="Cross Spacing" value={local.crossSpacing || 2} min={1} max={10} step={1} onChange={v => commit("crossSpacing", v)} />
+            </>
+          )}
+        </>
+      )}
+
+      {/* Loops — Loops Size + Loops Spacing */}
+      {style === "loops" && (
+        <>
+          <SpacingControl label="Loops Size" value={local.loopsSize || 4} min={1} max={10} step={1} onChange={v => commit("loopsSize", v)} />
+          <SpacingControl label="Loops Spacing" value={local.loopsSpacing || 3} min={1} max={10} step={1} onChange={v => commit("loopsSpacing", v)} />
+        </>
+      )}
+
+      {/* Rings — Ring Size + Ring Spacing */}
+      {style === "rings" && (
+        <>
+          <SpacingControl label="Ring Size" value={local.ringSize || 4} min={1} max={10} step={1} onChange={v => commit("ringSize", v)} />
+          <SpacingControl label="Ring Spacing" value={local.ringSpacing || 3} min={1} max={10} step={1} onChange={v => commit("ringSpacing", v)} />
+        </>
+      )}
+
+      {/* Dashed — Dash Spacing */}
+      {style === "dashed" && (
+        <SpacingControl label="Dash Spacing" value={local.dashSpacing || 6} min={2} max={20} step={1} onChange={v => commit("dashSpacing", v)} />
+      )}
+
+      {/* Stitched — Stitch Spacing */}
+      {style === "stitched" && (
+        <SpacingControl label="Stitch Spacing" value={local.stitchSpacing || 4} min={2} max={20} step={1} onChange={v => commit("stitchSpacing", v)} />
+      )}
+
+      {/* Dotted — Dot Spacing */}
+      {style === "dotted" && (
+        <SpacingControl label="Dot Spacing" value={local.dotSpacing || 4} min={2} max={20} step={1} onChange={v => commit("dotSpacing", v)} />
+      )}
+
+      {/* Khaka Dasti — only line thickness (solid green line) */}
+      {style === "khakaDasti" && (
+        <p className="text-[9px] text-green-600">Solid green line — only thickness applies.</p>
+      )}
     </div>
   );
 }
