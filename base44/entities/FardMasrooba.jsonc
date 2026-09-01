@@ -43,6 +43,10 @@
       "type": "string",
       "description": "JSON string of farmer rows (name, khasra, area, crop, abiana, signature)"
     },
+    "rate_config_json": {
+      "type": "string",
+      "description": "JSON string of abiana rate config (mode: manual/fix/fasal, fix rates, crop-wise rates)"
+    },
     "total_abiana": {
       "type": "number",
       "default": 0,
@@ -51,7 +55,7 @@
     "total_area": {
       "type": "number",
       "default": 0,
-      "description": "Total area (kanal/acres)"
+      "description": "Total area (kanal)"
     },
     "status": {
       "type": "string",
