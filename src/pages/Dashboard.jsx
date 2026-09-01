@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
-import { Shield, LogOut, Globe, Lock, Database } from "lucide-react";
+import { Shield, LogOut, Globe, Database } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import ModuleCard from "@/components/dashboard/ModuleCard";
 import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
 import { useSubscription } from "@/hooks/useSubscription";
 
@@ -222,41 +223,17 @@ export default function Dashboard() {
             const subLocked = needsSub && !hasAccess;
             const isLocked = !isAdmin && mod.locked;
             return (
-              <button
+              <ModuleCard
                 key={mod.id}
+                mod={mod}
+                locked={isLocked}
+                subLocked={subLocked}
                 onClick={() => {
                   if (subLocked) { navigate("/subscription"); return; }
                   if (isLocked) return;
                   navigate(mod.path);
                 }}
-                disabled={isLocked}
-                className={`group relative rounded-[20px] sm:rounded-[28px] bg-gradient-to-br ${mod.bg} p-3 sm:p-4 shadow-lg ${mod.shadow} transition-all duration-200 text-center min-h-[130px] sm:min-h-[155px] flex flex-col items-center justify-center overflow-hidden
-                  ${isLocked ? "opacity-60 cursor-not-allowed" : "hover:shadow-xl hover:scale-[1.04] active:scale-[0.97] cursor-pointer"}`}
-              >
-                {/* Glossy top sheen */}
-                <div className="absolute inset-x-0 top-0 h-1/2 bg-white/15 rounded-t-[22px] pointer-events-none" />
-
-                {(isLocked || subLocked) && (
-                  <div className="absolute top-2.5 right-2.5 bg-black/30 backdrop-blur-sm rounded-full p-1 z-10">
-                    <Lock className="w-3 h-3 text-white" />
-                  </div>
-                )}
-
-                {/* Icon — no white box, just the icon with drop-shadow */}
-                <div className="mb-2 sm:mb-3 w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] flex items-center justify-center transition-all duration-200 group-hover:-translate-y-1.5 group-hover:scale-110">
-                  <img
-                    src={mod.icon}
-                    alt={mod.label}
-                    className="w-[48px] h-[48px] sm:w-[68px] sm:h-[68px] object-contain"
-                    style={{ filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.45)) brightness(1.05) contrast(1.05)" }}
-                  />
-                </div>
-
-                <div className="relative z-10">
-                  <p className="text-[10px] sm:text-[11px] font-bold text-white tracking-wide leading-tight drop-shadow-sm">{mod.label}</p>
-                  <p className="text-[8px] sm:text-[9px] text-white/80 mt-0.5 drop-shadow-sm" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>{mod.labelUrdu}</p>
-                </div>
-              </button>
+              />
             );
           })}
         </div>
