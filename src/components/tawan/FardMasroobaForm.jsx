@@ -5,7 +5,7 @@ import { ArrowLeft, Plus, Trash2, Printer, FileText, Save, Search } from "lucide
 import BandubastPicker from "@/components/warabandi/BandubastPicker";
 import FractionCell from "@/components/warabandi/FractionCell";
 import { printFardRecord } from "@/lib/fardPrint";
-import RateAbianaBox, { computeAbiana, DEFAULT_RATE_CONFIG } from "@/components/tawan/RateAbianaBox";
+import RateAbianaBox, { computeAbiana, DEFAULT_RATE_CONFIG, cropOptionsFor } from "@/components/tawan/RateAbianaBox";
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
 const EMPTY_ROW = { name: "", khasra: "", area: "", crop: "خریف", abiana: "", signature: "" };
@@ -26,7 +26,12 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
   });
 
   const updateRow = (i, k, v) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
-  const addRow = () => setRows((rs) => [...rs, { ...EMPTY_ROW, crop: rateConfig.selectedCrop || "خریف" }]);
+  const addRow = () => {
+    const crop = rateConfig.mode === "fasal"
+      ? (rateConfig.selectedCrop || cropOptionsFor(rateConfig)[0] || "")
+      : (rateConfig.selectedSeason === "r" ? "ربیع" : "خریف");
+    setRows((rs) => [...rs, { ...EMPTY_ROW, crop }]);
+  };
   const delRow = (i) => setRows((rs) => rs.filter((_, idx) => idx !== i));
 
   const filteredIdx = useMemo(() => {
@@ -124,8 +129,20 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
                   <td className="border border-slate-400 px-1 py-0.5"><Input value={r.name} onChange={(e) => updateRow(i, "name", e.target.value)} dir="rtl" className="h-8 text-sm border-0 px-1" style={{ fontFamily: URDU }} /></td>
                   <td className="border border-slate-400 px-1 py-0.5"><FractionCell value={r.khasra} onChange={(v) => updateRow(i, "khasra", v)} onPicker={() => setPicker({ row: i })} /></td>
                   <td className="border border-slate-400 px-1 py-0.5"><Input value={r.area} onChange={(e) => updateRow(i, "area", e.target.value)} type="number" className="h-8 text-sm border-0 px-1 text-center" /></td>
-                  <td className="border border-slate-400 px-1 py-0.5"><Input value={r.crop} onChange={(e) => updateRow(i, "crop", e.target.value)} dir="rtl" className="h-8 text-sm border-0 px-1" style={{ fontFamily: URDU }} /></td>
-                  <td className="border border-slate-400 px-1 py-0.5"><Input value={rateConfig.mode === "manual" ? r.abiana : String(computeAbiana(r, rateConfig))} onChange={(e) => updateRow(i, "abiana", e.target.value)} readOnly={rateConfig.mode !== "manual"} type="number" className={`h-8 text-sm border-0 px-1 text-center ${rateConfig.mode !== "manual" ? "bg-slate-100 cursor-not-allowed" : ""}`} /></td>
+                  <td className="border border-slate-400 px-1 py-0.5">
+                    <select
+                      value={r.crop}
+                      onChange={(e) => updateRow(i, "crop", e.target.value)}
+                      dir="rtl"
+                      className="h-8 w-full text-sm border border-slate-300 rounded px-1 bg-white"
+                      style={{ fontFamily: URDU }}
+                    >
+                      {cropOptionsFor(rateConfig).map((c) => (
+                        <option key={c} value={c} style={{ fontFamily: URDU }}>{c}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="border border-slate-400 px-1 py-0.5"><Input value={String(computeAbiana(r, rateConfig))} readOnly type="number" className="h-8 text-sm border-0 px-1 text-center bg-slate-100 cursor-not-allowed" /></td>
                   <td className="border border-slate-400 px-1 py-0.5"><Input value={r.signature} onChange={(e) => updateRow(i, "signature", e.target.value)} className="h-8 text-xs border-0 px-1" /></td>
                   <td className="border border-slate-400 text-center"><button onClick={() => delRow(i)} className="text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button></td>
                 </tr>

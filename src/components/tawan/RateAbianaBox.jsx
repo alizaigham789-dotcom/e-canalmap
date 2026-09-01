@@ -10,12 +10,14 @@ const KHAREEF_CROPS = [
   { crop: "مونگ پھلی", rate: 1200 },
   { crop: "باغ", rate: 1000 },
   { crop: "کمند", rate: 1600 },
+  { crop: "گنا", rate: 1800 },
 ];
 // ── Rabeeh crops (ربیع) with per-acre abiana rates ──────────────────────
 const RABEEH_CROPS = [
   { crop: "چنا", rate: 200 },
   { crop: "گندم", rate: 400 },
   { crop: "خالی", rate: 400 },
+  { crop: "سرسوں", rate: 500 },
   { crop: "دیگر", rate: 400 },
 ];
 
@@ -27,7 +29,8 @@ CROP_SEASON["خریف"] = "k";
 CROP_SEASON["ربیع"] = "r";
 
 export const DEFAULT_RATE_CONFIG = {
-  mode: "manual", // "manual" | "fix" | "fasal"
+  mode: "fix", // "fix" | "fasal"
+  selectedSeason: "k", // "k" (خریف) | "r" (ربیع) — global season for new rows / crop list
   fixRate1: 1650, // خریف rate per acre
   fixRate2: 850, // ربیع rate per acre
   selectedCrop: "", // active fasal picked in fasal-war mode (default for new rows)
@@ -37,59 +40,73 @@ export const DEFAULT_RATE_CONFIG = {
   ],
 };
 
+// Crops available for the dropdown in each mode/season.
+export function cropOptionsFor(cfg) {
+  if (cfg.mode === "fix") return ["خریف", "ربیع"];
+  const season = cfg.selectedSeason || "k";
+  return (cfg.cropRates || [])
+    .filter((c) => (c.season || CROP_SEASON[c.crop] || "r") === season)
+    .map((c) => c.crop);
+}
+
 // Abiana is calculated from a per-ACRE rate. Raqba is entered in KANAL,
 // so acres = raqba / 8 (1 acre = 8 kanal).
 export function computeAbiana(row, cfg) {
   const area = parseFloat(row.area) || 0;
   const acres = area / 8;
-  if (cfg.mode === "fix") {
-    // Pick Khareef or Rabeeh rate based on the row's crop season.
-    const season = CROP_SEASON[row.crop] || "r";
-    const rate = season === "k" ? (cfg.fixRate1 || 0) : (cfg.fixRate2 || 0);
-    return Math.round(rate * acres);
-  }
   if (cfg.mode === "fasal") {
     const cr = (cfg.cropRates || []).find((c) => c.crop === row.crop);
     return cr ? Math.round((cr.rate || 0) * acres) : 0;
   }
-  return parseFloat(row.abiana) || 0; // manual
+  // fix
+  const season = CROP_SEASON[row.crop] || (cfg.selectedSeason === "k" ? "k" : "r");
+  const rate = season === "k" ? (cfg.fixRate1 || 0) : (cfg.fixRate2 || 0);
+  return Math.round(rate * acres);
 }
+
+export const SEASON_LABEL = { k: "خریف", r: "ربیع" };
 
 export default function RateAbianaBox({ config, onChange }) {
   const cfg = { ...DEFAULT_RATE_CONFIG, ...config };
   const update = (patch) => onChange({ ...cfg, ...patch });
 
-  const seasonOf = (c) => c.season || CROP_SEASON[c.crop] || "r";
-  const khareefRows = (cfg.cropRates || []).map((c, i) => ({ c, i })).filter((x) => seasonOf(x.c) === "k");
-  const rabeehRows = (cfg.cropRates || []).map((c, i) => ({ c, i })).filter((x) => seasonOf(x.c) === "r");
+  const cropsOfSeason = (season) =>
+    (cfg.cropRates || []).filter((c) => (c.season || CROP_SEASON[c.crop] || "r") === season);
 
-  const editCrop = (i, key, val) => {
-    const n = [...(cfg.cropRates || [])];
-    n[i] = { ...n[i], [key]: key === "rate" ? parseFloat(val) || 0 : val };
-    update({ cropRates: n });
+  const pickSeason = (s) => {
+    const firstCrop = cropsOfSeason(s)[0];
+    update({ selectedSeason: s, selectedCrop: firstCrop ? firstCrop.crop : "" });
   };
 
   return (
     <div dir="rtl" className="border-2 border-slate-300 rounded-lg bg-slate-50 p-3 mb-3" style={{ fontFamily: URDU }}>
       <p className="text-sm font-bold text-slate-700 mb-2">ریٹ آبیانہ</p>
 
-      {/* Mode selector — 3 options */}
-      <div className="flex flex-wrap gap-4 text-sm mb-3">
-        <label className="flex items-center gap-1.5 cursor-pointer">
-          <input type="radio" name="ratemode" checked={cfg.mode === "fix"} onChange={() => update({ mode: "fix" })} className="w-3.5 h-3.5" />
-          مقررہ ریٹ
-        </label>
+      {/* Row 1 — mode: فصلوار / مقررہ */}
+      <div className="flex flex-wrap gap-4 text-sm mb-2">
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="radio" name="ratemode" checked={cfg.mode === "fasal"} onChange={() => update({ mode: "fasal" })} className="w-3.5 h-3.5" />
           فصلوار ریٹ
         </label>
         <label className="flex items-center gap-1.5 cursor-pointer">
-          <input type="radio" name="ratemode" checked={cfg.mode === "manual"} onChange={() => update({ mode: "manual" })} className="w-3.5 h-3.5" />
-          دستی
+          <input type="radio" name="ratemode" checked={cfg.mode === "fix"} onChange={() => update({ mode: "fix" })} className="w-3.5 h-3.5" />
+          مقررہ ریٹ
         </label>
       </div>
 
-      {/* Fix rate — خریف / ربیع, both per acre; row crop picks the season */}
+      {/* Row 2 — season: خریف / ربیع */}
+      <div className="flex flex-wrap gap-4 text-sm mb-3">
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="radio" name="seasonmode" checked={cfg.selectedSeason === "k"} onChange={() => pickSeason("k")} className="w-3.5 h-3.5" />
+          خریف
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="radio" name="seasonmode" checked={cfg.selectedSeason === "r"} onChange={() => pickSeason("r")} className="w-3.5 h-3.5" />
+          ربیع
+        </label>
+      </div>
+
+      {/* Fix mode — show / edit the two per-acre rates */}
       {cfg.mode === "fix" && (
         <div className="flex flex-wrap gap-3 items-center text-sm">
           <label className="flex items-center gap-1.5">
@@ -100,74 +117,15 @@ export default function RateAbianaBox({ config, onChange }) {
             <span>ربیع ریٹ:</span>
             <Input type="number" value={cfg.fixRate2} onChange={(e) => update({ fixRate2: parseFloat(e.target.value) || 0 })} className="h-8 w-24 text-center" />
           </label>
-          <span className="text-[11px] text-slate-500">فی ایکڑ (۸ کنال) — فصل کے موسم سے ریٹ خودکار — آبیانہ = ریٹ × رقبہ ÷ ۸</span>
+          <span className="text-[11px] text-slate-500">فی ایکڑ — دونوں موسم کے ریٹ یہیں دے دیں</span>
         </div>
       )}
 
-      {/* Fasal war rate — pick a fasal (crop) first; its rate applies per acre */}
+      {/* Fasal mode — crops appear as dropdown in the table; just a hint here */}
       {cfg.mode === "fasal" && (
-        <div className="space-y-3">
-          <div>
-            <p className="text-xs font-bold text-slate-600 mb-1.5">خریف فصل — منتخب کریں</p>
-            <div className="flex flex-wrap gap-1.5">
-              {khareefRows.map((x) => (
-                <button
-                  key={x.i}
-                  onClick={() => update({ selectedCrop: x.c.crop })}
-                  className={`px-2.5 py-1 rounded-full text-xs border transition ${cfg.selectedCrop === x.c.crop ? "bg-emerald-600 border-emerald-500 text-white" : "bg-white border-slate-300 text-slate-700 hover:border-emerald-400"}`}
-                  style={{ fontFamily: URDU }}
-                >
-                  {x.c.crop} ({x.c.rate})
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-bold text-slate-600 mb-1.5">ربیع فصل — منتخب کریں</p>
-            <div className="flex flex-wrap gap-1.5">
-              {rabeehRows.map((x) => (
-                <button
-                  key={x.i}
-                  onClick={() => update({ selectedCrop: x.c.crop })}
-                  className={`px-2.5 py-1 rounded-full text-xs border transition ${cfg.selectedCrop === x.c.crop ? "bg-emerald-600 border-emerald-500 text-white" : "bg-white border-slate-300 text-slate-700 hover:border-emerald-400"}`}
-                  style={{ fontFamily: URDU }}
-                >
-                  {x.c.crop} ({x.c.rate})
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Selected fasal — show / edit its per-acre rate */}
-          {cfg.selectedCrop && (() => {
-            const idx = (cfg.cropRates || []).findIndex((c) => c.crop === cfg.selectedCrop);
-            if (idx < 0) return null;
-            const cr = cfg.cropRates[idx];
-            return (
-              <div className="flex flex-wrap gap-2 items-center text-sm border-t border-slate-200 pt-2">
-                <span className="font-semibold text-slate-700">منتخب فصل:</span>
-                <span className="font-bold text-emerald-700" style={{ fontFamily: URDU }}>{cr.crop}</span>
-                <label className="flex items-center gap-1.5">
-                  <span>ریٹ:</span>
-                  <Input
-                    type="number"
-                    value={cr.rate}
-                    onChange={(e) => editCrop(idx, "rate", e.target.value)}
-                    className="h-8 w-24 text-center"
-                  />
-                  <span className="text-[11px] text-slate-500">فی ایکڑ</span>
-                </label>
-              </div>
-            );
-          })()}
-
-          <p className="text-[11px] text-slate-500">آبیانہ = فصل کا ریٹ × رقبہ ÷ ۸ (کنال سے ایکڑ) — نئی قطار میں منتخب فصل خود درج ہو جائے گی</p>
-        </div>
-      )}
-
-      {/* Manual */}
-      {cfg.mode === "manual" && (
-        <p className="text-[11px] text-slate-500">ہر قطار میں آبیانہ دستی درج کریں۔</p>
+        <p className="text-[11px] text-slate-500">
+          منتخب موسم ({SEASON_LABEL[cfg.selectedSeason || "k"]}) کی فصلیں قطار کے فصل کالم کے ڈراپ ڈاؤن میں آ جائیں گی۔ آبیانہ = فصل کا ریٹ × رقبہ ÷ ۸ (کنال سے ایکڑ)
+        </p>
       )}
     </div>
   );
