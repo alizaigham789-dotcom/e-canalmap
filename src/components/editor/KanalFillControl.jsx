@@ -90,6 +90,8 @@ export default function KanalFillControl({ local, commit, title = "Mustateel Col
   const [selLabel, setSelLabel] = useState(LAND_USE_PRESETS[0].label);
   const [customColor, setCustomColor] = useState("#7c3aed");
   const [customLabel, setCustomLabel] = useState("");
+  // Only one acre's kanal panel open at a time (acre number or null)
+  const [openAcre, setOpenAcre] = useState(null);
 
   const write = (nextUses, nextFills) => commit({ acreUses: nextUses, kanalFills: nextFills });
 
@@ -110,6 +112,16 @@ export default function KanalFillControl({ local, commit, title = "Mustateel Col
     if (n === 0) { nu[idx] = null; nf[idx] = null; }
     else if (n === 8) { nu[idx] = { color: selColor, label: selLabel }; nf[idx] = null; }
     else { nu[idx] = null; nf[idx] = { color: selColor, label: selLabel, boxes: seq(n) }; }
+    write(nu, nf);
+    // Auto-open the kanal panel when a partial count is selected; close otherwise
+    setOpenAcre(n > 0 && n < 8 ? idx + 1 : null);
+  };
+
+  // Apply a different colour/label to a specific (already-filled) acre, keeping its boxes
+  const setAcreColor = (idx, color, label) => {
+    const nu = acreUses.slice(), nf = kanalFills.slice();
+    if (acreUses[idx]) nu[idx] = { ...acreUses[idx], color, label };
+    else if (kanalFills[idx]) nf[idx] = { ...kanalFills[idx], color, label };
     write(nu, nf);
   };
 
@@ -200,37 +212,58 @@ export default function KanalFillControl({ local, commit, title = "Mustateel Col
               {selectedAcres.map((a) => {
                 const idx = a - 1;
                 const cnt = getCount(idx);
-                const partial = cnt > 0 && cnt < 8;
+                const isOpen = openAcre === a;
                 const f = kanalFills[idx];
                 const fillCol = acreUses[idx] ? acreUses[idx].color : f ? f.color : GREEN;
                 const acreLabel = acreLabels[idx] || "—";
                 return (
-                  <div key={a} className="border border-slate-200 rounded p-1.5 bg-white">
+                  <div key={a} className={`border rounded p-1.5 bg-white ${isOpen ? "border-blue-400 shadow-sm" : "border-slate-200"}`}>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] font-bold text-slate-700 w-16 truncate" dir="ltr" title={acreLabel}>{acreLabel}/{a}</span>
-                      <input type="range" min={0} max={8} value={cnt} onChange={(e) => setCount(idx, +e.target.value)}
+                      <button type="button" onClick={() => cnt > 0 && setOpenAcre(isOpen ? null : a)}
+                        className={`font-mono text-[10px] font-bold truncate w-16 text-left ${isOpen ? "text-blue-600" : "text-slate-700"}`} dir="ltr" title={acreLabel}>{acreLabel}/{a}</button>
+                      <input type="range" min={0} max={8} value={cnt}
+                        onChange={(e) => setCount(idx, +e.target.value)}
                         className="flex-1" style={{ accentColor: GREEN }} />
                       <span className="text-[10px] font-mono font-bold w-8 text-right" style={{ color: fillCol }}>{cnt} K</span>
                     </div>
-                    {partial && (
+                    {isOpen && (
                       <>
-                        {/* Acre-shaped kanal grid — 2 cols × 4 rows, matching the map's
-                            acre division. Click a numbered kanal to toggle it. */}
-                        <div className="mt-1.5 flex justify-center">
-                          <div className="grid grid-cols-2 gap-0.5 p-1 bg-slate-100 rounded border border-slate-300" style={{ width: 96 }}>
-                            {BOXES.map((b) => {
-                              const on = f && f.boxes.includes(b);
-                              return (
-                                <button key={b} onClick={() => toggleBox(idx, b)}
-                                  className="relative h-8 rounded-sm border text-[9px] font-bold flex items-center justify-center"
-                                  style={{ background: on ? f.color : "#fff", borderColor: on ? f.color : "#cbd5e1", color: on ? "#fff" : "#94a3b8" }}
-                                  title={`کنال ${b}`}>
-                                  {b}
-                                </button>
-                              );
-                            })}
-                          </div>
+                        {/* Small colour presets — apply a different colour to THIS acre only */}
+                        <div className="mt-1 flex flex-wrap gap-0.5">
+                          {LAND_USE_PRESETS.map((p) => {
+                            const cur = acreUses[idx] || kanalFills[idx];
+                            const active = cur && cur.color === p.color && cur.label === p.label;
+                            return (
+                              <button key={p.id} onClick={() => setAcreColor(idx, p.color, p.label)}
+                                title={p.label}
+                                className={`w-5 h-5 rounded border ${active ? "border-blue-700 ring-1 ring-blue-400" : "border-slate-300"}`}
+                                style={{ background: p.color }} />
+                            );
+                          })}
+                          <input type="color" value={fillCol}
+                            onChange={(e) => setAcreColor(idx, e.target.value, (acreUses[idx] || kanalFills[idx]).label)}
+                            className="w-5 h-5 rounded cursor-pointer border border-slate-300 p-0" />
                         </div>
+                        {/* Acre-shaped kanal grid — 2 cols × 4 rows */}
+                        {f ? (
+                          <div className="mt-1.5 flex justify-center">
+                            <div className="grid grid-cols-2 gap-0.5 p-1 bg-slate-100 rounded border border-slate-300" style={{ width: 96 }}>
+                              {BOXES.map((b) => {
+                                const on = f.boxes.includes(b);
+                                return (
+                                  <button key={b} onClick={() => toggleBox(idx, b)}
+                                    className="relative h-8 rounded-sm border text-[9px] font-bold flex items-center justify-center"
+                                    style={{ background: on ? f.color : "#fff", borderColor: on ? f.color : "#cbd5e1", color: on ? "#fff" : "#94a3b8" }}
+                                    title={`کنال ${b}`}>
+                                    {b}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-[8px] text-slate-400 mt-1 text-center" style={URDU}>سلائیڈر 1–7 پر رکھیں تاکہ کنال منتخب ہوں</p>
+                        )}
                         <p className="text-[8px] text-slate-400 mt-1 text-center" style={URDU}>ایکڑ کے کنال (2×4) — کلک کر کے منتخب کریں</p>
                       </>
                     )}
