@@ -1123,7 +1123,7 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
   if (obj.points.length < 2) return;
   const style = forceKhakaDasti ? "khakaDasti" : (obj.chakbandiStyle || "cross");
   // Line thickness — applies to ALL styles (1-10 level → world units via CHAKBANDI_SCALE)
-  const defaultThk = style === "loops" ? 2 : (style === "khakaDasti" ? 4 : 6);
+  const defaultThk = style === "loops" ? 2 : (style === "stitched" ? 2 : (style === "khakaDasti" ? 4 : 6));
   const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness ?? defaultThk) * 0.2 / zoom;
   const lineColor = style === "khakaDasti" ? "#22c55e" : (C.chakbandiStroke || "#22c55e");
   const color = isSelected ? "#86efac" : lineColor;
@@ -1176,8 +1176,8 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
     ctx.beginPath(); ctx.moveTo(obj.points[0].x, obj.points[0].y);
     for (const p of obj.points) ctx.lineTo(p.x, p.y);
     ctx.stroke();
-    const tickLen = CHAKBANDI_SCALE.stitchSize(obj.stitchSize || 4) * 0.2 / zoom;
-    const tickSpacing = CHAKBANDI_SCALE.stitchSpacing(obj.stitchSpacing || 4) / zoom;
+    const tickLen = CHAKBANDI_SCALE.stitchSize(obj.stitchSize || 5) * 0.2 / zoom;
+    const tickSpacing = CHAKBANDI_SCALE.stitchSpacing(obj.stitchSpacing || 2) / zoom;
     ctx.lineWidth = Math.max(1, spineW * 0.7);
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];

@@ -270,7 +270,7 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   const midPt = obj.points[Math.floor(obj.points.length/2)];
   // Line thickness — applies to ALL styles (1-10 level → world units via CHAKBANDI_SCALE)
   // Loops style defaults to a thinner line (2) per user preference.
-  const defaultThk = style === "loops" ? 2 : 6;
+  const defaultThk = style === "loops" ? 2 : (style === "stitched" ? 2 : 6);
   const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness ?? defaultThk);
   const lineColor = C.chakbandiStroke || "#22c55e";
   const labelSvg = label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${lineColor}">${label}</text>` : "";
@@ -305,8 +305,8 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   }
   if (style === "stitched") {
     const spineW = Math.max(2, lineW);
-    const tickLen = CHAKBANDI_SCALE.stitchSize(obj.stitchSize || 4);
-    const tickSpacing = Math.max(4, CHAKBANDI_SCALE.stitchSpacing(obj.stitchSpacing || 4));
+    const tickLen = CHAKBANDI_SCALE.stitchSize(obj.stitchSize || 5);
+    const tickSpacing = Math.max(4, CHAKBANDI_SCALE.stitchSpacing(obj.stitchSpacing || 2));
     let ticks = "";
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];

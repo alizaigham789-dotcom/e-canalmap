@@ -817,7 +817,7 @@ function ChakbandiStyleControls({ local, commit }) {
   // Line Thickness — applies to every style
   const thicknessLabel = style === "loops" ? "Line Size" : "Line Thickness";
   const thicknessKey = "lineThickness";
-  const thickness = local[thicknessKey] ?? (style === "loops" ? 2 : style === "khakaDasti" ? 4 : 6);
+  const thickness = local[thicknessKey] ?? (style === "loops" ? 2 : style === "stitched" ? 2 : (style === "khakaDasti" ? 4 : 6));
 
   return (
     <div className="space-y-2">
@@ -867,8 +867,8 @@ function ChakbandiStyleControls({ local, commit }) {
       {/* Stitched — Stitch Size + Stitch Spacing */}
       {style === "stitched" && (
         <>
-          <SpacingControl label="Stitch Size" value={local.stitchSize || 4} min={1} max={10} step={1} onChange={v => commit("stitchSize", v)} />
-          <SpacingControl label="Stitch Spacing" value={local.stitchSpacing || 4} min={2} max={20} step={1} onChange={v => commit("stitchSpacing", v)} />
+          <SpacingControl label="Stitch Size" value={local.stitchSize || 5} min={1} max={10} step={1} onChange={v => commit("stitchSize", v)} />
+          <SpacingControl label="Stitch Spacing" value={local.stitchSpacing || 2} min={2} max={20} step={1} onChange={v => commit("stitchSpacing", v)} />
         </>
       )}
 
