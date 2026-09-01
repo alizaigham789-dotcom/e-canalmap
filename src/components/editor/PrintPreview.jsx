@@ -403,7 +403,22 @@ function svgCanal(obj, C, idx, outlets) {
   const boundarySvg = buildSideBoundarySVG(obj, C);
   const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH);
   const bw = !!C?.bw;
+  const unfilled = C._unfilled;
   const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf, outlets, bw) : "";
+  if (unfilled) {
+    const w = (obj.width || DIMENSIONS.CANAL_WIDTH);
+    const halfW = w / 2;
+    const left = getParallelPolyline(obj.points, -halfW);
+    const right = getParallelPolyline(obj.points, halfW);
+    const strokeColor = C.canalStroke || "#000000";
+    return `
+<g key="canal_${idx}">
+  ${boundarySvg}
+  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
+  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
+  ${nameSvg}
+</g>`;
+  }
   if (isNewCanalStyle(obj.canalStyle)) {
     return `<g>${boundarySvg}${buildCanalStyleSVG(obj, obj.canalStyle, C)}${nameSvg}</g>`;
   }
@@ -458,9 +473,10 @@ function svgKhal(obj, C, idx) {
   const left = getParallelPolyline(obj.points, -halfW);
   const right = getParallelPolyline(obj.points, halfW);
   const greyed = C._greyTypes?.has('khal');
+  const unfilled = C._unfilled;
   const color = greyed ? "#6b6b6b" : (C.khalStroke || "#0D47A1");
   const isDefaultKhal = !C.khalStroke || C.khalStroke === "#0D47A1" || C.khalStroke === "#2563eb";
-  const khalFill = greyed ? "#8a8a8a" : (obj.fillColor || (isDefaultKhal ? "#1565C0" : color));
+  const khalFill = unfilled ? "none" : (greyed ? "#8a8a8a" : (obj.fillColor || (isDefaultKhal ? "#1565C0" : color)));
   // Straight polylines (no smooth curve — matches editor exactly)
   const leftPts = left.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const rightPts = right.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
@@ -480,10 +496,12 @@ function svgKhal(obj, C, idx) {
   const p1y = (last.y - aLen * Math.sin(ang) + aW * Math.cos(ang)).toFixed(1);
   const p2x = (last.x - aLen * Math.cos(ang) + aW * Math.sin(ang)).toFixed(1);
   const p2y = (last.y - aLen * Math.sin(ang) - aW * Math.cos(ang)).toFixed(1);
-  const arrowSvg = obj.noArrow ? "" : `<polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>`;
+  const arrowSvg = obj.noArrow ? "" : (unfilled
+    ? `<polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="none" stroke="${color}" stroke-width="2"/>`
+    : `<polygon points="${last.x.toFixed(1)},${last.y.toFixed(1)} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>`);
   return `
 <g key="khal_${idx}">
-  <polygon points="${fillPts}" fill="${khalFill}" />
+  ${unfilled ? "" : `<polygon points="${fillPts}" fill="${khalFill}" />`}
   <polyline points="${leftPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <polyline points="${rightPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   ${arrowSvg}
@@ -565,6 +583,7 @@ function svgBridge(obj, C, idx) {
 function svgOutlet(obj, C, idx, mogaScale = 1) {
   if (!obj.start || !obj.end) return "";
   const greyed = C._greyTypes?.has('outlet');
+  const unfilled = C._unfilled;
   const color = greyed ? "#6b6b6b" : (obj.outletColor || C.outletStroke || "#dc2626");
   // Shared dimensions — identical to editor canvas & all export formats
   const { size, shaftWidth, headLen, headW, radius } = getOutletDimensions(obj);
@@ -585,12 +604,18 @@ function svgOutlet(obj, C, idx, mogaScale = 1) {
     if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
     const canalAngDeg = canalAng * 180 / Math.PI;
     const cf = canalNameFont(obj.canalWidth || DIMENSIONS.CANAL_WIDTH);
-    mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="rgba(0,0,0,0.85)" stroke-width="${Math.max(2, cf * 0.18).toFixed(1)}" stroke-linejoin="round" fill="#FFD700">${mogaText}</text>`;
+    const mogaFill = unfilled ? "#000000" : "#FFD700";
+    mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="rgba(0,0,0,0.85)" stroke-width="${Math.max(2, cf * 0.18).toFixed(1)}" stroke-linejoin="round" fill="${mogaFill}">${mogaText}</text>`;
   }
+  const blockFill = unfilled ? "none" : color;
+  const blockStroke = unfilled ? color : "#7f1d1d";
+  const shaftW = unfilled ? 2 : shaftWidth;
+  const arrowFill = unfilled ? "none" : color;
+  const arrowExtra = unfilled ? `stroke="${color}" stroke-width="2"` : "";
   return `<g key="outlet_${idx}">
-    <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" rx="${radius.toFixed(1)}" fill="${color}" stroke="#7f1d1d" stroke-width="2"/>
-    <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${shaftWidth.toFixed(1)}" stroke-linecap="round"/>
-    <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${color}"/>
+    <rect x="${(sx - half).toFixed(1)}" y="${(sy - half).toFixed(1)}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" rx="${radius.toFixed(1)}" fill="${blockFill}" stroke="${blockStroke}" stroke-width="2"/>
+    <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${shaftW.toFixed(1)}" stroke-linecap="round"/>
+    <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${h1x},${h1y} ${h2x},${h2y}" fill="${arrowFill}" ${arrowExtra}/>
     ${mogaInside}
     ${svgMogaInfo(obj, size * 1.2)}
   </g>`;
@@ -806,6 +831,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [scale, setScale] = useState(100);
   const [mogaFilter, setMogaFilter] = useState(selectedMogaFilter || "");
   const [bwMode, setBwMode] = useState(false);
+  const [bwUnfilledMode, setBwUnfilledMode] = useState(false);
   const [pencilMode, setPencilMode] = useState(false);
   const [khakaDastiMode, setKhakaDastiMode] = useState(false);
   // Per-element colourful toggle in Khaka Dasti — default all grey (pencil sketch),
@@ -904,6 +930,22 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   // In B&W mode, override all colors to black/grey; pencil mode uses dim grey + red mouza
   const effectiveColors = useMemo(() => {
+    if (bwUnfilledMode) {
+      return {
+        mustateelStroke: "#000000", mustateelFill: "none",
+        murabaStroke: "#000000", murabaFill: "none",
+        acreStroke: "#555555", acreFill: "none",
+        canalStroke: "#000000", canalFill: "none",
+        khalStroke: "#000000",
+        roadStroke: "#222222",
+        chakbandiStroke: "#000000",
+        mouzaStroke: "#000000",
+        labelColor: "#000000",
+        outletStroke: "#000000",
+        bw: true,
+        _unfilled: true,
+      };
+    }
     if (bwMode) {
       return {
         mustateelStroke: "#000000", mustateelFill: "none",
@@ -939,7 +981,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
       return base;
     }
     return colorSettings || {};
-  }, [bwMode, pencilMode, khakaDastiMode, khakaColorful, colorSettings]);
+  }, [bwUnfilledMode, bwMode, pencilMode, khakaDastiMode, khakaColorful, colorSettings]);
 
   const svgData = useMemo(
     () => buildSVG(objects, effectiveColors, mogaFilter || null, killaVisibility, 0.5, khakaDastiMode, khakaTargetAspect),
@@ -1256,6 +1298,14 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               title="Black & White Mode"
             >
               {bwMode ? "🎨 Colour" : "⬛ B&W"}
+            </button>
+            {/* B&W Unfilled — outer lines only, empty inside (hand-colour after print) */}
+            <button
+              onClick={() => setBwUnfilledMode(v => !v)}
+              className={`h-8 px-3 rounded-md text-xs font-bold border transition-all ${bwUnfilledMode ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"}`}
+              title="Black & White Unfilled — canal/khal/moga outer lines only, empty inside for hand-colouring"
+            >
+              {bwUnfilledMode ? "⬛ B&W خالی" : "⚪ B&W خالی"}
             </button>
             {/* Pencil Mode Toggle — lead-pencil sketch style, red mouza */}
             <button
