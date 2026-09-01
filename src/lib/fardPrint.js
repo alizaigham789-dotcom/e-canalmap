@@ -51,7 +51,7 @@ export function printFardRecord(rec) {
       <td>${esc(r.area) || "&nbsp;"}</td>
       <td>${esc(r.crop) || "&nbsp;"}</td>
       <td>${r.abiana ? esc(r.abiana) + "/-" : "&nbsp;"}</td>
-      <td>${esc(r.signature) || "&nbsp;"}</td>
+      <td>${esc(r.phone) || "&nbsp;"}</td>
     </tr>`).join("");
 
   const html = `<!DOCTYPE html><html dir="rtl" lang="ur"><head><meta charset="utf-8"><title>فرد مسروبہ</title><style>${css}</style></head>
@@ -65,7 +65,7 @@ export function printFardRecord(rec) {
         <th style="width:9%">رقبہ</th>
         <th style="width:10%">فصل</th>
         <th style="width:11%">آبیانہ</th>
-        <th style="width:10%">دستخط</th>
+        <th style="width:12%">فون نمبر</th>
       </tr></thead>
       <tbody>
         ${rowsHtml}

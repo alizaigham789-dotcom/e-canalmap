@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Trash2, Printer, FileText, Save, Search } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Printer, FileText, Save } from "lucide-react";
 import BandubastPicker from "@/components/warabandi/BandubastPicker";
 import FractionCell from "@/components/warabandi/FractionCell";
 import { printFardRecord } from "@/lib/fardPrint";
@@ -29,8 +29,6 @@ function buildFardHeader(d) {
 
 export default function FardMasroobaForm({ record, onSave, onBack }) {
   const [rows, setRows] = useState(() => { try { return JSON.parse(record.rows_json || "[]"); } catch { return []; } });
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState(new Set());
   const [picker, setPicker] = useState(null);
   const [rateConfig, setRateConfig] = useState(() => {
     try { return { ...DEFAULT_RATE_CONFIG, ...JSON.parse(record.rate_config_json || "{}") }; }
@@ -38,35 +36,13 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
   });
 
   const updateRow = (i, k, v) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
-  const addRow = () => {
-    const crop = rateConfig.mode === "fasal"
-      ? (rateConfig.selectedCrop || cropOptionsFor(rateConfig).find((c) => c !== SEASON_LABEL.k && c !== SEASON_LABEL.r) || "")
-      : SEASON_LABEL[rateConfig.selectedSeason || "k"];
-    setRows((rs) => [...rs, { ...EMPTY_ROW, crop }]);
-  };
+  const newCrop = () => rateConfig.mode === "fasal"
+    ? (rateConfig.selectedCrop || cropOptionsFor(rateConfig).find((c) => c !== SEASON_LABEL.k && c !== SEASON_LABEL.r) || "")
+    : SEASON_LABEL[rateConfig.selectedSeason || "k"];
+  const addRow = () => setRows((rs) => [...rs, { ...EMPTY_ROW, crop: newCrop() }]);
+  // Insert a blank row ABOVE row index i (the "+" on row 5 adds a row above row 5).
+  const insertAbove = (i) => setRows((rs) => [...rs.slice(0, i), { ...EMPTY_ROW, crop: newCrop() }, ...rs.slice(i)]);
   const delRow = (i) => setRows((rs) => rs.filter((_, idx) => idx !== i));
-
-  const filteredIdx = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const all = rows.map((_, i) => i);
-    if (!q) return all;
-    return all.filter((i) => {
-      const r = rows[i];
-      return (r.name || "").toLowerCase().includes(q) || (r.khasra || "").toLowerCase().includes(q);
-    });
-  }, [rows, search]);
-
-  const allSelected = filteredIdx.length > 0 && filteredIdx.every((i) => selected.has(i));
-  const toggleAll = () => {
-    if (allSelected) setSelected((p) => { const n = new Set(p); filteredIdx.forEach((i) => n.delete(i)); return n; });
-    else setSelected((p) => { const n = new Set(p); filteredIdx.forEach((i) => n.add(i)); return n; });
-  };
-  const toggleRow = (i) => setSelected((p) => { const n = new Set(p); n.has(i) ? n.delete(i) : n.add(i); return n; });
-  const deleteSelected = () => {
-    if (!confirm("منتخب صفات حذف کریں؟")) return;
-    setRows((rs) => rs.filter((_, i) => !selected.has(i)));
-    setSelected(new Set());
-  };
 
   const totalAbiana = rows.reduce((s, r) => s + computeAbiana(r, rateConfig), 0);
   const totalArea = rows.reduce((s, r) => s + (parseFloat(r.area) || 0), 0);
@@ -85,17 +61,10 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
 
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4">
-      {/* Toolbar — search / select-all / delete / add / save / print / pdf */}
+      {/* Toolbar — back / add / save / print / pdf */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <Button onClick={onBack} variant="ghost" size="icon" className="w-8 h-8 text-slate-500"><ArrowLeft className="w-4 h-4" /></Button>
-        <div className="relative flex-1 min-w-[140px] max-w-xs">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="نام / خسرہ تلاش کریں" className="h-8 text-xs pl-7" dir="rtl" style={{ fontFamily: URDU }} />
-        </div>
-        <Button onClick={toggleAll} variant="outline" size="sm" className="text-xs">{allSelected ? "سب ہٹا" : "سب منتخب"}</Button>
-        {selected.size > 0 && (
-          <Button onClick={deleteSelected} variant="outline" size="sm" className="text-xs text-red-500 gap-1"><Trash2 className="w-3.5 h-3.5" /> حذف</Button>
-        )}
+        <Button onClick={addRow} size="sm" className="gap-1 text-xs"><Plus className="w-3.5 h-3.5" /> قطار</Button>
         <Button onClick={save} size="sm" className="gap-1 text-xs"><Save className="w-3.5 h-3.5" /> محفوظ</Button>
         <Button onClick={print} size="sm" variant="outline" className="gap-1 text-xs"><Printer className="w-3.5 h-3.5" /> پرنٹ</Button>
         <Button onClick={print} size="sm" variant="outline" className="gap-1 text-xs"><FileText className="w-3.5 h-3.5" /> PDF</Button>
@@ -115,7 +84,7 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
         <table dir="rtl" className="w-full border-collapse text-sm" style={{ fontFamily: URDU }}>
           <thead>
             <tr className="bg-slate-100">
-              <th className="border border-slate-400 px-1 py-1.5 w-8"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="w-3.5 h-3.5" /></th>
+              <th className="border border-slate-400 px-1 py-1.5 w-12">+ / حذف</th>
               <th className="border border-slate-400 px-1 py-1.5 w-10">نمبر شمار</th>
               <th className="border border-slate-400 px-1 py-1.5">نام و ولدیت</th>
               <th className="border border-slate-400 px-1 py-1.5 w-28">خسرہ نمبران</th>
@@ -123,18 +92,19 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
               <th className="border border-slate-400 px-1 py-1.5 w-20">فصل</th>
               <th className="border border-slate-400 px-1 py-1.5 w-20">آبیانہ</th>
               <th className="border border-slate-400 px-1 py-1.5 w-28">فون نمبر<div className="text-[9px] font-normal text-slate-500">Phone Number</div></th>
-              <th className="border border-slate-400 px-1 py-1.5 w-8"></th>
             </tr>
           </thead>
           <tbody>
-            {filteredIdx.length === 0 ? (
-              <tr><td colSpan={9} className="text-center text-slate-400 py-6 text-xs border border-slate-200" style={{ fontFamily: URDU }}>کوئی قطار نہیں — "قطار" دبائیں</td></tr>
-            ) : filteredIdx.map((i) => {
-              const r = rows[i];
-              const sel = selected.has(i);
-              return (
-                <tr key={i} className={sel ? "bg-blue-50" : "bg-white"}>
-                  <td className="border border-slate-400 text-center px-1 py-0.5"><input type="checkbox" checked={sel} onChange={() => toggleRow(i)} className="w-3.5 h-3.5" /></td>
+            {rows.length === 0 ? (
+              <tr><td colSpan={8} className="text-center text-slate-400 py-6 text-xs border border-slate-200" style={{ fontFamily: URDU }}>کوئی قطار نہیں — "قطار" دبائیں</td></tr>
+            ) : rows.map((r, i) => (
+                <tr key={i} className="bg-white">
+                  <td className="border border-slate-400 text-center px-1 py-0.5">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <button onClick={() => insertAbove(i)} title="اس قطار کے اوپر نئی قطار" className="text-green-600 hover:text-green-700"><Plus className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => delRow(i)} title="قطار حذف" className="text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </td>
                   <td className="border border-slate-400 text-center px-1 py-0.5">{i + 1}</td>
                   <td className="border border-slate-400 px-1 py-0.5"><Input value={r.name} onChange={(e) => updateRow(i, "name", e.target.value)} dir="rtl" className="h-8 text-sm border-0 px-1" style={{ fontFamily: URDU }} /></td>
                   <td className="border border-slate-400 px-1 py-0.5"><FractionCell value={r.khasra} onChange={(v) => updateRow(i, "khasra", v)} onPicker={() => setPicker({ row: i })} /></td>
@@ -170,10 +140,8 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
                       dir="ltr"
                     />
                   </td>
-                  <td className="border border-slate-400 text-center"><button onClick={() => delRow(i)} className="text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button></td>
                 </tr>
-              );
-            })}
+              ))}
             <tr className="bg-slate-100 font-bold">
               <td className="border border-slate-400"></td>
               <td className="border border-slate-400 px-1 py-1 text-center" colSpan={3}>کل</td>
@@ -181,17 +149,12 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
               <td className="border border-slate-400 px-1 py-1"></td>
               <td className="border border-slate-400 px-1 py-1 text-center">{totalAbiana}/-</td>
               <td className="border border-slate-400 px-1 py-1"></td>
-              <td className="border border-slate-400"></td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      {/* Add-row (قطار) button — at table end, above total */}
-      <div dir="rtl" className="mt-2 flex justify-end">
-        <Button onClick={addRow} size="sm" className="gap-1 text-xs"><Plus className="w-3.5 h-3.5" /> قطار</Button>
-      </div>
-      <div dir="rtl" className="mt-1.5 text-sm font-bold" style={{ fontFamily: URDU }}>کل رقم: {totalAbiana}/-</div>
+      <div dir="rtl" className="mt-3 text-sm font-bold" style={{ fontFamily: URDU }}>کل رقم: {totalAbiana}/-</div>
 
       {/* Signature footer */}
       <div dir="rtl" className="mt-8 flex justify-between items-end" style={{ fontFamily: URDU }}>
