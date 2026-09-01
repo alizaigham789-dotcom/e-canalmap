@@ -270,7 +270,7 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   const midPt = obj.points[Math.floor(obj.points.length/2)];
   // Line thickness — applies to ALL styles (1-10 level → world units via CHAKBANDI_SCALE)
   // Loops style defaults to a thinner line (2) per user preference.
-  const defaultThk = style === "loops" ? 2 : (style === "stitched" ? 1 : (style === "dotted" ? 8 : (style === "dashed" ? 5 : 6)));
+  const defaultThk = style === "loops" ? 2 : (style === "stitched" ? 1 : (style === "dotted" ? 10 : (style === "dashed" ? 10 : 6)));
   const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness ?? defaultThk);
   const lineColor = C.chakbandiStroke || "#22c55e";
   const labelSvg = label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${lineColor}">${label}</text>` : "";
@@ -286,7 +286,7 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   if (style === "dashed") {
     // Thin continuous spine (line thickness) + thick dashes (dash thickness) on top,
     // so the path stays visible through the gaps even at large dash spacing.
-    const dashGap = CHAKBANDI_SCALE.dashSpacing(obj.dashSpacing || 5);
+    const dashGap = CHAKBANDI_SCALE.dashSpacing(obj.dashSpacing || 4);
     const dashW = CHAKBANDI_SCALE.dashThickness(obj.dashThickness ?? 6);
     const spineW = Math.max(1, lineW * 0.4);
     return `<g>
@@ -300,7 +300,7 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
     // Draws actual <circle> elements (not round-capped dashes) so each dot is a
     // perfect circle. Uses the same world-unit size & spacing as the editor canvas.
     const dotR = CHAKBANDI_SCALE.dotSize(obj.dotSize || 10) / 2;
-    const dotSpacing = Math.max(dotR * 2, CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 2));
+    const dotSpacing = Math.max(dotR * 2, CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 3));
     let dots = "";
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
@@ -309,7 +309,7 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
         const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
-        dots += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${dotR.toFixed(1)}" fill="${lineColor}"/>`;
+        dots += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${dotR.toFixed(1)}" fill="${lineColor}" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}"/>`;
       }
     }
     return `<g>${dots}${labelSvg}</g>`;
@@ -341,8 +341,8 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   if (style === "rings") {
     // Spine segments join adjacent ring edges (never crossing the ring interiors),
     // then rings are drawn on top. Matches the canvas editor exactly.
-    const r = CHAKBANDI_SCALE.ringSize(obj.ringSize || 4);
-    const ringSpacing = Math.max(4, CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 3));
+    const r = CHAKBANDI_SCALE.ringSize(obj.ringSize || 3);
+    const ringSpacing = Math.max(4, CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 6));
     const centers = [];
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];

@@ -814,10 +814,10 @@ function FillControl({ local, commit }) {
 export const CHAKBANDI_DEFAULTS = {
   cross:      { lineThickness: 6, crossSize: 3, crossSpacing: 2 },
   loops:      { lineThickness: 2, loopsSize: 5, loopsSpacing: 5 },
-  rings:      { lineThickness: 6, ringSize: 4, ringSpacing: 3 },
-  dashed:     { lineThickness: 5, dashSpacing: 5, dashThickness: 6 },
+  rings:      { lineThickness: 3, ringSize: 3, ringSpacing: 6 },
+  dashed:     { lineThickness: 10, dashSpacing: 4, dashThickness: 6 },
   stitched:   { lineThickness: 1, stitchSize: 4, stitchSpacing: 2 },
-  dotted:     { lineThickness: 8, dotSize: 10, dotSpacing: 2 },
+  dotted:     { lineThickness: 10, dotSize: 10, dotSpacing: 3 },
   khakaDasti: { lineThickness: 4 },
 };
 

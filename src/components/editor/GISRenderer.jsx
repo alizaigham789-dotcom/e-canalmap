@@ -1123,7 +1123,7 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
   if (obj.points.length < 2) return;
   const style = forceKhakaDasti ? "khakaDasti" : (obj.chakbandiStyle || "cross");
   // Line thickness — applies to ALL styles (1-10 level → world units via CHAKBANDI_SCALE)
-  const defaultThk = style === "loops" ? 2 : (style === "stitched" ? 1 : (style === "dotted" ? 8 : (style === "dashed" ? 5 : (style === "khakaDasti" ? 4 : 6))));
+  const defaultThk = style === "loops" ? 2 : (style === "stitched" ? 1 : (style === "dotted" ? 10 : (style === "dashed" ? 10 : (style === "khakaDasti" ? 4 : 6))));
   const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness ?? defaultThk) * 0.2 / zoom;
   const lineColor = style === "khakaDasti" ? "#22c55e" : (C.chakbandiStroke || "#22c55e");
   const color = isSelected ? "#86efac" : lineColor;
@@ -1146,7 +1146,7 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
   if (style === "khakaDasti") {
     drawSpine(null);
   } else if (style === "dashed") {
-    const dashGap = CHAKBANDI_SCALE.dashSpacing(obj.dashSpacing || 5) / zoom;
+    const dashGap = CHAKBANDI_SCALE.dashSpacing(obj.dashSpacing || 4) / zoom;
     // Thin continuous spine (line thickness) so the path stays visible through the
     // gaps even at large dash spacing; thick dashes (dash thickness) drawn on top.
     const dashW = (CHAKBANDI_SCALE.dashThickness(obj.dashThickness ?? 6) * 0.2 + (isSelected ? 2 : 0)) / zoom;
@@ -1170,8 +1170,13 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
     // (not round-capped dashes) so every dot is a perfect circle. Uses the same
     // world-unit size & spacing as print preview so dots match exactly.
     const dotR = CHAKBANDI_SCALE.dotSize(obj.dotSize || 10) / 2;
-    const dotSpacing = Math.max(dotR * 2, CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 2));
+    const dotSpacing = Math.max(dotR * 2, CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 3));
+    // Line Thickness controls a stroke around each filled dot so the slider is
+    // useful — increasing it makes the dots visibly larger (same colour stroke).
+    const dotStrokeW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness ?? 10) / zoom;
     ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = dotStrokeW;
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
@@ -1182,6 +1187,7 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
         ctx.beginPath();
         ctx.arc(cx, cy, dotR, 0, Math.PI * 2);
         ctx.fill();
+        if (dotStrokeW > 0) ctx.stroke();
       }
     }
   } else if (style === "stitched") {
@@ -1214,10 +1220,10 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
     // Spine segments join adjacent ring edges WITHOUT crossing the ring interiors —
     // each ring sits clean, connected by a short line from its leading edge to the
     // next ring's trailing edge. The path stays visible even at large spacing.
-    const r = CHAKBANDI_SCALE.ringSize(obj.ringSize || 4) * 0.2 / zoom;
+    const r = CHAKBANDI_SCALE.ringSize(obj.ringSize || 3) * 0.2 / zoom;
     // Ring spacing in pure world units (no /zoom) — matches print preview exactly so
     // the ring COUNT is identical in the editor and print/export at every zoom level.
-    const ringSpacing = Math.max(4, CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 3));
+    const ringSpacing = Math.max(4, CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 6));
     const centers = [];
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
