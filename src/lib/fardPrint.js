@@ -10,7 +10,8 @@ function esc(s) {
 
 function buildHeader(rec) {
   const mogha = rec.mogha_number ? `${rec.mogha_number}${rec.mogha_side ? `/${rec.mogha_side}` : ""}` : "_____";
-  return `فرد مسروبہ ناجائز آبپاشی موگہ نمبری ${mogha}، راجباہ ${rec.rajbah || "_____"}، موضع ${rec.village || "_____"}، ضلعداری سیکشن ${rec.section || "_____"}، سب ڈویژن ${rec.tehsil || "_____"}، کینال ڈویژن ${rec.district || "_____"}`;
+  // Mogha number forced LTR so "6000/L" reads left-to-right inside the Urdu RTL line.
+  return `فرد مسروبہ ناجائز آبپاشی موگہ نمبری <span dir="ltr" style="display:inline-block">${esc(mogha)}</span>، راجباہ ${esc(rec.rajbah || "_____")}، موضع ${esc(rec.village || "_____")}، ضلعداری سیکشن ${esc(rec.section || "_____")}، سب ڈویژن ${esc(rec.tehsil || "_____")}، کینال ڈویژن ${esc(rec.district || "_____")}`;
 }
 
 // Stacked fraction (mustateel over killa) — matches parat warabandi bandubast style
@@ -54,9 +55,9 @@ export function printFardRecord(rec) {
       <td>${esc(r.phone) || "&nbsp;"}</td>
     </tr>`).join("");
 
-  const html = `<!DOCTYPE html><html dir="rtl" lang="ur"><head><meta charset="utf-8"><title>فرد مسروبہ</title><style>${css}</style></head>
+  const html = `<!DOCTYPE html><html dir="rtl" lang="ur"><head><meta charset="utf-8"><title></title><style>${css}</style></head>
   <body>
-    <div class="hdr">${esc(headerLine)}</div>
+    <div class="hdr">${headerLine}</div>
     <table>
       <thead><tr>
         <th style="width:6%">نمبر شمار</th>
@@ -75,7 +76,7 @@ export function printFardRecord(rec) {
     <div class="total">کل رقم: ${totalAbiana}/-</div>
     <div class="sig">
       <div>دستخط پٹواری<br/><br/><br/>__________________</div>
-      <div style="text-align:center">دستخط ظلعدار<br/><br/><br/>__________________<br/><span style="font-size:10px">Zilladar Section, Canal Division</span></div>
+      <div style="text-align:center">دستخط ظلعدار<br/><br/><br/>__________________</div>
     </div>
   </body></html>`;
 

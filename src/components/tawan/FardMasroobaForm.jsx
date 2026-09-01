@@ -24,7 +24,14 @@ function formatPkPhone(raw) {
 
 function buildFardHeader(d) {
   const mogha = d.mogha_number ? `${d.mogha_number}${d.mogha_side ? `/${d.mogha_side}` : ""}` : "_____";
-  return `فرد مسروبہ ناجائز آبپاشی موگہ نمبری\u2009${mogha}،\u2009راجباہ ${d.rajbah || "_____"}،\u2009موضع ${d.village || "_____"}،\u2009ضلعداری سیکشن ${d.section || "_____"}،\u2009سب ڈویژن ${d.tehsil || "_____"}،\u2009کینال ڈویژن ${d.district || "_____"}`;
+  // Mogha number (e.g. 6000/L) is forced LTR so it reads left-to-right inside the Urdu RTL line.
+  return (
+    <>
+      فرد مسروبہ ناجائز آبپاشی موگہ نمبری{"\u2009"}
+      <span dir="ltr" style={{ display: "inline-block" }}>{mogha}</span>
+      {"\u2009"}،{"\u2009"}راجباہ {d.rajbah || "_____"}،{"\u2009"}موضع {d.village || "_____"}،{"\u2009"}ضلعداری سیکشن {d.section || "_____"}،{"\u2009"}سب ڈویژن {d.tehsil || "_____"}،{"\u2009"}کینال ڈویژن {d.district || "_____"}
+    </>
+  );
 }
 
 export default function FardMasroobaForm({ record, onSave, onBack }) {
@@ -61,13 +68,15 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
 
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4">
-      {/* Toolbar — back / add / save / print / pdf */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      {/* Toolbar — cutar / save / print / PDF at the right corner (RTL start); back button at the left. */}
+      <div dir="rtl" className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={addRow} size="sm" className="gap-1 text-xs"><Plus className="w-3.5 h-3.5" /> قطار</Button>
+          <Button onClick={save} size="sm" className="gap-1 text-xs"><Save className="w-3.5 h-3.5" /> محفوظ</Button>
+          <Button onClick={print} size="sm" variant="outline" className="gap-1 text-xs"><Printer className="w-3.5 h-3.5" /> پرنٹ</Button>
+          <Button onClick={print} size="sm" variant="outline" className="gap-1 text-xs"><FileText className="w-3.5 h-3.5" /> PDF</Button>
+        </div>
         <Button onClick={onBack} variant="ghost" size="icon" className="w-8 h-8 text-slate-500"><ArrowLeft className="w-4 h-4" /></Button>
-        <Button onClick={addRow} size="sm" className="gap-1 text-xs"><Plus className="w-3.5 h-3.5" /> قطار</Button>
-        <Button onClick={save} size="sm" className="gap-1 text-xs"><Save className="w-3.5 h-3.5" /> محفوظ</Button>
-        <Button onClick={print} size="sm" variant="outline" className="gap-1 text-xs"><Printer className="w-3.5 h-3.5" /> پرنٹ</Button>
-        <Button onClick={print} size="sm" variant="outline" className="gap-1 text-xs"><FileText className="w-3.5 h-3.5" /> PDF</Button>
       </div>
 
       {/* Composed header line — same fields as map editor / warabandi parat */}
@@ -154,12 +163,15 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
         </table>
       </div>
 
-      <div dir="rtl" className="mt-3 text-sm font-bold" style={{ fontFamily: URDU }}>کل رقم: {totalAbiana}/-</div>
+      <div dir="rtl" className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <Button onClick={addRow} size="sm" variant="outline" className="gap-1 text-xs"><Plus className="w-3.5 h-3.5" /> قطار</Button>
+        <span className="text-sm font-bold" style={{ fontFamily: URDU }}>کل رقم: {totalAbiana}/-</span>
+      </div>
 
       {/* Signature footer */}
       <div dir="rtl" className="mt-8 flex justify-between items-end" style={{ fontFamily: URDU }}>
         <div className="text-right"><p className="text-sm font-semibold">دستخط پٹواری</p><p className="text-xs text-slate-400 mt-8">__________________</p></div>
-        <div className="text-center"><p className="text-sm font-semibold">دستخط ظلعدار</p><p className="text-xs text-slate-400 mt-8">__________________</p><p className="text-[10px] text-slate-600">Zilladar Section, Canal Division</p></div>
+        <div className="text-center"><p className="text-sm font-semibold">دستخط ظلعدار</p><p className="text-xs text-slate-400 mt-8">__________________</p></div>
       </div>
 
       {/* Khasra / bandubast picker — works from the selected map's mustateels,
