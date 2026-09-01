@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
@@ -52,6 +52,8 @@ export default function ParatWarabandi() {
   const [showBatchPrint, setShowBatchPrint] = useState(false);
   const [batchRecords, setBatchRecords] = useState([]);
   const [search, setSearch] = useState("");
+  const selectedMapRef = useRef(null);
+  const editMapRef = useRef(null);
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["parat-records"],
@@ -142,6 +144,7 @@ export default function ParatWarabandi() {
   const handleEditSelect = (map) => {
     if (!map) return;
     if (map._sideOnly) { setEditHeader(prev => ({ ...prev, mogha_side: map.mogha_side })); return; }
+    editMapRef.current = map;
     setEditHeader(prev => ({
       ...prev,
       mogha_number: String(map.moga_number || ""),
@@ -156,9 +159,11 @@ export default function ParatWarabandi() {
     extractCCAFromMap(map).then(cca => { setEditHeader(prev => ({ ...prev, cca })); });
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (!editHeader.mogha_number) { toast.error("موگہ نمبری درج کریں"); return; }
-    const { doc_type, cca, ...headerFields } = editHeader;
+    const { doc_type, cca: ccaVal, ...headerFields } = editHeader;
+    let cca = ccaVal;
+    if (!cca && editMapRef.current) cca = await extractCCAFromMap(editMapRef.current);
     let existing = {};
     try { existing = JSON.parse(editTarget.data_json || "{}"); } catch {}
     const data_json = JSON.stringify({ ...existing, header: headerFields, cca });
@@ -177,6 +182,7 @@ export default function ParatWarabandi() {
   const handleMogaSelect = (map) => {
     if (!map) return;
     if (map._sideOnly) { setNewHeader(prev => ({ ...prev, mogha_side: map.mogha_side })); return; }
+    selectedMapRef.current = map;
     setNewHeader(prev => ({
       ...prev,
       mogha_number: String(map.moga_number || ""),
@@ -191,9 +197,11 @@ export default function ParatWarabandi() {
     extractCCAFromMap(map).then(cca => { if (cca) setNewHeader(prev => ({ ...prev, cca })); });
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newHeader.mogha_number) { toast.error("موگہ نمبری درج کریں"); return; }
-    const { doc_type, cca, ...headerFields } = newHeader;
+    const { doc_type, cca: ccaVal, ...headerFields } = newHeader;
+    let cca = ccaVal;
+    if (!cca && selectedMapRef.current) cca = await extractCCAFromMap(selectedMapRef.current);
     const data_json = JSON.stringify({ header: headerFields, cca });
     createMutation.mutate({
       mogha_number: newHeader.mogha_number,
