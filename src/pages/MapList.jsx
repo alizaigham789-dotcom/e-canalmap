@@ -94,9 +94,13 @@ export default function MapList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["maps"] });
       setDeleteTarget(null);
-      toast.success("Map deleted");
+      toast.success("نقشہ حذف ہو گیا");
     },
-    onError: () => toast.error("Delete failed"),
+    onError: (err) => {
+      const msg = String(err?.message || err || "");
+      const denied = /403|forbidden|permission|unauthor/i.test(msg);
+      toast.error(denied ? "حذف کرنے کی اجازت نہیں — صرف ایڈمن یا مالک حذف کر سکتا ہے" : "حذف ناکام — دوبارہ کوشش کریں");
+    },
   });
 
   const handleUploadMap = (e) => {
@@ -556,23 +560,27 @@ export default function MapList() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog — Yes / No */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-heading text-base text-red-600">Delete Map?</DialogTitle>
+            <DialogTitle className="font-heading text-base text-red-600 flex items-center gap-2">
+              <Trash2 className="w-4 h-4" /> نقشہ حذف کریں؟
+            </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-slate-600 py-2">
-            Are you sure you want to permanently delete <b>{deleteTarget?.title || "Untitled Map"}</b>? This cannot be undone.
+          <p className="text-sm text-slate-600 py-2" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+            کیا آپ واقعی <b>{deleteTarget?.title || "Untitled Map"}</b> کو مستقل طور پر حذف کرنا چاہتے ہیں؟ یہ واپس نہیں ہو گا۔
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)} className="text-slate-500">Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="text-slate-600 gap-1.5">
+              نہیں (No)
+            </Button>
             <Button
               onClick={() => deleteMutation.mutate(deleteTarget.id)}
               disabled={deleteMutation.isPending}
               className="bg-red-600 hover:bg-red-500 gap-2"
             >
-              <Trash2 className="w-4 h-4" /> Delete Permanently
+              <Trash2 className="w-4 h-4" /> {deleteMutation.isPending ? "حذف ہو رہا ہے…" : "ہاں (Yes)"}
             </Button>
           </DialogFooter>
         </DialogContent>

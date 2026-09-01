@@ -248,7 +248,11 @@ export default function Editor() {
   const saveMutation = useMutation({
     mutationFn: (data) => base44.entities.LandMap.update(mapId, data),
     onSuccess: () => {
-      toast.success("Map saved", { duration: 1500 });
+      // Show how many canals/chakbandis/khals/mouzas were saved so the user can
+      // confirm ALL layers (not just mustateels) persisted to the server.
+      const _parcels = dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length;
+      const _nonParcels = countNonParcels(dsmRef.current.objects);
+      toast.success(`محفوظ ہو گیا — ${_parcels} parcels, ${_nonParcels} lines/features`, { duration: 1500 });
       // Update cache silently — DO NOT invalidate/refetch the map query
       // (causes load effect to overwrite local edits)
       queryClient.setQueryData(["map", mapId], (old) => old ? { ...old, ...{
@@ -617,6 +621,9 @@ export default function Editor() {
         }, 5000);
       }).catch(() => {
         queryClient.invalidateQueries({ queryKey: ["maps"] });
+        // Surface silent exit-save failures so the user knows the map didn't sync
+        // to the server (cross-device) and can re-open + Save to push their edits.
+        toast.error("محفوظ ناکام — نقشہ دوبارہ کھولیں اور Save دبائیں تاکہ دوسری ڈیوائسز پر ڈیٹا مل جائے", { duration: 5000 });
       });
       })();
     };
