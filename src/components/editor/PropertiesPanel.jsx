@@ -817,7 +817,7 @@ function ChakbandiStyleControls({ local, commit }) {
   // Line Thickness — applies to every style
   const thicknessLabel = style === "loops" ? "Line Size" : "Line Thickness";
   const thicknessKey = "lineThickness";
-  const thickness = local[thicknessKey] ?? (style === "khakaDasti" ? 4 : 6);
+  const thickness = local[thicknessKey] ?? (style === "loops" ? 2 : style === "khakaDasti" ? 4 : 6);
 
   return (
     <div className="space-y-2">
@@ -839,11 +839,11 @@ function ChakbandiStyleControls({ local, commit }) {
         </>
       )}
 
-      {/* Loops — Loops Size + Loops Spacing */}
+      {/* Loops — Loops Size + Loops Spacing (defaults: size 6, spacing 7) */}
       {style === "loops" && (
         <>
-          <SpacingControl label="Loops Size" value={local.loopsSize || 4} min={1} max={10} step={1} onChange={v => commit("loopsSize", v)} />
-          <SpacingControl label="Loops Spacing" value={local.loopsSpacing || 3} min={1} max={10} step={1} onChange={v => commit("loopsSpacing", v)} />
+          <SpacingControl label="Loops Size" value={local.loopsSize || 6} min={1} max={10} step={1} onChange={v => commit("loopsSize", v)} />
+          <SpacingControl label="Loops Spacing" value={local.loopsSpacing || 7} min={1} max={10} step={1} onChange={v => commit("loopsSpacing", v)} />
         </>
       )}
 

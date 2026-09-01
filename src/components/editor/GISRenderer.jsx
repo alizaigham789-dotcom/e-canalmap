@@ -1123,7 +1123,8 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
   if (obj.points.length < 2) return;
   const style = forceKhakaDasti ? "khakaDasti" : (obj.chakbandiStyle || "cross");
   // Line thickness — applies to ALL styles (1-10 level → world units via CHAKBANDI_SCALE)
-  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness || 6) * 0.2 / zoom;
+  const defaultThk = style === "loops" ? 2 : (style === "khakaDasti" ? 4 : 6);
+  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness ?? defaultThk) * 0.2 / zoom;
   const lineColor = style === "khakaDasti" ? "#22c55e" : (C.chakbandiStroke || "#22c55e");
   const color = isSelected ? "#86efac" : lineColor;
 
@@ -1176,7 +1177,8 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
       }
     }
   } else if (style === "rings") {
-    // Series of empty circles (rings) along the line
+    // Continuous spine line connects all rings — always present regardless of spacing
+    drawSpine(null);
     const r = CHAKBANDI_SCALE.ringSize(obj.ringSize || 4) * 0.2 / zoom;
     const ringSpacing = CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 3) / zoom;
     ctx.strokeStyle = color; ctx.lineWidth = lineW; ctx.setLineDash([]);
@@ -1191,16 +1193,17 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
       }
     }
   } else if (style === "loops") {
-    // Pencil-drawn loops — flattened ellipses with stroke endpoints sticking out
-    const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 4) * 0.2 / zoom;
+    // Continuous spine line connects all loops — always present regardless of spacing.
+    // Loops defaults: line size 2, loops size 6, loops spacing 7.
+    drawSpine(null);
+    const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 6) * 0.2 / zoom;
     const rx = loopSize * 1.4, ry = loopSize * 0.8;
-    const loopSpacing = CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 3) / zoom;
+    const loopSpacing = CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 7) / zoom;
     ctx.strokeStyle = color; ctx.lineWidth = lineW; ctx.setLineDash([]); ctx.lineCap = "round";
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
       const ang = Math.atan2(b.y - a.y, b.x - a.x);
-      const dirX = Math.cos(ang), dirY = Math.sin(ang);
       const steps = Math.max(1, Math.floor(segLen / Math.max(4, loopSpacing)));
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
@@ -1208,11 +1211,6 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
         ctx.beginPath();
         if (ctx.ellipse) ctx.ellipse(cx, cy, rx, ry, ang, 0, Math.PI * 2);
         else { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.scale(rx, ry); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.restore(); }
-        ctx.stroke();
-        const stub = rx * 1.6;
-        ctx.beginPath();
-        ctx.moveTo(cx - dirX * stub, cy - dirY * stub);
-        ctx.lineTo(cx + dirX * stub, cy + dirY * stub);
         ctx.stroke();
       }
     }

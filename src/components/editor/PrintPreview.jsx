@@ -269,7 +269,9 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   const label = obj.name || "";
   const midPt = obj.points[Math.floor(obj.points.length/2)];
   // Line thickness — applies to ALL styles (1-10 level → world units via CHAKBANDI_SCALE)
-  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness || 6);
+  // Loops style defaults to a thinner line (2) per user preference.
+  const defaultThk = style === "loops" ? 2 : 6;
+  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness ?? defaultThk);
   const lineColor = C.chakbandiStroke || "#22c55e";
   const labelSvg = label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${lineColor}">${label}</text>` : "";
 
@@ -321,9 +323,9 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   }
 
   if (style === "rings") {
-    // Series of empty circles (rings) along the line — "chakbandi line just rings"
+    // Series of empty circles (rings) along a continuous spine line — the spine
+    // always joins the rings regardless of spacing (matches canvas editor exactly).
     const r = CHAKBANDI_SCALE.ringSize(obj.ringSize || 4);
-    const ringW = Math.max(1.5, lineW * 0.5);
     const ringSpacing = Math.max(4, CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 3));
     let rings = "";
     for (let i = 0; i < obj.points.length - 1; i++) {
@@ -333,35 +335,32 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
         const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
-        rings += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="none" stroke="${lineColor}" stroke-width="${ringW.toFixed(1)}"/>`;
+        rings += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="none" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}"/>`;
       }
     }
-    return `<g>${rings}${labelSvg}</g>`;
+    return `<g><polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}" stroke-linecap="round" stroke-linejoin="miter"/>${rings}${labelSvg}</g>`;
   }
   if (style === "loops") {
-    // Pencil-drawn loops — flattened ellipses (chipti shape) with the stroke
-    // endpoints sticking out along the line, like a hand-drawn cursive loop.
-    const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 4);
+    // Pencil-drawn loops (flattened ellipses) sitting on a continuous spine line.
+    // The spine always joins the loops regardless of spacing (matches canvas editor).
+    // Loops defaults: line size 2, loops size 6, loops spacing 7.
+    const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 6);
     const rx = loopSize * 1.4, ry = loopSize * 0.8;
-    const loopW = Math.max(1.5, lineW * 0.5);
-    const loopSpacing = Math.max(4, CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 3));
+    const loopSpacing = Math.max(4, CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 7));
     let loops = "";
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
       const ang = Math.atan2(b.y - a.y, b.x - a.x);
       const deg = (ang * 180 / Math.PI).toFixed(1);
-      const dirX = Math.cos(ang), dirY = Math.sin(ang);
       const steps = Math.max(1, Math.floor(segLen / loopSpacing));
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
         const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
-        loops += `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${lineColor}" stroke-width="${loopW.toFixed(1)}" transform="rotate(${deg} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`;
-        const stub = rx * 1.6;
-        loops += `<line x1="${(cx - dirX*stub).toFixed(1)}" y1="${(cy - dirY*stub).toFixed(1)}" x2="${(cx + dirX*stub).toFixed(1)}" y2="${(cy + dirY*stub).toFixed(1)}" stroke="${lineColor}" stroke-width="${loopW.toFixed(1)}" stroke-linecap="round"/>`;
+        loops += `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}" transform="rotate(${deg} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`;
       }
     }
-    return `<g>${loops}${labelSvg}</g>`;
+    return `<g><polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${lineW.toFixed(1)}" stroke-linecap="round" stroke-linejoin="miter"/>${loops}${labelSvg}</g>`;
   }
 
   // Default: Cross (×) pattern — keeps the user's chakbandi colour + thickness
