@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
@@ -58,6 +58,12 @@ export default function ParatWarabandi() {
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["parat-records"],
     queryFn: () => base44.entities.ParatWarabandiRecord.list("-updated_date", 50),
+  });
+
+  // LandMap ریکارڈز — MogaSearchSelect کے ساتھ cache share کرتے ہیں
+  const { data: maps = [] } = useQuery({
+    queryKey: ["warabandi-moga-maps"],
+    queryFn: () => base44.entities.LandMap.list("-updated_date", 500),
   });
 
   const filteredRecords = useMemo(() => {
@@ -198,11 +204,38 @@ export default function ParatWarabandi() {
     extractCCAFromMap(map).then(cca => { if (cca) setNewHeader(prev => ({ ...prev, cca })); });
   };
 
+  // جب موگہ نمبر بدلے (ٹائپ یا ڈراپ ڈاؤن سے) — میپ ایڈیٹر میں تلاش کر کے CCA خود بخود نکالیں
+  useEffect(() => {
+    const num = String(newHeader.mogha_number || "").trim();
+    if (!num) return;
+    const matches = maps.filter(m => String(m.moga_number) === num);
+    if (!matches.length) return; // میپ ایڈیٹر میں نہیں → CCA دستی درج کریں
+    let cancelled = false;
+    (async () => {
+      for (const m of matches) {
+        const cca = await extractCCAFromMap(m);
+        if (cca && !cancelled) {
+          setNewHeader(prev => ({ ...prev, cca, map_id: prev.map_id || m.id }));
+          return;
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [newHeader.mogha_number, maps]);
+
   const handleCreate = async () => {
     if (!newHeader.mogha_number) { toast.error("موگہ نمبری درج کریں"); return; }
     const { doc_type, cca: ccaVal, ...headerFields } = newHeader;
     let cca = ccaVal;
     if (!cca && selectedMapRef.current) cca = await extractCCAFromMap(selectedMapRef.current);
+    // اگر CCA اب بھی خالی ہے اور میپ منتخب نہیں — موگہ نمبر سے میپ تلاش کریں
+    if (!cca) {
+      const matches = maps.filter(m => String(m.moga_number) === String(newHeader.mogha_number).trim());
+      for (const m of matches) {
+        const c = await extractCCAFromMap(m);
+        if (c) { cca = c; if (!headerFields.map_id) headerFields.map_id = m.id; break; }
+      }
+    }
     const data_json = JSON.stringify({ header: headerFields, cca });
     createMutation.mutate({
       mogha_number: newHeader.mogha_number,
@@ -399,6 +432,18 @@ export default function ParatWarabandi() {
                   <option value="پرت وارہ بندی">پرت وارہ بندی</option>
                   <option value="کیس ترمیم وارہ بندی">کیس ترمیم وارہ بندی</option>
                 </select>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                  CCA (ایکڑ) {newHeader.cca && <span className="text-emerald-600 text-[10px]">— خودکار</span>}
+                </label>
+                <input type="number" value={newHeader.cca} onChange={e => setNewHeader(p => ({ ...p, cca: e.target.value }))}
+                  placeholder="میپ سے خودکار، ورنہ درج کریں"
+                  dir="ltr"
+                  className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-800 bg-slate-50 focus:outline-none focus:border-blue-500 font-mono" />
+                <p className="text-[10px] text-slate-400 mt-1" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                  {newHeader.cca ? "میپ ایڈیٹر سے نکلا ہوا CCA" : "موگہ میپ ایڈیٹر میں نہیں — دستی درج کریں"}
+                </p>
               </div>
             </div>
             <DialogFooter className="gap-2">
