@@ -28,6 +28,7 @@ const MogaMerge = lazy(() => import('./pages/MogaMerge'));
 const Form1Register = lazy(() => import('./pages/Form1Register'));
 const DeputyCollectorDocs = lazy(() => import('./pages/DeputyCollectorDocs'));
 const Form33C = lazy(() => import('./pages/Form33C'));
+const TaskAssignment = lazy(() => import('./pages/TaskAssignment'));
 const ZilladarDocs = lazy(() => import('./pages/ZilladarDocs'));
 const GroupChat = lazy(() => import('./pages/GroupChat'));
 const CanalPatwari = lazy(() => import('./pages/CanalPatwari'));
@@ -92,6 +93,7 @@ const AuthenticatedApp = () => {
         </Route>
         <Route path="/deputy-collector" element={<DeputyCollectorDocs />} />
         <Route path="/deputy-collector/33c" element={<Form33C />} />
+        <Route path="/deputy-collector/task-assignment" element={<TaskAssignment />} />
 
         <Route path="/zilladar" element={<ZilladarDocs />} />
         <Route path="/group-chat" element={<GroupChat />} />

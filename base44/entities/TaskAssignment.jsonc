@@ -1,0 +1,99 @@
+{
+  "name": "TaskAssignment",
+  "type": "object",
+  "properties": {
+    "division": {
+      "type": "string",
+      "description": "Canal Division (e.g. Khushab)"
+    },
+    "subdivision": {
+      "type": "string",
+      "enum": [
+        "Jauharabad",
+        "Qaidabad"
+      ],
+      "description": "Sub Division"
+    },
+    "section": {
+      "type": "string",
+      "description": "Zilladar Section (depends on subdivision)"
+    },
+    "mouza": {
+      "type": "string",
+      "description": "Mouza / village name"
+    },
+    "officer_role": {
+      "type": "string",
+      "enum": [
+        "zilladar",
+        "patwari"
+      ],
+      "description": "Role of the officer being assigned"
+    },
+    "officer_name": {
+      "type": "string",
+      "description": "Name of the assigned officer (zilladar / patwari)"
+    },
+    "title": {
+      "type": "string",
+      "description": "Task / application subject"
+    },
+    "description": {
+      "type": "string",
+      "description": "Task details or document reference"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date by which the officer should complete the task"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "completed"
+      ],
+      "default": "pending"
+    },
+    "assigned_by_name": {
+      "type": "string",
+      "description": "Name of the deputy collector who assigned (denormalized)"
+    }
+  },
+  "required": [
+    "division",
+    "subdivision",
+    "section",
+    "officer_role",
+    "title"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

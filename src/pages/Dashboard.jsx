@@ -175,8 +175,14 @@ export default function Dashboard() {
   });
 
   const isAdmin = currentUser?.role === "admin";
+  const isDeputyCollector = currentUser?.role === "deputy_collector";
   const { data: subscription } = useSubscription();
   const hasAccess = isAdmin || !!subscription;
+
+  // Deputy Collector role: surface the Deputy Collector module at the top on login.
+  const orderedModules = isDeputyCollector
+    ? [...MODULES].sort((a, b) => (a.id === "deputy-collector" ? -1 : b.id === "deputy-collector" ? 1 : 0))
+    : MODULES;
 
   const recoveryMaps = [
     { id: "6a50caf149f33fc254601cbd", title: "21671R", moga_number: "21671" },
@@ -232,7 +238,7 @@ export default function Dashboard() {
 
         {/* Module Cards — 2-column grid, responsive on all screens */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          {MODULES.map((mod) => {
+          {orderedModules.map((mod) => {
             const needsSub = mod.id === "map-editor" || mod.id === "geo-map" || mod.id === "moga-merge";
             const subLocked = needsSub && !hasAccess;
             const isLocked = !isAdmin && mod.locked;
