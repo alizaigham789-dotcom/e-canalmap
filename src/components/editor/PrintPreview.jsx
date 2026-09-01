@@ -296,12 +296,23 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
 </g>`;
   }
   if (style === "dotted") {
-    const dotSize = CHAKBANDI_SCALE.dotSize(obj.dotSize || 10);
-    const dotSpacing = CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 2);
-    return `<g>
-  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${lineW}" stroke-dasharray="${Math.max(2,dotSize).toFixed(1)},${dotSpacing.toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>
-  ${labelSvg}
-</g>`;
+    // Dotted = filled circular balls (like fullstops) — distinct from Dashed.
+    // Draws actual <circle> elements (not round-capped dashes) so each dot is a
+    // perfect circle. Uses the same world-unit size & spacing as the editor canvas.
+    const dotR = CHAKBANDI_SCALE.dotSize(obj.dotSize || 10) / 2;
+    const dotSpacing = Math.max(dotR * 2, CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 2));
+    let dots = "";
+    for (let i = 0; i < obj.points.length - 1; i++) {
+      const a = obj.points[i], b = obj.points[i+1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.max(1, Math.floor(segLen / dotSpacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+        dots += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${dotR.toFixed(1)}" fill="${lineColor}"/>`;
+      }
+    }
+    return `<g>${dots}${labelSvg}</g>`;
   }
   if (style === "stitched") {
     const spineW = Math.max(2, lineW);

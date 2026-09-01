@@ -1165,9 +1165,25 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
     ctx.stroke();
     ctx.setLineDash([]);
   } else if (style === "dotted") {
-    const dotSize = CHAKBANDI_SCALE.dotSize(obj.dotSize || 10) * 0.2 / zoom;
-    const dotSpacing = CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 2) / zoom;
-    drawSpine([Math.max(0.5, dotSize), dotSpacing], "round");
+    // Dotted = filled circular balls (like fullstops) along the path — visually
+    // distinct from Dashed (which uses line segments). Draws actual filled circles
+    // (not round-capped dashes) so every dot is a perfect circle. Uses the same
+    // world-unit size & spacing as print preview so dots match exactly.
+    const dotR = CHAKBANDI_SCALE.dotSize(obj.dotSize || 10) / 2;
+    const dotSpacing = Math.max(dotR * 2, CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 2));
+    ctx.fillStyle = color;
+    for (let i = 0; i < obj.points.length - 1; i++) {
+      const a = obj.points[i], b = obj.points[i+1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.max(1, Math.floor(segLen / dotSpacing));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
+        ctx.beginPath();
+        ctx.arc(cx, cy, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
   } else if (style === "stitched") {
     // Full-thickness continuous spine so the chakbandi path stays visible even
     // at large stitch spacing; ticks cross it perpendicular.
@@ -1199,12 +1215,14 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
     // each ring sits clean, connected by a short line from its leading edge to the
     // next ring's trailing edge. The path stays visible even at large spacing.
     const r = CHAKBANDI_SCALE.ringSize(obj.ringSize || 4) * 0.2 / zoom;
-    const ringSpacing = CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 3) / zoom;
+    // Ring spacing in pure world units (no /zoom) — matches print preview exactly so
+    // the ring COUNT is identical in the editor and print/export at every zoom level.
+    const ringSpacing = Math.max(4, CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 3));
     const centers = [];
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
-      const steps = Math.max(1, Math.floor(segLen / Math.max(4, ringSpacing)));
+      const steps = Math.max(1, Math.floor(segLen / ringSpacing));
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
         centers.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
