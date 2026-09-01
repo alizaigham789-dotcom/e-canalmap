@@ -110,6 +110,27 @@ export function drawAcre(ctx, obj, isSelected, zoom, C) {
   ctx.lineWidth = ((isSelected ? 2 : 1.5) * 0.2 + (isSelected ? 1.5 : 0)) / zoom;
   ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
+  // Layer 2b: Kanal subdivision — divide the acre into 8 equal boxes (2 cols × 4 rows).
+  // Each box = 1 kanal (110 ft × 49.5 ft = 5445 sq ft; 1 acre = 8 kanal). Subtle dashed
+  // grid lines, always visible in the editor so the 8-box division is clearly shown.
+  {
+    ctx.strokeStyle = "rgba(180,83,9,0.30)";
+    ctx.lineWidth = Math.max(0.4, 0.6) / zoom;
+    ctx.setLineDash([4 / zoom, 3 / zoom]);
+    ctx.beginPath();
+    // 1 vertical line → 2 columns
+    ctx.moveTo(obj.x + obj.w / 2, obj.y);
+    ctx.lineTo(obj.x + obj.w / 2, obj.y + obj.h);
+    // 3 horizontal lines → 4 rows
+    for (let r = 1; r < 4; r++) {
+      const y = obj.y + (r * obj.h) / 4;
+      ctx.moveTo(obj.x, y);
+      ctx.lineTo(obj.x + obj.w, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
   // Layer 5: Label
   if (obj.label) {
     ctx.fillStyle = C.labelColor || "#000000";

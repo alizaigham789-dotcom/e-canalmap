@@ -988,7 +988,18 @@ export function isInViewport(obj, pan, zoom, canvasW, canvasH, margin = 100) {
     return !(obj.x + obj.w < vx0 || obj.x > vx1 || obj.y + obj.h < vy0 || obj.y > vy1);
   }
   if (obj.points) {
-    return obj.points.some(p => p.x >= vx0 && p.x <= vx1 && p.y >= vy0 && p.y <= vy1);
+    // Bounding-box intersection (NOT point containment) — a long canal/khal/chakbandi
+    // can span the whole map while none of its anchor points are inside the current
+    // viewport (e.g. when zoomed into the middle of the line). Point containment would
+    // wrongly cull it, making it vanish on zoom-in and reappear on zoom-out.
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of obj.points) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+    return !(maxX < vx0 || minX > vx1 || maxY < vy0 || minY > vy1);
   }
   if (obj.start) {
     return obj.start.x >= vx0 && obj.start.x <= vx1 && obj.start.y >= vy0 && obj.start.y <= vy1;
