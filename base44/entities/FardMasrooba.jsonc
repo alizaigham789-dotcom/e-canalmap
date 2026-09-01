@@ -35,6 +35,10 @@
       "type": "string",
       "description": "\u06a9\u06cc\u0646\u0627\u0644 \u0688\u0648\u06cc\u0698\u0646"
     },
+    "map_id": {
+      "type": "string",
+      "description": "Reference to the LandMap id (for khasra/bandubast picker)"
+    },
     "rows_json": {
       "type": "string",
       "description": "JSON string of farmer rows (name, khasra, area, crop, abiana, signature)"
