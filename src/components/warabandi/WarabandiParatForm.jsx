@@ -1133,7 +1133,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                     <FractionCell
                       value={row.bandubast}
                       onChange={(v) => updateRow(i, "bandubast", v)}
-                      onPicker={hasMap ? () => setPicker({ row: i, field: "bandubast" }) : undefined}
+                      onPicker={() => setPicker({ row: i, field: "bandubast" })}
                       placeholder="555/5-10"
                       disabled={mainLocked}
                     />
