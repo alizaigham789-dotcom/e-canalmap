@@ -23,13 +23,12 @@ export default function MustateelGridDialog({ zoom, pan, canvasRef, objects = []
 
   const addRow = () => setRows(rs => {
     const last = rs[rs.length - 1];
-    const lastStart = Number(last.start) || 0;
     const lastCount = Number(last.count) || 0;
     return [...rs, {
       id: rowIdSeq++,
-      start: lastStart + lastCount,
+      start: lastCount + 1,
       count: last.count || 10,
-      below: String(lastStart + lastCount - 1),
+      below: String(lastCount),
       direction: last.direction === "ltr" ? "rtl" : "ltr",
     }];
   });
