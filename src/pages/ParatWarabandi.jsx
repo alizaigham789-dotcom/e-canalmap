@@ -10,6 +10,7 @@ import WarabandiParatForm from "@/components/warabandi/WarabandiParatForm";
 import MogaSearchSelect from "@/components/warabandi/MogaSearchSelect";
 import BottomNav from "@/components/BottomNav";
 import BatchPrintModal from "@/components/warabandi/BatchPrintModal";
+import { loadDrawingData } from "@/lib/drawingDataStorage";
 
 const EMPTY_HEADER = {
   mogha_number: "", mogha_side: "R", rajbaha: "",
@@ -22,10 +23,10 @@ function parseHeader(rec) {
 }
 
 // میپ کی chakbandi آبجیکٹس سے CCA خود بخود نکالیں (مoga منتخب کرتے وقت)
-function extractCCAFromMap(map) {
+async function extractCCAFromMap(map) {
   if (!map?.drawing_data) return "";
   try {
-    const objects = JSON.parse(map.drawing_data);
+    const objects = await loadDrawingData(map.drawing_data);
     if (!Array.isArray(objects)) return "";
     let total = 0, found = false;
     for (const o of objects) {
@@ -120,7 +121,9 @@ export default function ParatWarabandi() {
   };
 
   const handleEditOpen = (rec) => {
-    const h = parseHeader(rec);
+    let data = {};
+    try { data = JSON.parse(rec.data_json || "{}"); } catch {}
+    const h = data.header || {};
     setEditHeader({
       mogha_number: rec.mogha_number || h.mogha_number || "",
       mogha_side: rec.mogha_side || h.mogha_side || "R",
@@ -131,6 +134,7 @@ export default function ParatWarabandi() {
       canal_division: h.canal_division || "",
       map_id: h.map_id || "",
       doc_type: rec.doc_type || "پرت وارہ بندی",
+      cca: data.cca || "",
     });
     setEditTarget(rec);
   };
@@ -149,14 +153,15 @@ export default function ParatWarabandi() {
       canal_division: map.district || "",
       map_id: map.id || "",
     }));
+    extractCCAFromMap(map).then(cca => { setEditHeader(prev => ({ ...prev, cca })); });
   };
 
   const handleEditSave = () => {
     if (!editHeader.mogha_number) { toast.error("موگہ نمبری درج کریں"); return; }
-    const { doc_type, ...headerFields } = editHeader;
+    const { doc_type, cca, ...headerFields } = editHeader;
     let existing = {};
     try { existing = JSON.parse(editTarget.data_json || "{}"); } catch {}
-    const data_json = JSON.stringify({ ...existing, header: headerFields });
+    const data_json = JSON.stringify({ ...existing, header: headerFields, cca });
     updateMutation.mutate({
       id: editTarget.id,
       data: {
@@ -182,8 +187,8 @@ export default function ParatWarabandi() {
       sub_division: map.tehsil || "",
       canal_division: map.district || "",
       map_id: map.id || "",
-      cca: extractCCAFromMap(map),
     }));
+    extractCCAFromMap(map).then(cca => { if (cca) setNewHeader(prev => ({ ...prev, cca })); });
   };
 
   const handleCreate = () => {

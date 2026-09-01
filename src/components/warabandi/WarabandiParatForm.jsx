@@ -1089,8 +1089,8 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                       dir={isUrduMode ? "rtl" : "ltr"} disabled={summaryLocked}
                       style={{ fontFamily: isUrduMode ? "'Noto Nastaliq Urdu', serif" : undefined, textAlign: isUrduMode ? "right" : "left" }} />
                   </td>
-                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_lega" }) : undefined} disabled={summaryLocked} /></td>
-                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} onPicker={hasMap ? () => setPicker({ row: i, field: "nikha2_dega" }) : undefined} disabled={summaryLocked} /></td>
+                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_lega} onChange={(v) => updateRow(i, "nikha2_lega", v)} onPicker={() => setPicker({ row: i, field: "nikha2_lega" })} disabled={summaryLocked} /></td>
+                  <td className={tdCls} style={{ minWidth: 70 }}><FractionCell value={row.nikha2_dega} onChange={(v) => updateRow(i, "nikha2_dega", v)} onPicker={() => setPicker({ row: i, field: "nikha2_dega" })} disabled={summaryLocked} /></td>
                   <td className={tdCls} style={{ position: "relative" }}>
                     <input value={row.total_area2} onChange={e => updateRow(i, "total_area2", e.target.value)} className={inp} dir="ltr" disabled={summaryLocked} />
                     {!isUrduMode && row.total_area2 && isEnglishOrDigit(row.total_area2) && (
@@ -1142,7 +1142,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                     <FractionCell
                       value={row.nikha_lega}
                       onChange={(v) => updateRow(i, "nikha_lega", v)}
-                      onPicker={hasMap ? () => setPicker({ row: i, field: "nikha_lega" }) : undefined}
+                      onPicker={() => setPicker({ row: i, field: "nikha_lega" })}
                       disabled={mainLocked}
                     />
                   </td>
@@ -1150,7 +1150,7 @@ Return ONLY a valid JSON object matching the schema — no markdown fences, no c
                     <FractionCell
                       value={row.nikha_dega}
                       onChange={(v) => updateRow(i, "nikha_dega", v)}
-                      onPicker={hasMap ? () => setPicker({ row: i, field: "nikha_dega" }) : undefined}
+                      onPicker={() => setPicker({ row: i, field: "nikha_dega" })}
                       disabled={mainLocked}
                     />
                   </td>

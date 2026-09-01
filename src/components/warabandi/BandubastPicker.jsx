@@ -120,6 +120,9 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
 
   if (!open) return null;
 
+  const isNikha = title.includes("نکہ");
+  const topLabel = isNikha ? "نکہ نمبر" : "مستطیل نمبر";
+  const bottomLabel = isNikha ? "کلہ" : "ایکڑ";
   const apply = () => { onChange(draft); onClose(); };
 
   return (
@@ -138,14 +141,14 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
           {!mapId ? (
             <div className="border border-emerald-200 rounded-lg p-2.5 bg-emerald-50/60">
               <label className="text-[9px] font-bold text-emerald-700 uppercase block mb-1.5" dir="rtl" style={{ fontFamily: "serif" }}>
-                دستی اندراج — مستطیل نمبر لکھیں، نیچے ایکڑ منتخب کریں
+                دستی اندراج — {topLabel} لکھیں، نیچے {bottomLabel} منتخب کریں
               </label>
               <input
                 value={manualMust}
                 onChange={(e) => setManualMust(e.target.value)}
                 dir="ltr"
                 inputMode="numeric"
-                placeholder="مستطیل نمبر"
+                placeholder={isNikha ? "نکہ نمبر" : "مستطیل نمبر"}
                 className="w-full h-8 text-xs px-2 border border-emerald-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono bg-white"
               />
               <div className="flex flex-wrap gap-1 mt-2">
@@ -169,7 +172,7 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
               </div>
               <div className="flex items-center justify-between mt-1.5">
                 <div className="text-[9px] text-slate-400" dir="rtl" style={{ fontFamily: "serif" }}>
-                  اگلا مستطیل: نمبر بدل کر ایکڑ منتخب کریں — slash خود بخود
+                  اگلا {topLabel}: نمبر بدل کر {bottomLabel} منتخب کریں — slash خود بخود
                 </div>
                 {draft && (
                   <button onClick={() => setDraft("")} className="text-[9px] text-red-500 hover:text-red-700" dir="rtl" style={{ fontFamily: "serif" }}>صاف کریں</button>
