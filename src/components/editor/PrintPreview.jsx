@@ -268,7 +268,8 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   const pts = obj.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const label = obj.name || "";
   const midPt = obj.points[Math.floor(obj.points.length/2)];
-  const mustW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5);
+  // Line thickness — applies to ALL styles (1-10 level → world units via CHAKBANDI_SCALE)
+  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness || 6);
   const lineColor = C.chakbandiStroke || "#22c55e";
   const labelSvg = label && midPt ? `<text x="${midPt.x.toFixed(1)}" y="${(midPt.y - 8).toFixed(1)}" text-anchor="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="12" fill="${lineColor}">${label}</text>` : "";
 
@@ -276,26 +277,29 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   // the colour follows the grey/colorful toggle via C.chakbandiStroke.
   if (style === "khakaDasti") {
     return `<g>
-  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${mustW}" stroke-linecap="round" stroke-linejoin="miter"/>
+  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${lineW}" stroke-linecap="round" stroke-linejoin="miter"/>
   ${labelSvg}
 </g>`;
   }
   if (style === "dashed") {
+    const dashGap = CHAKBANDI_SCALE.dashSpacing(obj.dashSpacing || 6);
     return `<g>
-  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${mustW}" stroke-dasharray="${(mustW*2.2).toFixed(1)},${(mustW*1.4).toFixed(1)}" stroke-linecap="butt" stroke-linejoin="miter"/>
+  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${lineW}" stroke-dasharray="${(lineW*2.2).toFixed(1)},${dashGap.toFixed(1)}" stroke-linecap="butt" stroke-linejoin="miter"/>
   ${labelSvg}
 </g>`;
   }
   if (style === "dotted") {
+    const dotSize = CHAKBANDI_SCALE.dotSize(obj.dotSize || 4);
+    const dotSpacing = CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 4);
     return `<g>
-  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${mustW}" stroke-dasharray="${Math.max(2,mustW*0.5).toFixed(1)},${(mustW*1.2).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="${lineW}" stroke-dasharray="${Math.max(2,dotSize).toFixed(1)},${dotSpacing.toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>
   ${labelSvg}
 </g>`;
   }
   if (style === "stitched") {
-    const spineW = Math.max(2, mustW * 0.5);
-    const tickLen = mustW * 1.1;
-    const tickSpacing = Math.max(20, mustW * 2.5);
+    const spineW = Math.max(2, lineW * 0.5);
+    const tickLen = CHAKBANDI_SCALE.stitchSize(obj.stitchSize || 4);
+    const tickSpacing = Math.max(4, CHAKBANDI_SCALE.stitchSpacing(obj.stitchSpacing || 4));
     let ticks = "";
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
@@ -318,9 +322,9 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
 
   if (style === "rings") {
     // Series of empty circles (rings) along the line — "chakbandi line just rings"
-    const r = mustW;
-    const ringW = Math.max(1.5, mustW * 0.5);
-    const ringSpacing = Math.max(16, mustW * 2.2);
+    const r = CHAKBANDI_SCALE.ringSize(obj.ringSize || 4);
+    const ringW = Math.max(1.5, lineW * 0.5);
+    const ringSpacing = Math.max(4, CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 3));
     let rings = "";
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
@@ -337,9 +341,10 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   if (style === "loops") {
     // Pencil-drawn loops — flattened ellipses (chipti shape) with the stroke
     // endpoints sticking out along the line, like a hand-drawn cursive loop.
-    const rx = mustW * 1.4, ry = mustW * 0.8;
-    const loopW = Math.max(1.5, mustW * 0.5);
-    const loopSpacing = Math.max(20, mustW * 3);
+    const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 4);
+    const rx = loopSize * 1.4, ry = loopSize * 0.8;
+    const loopW = Math.max(1.5, lineW * 0.5);
+    const loopSpacing = Math.max(4, CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 3));
     let loops = "";
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
@@ -361,7 +366,6 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
 
   // Default: Cross (×) pattern — keeps the user's chakbandi colour + thickness
   const color = C.chakbandiStroke || "#000000";
-  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness);
   const crossW = lineW * 0.6;
   const crossSize = CHAKBANDI_SCALE.crossSize(obj.crossSize);
   const spacing = CHAKBANDI_SCALE.crossSpacing(obj.crossSpacing);

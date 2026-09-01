@@ -5,7 +5,7 @@ import { Download, FileText, Globe, Map, Table2, Image, FileImage, Share2 } from
 import { toast } from "sonner";
 import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, calculateChakbandiLoopGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas, svgAcreUses, acreUseHasLabel, drawAcreUsesOnCanvas, svgRailwayTracks, drawRailwayTracksCanvas as drawRailwayTracks } from "@/lib/printRenderHelpers";
-import { drawExclusionHatchOnCanvas } from "@/components/editor/GISRenderer";
+import { drawExclusionHatchOnCanvas, drawChakbandi } from "@/components/editor/GISRenderer";
 import { drawSideBoundaryCanvas, drawCanalStyleCanvas, buildSideBoundarySVG, buildCanalStyleSVG, isNewCanalStyle } from "@/lib/canalStyles";
 import { collectLandUses } from "@/lib/landUsePalette";
 import { canvasToPdfBlob, downloadBlob, shareBlob } from "@/lib/pdfExport";
@@ -272,35 +272,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     } else if (o.type === "railway" && o.points?.length >= 2) {
       drawRailwayTracks(ctx, o.points, o.width || 24, o.railwayStyle || 1, { railColor: o.railColor, tieColor: o.tieColor, tieSpacing: o.tieSpacing, gaugeWidth: o.gaugeWidth }, zoom, false);
     } else if (o.type === "chakbandi" && o.points?.length >= 2) {
-      // Bold line + X crosses — colour & thickness match editor/print exactly
-      const chColor = C.chakbandiStroke || "#000000";
-      const lineW = CHAKBANDI_SCALE.lineWidth(o.lineThickness);
-      ctx.strokeStyle=chColor; ctx.lineWidth=lineW;
-      ctx.lineCap="round"; ctx.lineJoin="round";
-      ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);
-      for(const p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();
-      // Draw X crosses along each segment
-      const crossSize = CHAKBANDI_SCALE.crossSize(o.crossSize), spacing = CHAKBANDI_SCALE.crossSpacing(o.crossSpacing);
-      ctx.strokeStyle=chColor; ctx.lineWidth=lineW*0.6; ctx.lineCap="round";
-      for (let i = 0; i < o.points.length - 1; i++) {
-        const a = o.points[i], b = o.points[i+1];
-        const segLen = Math.hypot(b.x-a.x, b.y-a.y);
-        const angle = Math.atan2(b.y-a.y, b.x-a.x);
-        const steps = Math.max(1, Math.floor(segLen / spacing));
-        for (let s = 0; s <= steps; s++) {
-          const t = s/steps;
-          const cx = a.x+(b.x-a.x)*t, cy = a.y+(b.y-a.y)*t;
-          const cos = Math.cos(angle), sin = Math.sin(angle);
-          ctx.beginPath();
-          ctx.moveTo(cx+(-crossSize*cos- -crossSize*sin), cy+(-crossSize*sin+ -crossSize*cos));
-          ctx.lineTo(cx+(crossSize*cos-crossSize*sin), cy+(crossSize*sin+crossSize*cos));
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(cx+(crossSize*cos- -crossSize*sin), cy+(crossSize*sin+ -crossSize*cos));
-          ctx.lineTo(cx+(-crossSize*cos-crossSize*sin), cy+(-crossSize*sin+crossSize*cos));
-          ctx.stroke();
-        }
-      }
+      // Shared chakbandi renderer — respects all 7 styles + line thickness/size/spacing
+      drawChakbandi(ctx, o, false, zoom, C);
     } else if (o.type === "mouza" && o.points?.length >= 2) {
       ctx.strokeStyle=C.mouzaStroke || "#000"; ctx.lineWidth=(CHAKBANDI_SCALE.lineWidth()*5)/3; ctx.lineCap="round"; ctx.setLineDash([25,12]);
       ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y);

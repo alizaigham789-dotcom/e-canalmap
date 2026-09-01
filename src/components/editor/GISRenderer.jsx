@@ -1122,9 +1122,8 @@ export function drawDamageMarker(ctx, obj, isSelected, zoom) {
 export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false, forceKhakaDasti = false) {
   if (obj.points.length < 2) return;
   const style = forceKhakaDasti ? "khakaDasti" : (obj.chakbandiStyle || "cross");
-  const mustBorderW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5) * 0.2;
-  const mustW = mustBorderW / zoom;
-  const mustFullW = MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness || 5);
+  // Line thickness — applies to ALL styles (1-10 level → world units via CHAKBANDI_SCALE)
+  const lineW = CHAKBANDI_SCALE.lineWidth(obj.lineThickness || 6) * 0.2 / zoom;
   const lineColor = style === "khakaDasti" ? "#22c55e" : (C.chakbandiStroke || "#22c55e");
   const color = isSelected ? "#86efac" : lineColor;
 
@@ -1132,7 +1131,7 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
   // width (forced on by the Print خاکہ دستی toggle). Cross keeps the user's colour/thickness.
   const drawSpine = (dash, cap = "round") => {
     ctx.strokeStyle = color;
-    ctx.lineWidth = mustW;
+    ctx.lineWidth = lineW;
     ctx.lineCap = cap;
     ctx.lineJoin = "miter";
     ctx.setLineDash(dash || []);
@@ -1146,24 +1145,27 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
   if (style === "khakaDasti") {
     drawSpine(null);
   } else if (style === "dashed") {
-    drawSpine([mustW * 2.2, mustW * 1.4], "butt");
+    const dashGap = CHAKBANDI_SCALE.dashSpacing(obj.dashSpacing || 6) / zoom;
+    drawSpine([lineW * 2.2, dashGap], "butt");
   } else if (style === "dotted") {
-    drawSpine([Math.max(0.5, mustW * 0.4), mustW * 1.2], "round");
+    const dotSize = CHAKBANDI_SCALE.dotSize(obj.dotSize || 4) * 0.2 / zoom;
+    const dotSpacing = CHAKBANDI_SCALE.dotSpacing(obj.dotSpacing || 4) / zoom;
+    drawSpine([Math.max(0.5, dotSize), dotSpacing], "round");
   } else if (style === "stitched") {
-    const spineW = Math.max(1, mustW * 0.5);
+    const spineW = Math.max(1, lineW * 0.5);
     ctx.strokeStyle = color; ctx.lineWidth = spineW; ctx.lineCap = "round"; ctx.lineJoin = "miter"; ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(obj.points[0].x, obj.points[0].y);
     for (const p of obj.points) ctx.lineTo(p.x, p.y);
     ctx.stroke();
-    const tickLen = mustW * 1.1;
-    const tickSpacing = Math.max(20, mustW * 2.5);
+    const tickLen = CHAKBANDI_SCALE.stitchSize(obj.stitchSize || 4) * 0.2 / zoom;
+    const tickSpacing = CHAKBANDI_SCALE.stitchSpacing(obj.stitchSpacing || 4) / zoom;
     ctx.lineWidth = Math.max(1, spineW * 0.7);
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
       const ang = Math.atan2(b.y - a.y, b.x - a.x);
       const nx = -Math.sin(ang), ny = Math.cos(ang);
-      const steps = Math.max(1, Math.floor(segLen / tickSpacing));
+      const steps = Math.max(1, Math.floor(segLen / Math.max(4, tickSpacing)));
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
         const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
@@ -1175,13 +1177,13 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
     }
   } else if (style === "rings") {
     // Series of empty circles (rings) along the line
-    const r = mustFullW;
-    const ringSpacing = Math.max(16, mustFullW * 2.2);
-    ctx.strokeStyle = color; ctx.lineWidth = mustW; ctx.setLineDash([]);
+    const r = CHAKBANDI_SCALE.ringSize(obj.ringSize || 4) * 0.2 / zoom;
+    const ringSpacing = CHAKBANDI_SCALE.ringSpacing(obj.ringSpacing || 3) / zoom;
+    ctx.strokeStyle = color; ctx.lineWidth = lineW; ctx.setLineDash([]);
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
-      const steps = Math.max(1, Math.floor(segLen / ringSpacing));
+      const steps = Math.max(1, Math.floor(segLen / Math.max(4, ringSpacing)));
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
         const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;
@@ -1190,15 +1192,16 @@ export function drawChakbandi(ctx, obj, isSelected, zoom, C, forceCross = false,
     }
   } else if (style === "loops") {
     // Pencil-drawn loops — flattened ellipses with stroke endpoints sticking out
-    const rx = mustFullW * 1.4, ry = mustFullW * 0.8;
-    const loopSpacing = Math.max(20, mustFullW * 3);
-    ctx.strokeStyle = color; ctx.lineWidth = mustW; ctx.setLineDash([]); ctx.lineCap = "round";
+    const loopSize = CHAKBANDI_SCALE.loopsSize(obj.loopsSize || 4) * 0.2 / zoom;
+    const rx = loopSize * 1.4, ry = loopSize * 0.8;
+    const loopSpacing = CHAKBANDI_SCALE.loopsSpacing(obj.loopsSpacing || 3) / zoom;
+    ctx.strokeStyle = color; ctx.lineWidth = lineW; ctx.setLineDash([]); ctx.lineCap = "round";
     for (let i = 0; i < obj.points.length - 1; i++) {
       const a = obj.points[i], b = obj.points[i+1];
       const segLen = Math.hypot(b.x - a.x, b.y - a.y);
       const ang = Math.atan2(b.y - a.y, b.x - a.x);
       const dirX = Math.cos(ang), dirY = Math.sin(ang);
-      const steps = Math.max(1, Math.floor(segLen / loopSpacing));
+      const steps = Math.max(1, Math.floor(segLen / Math.max(4, loopSpacing)));
       for (let s = 0; s <= steps; s++) {
         const t = s / steps;
         const cx = a.x + (b.x - a.x) * t, cy = a.y + (b.y - a.y) * t;

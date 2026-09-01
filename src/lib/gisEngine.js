@@ -657,7 +657,16 @@ export function createOutlet(canalId, startPt, endPt, label = "", canalWidth = 1
 export const CHAKBANDI_SCALE = {
   lineWidth: (level) => (level || 6) * 3,       // spine + cross stroke thickness
   crossSize: (level) => (level || 3) * 6,       // cross arm length
-  crossSpacing: (level) => (level || 2) * 20,   // distance between crosses
+  crossSpacing: (level) => (level || 2) * 20,  // distance between crosses
+  loopsSize: (level) => (level || 4) * 6,       // loop ellipse size
+  loopsSpacing: (level) => (level || 3) * 20,  // distance between loops
+  ringSize: (level) => (level || 4) * 6,        // ring radius
+  ringSpacing: (level) => (level || 3) * 20,   // distance between rings
+  dashSpacing: (level) => (level || 6) * 6,    // dash gap length
+  stitchSize: (level) => (level || 4) * 6,     // stitch tick length
+  stitchSpacing: (level) => (level || 4) * 20, // distance between stitches
+  dotSize: (level) => (level || 4) * 3,        // dot length
+  dotSpacing: (level) => (level || 4) * 20,    // distance between dots
 };
 export const MUSTATEEL_SCALE = {
   boundaryWidth: (level) => (level || 5) * 3,

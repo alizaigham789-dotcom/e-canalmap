@@ -860,19 +860,25 @@ function ChakbandiStyleControls({ local, commit }) {
         <SpacingControl label="Dash Spacing" value={local.dashSpacing || 6} min={2} max={20} step={1} onChange={v => commit("dashSpacing", v)} />
       )}
 
-      {/* Stitched — Stitch Spacing */}
+      {/* Stitched — Stitch Size + Stitch Spacing */}
       {style === "stitched" && (
-        <SpacingControl label="Stitch Spacing" value={local.stitchSpacing || 4} min={2} max={20} step={1} onChange={v => commit("stitchSpacing", v)} />
+        <>
+          <SpacingControl label="Stitch Size" value={local.stitchSize || 4} min={1} max={10} step={1} onChange={v => commit("stitchSize", v)} />
+          <SpacingControl label="Stitch Spacing" value={local.stitchSpacing || 4} min={2} max={20} step={1} onChange={v => commit("stitchSpacing", v)} />
+        </>
       )}
 
-      {/* Dotted — Dot Spacing */}
+      {/* Dotted — Dot Size + Dot Spacing */}
       {style === "dotted" && (
-        <SpacingControl label="Dot Spacing" value={local.dotSpacing || 4} min={2} max={20} step={1} onChange={v => commit("dotSpacing", v)} />
+        <>
+          <SpacingControl label="Dot Size" value={local.dotSize || 4} min={1} max={10} step={1} onChange={v => commit("dotSize", v)} />
+          <SpacingControl label="Dot Spacing" value={local.dotSpacing || 4} min={2} max={20} step={1} onChange={v => commit("dotSpacing", v)} />
+        </>
       )}
 
       {/* Khaka Dasti — only line thickness (solid green line) */}
       {style === "khakaDasti" && (
-        <p className="text-[9px] text-green-600">Solid green line — only thickness applies.</p>
+        <p className="text-[9px] text-green-600">خاکہ دستی / Line — only thickness applies.</p>
       )}
     </div>
   );
