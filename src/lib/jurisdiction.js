@@ -10,35 +10,42 @@ export const SUBDIVISIONS = {
 // Sections per sub-division (from official document)
 export const SECTIONS = {
   Jauharabad: ["Mithatiwana", "Khushab Town"],
-  Qaidabad: ["Khushab (Zilladari)", "Mushtar Twana", "Sanjyal", "Admi Sargal"],
+  Qaidabad: ["Khushab", "Gunjial", "Mithatiwana", "Wan"],
 };
 
-// Mouzas per section (from Thal Circle PDF)
+// Mouzas per (subdivision + section) — keyed by `subdivision::section` to keep
+// section names unique only within their subdivision (e.g. Mithatiwana exists
+// in both Jauharabad and Qaidabad but has different mouzas).
+// Jauharabad sections: mouza names to be provided later.
+// Qaidabad sections: Halqa Patwar mouza lists per official document.
 export const SECTION_MOUZAS = {
-  // Jauharabad sub-division
-  "Mithatiwana": ["Mithatiwana", "Khushab"],
-  "Khushab Town": ["Khushab", "Khanpur"],
+  // Jauharabad sub-division (mouzas to be filled later)
+  "Jauharabad::Mithatiwana": [],
+  "Jauharabad::Khushab Town": [],
 
-  // Qaidabad sub-division — Khushab Zilladari Section (Page 1)
-  "Khushab (Zilladari)": [
-    "خوشاب", "منڈل", "تاڑی جٹلی", "ذماک", "قی", "ڈُمل", "ڈُمل نمبر 1", "ڈُمل نمبر 2",
+  // Qaidabad — Khushab Zilladari Section
+  "Qaidabad::Khushab": [
+    "خوشاب", "سندرال", "ناڑی جنوبی", "ڈھاک", "نلی", "ہڈالی", "64/MB",
+    "ہڈالی نمبر 1", "ہڈالی نمبر 2",
   ],
 
-  // Qaidabad — Mushtar Twana Section (Page 2)
-  "Mushtar Twana": [
-    "مشتر توانہ", "حسن پر توانہ", "پٹیال جٹلی", "یار", "اوکل سوبہ", "مجازاے رائیٹ",
-    "مشتر توانہ نمبر 2", "مشتر توانہ نمبر 3",
+  // Qaidabad — Gunjial Section (formerly Sanjyal)
+  "Qaidabad::Gunjial": [
+    "5/TDA", "4/TDA", "26/MB", "8/MB", "گنجیال", "آدھی کوٹ", "روڈہ",
+    "روڈہ نمبر 1", "اوکھلی موہلہ جنوبی",
   ],
 
-  // Qaidabad — Sanjyal Section (Page 3)
-  "Sanjyal": [
-    "سنجیال", "اوکل سوبہ", "مشتر توانہ", "رودہ", "رودہ نمبر 1", "8/MB", "آڑمی کٹ",
+  // Qaidabad — Mithatiwana Section (formerly Mushtar Twana)
+  "Qaidabad::Mithatiwana": [
+    "48/MB", "حسن پور ٹوانہ", "بوتالہ جنوبی", "مٹھہ ٹوانہ", "مٹھہ ٹوانہ نمبر 1",
+    "بجار", "اوکھلی موہلہ جنوبی", "مہاڑاے رائیٹ", "مٹھہ ٹوانہ نمبر 2",
+    "مٹھہ ٹوانہ نمبر 3",
   ],
 
-  // Qaidabad — Admi Sargal / Waans Section (Page 4)
-  "Admi Sargal": [
-    "التزام", "آڑمی سرگل", "بندیال", "شادیہ شال", "شادیہ جٹلی", "واں",
-    "مظفر شال", "بندیال نمبر 1", "مجازاے لیفٹ", "واں نمبر 1",
+  // Qaidabad — Wan Section (formerly Admi Sargal)
+  "Qaidabad::Wan": [
+    "اتراء", "آدھی سرگل", "بندیال", "شادیہ جنوبی", "شادیہ شمالی", "واں",
+    "مظفر پور", "بندیال نمبر 1", "مہاڑاے لفٹ", "مہاڑاے لفٹ نمبر 1",
   ],
 };
 
@@ -46,6 +53,6 @@ export function sectionsFor(subdivision) {
   return SECTIONS[subdivision] || [];
 }
 
-export function mouzasFor(section) {
-  return SECTION_MOUZAS[section] || [];
+export function mouzasFor(subdivision, section) {
+  return SECTION_MOUZAS[`${subdivision}::${section}`] || [];
 }

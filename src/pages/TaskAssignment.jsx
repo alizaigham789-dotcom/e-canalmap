@@ -169,7 +169,7 @@ export default function TaskAssignment() {
             <Select value={form.mouza} onValueChange={(v) => set("mouza", v)} disabled={!form.section}>
               <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={form.section ? "موضع منتخب کریں" : "پہلے سیکشن"} /></SelectTrigger>
               <SelectContent>
-                {mouzasFor(form.section).map((m) => <SelectItem key={m} value={m} style={{ fontFamily: URDU }}>{m}</SelectItem>)}
+                {mouzasFor(form.subdivision, form.section).map((m) => <SelectItem key={m} value={m} style={{ fontFamily: URDU }}>{m}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
