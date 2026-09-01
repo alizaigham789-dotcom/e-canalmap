@@ -1207,7 +1207,12 @@ export function calculateChakbandiGCA(chakbandi, parcels, canals = []) {
     return [...left, ...[...right].reverse()];
   }).filter(Boolean);
 
-  let totalAcres = 0;
+  // Each killa (acre) is split into 8 kanal (2 cols × 4 rows) and each kanal into
+  // 20 marla (5 cols × 4 rows) → 160 marla per acre. Count marla boxes whose centre
+  // falls inside the chakbandi polygon and NOT inside a canal. Counting at marla
+  // resolution means a chakbandi crossing the middle of a kanal registers as a
+  // clean half-kanal (10 marla), giving an easy, integer-marla CCA.
+  let totalMarla = 0;
   for (const p of parcels) {
     if (p.excluded) continue; // excluded parcels don't count in GCA
     let killaCols, killaRows;
@@ -1222,20 +1227,36 @@ export function calculateChakbandiGCA(chakbandi, parcels, canals = []) {
         if (p.excludedAcres && p.type === "mustateel") {
           if (p.excludedAcres[getMustateeelKillaGrid()[r][c] - 1]) continue;
         }
-        const cellRect = { x: p.x + c * cellW, y: p.y + r * cellH, w: cellW, h: cellH };
-        let fraction = rectAreaFractionInPolygon(cellRect, polygon);
-        if (fraction <= 0) continue;
-        for (const canalPoly of canalPolys) {
-          if (fraction <= 0) break;
-          const canalFraction = rectAreaFractionInPolygon(cellRect, canalPoly);
-          fraction = Math.max(0, fraction - canalFraction);
+        const acreX = p.x + c * cellW, acreY = p.y + r * cellH;
+        // 8 kanal per acre (2 cols × 4 rows) — matches the visible kanal grid
+        const kanalCols = 2, kanalRows = 4;
+        const kW = cellW / kanalCols, kH = cellH / kanalRows;
+        // 20 marla per kanal (5 cols × 4 rows) — 1 marla = 272.25 sq ft
+        const marlaCols = 5, marlaRows = 4;
+        const mW = kW / marlaCols, mH = kH / marlaRows;
+        for (let kr = 0; kr < kanalRows; kr++) {
+          for (let kc = 0; kc < kanalCols; kc++) {
+            for (let mr = 0; mr < marlaRows; mr++) {
+              for (let mc = 0; mc < marlaCols; mc++) {
+                const cx = acreX + kc * kW + mc * mW + mW / 2;
+                const cy = acreY + kr * kH + mr * mH + mH / 2;
+                if (!pointInPolygon({ x: cx, y: cy }, polygon)) continue;
+                let inCanal = false;
+                for (const canalPoly of canalPolys) {
+                  if (pointInPolygon({ x: cx, y: cy }, canalPoly)) { inCanal = true; break; }
+                }
+                if (inCanal) continue;
+                totalMarla++;
+              }
+            }
+          }
         }
-        totalAcres += fraction; // each killa = 1 acre
       }
     }
   }
-  // Keep decimal precision (1 acre = 160 marla) — the marla breakdown needs the point
-  return Math.round(totalAcres * 100) / 100;
+  // 1 acre = 160 marla — 4 decimals keeps exact marla precision (1 marla = 0.00625 acre)
+  // so the acre/kanal/marla breakdown is always a clean integer.
+  return Math.round((totalMarla / 160) * 10000) / 10000;
 }
 
 // ─── Closed-loop detection for chakbandi + canal/road ───────────────────────
