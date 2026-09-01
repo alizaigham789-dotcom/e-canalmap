@@ -447,6 +447,45 @@ export function getMurabaKillaCells(obj) {
   return cells;
 }
 
+// ─── Kanal subdivision (8 boxes per acre/killa) ───────────────────────────
+// Each acre (killa) = 8 kanal arranged as 2 columns × 4 rows within the cell.
+// Returns 8 box rects {box:1..8, x, y, w, h} for one killa cell, reading row-by-row.
+export function getKanalBoxes(cell) {
+  const cols = 2, rows = 4;
+  const bw = cell.w / cols, bh = cell.h / rows;
+  const boxes = [];
+  let box = 1;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      boxes.push({ box, x: cell.x + c * bw, y: cell.y + r * bh, w: bw, h: bh });
+      box++;
+    }
+  }
+  return boxes;
+}
+
+// Resolve a single killa number (1..N) to its cell rect for a parcel object.
+export function getKillaCell(obj, killa) {
+  const cells = obj.type === "muraba" ? getMurabaKillaCells(obj)
+    : obj.type === "mustateel" ? getMustateelKillaCells(obj)
+    : [{ killa: 1, x: obj.x, y: obj.y, w: obj.w, h: obj.h }];
+  return cells.find(c => c.killa === killa) || null;
+}
+
+// Normalised per-killa kanal-fill list — each entry is null or {color, label, boxes:number[1..8]}.
+export function getKanalFills(obj) {
+  const total = obj && obj.type === "muraba" ? 25 : 10;
+  if (!obj || !Array.isArray(obj.kanalFills)) return Array(total).fill(null);
+  const f = obj.kanalFills.slice(0, total);
+  while (f.length < total) f.push(null);
+  return f.map(x => {
+    if (!x || !x.color) return null;
+    const boxes = Array.isArray(x.boxes) ? x.boxes.filter(b => b >= 1 && b <= 8) : [];
+    if (boxes.length === 0) return null;
+    return { color: x.color, label: x.label || "", boxes };
+  });
+}
+
 export function getMurabaKillaGrid() {
   return [
     [1, 2, 3, 4, 5],

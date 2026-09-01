@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, getKanalBoxes, getKanalFills, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, getOutletLabelPos, isUrduText, drawRailwayTracksCanvas } from "@/lib/printRenderHelpers";
 import { drawSideBoundaryCanvas, drawCanalStyleCanvas, isNewCanalStyle } from "@/lib/canalStyles";
 
@@ -234,6 +234,9 @@ export function drawMustateel(ctx, obj, isSelected, zoom, C, showKillaNumbers = 
       }
     }
 
+    // Layer 2c: Per-kanal box fills — coloured sub-kanal cells within selected acres
+    drawKanalFillsOnCells(ctx, getKanalFills(obj), getMustateelKillaCells(obj), zoom);
+
     // Layer 5: Killa numbers + land-use labels
     if (effectiveShowKilla || (showAcreUseLabels && acreUses.some(u => u && u.label))) {
       ctx.save();
@@ -403,6 +406,9 @@ export function drawMuraba(ctx, obj, isSelected, zoom, C, showKillaNumbers = tru
         }
       }
     }
+
+    // Layer 2c: Per-kanal box fills — coloured sub-kanal cells within selected acres
+    drawKanalFillsOnCells(ctx, getKanalFills(obj), getMurabaKillaCells(obj), zoom);
 
     // Layer 5: Killa numbers + land-use labels
     const effectiveShowKilla = effectiveKillaVisible(obj, showKillaNumbers);
@@ -1589,6 +1595,25 @@ export function drawOutletDraft(ctx, outletDraft, snapPos, zoom) {
   ctx.beginPath(); ctx.moveTo(outletDraft.x, outletDraft.y);
   if (snapPos) ctx.lineTo(snapPos.x, snapPos.y);
   ctx.stroke(); ctx.setLineDash([]);
+}
+
+// ─── Per-kanal box fills inside an acre (over the acre-use layer) ───────────
+function drawKanalFillsOnCells(ctx, kanalFills, cells, zoom) {
+  for (const cell of cells) {
+    const fill = kanalFills[cell.killa - 1];
+    if (!fill || !fill.color || !fill.boxes || fill.boxes.length === 0) continue;
+    for (const b of getKanalBoxes(cell)) {
+      if (!fill.boxes.includes(b.box)) continue;
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = fill.color;
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.restore();
+      ctx.strokeStyle = fill.color;
+      ctx.lineWidth = 1.2 / zoom;
+      ctx.strokeRect(b.x, b.y, b.w, b.h);
+    }
+  }
 }
 
 // ---- Hex color to RGB string ----

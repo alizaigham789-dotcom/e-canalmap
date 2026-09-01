@@ -7,6 +7,7 @@ import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, Chev
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { calculateChakbandiGCA, acresToAcreKanalMarla } from "@/lib/gisEngine";
 import AcreUseControl from "@/components/editor/AcreUseControl";
+import KanalFillControl from "@/components/editor/KanalFillControl";
 import CanalStyleControl from "@/components/editor/CanalStyleControl";
 
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
@@ -131,6 +132,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               <ExclusionToggle local={local} commit={commit} />
               <MustateelStyleControl local={local} onApplyAll={onUpdateAllMustateels} onResetAll={onResetAllMustateels} />
               <AcreUseControl local={local} commit={commit} />
+              <KanalFillControl local={local} commit={commit} />
               {(() => {
                 const hasMustateelFill = !!(local.fillColor && local.fillColor.trim() && local.fillColor.startsWith("#")) || (local.acreUses && local.acreUses.some(u => u && u.color));
                 return hasMustateelFill ? (
@@ -157,6 +159,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               <ExclusionToggle local={local} commit={commit} />
               <MustateelStyleControl local={local} onApplyAll={onUpdateAllMurabas} onResetAll={onResetAllMurabas} type="muraba" />
               <AcreUseControl local={local} commit={commit} />
+              <KanalFillControl local={local} commit={commit} />
               {(() => {
                 const hasMurabaFill = !!(local.fillColor && local.fillColor.trim() && local.fillColor.startsWith("#")) || (local.acreUses && local.acreUses.some(u => u && u.color));
                 return hasMurabaFill ? (
