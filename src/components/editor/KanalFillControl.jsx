@@ -1,67 +1,13 @@
 import React, { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Trash2 } from "lucide-react";
-import { LAND_USE_PRESETS, getAcreUses, killaCountFor } from "@/lib/landUsePalette";
-import { getKanalFills, getMustateelKillaCells, getMurabaKillaCells } from "@/lib/gisEngine";
+import { LAND_USE_PRESETS, getAcreUses, killaCountFor, acreLabelsFor } from "@/lib/landUsePalette";
+import { getKanalFills } from "@/lib/gisEngine";
 
 const URDU = { fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif" };
 const BOXES = [1, 2, 3, 4, 5, 6, 7, 8];
 const seq = (n) => BOXES.slice(0, Math.max(0, Math.min(8, n)));
 const GREEN = "#16a34a";
-
-// Which side of a polyline a point lies on (sign relative to nearest segment).
-// +1 = left of the line, -1 = right, 0 = on it.
-function sideOfPolyline(pts, px, py) {
-  let best = Infinity, bestSign = 0;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const a = pts[i], b = pts[i + 1];
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const len2 = dx * dx + dy * dy;
-    if (len2 === 0) continue;
-    let t = ((px - a.x) * dx + (py - a.y) * dy) / len2;
-    t = Math.max(0, Math.min(1, t));
-    const projx = a.x + t * dx, projy = a.y + t * dy;
-    const d2 = (px - projx) ** 2 + (py - projy) ** 2;
-    if (d2 < best) {
-      best = d2;
-      bestSign = Math.sign(dx * (py - a.y) - dy * (px - a.x));
-    }
-  }
-  return bestSign;
-}
-
-// Per-acre label for a parcel. When the parcel carries two labels (label + label2)
-// and a mouza boundary line crosses it, the mouza line is treated as the boundary:
-// acres on one side show label, acres on the other side show label2.
-// Returns an array indexed by killa-1 (0..total-1).
-function acreLabelsFor(local, allObjects) {
-  const total = killaCountFor(local);
-  const label1 = local.label || "";
-  const label2 = local.label2 || "";
-
-  const cells = local.type === "muraba" ? getMurabaKillaCells(local)
-    : local.type === "mustateel" ? getMustateelKillaCells(local)
-    : [{ killa: 1, x: local.x, y: local.y, w: local.w || 220, h: local.h || 198 }];
-  const byKilla = Array(total).fill(null);
-  cells.forEach((cell) => { if (cell && cell.killa >= 1 && cell.killa <= total) byKilla[cell.killa - 1] = cell; });
-
-  const mouzas = (allObjects || []).filter((o) => o.type === "mouza" && o.points && o.points.length >= 2);
-  const useSplit = !!label2 && mouzas.length > 0;
-  if (!useSplit) return byKilla.map(() => label1 || "—");
-
-  const mx1 = local.x, my1 = local.y;
-  const mx2 = local.x + (local.w || 0), my2 = local.y + (local.h || 0);
-  const mouza = mouzas.find((m) => {
-    const xs = m.points.map((p) => p.x), ys = m.points.map((p) => p.y);
-    return Math.max(...xs) >= mx1 && Math.min(...xs) <= mx2 && Math.max(...ys) >= my1 && Math.min(...ys) <= my2;
-  }) || mouzas[0];
-
-  return byKilla.map((cell) => {
-    if (!cell) return label1 || "—";
-    const cx = cell.x + cell.w / 2, cy = cell.y + cell.h / 2;
-    return sideOfPolyline(mouza.points, cx, cy) >= 0 ? label1 : label2;
-  });
-}
 
 // Unified colour-fill control for a mustateel / muraba.
 //   • On/Off toggle at top — turning ON fills every acre by default (full 8 kanal);
@@ -111,28 +57,38 @@ export default function KanalFillControl({ local, commit, title = "Mustateel Col
     const nu = acreUses.slice(), nf = kanalFills.slice();
     if (n === 0) { nu[idx] = null; nf[idx] = null; }
     else if (n === 8) { nu[idx] = { color: selColor, label: selLabel }; nf[idx] = null; }
-    else { nu[idx] = null; nf[idx] = { color: selColor, label: selLabel, boxes: seq(n) }; }
+    else {
+      // Partial — each kanal box records its own colour (uniform by default) so the
+      // user can later recolour individual boxes to get different colours in one acre.
+      const boxes = seq(n);
+      const boxColors = {};
+      boxes.forEach((b) => { boxColors[b] = { color: selColor, label: selLabel }; });
+      nu[idx] = null; nf[idx] = { color: selColor, label: selLabel, boxes, boxColors };
+    }
     write(nu, nf);
     // Auto-open the kanal panel when a partial count is selected; close otherwise
     setOpenAcre(n > 0 && n < 8 ? idx + 1 : null);
   };
 
-  // Apply a different colour/label to a specific (already-filled) acre, keeping its boxes
-  const setAcreColor = (idx, color, label) => {
-    const nu = acreUses.slice(), nf = kanalFills.slice();
-    if (acreUses[idx]) nu[idx] = { ...acreUses[idx], color, label };
-    else if (kanalFills[idx]) nf[idx] = { ...kanalFills[idx], color, label };
-    write(nu, nf);
-  };
-
+  // Toggle a single kanal box. When switching a box ON, it takes the CURRENTLY selected
+  // preset colour (selColor/selLabel) — so the user can pick red, click 4 boxes, pick
+  // green, click 4 boxes → one acre holding two different colours.
   const toggleBox = (idx, b) => {
     const f = kanalFills[idx];
     if (!f) return;
-    const boxes = f.boxes.includes(b) ? f.boxes.filter((x) => x !== b) : [...f.boxes, b].sort((x, y) => x - y);
+    const boxColors = { ...(f.boxColors || {}) };
+    let boxes;
+    if (f.boxes.includes(b)) {
+      boxes = f.boxes.filter((x) => x !== b);
+      delete boxColors[b];
+    } else {
+      boxes = [...f.boxes, b].sort((x, y) => x - y);
+      boxColors[b] = { color: selColor, label: selLabel };
+    }
     const nu = acreUses.slice(), nf = kanalFills.slice();
     if (boxes.length === 0) { nf[idx] = null; }
     else if (boxes.length === 8) { nu[idx] = { color: f.color, label: f.label }; nf[idx] = null; }
-    else { nf[idx] = { ...f, boxes }; }
+    else { nf[idx] = { ...f, boxes, boxColors }; }
     write(nu, nf);
   };
 
@@ -228,32 +184,34 @@ export default function KanalFillControl({ local, commit, title = "Mustateel Col
                     </div>
                     {isOpen && (
                       <>
-                        {/* Small colour presets — apply a different colour to THIS acre only */}
-                        <div className="mt-1 flex flex-wrap gap-0.5">
+                        {/* Small colour presets — pick the active colour, then click kanal
+                            boxes below to apply it. Lets different boxes get different colours. */}
+                        <div className="mt-1 flex flex-wrap gap-0.5 items-center">
                           {LAND_USE_PRESETS.map((p) => {
-                            const cur = acreUses[idx] || kanalFills[idx];
-                            const active = cur && cur.color === p.color && cur.label === p.label;
+                            const active = selColor === p.color && selLabel === p.label;
                             return (
-                              <button key={p.id} onClick={() => setAcreColor(idx, p.color, p.label)}
+                              <button key={p.id} onClick={() => { setSelColor(p.color); setSelLabel(p.label); }}
                                 title={p.label}
                                 className={`w-5 h-5 rounded border ${active ? "border-blue-700 ring-1 ring-blue-400" : "border-slate-300"}`}
                                 style={{ background: p.color }} />
                             );
                           })}
-                          <input type="color" value={fillCol}
-                            onChange={(e) => setAcreColor(idx, e.target.value, (acreUses[idx] || kanalFills[idx]).label)}
+                          <input type="color" value={/^#[0-9a-f]{6}$/i.test(selColor) ? selColor : "#7c3aed"}
+                            onChange={(e) => { setSelColor(e.target.value); setSelLabel(customLabel || "استعمال"); }}
                             className="w-5 h-5 rounded cursor-pointer border border-slate-300 p-0" />
                         </div>
-                        {/* Acre-shaped kanal grid — 2 cols × 4 rows */}
+                        {/* Acre-shaped kanal grid — 2 cols × 4 rows. Each box shows its own colour. */}
                         {f ? (
                           <div className="mt-1.5 flex justify-center">
                             <div className="grid grid-cols-2 gap-0.5 p-1 bg-slate-100 rounded border border-slate-300" style={{ width: 96 }}>
                               {BOXES.map((b) => {
                                 const on = f.boxes.includes(b);
+                                const bc = f.boxColors && f.boxColors[b];
+                                const col = (bc && bc.color) || f.color;
                                 return (
                                   <button key={b} onClick={() => toggleBox(idx, b)}
                                     className="relative h-8 rounded-sm border text-[9px] font-bold flex items-center justify-center"
-                                    style={{ background: on ? f.color : "#fff", borderColor: on ? f.color : "#cbd5e1", color: on ? "#fff" : "#94a3b8" }}
+                                    style={{ background: on ? col : "#fff", borderColor: on ? col : "#cbd5e1", color: on ? "#fff" : "#94a3b8" }}
                                     title={`کنال ${b}`}>
                                     {b}
                                   </button>
@@ -264,7 +222,7 @@ export default function KanalFillControl({ local, commit, title = "Mustateel Col
                         ) : (
                           <p className="text-[8px] text-slate-400 mt-1 text-center" style={URDU}>سلائیڈر 1–7 پر رکھیں تاکہ کنال منتخب ہوں</p>
                         )}
-                        <p className="text-[8px] text-slate-400 mt-1 text-center" style={URDU}>ایکڑ کے کنال (2×4) — کلک کر کے منتخب کریں</p>
+                        <p className="text-[8px] text-slate-400 mt-1 text-center" style={URDU}>رنگ منتخب کر کے کنال (2×4) پر کلک کریں — ہر کنال الگ رنگ کا سکتا ہے</p>
                       </>
                     )}
                   </div>

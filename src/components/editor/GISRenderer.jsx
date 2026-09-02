@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, getKanalBoxes, getKanalFills, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, getKanalBoxes, getKanalFills, getExcludedKanals, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, getOutletLabelPos, isUrduText, drawRailwayTracksCanvas } from "@/lib/printRenderHelpers";
 import { drawSideBoundaryCanvas, drawCanalStyleCanvas, isNewCanalStyle } from "@/lib/canalStyles";
 
@@ -1598,18 +1598,22 @@ export function drawOutletDraft(ctx, outletDraft, snapPos, zoom) {
 }
 
 // ─── Per-kanal box fills inside an acre (over the acre-use layer) ───────────
+// Each box can carry its own colour via fill.boxColors[b]; boxes without an override
+// fall back to the acre's fill.color — so a single acre can hold multiple colours.
 function drawKanalFillsOnCells(ctx, kanalFills, cells, zoom) {
   for (const cell of cells) {
     const fill = kanalFills[cell.killa - 1];
     if (!fill || !fill.color || !fill.boxes || fill.boxes.length === 0) continue;
     for (const b of getKanalBoxes(cell)) {
       if (!fill.boxes.includes(b.box)) continue;
+      const bc = fill.boxColors && fill.boxColors[b.box];
+      const col = (bc && bc.color) || fill.color;
       ctx.save();
       ctx.globalAlpha = 0.85;
-      ctx.fillStyle = fill.color;
+      ctx.fillStyle = col;
       ctx.fillRect(b.x, b.y, b.w, b.h);
       ctx.restore();
-      ctx.strokeStyle = fill.color;
+      ctx.strokeStyle = col;
       ctx.lineWidth = 1.2 / zoom;
       ctx.strokeRect(b.x, b.y, b.w, b.h);
     }
@@ -1630,16 +1634,26 @@ export function drawExclusionHatchOnCanvas(ctx, obj, zoom) {
   const color = obj.exclusionColor || "#000000"; // default black
   const lineWidth = 1 / zoom; // matches acre/killa grid line width
 
-  // Determine which rectangles to hatch — per-acre for mustateels, whole parcel otherwise
+  // Determine which rectangles to hatch — per-kanal for mustateels/murabas, whole parcel otherwise.
+  // `getExcludedKanals` unifies per-kanal exclusion (boxes), legacy acre-wise excludedAcres and the
+  // default "whole parcel excluded" (obj.excluded with no per-acre data).
   let rects;
-  if (obj.excludedAcres && obj.type === "mustateel") {
-    rects = getMustateelKillaCells(obj)
-      .filter(cell => obj.excludedAcres[cell.killa - 1])
-      .map(cell => ({ x: cell.x, y: cell.y, w: cell.w, h: cell.h }));
-  } else if (obj.excludedAcres && obj.type === "muraba") {
-    rects = getMurabaKillaCells(obj)
-      .filter(cell => obj.excludedAcres[cell.killa - 1])
-      .map(cell => ({ x: cell.x, y: cell.y, w: cell.w, h: cell.h }));
+  if (obj.type === "mustateel" || obj.type === "muraba") {
+    const exK = getExcludedKanals(obj);
+    if (!exK.some(e => e)) return; // nothing excluded → no hatch
+    const cells = obj.type === "muraba" ? getMurabaKillaCells(obj) : getMustateelKillaCells(obj);
+    rects = [];
+    for (const cell of cells) {
+      const ex = exK[cell.killa - 1];
+      if (!ex) continue;
+      if (ex.boxes.length === 8) {
+        rects.push({ x: cell.x, y: cell.y, w: cell.w, h: cell.h });
+      } else {
+        for (const b of getKanalBoxes(cell)) {
+          if (ex.boxes.includes(b.box)) rects.push({ x: b.x, y: b.y, w: b.w, h: b.h });
+        }
+      }
+    }
   } else {
     rects = [{ x: obj.x, y: obj.y, w: obj.w, h: obj.h }];
   }

@@ -7,6 +7,7 @@ import { X, Trash2, User, ArrowUpDown, Palette, Grid3x3, Lock, ChevronDown, Chev
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { calculateChakbandiGCA, acresToAcreKanalMarla } from "@/lib/gisEngine";
 import KanalFillControl from "@/components/editor/KanalFillControl";
+import IkhrajKanalControl from "@/components/editor/IkhrajKanalControl";
 import CanalStyleControl from "@/components/editor/CanalStyleControl";
 
 const FILL_STYLES = ["solid", "diagonal", "crosshatch", "dots", "horizontal", "vertical"];
@@ -112,7 +113,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
             <>
               <Separator className="bg-slate-100" />
               <Field label="Label" value={local.label || ""} onChange={v => commit("label", v)} placeholder="Optional label" />
-              <ExclusionToggle local={local} commit={commit} />
+              <ExclusionToggle local={local} commit={commit} commitMultiple={commitMultiple} allObjects={allObjects} />
               <FillStyleControl local={local} commit={commit} />
               <div className="text-[10px] text-slate-400 font-mono">220 ft × 198 ft</div>
             </>
@@ -129,7 +130,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <label className="text-xs text-slate-600">Show Owner</label>
                 <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
               </div>
-              <ExclusionToggle local={local} commit={commit} />
+              <ExclusionToggle local={local} commit={commit} commitMultiple={commitMultiple} allObjects={allObjects} />
               <MustateelStyleControl local={local} onApplyAll={onUpdateAllMustateels} onResetAll={onResetAllMustateels} />
               {(() => {
                 const hasMustateelFill = !!(local.fillColor && local.fillColor.trim() && local.fillColor.startsWith("#")) || (local.acreUses && local.acreUses.some(u => u && u.color));
@@ -154,7 +155,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <label className="text-xs text-slate-600">Show Owner</label>
                 <Switch checked={!!local.showOwner} onCheckedChange={v => commit("showOwner", v)} className="scale-75" />
               </div>
-              <ExclusionToggle local={local} commit={commit} />
+              <ExclusionToggle local={local} commit={commit} commitMultiple={commitMultiple} allObjects={allObjects} />
               <MustateelStyleControl local={local} onApplyAll={onUpdateAllMurabas} onResetAll={onResetAllMurabas} type="muraba" />
               <KanalFillControl local={local} commit={commitMultiple} title="Muraba Colour filling" allObjects={allObjects} />
               {(() => {
@@ -608,7 +609,7 @@ function CanalWidthControl({ name, value, onChange }) {
   );
 }
 
-function ExclusionToggle({ local, commit }) {
+function ExclusionToggle({ local, commit, commitMultiple, allObjects = [] }) {
   const isParcel = local.type === "mustateel" || local.type === "muraba";
   const exclusionColor = local.exclusionColor || "#000000";
   const exclusionSpacing = local.exclusionSpacing || 60;
@@ -633,32 +634,7 @@ function ExclusionToggle({ local, commit }) {
           <span className="text-[9px] font-mono text-slate-500 w-6">{exclusionSpacing}</span>
         </div>
       )}
-      {isParcel && local.excluded && <KillaExclusionCheckboxes local={local} commit={commit} />}
-    </div>
-  );
-}
-
-function KillaExclusionCheckboxes({ local, commit }) {
-  // Default: all killas ticked (chakbandi ikhraj = all included)
-  const isMustateel = local.type === "mustateel";
-  const totalKillas = isMustateel ? 10 : 25;
-  const acres = local.excludedAcres || Array(totalKillas).fill(true);
-  const toggle = (idx) => {
-    const next = Array.from(acres);
-    next[idx] = !next[idx];
-    commit("excludedAcres", next);
-  };
-  return (
-    <div className="border-t border-slate-200 pt-2 mt-1">
-      <label className="text-[9px] text-slate-400 uppercase tracking-wider block mb-1">Killa Ikhraj (1–{totalKillas})</label>
-      <div className="grid grid-cols-5 gap-1">
-        {Array.from({ length: totalKillas }, (_, i) => (
-          <label key={i} className="flex items-center gap-1 text-[9px] text-slate-600 cursor-pointer select-none">
-            <input type="checkbox" checked={!!acres[i]} onChange={() => toggle(i)} className="w-2.5 h-2.5 accent-blue-600 cursor-pointer" />
-            <span>{i + 1}</span>
-          </label>
-        ))}
-      </div>
+      {isParcel && local.excluded && <IkhrajKanalControl local={local} commit={commitMultiple} allObjects={allObjects} />}
     </div>
   );
 }

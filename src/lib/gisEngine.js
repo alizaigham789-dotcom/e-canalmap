@@ -472,7 +472,10 @@ export function getKillaCell(obj, killa) {
   return cells.find(c => c.killa === killa) || null;
 }
 
-// Normalised per-killa kanal-fill list — each entry is null or {color, label, boxes:number[1..8]}.
+// Normalised per-killa kanal-fill list — each entry is null or {color, label, boxes, boxColors}.
+// `boxes` lists which of the 8 kanal are filled. `boxColors` (optional) lets each box carry
+// its own {color, label} so a single acre can hold several different colours (e.g. 4 red + 4 green);
+// renderers fall back to the acre `color`/`label` for boxes without an override.
 export function getKanalFills(obj) {
   const total = obj && obj.type === "muraba" ? 25 : 10;
   if (!obj || !Array.isArray(obj.kanalFills)) return Array(total).fill(null);
@@ -482,8 +485,37 @@ export function getKanalFills(obj) {
     if (!x || !x.color) return null;
     const boxes = Array.isArray(x.boxes) ? x.boxes.filter(b => b >= 1 && b <= 8) : [];
     if (boxes.length === 0) return null;
-    return { color: x.color, label: x.label || "", boxes };
+    const boxColors = (x.boxColors && typeof x.boxColors === "object" && !Array.isArray(x.boxColors)) ? x.boxColors : null;
+    return { color: x.color, label: x.label || "", boxes, boxColors };
   });
+}
+
+// Normalised per-killa ikhraj (exclusion) list — each entry is null or {boxes:[1..8]}.
+// boxes.length === 8 means the whole acre is excluded. Precedence: `excludedKanals`
+// (per-kanal) → legacy `excludedAcres` (true = whole acre) → when `excluded` is on with
+// no per-acre data, default to ALL acres excluded (preserves legacy whole-parcel exclusion).
+export function getExcludedKanals(obj) {
+  const total = obj && obj.type === "muraba" ? 25 : 10;
+  const out = Array(total).fill(null);
+  let used = false;
+  if (Array.isArray(obj && obj.excludedKanals)) {
+    for (let i = 0; i < total; i++) {
+      const x = obj.excludedKanals[i];
+      if (x && Array.isArray(x.boxes) && x.boxes.length) {
+        const boxes = x.boxes.filter(b => b >= 1 && b <= 8);
+        if (boxes.length) { out[i] = { boxes }; used = true; }
+      }
+    }
+  }
+  if (Array.isArray(obj && obj.excludedAcres)) {
+    for (let i = 0; i < total; i++) {
+      if (obj.excludedAcres[i] && !out[i]) { out[i] = { boxes: [1,2,3,4,5,6,7,8] }; used = true; }
+    }
+  }
+  if (obj && obj.excluded && !used) {
+    for (let i = 0; i < total; i++) out[i] = { boxes: [1,2,3,4,5,6,7,8] };
+  }
+  return out;
 }
 
 export function getMurabaKillaGrid() {
@@ -1253,19 +1285,45 @@ export function calculateChakbandiGCA(chakbandi, parcels, canals = []) {
   // clean half-kanal (10 marla), giving an easy, integer-marla CCA.
   let totalMarla = 0;
   for (const p of parcels) {
-    if (p.excluded) continue; // excluded parcels don't count in GCA
-    let killaCols, killaRows;
-    if (p.type === "acre") { killaCols = 1; killaRows = 1; }
-    else if (p.type === "mustateel") { killaCols = 2; killaRows = 5; }
-    else if (p.type === "muraba") { killaCols = 5; killaRows = 5; }
+    // Acre blocks are a single cell — only whole-acre exclusion applies (obj.excluded).
+    if (p.type === "acre") {
+      if (p.excluded) continue;
+      const cellW = p.w, cellH = p.h;
+      const kanalCols = 2, kanalRows = 4;
+      const kW = cellW / kanalCols, kH = cellH / kanalRows;
+      const marlaCols = 5, marlaRows = 4;
+      const mW = kW / marlaCols, mH = kH / marlaRows;
+      for (let kr = 0; kr < kanalRows; kr++) {
+        for (let kc = 0; kc < kanalCols; kc++) {
+          for (let mr = 0; mr < marlaRows; mr++) {
+            for (let mc = 0; mc < marlaCols; mc++) {
+              const cx = p.x + kc * kW + mc * mW + mW / 2;
+              const cy = p.y + kr * kH + mr * mH + mH / 2;
+              if (!pointInPolygon({ x: cx, y: cy }, polygon)) continue;
+              let inCanal = false;
+              for (const canalPoly of canalPolys) {
+                if (pointInPolygon({ x: cx, y: cy }, canalPoly)) { inCanal = true; break; }
+              }
+              if (inCanal) continue;
+              totalMarla++;
+            }
+          }
+        }
+      }
+      continue;
+    }
+    let killaCols, killaRows, killaGrid;
+    if (p.type === "mustateel") { killaCols = 2; killaRows = 5; killaGrid = getMustateeelKillaGrid(); }
+    else if (p.type === "muraba") { killaCols = 5; killaRows = 5; killaGrid = getMurabaKillaGrid(); }
     else continue;
+    // Per-kanal exclusion list — drives which kanal boxes are kharij (excluded) from GCA.
+    const excludedKanals = getExcludedKanals(p);
     const cellW = p.w / killaCols, cellH = p.h / killaRows;
     for (let r = 0; r < killaRows; r++) {
       for (let c = 0; c < killaCols; c++) {
-        // Skip individually excluded acres in mustateels
-        if (p.excludedAcres && p.type === "mustateel") {
-          if (p.excludedAcres[getMustateeelKillaGrid()[r][c] - 1]) continue;
-        }
+        const killaNo = killaGrid[r][c];
+        const exK = excludedKanals[killaNo - 1];
+        const exBoxes = exK ? exK.boxes : null;
         const acreX = p.x + c * cellW, acreY = p.y + r * cellH;
         // 8 kanal per acre (2 cols × 4 rows) — matches the visible kanal grid
         const kanalCols = 2, kanalRows = 4;
@@ -1275,6 +1333,9 @@ export function calculateChakbandiGCA(chakbandi, parcels, canals = []) {
         const mW = kW / marlaCols, mH = kH / marlaRows;
         for (let kr = 0; kr < kanalRows; kr++) {
           for (let kc = 0; kc < kanalCols; kc++) {
+            const boxNo = kr * kanalCols + kc + 1;
+            // Skip this kanal box entirely when it is kharij (per-kanal / whole-acre exclusion)
+            if (exBoxes && exBoxes.includes(boxNo)) continue;
             for (let mr = 0; mr < marlaRows; mr++) {
               for (let mc = 0; mc < marlaCols; mc++) {
                 const cx = acreX + kc * kW + mc * mW + mW / 2;

@@ -4,7 +4,8 @@
 // ============================================================
 
 import {
-  getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid,
+  getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells,
+  getKanalBoxes, getExcludedKanals,
   DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE,
   getMustateelMouzaSplit, getMogaColor, effectiveKillaVisible,
   mogaNumberFont, canalNameFont, getOutletDimensions,
@@ -76,11 +77,24 @@ function svgExclusionHatch(obj, idx) {
   else if (obj.type === "muraba") width = 6.5 * 0.75;
   else width = 1 * 0.75;
 
+  // Per-kanal exclusion rects — matches the editor canvas via getExcludedKanals.
   let rects;
-  if (obj.excludedAcres && obj.type === "mustateel") {
-    rects = getMustateelKillaCells(obj)
-      .filter(cell => obj.excludedAcres[cell.killa - 1])
-      .map(cell => ({ x: cell.x, y: cell.y, w: cell.w, h: cell.h }));
+  if (obj.type === "mustateel" || obj.type === "muraba") {
+    const exK = getExcludedKanals(obj);
+    if (!exK.some(e => e)) return "";
+    const cells = obj.type === "muraba" ? getMurabaKillaCells(obj) : getMustateelKillaCells(obj);
+    rects = [];
+    for (const cell of cells) {
+      const ex = exK[cell.killa - 1];
+      if (!ex) continue;
+      if (ex.boxes.length === 8) {
+        rects.push({ x: cell.x, y: cell.y, w: cell.w, h: cell.h });
+      } else {
+        for (const b of getKanalBoxes(cell)) {
+          if (ex.boxes.includes(b.box)) rects.push({ x: b.x, y: b.y, w: b.w, h: b.h });
+        }
+      }
+    }
   } else {
     rects = [{ x: obj.x, y: obj.y, w: obj.w, h: obj.h }];
   }
