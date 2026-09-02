@@ -29,7 +29,7 @@ function buildFardHeader(d) {
     <>
       فرد مسروبہ ناجائز آبپاشی موگہ نمبری{"\u2009"}
       <span dir="ltr" style={{ display: "inline-block" }}>{mogha}</span>
-      {"\u2009"}،{"\u2009"}راجباہ {d.rajbah || "_____"}،{"\u2009"}موضع {d.village2 ? `${d.village || "_____"} و ${d.village2}` : (d.village || "_____")}،{"\u2009"}ضلعداری سیکشن {d.section || "_____"}،{"\u2009"}سب ڈویژن {d.tehsil || "_____"}،{"\u2009"}کینال ڈویژن {d.district || "_____"}
+      {"\u2009"}،{"\u2009"}راجباہ {d.rajbah || "_____"}،{"\u2009"}موضع {d.village2 ? <>{d.village || "_____"} و <span dir="ltr" style={{ display: "inline-block" }}>{d.village2}</span></> : (d.village || "_____")}،{"\u2009"}ضلعداری سیکشن {d.section || "_____"}،{"\u2009"}سب ڈویژن {d.tehsil || "_____"}،{"\u2009"}کینال ڈویژن {d.district || "_____"}
     </>
   );
 }

@@ -82,7 +82,7 @@ export default function FardHeaderEditDialog({ open, record, onClose, onSave }) 
             ].map(([k, l]) => (
               <div key={k}>
                 <Label className="text-[11px] text-slate-500" style={{ fontFamily: URDU }}>{l}</Label>
-                <Input value={h[k] || ""} onChange={(e) => set(k, e.target.value)} dir="auto" className="h-8 text-sm" style={{ fontFamily: URDU }} />
+                <Input value={h[k] || ""} onChange={(e) => set(k, e.target.value)} dir={k === "village2" ? "ltr" : "auto"} className="h-8 text-sm" style={{ fontFamily: URDU }} />
               </div>
             ))}
           </div>

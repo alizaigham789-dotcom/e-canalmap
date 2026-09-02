@@ -12,7 +12,7 @@ function buildHeader(rec) {
   const mogha = rec.mogha_number ? `${rec.mogha_number}${rec.mogha_side ? `/${rec.mogha_side}` : ""}` : "_____";
   // Two mouzas → "موضع X و Y"; one mouza → "موضع X".
   const villageTxt = rec.village2
-    ? `${esc(rec.village || "_____")} و ${esc(rec.village2)}`
+    ? `${esc(rec.village || "_____")} و <span dir="ltr" style="unicode-bidi:isolate;display:inline-block">${esc(rec.village2)}</span>`
     : esc(rec.village || "_____");
   // Mogha number forced LTR so "6000/L" reads left-to-right inside the Urdu RTL line.
   return `فرد مسروبہ ناجائز آبپاشی موگہ نمبری <span dir="ltr" style="display:inline-block">${esc(mogha)}</span>، راجباہ ${esc(rec.rajbah || "_____")}، موضع ${villageTxt}، ضلعداری سیکشن ${esc(rec.section || "_____")}، سب ڈویژن ${esc(rec.tehsil || "_____")}، کینال ڈویژن ${esc(rec.district || "_____")}`;
