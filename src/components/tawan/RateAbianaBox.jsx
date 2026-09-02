@@ -9,8 +9,9 @@ const KHAREEF_CROPS = [
   { crop: "کپاس", rate: 1000 },
   { crop: "مونگ پھلی", rate: 1200 },
   { crop: "باغ", rate: 1000 },
-  { crop: "کمند", rate: 1600 },
+  { crop: "کماد", rate: 1600 },
   { crop: "گنا", rate: 1800 },
+  { crop: "خالی", rate: 0 },
 ];
 // ── Rabeeh crops (ربیع) with per-acre abiana rates ──────────────────────
 const RABEEH_CROPS = [

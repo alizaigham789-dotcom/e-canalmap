@@ -119,7 +119,7 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
                   </td>
                   <td className="border border-slate-400 text-center px-1 py-0.5">{i + 1}</td>
                   <td className="border border-slate-400 px-1 py-0.5">
-                    <Input value={r.name} onChange={(e) => updateRow(i, "name", e.target.value)} dir="rtl" className="h-8 text-sm border-0 px-1" style={{ fontFamily: URDU }} />
+                    <Input value={r.name} onChange={(e) => updateRow(i, "name", e.target.value)} dir="auto" className="h-8 text-sm border-0 px-1" style={{ fontFamily: URDU }} />
                     {record.village2 && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <select
