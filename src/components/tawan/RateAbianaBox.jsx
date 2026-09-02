@@ -26,7 +26,7 @@ const CROP_SEASON = {};
 KHAREEF_CROPS.forEach((c) => (CROP_SEASON[c.crop] = "k"));
 RABEEH_CROPS.forEach((c) => (CROP_SEASON[c.crop] = "r"));
 
-export const SEASON_LABEL = { k: "Khareef", r: "Rabeeh" };
+export const SEASON_LABEL = { k: "خریف", r: "ربیع" };
 CROP_SEASON[SEASON_LABEL.k] = "k";
 CROP_SEASON[SEASON_LABEL.r] = "r";
 

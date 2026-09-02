@@ -10,12 +10,11 @@ function esc(s) {
 
 function buildHeader(rec) {
   const mogha = rec.mogha_number ? `${rec.mogha_number}${rec.mogha_side ? `/${rec.mogha_side}` : ""}` : "_____";
-  // Two mouzas → "موضع X و Y"; one mouza → "موضع X".
-  const villageTxt = rec.village2
-    ? `${esc(rec.village || "_____")} و <span dir="ltr" style="unicode-bidi:isolate;display:inline-block">${esc(rec.village2)}</span>`
-    : esc(rec.village || "_____");
+  // Each field auto-detects direction: English/Latin → LTR, Urdu → RTL.
+  const F = (v) => `<span dir="auto" style="unicode-bidi:isolate">${esc(v || "_____")}</span>`;
+  const villageTxt = rec.village2 ? `${F(rec.village)} و ${F(rec.village2)}` : F(rec.village);
   // Mogha number forced LTR so "6000/L" reads left-to-right inside the Urdu RTL line.
-  return `فرد مسروبہ ناجائز آبپاشی موگہ نمبری <span dir="ltr" style="display:inline-block">${esc(mogha)}</span>، راجباہ ${esc(rec.rajbah || "_____")}، موضع ${villageTxt}، ضلعداری سیکشن ${esc(rec.section || "_____")}، سب ڈویژن ${esc(rec.tehsil || "_____")}، کینال ڈویژن ${esc(rec.district || "_____")}`;
+  return `فرد مسروبہ ناجائز آبپاشی موگہ نمبری <span dir="ltr" style="display:inline-block">${esc(mogha)}</span>، راجباہ ${F(rec.rajbah)}، موضع ${villageTxt}، ضلعداری سیکشن ${F(rec.section)}، سب ڈویژن ${F(rec.tehsil)}، کینال ڈویژن ${F(rec.district)}`;
 }
 
 // Stacked fraction (mustateel over killa) — matches parat warabandi bandubast style

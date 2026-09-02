@@ -8,7 +8,7 @@ import { printFardRecord } from "@/lib/fardPrint";
 import RateAbianaBox, { computeAbiana, DEFAULT_RATE_CONFIG, cropOptionsFor, SEASON_LABEL } from "@/components/tawan/RateAbianaBox";
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
-const EMPTY_ROW = { name: "", khasra: "", area: "", crop: "Khareef", abiana: "", phone: "", mozah: "" };
+const EMPTY_ROW = { name: "", khasra: "", area: "", crop: "خریف", abiana: "", phone: "", mozah: "" };
 
 // Pakistani mobile format: 11 digits, "03" prefix fixed, dash after 4 → 0300-1234567
 function formatPkPhone(raw) {
@@ -24,12 +24,15 @@ function formatPkPhone(raw) {
 
 function buildFardHeader(d) {
   const mogha = d.mogha_number ? `${d.mogha_number}${d.mogha_side ? `/${d.mogha_side}` : ""}` : "_____";
+  // Each field auto-detects direction: English/Latin → LTR, Urdu → RTL.
+  const V = (v) => <span dir="auto">{v || "_____"}</span>;
+  const villagePart = d.village2 ? <>{V(d.village)} و {V(d.village2)}</> : V(d.village);
   // Mogha number (e.g. 6000/L) is forced LTR so it reads left-to-right inside the Urdu RTL line.
   return (
     <>
       فرد مسروبہ ناجائز آبپاشی موگہ نمبری{"\u2009"}
       <span dir="ltr" style={{ display: "inline-block" }}>{mogha}</span>
-      {"\u2009"}،{"\u2009"}راجباہ {d.rajbah || "_____"}،{"\u2009"}موضع {d.village2 ? <>{d.village || "_____"} و <span dir="ltr" style={{ display: "inline-block" }}>{d.village2}</span></> : (d.village || "_____")}،{"\u2009"}ضلعداری سیکشن {d.section || "_____"}،{"\u2009"}سب ڈویژن {d.tehsil || "_____"}،{"\u2009"}کینال ڈویژن {d.district || "_____"}
+      {"\u2009"}،{"\u2009"}راجباہ {V(d.rajbah)}،{"\u2009"}موضع {villagePart}،{"\u2009"}ضلعداری سیکشن {V(d.section)}،{"\u2009"}سب ڈویژن {V(d.tehsil)}،{"\u2009"}کینال ڈویژن {V(d.district)}
     </>
   );
 }
