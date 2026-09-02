@@ -138,7 +138,11 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
         </div>
 
         <div className="p-3 space-y-3 overflow-y-auto">
-          {!mapId ? (
+          {isLoading || loadingObjs ? (
+            <div className="flex items-center justify-center py-8 text-slate-400">
+              <Loader2 className="w-5 h-5 animate-spin" />
+            </div>
+          ) : mustateels.length === 0 ? (
             <div className="border border-emerald-200 rounded-lg p-2.5 bg-emerald-50/60">
               <label className="text-[9px] font-bold text-emerald-700 uppercase block mb-1.5" dir="rtl" style={{ fontFamily: "serif" }}>
                 دستی اندراج — {topLabel} لکھیں، نیچے {bottomLabel} منتخب کریں
@@ -183,14 +187,6 @@ export default function BandubastPicker({ open, value, onChange, mogaNumber, map
                   <FractionDisplay value={draft} fontSize="11px" lineColor="#1e3a5f" />
                 </div>
               )}
-            </div>
-          ) : loadingObjs || isLoading ? (
-            <div className="flex items-center justify-center py-8 text-slate-400">
-              <Loader2 className="w-5 h-5 animate-spin" />
-            </div>
-          ) : mustateels.length === 0 ? (
-            <div className="text-center py-4 text-[11px] text-slate-400" dir="rtl" style={{ fontFamily: "serif" }}>
-              اس موگہ کا نقشہ ڈیٹا دستیاب نہیں
             </div>
           ) : (
             <>
