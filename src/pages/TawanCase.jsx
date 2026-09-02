@@ -41,10 +41,13 @@ export default function TawanCase() {
 
   const createMut = useMutation({
     mutationFn: (data) => base44.entities.FardMasrooba.create({ ...data, rows_json: "[]", total_abiana: 0, total_area: 0, status: "draft" }),
-    onSuccess: (created) => {
+    onSuccess: (created, variables) => {
       queryClient.invalidateQueries({ queryKey: ["fard-masrooba-records"] });
       setShowCreate(false);
-      setEditRec(created);
+      // Merge the submitted header (variables) over the create response so the
+      // form's header line always shows the 2nd mozah even if the API response
+      // doesn't echo newly-added fields back.
+      setEditRec({ ...variables, ...created });
       setScreen("edit");
       toast.success("فرد مسروبہ بن گیا");
     },
@@ -52,7 +55,15 @@ export default function TawanCase() {
   });
   const updateMut = useMutation({
     mutationFn: ({ id, data }) => base44.entities.FardMasrooba.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["fard-masrooba-records"] }); toast.success("محفوظ ہو گیا"); },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["fard-masrooba-records"] });
+      // If the full form is open for this record, refresh its header so the
+      // 2nd mozah appears in the header line immediately after a header edit.
+      if (editRec && variables && variables.id === editRec.id) {
+        setEditRec((r) => ({ ...r, ...variables.data }));
+      }
+      toast.success("محفوظ ہو گیا");
+    },
     onError: () => toast.error("محفوظ نہیں ہوا"),
   });
   const deleteMut = useMutation({
