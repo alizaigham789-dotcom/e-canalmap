@@ -60,10 +60,13 @@ export function computeAbiana(row, cfg) {
   if (cfg.mode === "fasal") {
     // fasal-war: use the selected crop's own rate. Season label alone = 0.
     if (!row.crop || row.crop === SEASON_LABEL.k || row.crop === SEASON_LABEL.r) return 0;
+    // خالی (fallow) — fixed 400/acre regardless of saved cropRates
+    if (row.crop === "خالی") return Math.round(400 * acres);
     const cr = (cfg.cropRates || []).find((c) => c.crop === row.crop);
     return cr ? Math.round((cr.rate || 0) * acres) : 0;
   }
-  // fix: flat season rate applies (regardless of which crop name is shown)
+  // fix: flat season rate applies (regardless of which crop name is shown).
+  // خریف → fixRate1, ربیع → fixRate2 (based on the selected season).
   const season = cfg.selectedSeason || "k";
   const rate = season === "k" ? (cfg.fixRate1 || 0) : (cfg.fixRate2 || 0);
   return Math.round(rate * acres);
