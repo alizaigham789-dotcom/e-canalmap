@@ -117,22 +117,24 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
                   <td className="border border-slate-400 text-center px-1 py-0.5">{i + 1}</td>
                   <td className="border border-slate-400 px-1 py-0.5">
                     <Input value={r.name} onChange={(e) => updateRow(i, "name", e.target.value)} dir="rtl" className="h-8 text-sm border-0 px-1" style={{ fontFamily: URDU }} />
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <select
-                        value={r.mozah || ""}
-                        onChange={(e) => updateRow(i, "mozah", e.target.value)}
-                        dir="rtl"
-                        className="h-6 text-[10px] border border-slate-300 rounded px-0.5 bg-white"
-                        style={{ fontFamily: URDU }}
-                      >
-                        <option value="">موضع</option>
-                        <option value="1">{record.village || "موضع ۱"}</option>
-                        <option value="2">{record.village2 || "موضع ۲"}</option>
-                      </select>
-                      {r.mozah && (r.mozah === "1" ? record.village : record.village2) ? (
-                        <span className="text-[10px] text-slate-600 truncate" style={{ fontFamily: URDU }}>({r.mozah === "1" ? record.village : record.village2})</span>
-                      ) : null}
-                    </div>
+                    {record.village2 && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <select
+                          value={r.mozah || ""}
+                          onChange={(e) => updateRow(i, "mozah", e.target.value)}
+                          dir="rtl"
+                          className="h-6 text-[10px] border border-slate-300 rounded px-0.5 bg-white"
+                          style={{ fontFamily: URDU }}
+                        >
+                          <option value="">موضع</option>
+                          <option value="1">{record.village || "موضع ۱"}</option>
+                          <option value="2">{record.village2}</option>
+                        </select>
+                        {r.mozah && (r.mozah === "1" ? record.village : record.village2) ? (
+                          <span className="text-[10px] text-slate-600 truncate" style={{ fontFamily: URDU }}>({r.mozah === "1" ? record.village : record.village2})</span>
+                        ) : null}
+                      </div>
+                    )}
                   </td>
                   <td className="border border-slate-400 px-1 py-0.5"><FractionCell value={r.khasra} onChange={(v) => updateRow(i, "khasra", v)} onPicker={() => setPicker({ row: i })} /></td>
                   <td className="border border-slate-400 px-1 py-0.5"><Input value={r.area} onChange={(e) => updateRow(i, "area", e.target.value)} type="number" className="h-8 text-sm border-0 px-1 text-center" /></td>

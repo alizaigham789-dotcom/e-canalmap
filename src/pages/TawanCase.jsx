@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Plus, Pencil, Trash2, Printer, Search, FileText } from "lucide-react";
 import FardHeaderDialog from "@/components/tawan/FardHeaderDialog";
 import FardMasroobaForm from "@/components/tawan/FardMasroobaForm";
+import FardHeaderEditDialog from "@/components/tawan/FardHeaderEditDialog";
 import { printFardRecord } from "@/lib/fardPrint";
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
@@ -23,6 +24,7 @@ export default function TawanCase() {
   const [activeDoc, setActiveDoc] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editRec, setEditRec] = useState(null);
+  const [editHeaderRec, setEditHeaderRec] = useState(null);
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState(new Set());
 
@@ -130,7 +132,8 @@ export default function TawanCase() {
                     <p className="text-sm font-semibold text-slate-800 truncate">موگہ نمبری {r.mogha_number || "—"} · موضع {r.village || "—"}</p>
                     <p className="text-[11px] text-slate-400">راجباہ {r.rajbah || "—"} · آبیانہ {r.total_abiana || 0}/-</p>
                   </div>
-                  <Button onClick={() => { setEditRec(r); setScreen("edit"); }} size="icon" variant="ghost" className="w-8 h-8 text-slate-500"><Pencil className="w-4 h-4" /></Button>
+                  <Button onClick={() => { setEditRec(r); setScreen("edit"); }} size="icon" variant="ghost" className="w-8 h-8 text-slate-500" title="فرد کھولیں"><FileText className="w-4 h-4" /></Button>
+                  <Button onClick={() => setEditHeaderRec(r)} size="icon" variant="ghost" className="w-8 h-8 text-slate-500" title="ہیڈر لائن ایڈٹ"><Pencil className="w-4 h-4" /></Button>
                   <Button onClick={() => printFardRecord(r)} size="icon" variant="ghost" className="w-8 h-8 text-slate-500"><Printer className="w-4 h-4" /></Button>
                   <Button onClick={() => { if (confirm("حذف کریں؟")) deleteMut.mutate(r.id); }} size="icon" variant="ghost" className="w-8 h-8 text-red-400"><Trash2 className="w-4 h-4" /></Button>
                 </div>
@@ -149,6 +152,12 @@ export default function TawanCase() {
       )}
 
       <FardHeaderDialog open={showCreate} onClose={() => setShowCreate(false)} onCreate={(h) => createMut.mutate(h)} />
+      <FardHeaderEditDialog
+        open={!!editHeaderRec}
+        record={editHeaderRec}
+        onClose={() => setEditHeaderRec(null)}
+        onSave={(data) => { if (editHeaderRec) updateMut.mutate({ id: editHeaderRec.id, data }); setEditHeaderRec(null); }}
+      />
     </div>
   );
 }

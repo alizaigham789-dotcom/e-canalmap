@@ -36,7 +36,7 @@ export function printFardRecord(rec) {
   const headerLine = buildHeader(rec);
 
   const css = `
-    @page { size: A4; margin: 12mm; }
+    @page { size: A4; margin: 12mm; @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; } @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: ""; } }
     body { font-family: ${URDU_FONT}; color: #111; direction: rtl; }
     .hdr { text-align: center; font-size: 16px; font-weight: bold; border: 2px solid #1e3a5f; padding: 8px; margin-bottom: 10px; line-height: 1.9; }
     table { width: 100%; border-collapse: collapse; }
@@ -50,8 +50,8 @@ export function printFardRecord(rec) {
   `;
 
   const rowsHtml = rows.map((r, i) => {
-    const mozahName = r.mozah === "1" ? (rec.village || "") : r.mozah === "2" ? (rec.village2 || "") : "";
-    const nameCell = (r.name ? esc(r.name) : "&nbsp;") + (r.mozah && mozahName ? ` (${esc(mozahName)})` : "");
+    const mozahName = rec.village2 && r.mozah === "1" ? (rec.village || "") : rec.village2 && r.mozah === "2" ? (rec.village2 || "") : "";
+    const nameCell = (r.name ? esc(r.name) : "&nbsp;") + (mozahName ? ` (${esc(mozahName)})` : "");
     return `<tr>
       <td>${i + 1}</td>
       <td style="text-align:right">${nameCell}</td>
