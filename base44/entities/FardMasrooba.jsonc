@@ -21,7 +21,11 @@
     },
     "village": {
       "type": "string",
-      "description": "\u0645\u0648\u0636\u0639"
+      "description": "\u0645\u0648\u0636\u0639 1 (first mouza name)"
+    },
+    "village2": {
+      "type": "string",
+      "description": "\u0645\u0648\u0636\u0639 2 (second mouza name, shown as \u0645\u0648\u0636\u0639 X \u0648 Y)"
     },
     "section": {
       "type": "string",
@@ -41,7 +45,7 @@
     },
     "rows_json": {
       "type": "string",
-      "description": "JSON string of farmer rows (name, khasra, area, crop, abiana, signature)"
+      "description": "JSON string of farmer rows (name, khasra, area, crop, abiana, phone, mozah)"
     },
     "rate_config_json": {
       "type": "string",

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import MogaSearchSelect from "@/components/warabandi/MogaSearchSelect";
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
-const EMPTY = { mogha_number: "", mogha_side: "R", rajbah: "", village: "", section: "", tehsil: "", district: "", map_id: "" };
+const EMPTY = { mogha_number: "", mogha_side: "R", rajbah: "", village: "", village2: "", section: "", tehsil: "", district: "", map_id: "" };
 
 // Header form that opens FIRST (like map editor / warabandi parat create flow).
 // Moga number is selectable from the maps that exist in the map editor; selecting
@@ -63,7 +63,8 @@ export default function FardHeaderDialog({ open, onClose, onCreate }) {
           <div className="grid grid-cols-2 gap-2">
             {[
               ["rajbah", "راجباہ"],
-              ["village", "موضع"],
+              ["village", "موضع ۱"],
+              ["village2", "موضع ۲"],
               ["section", "ضلعداری سیکشن"],
               ["tehsil", "سب ڈویژن"],
               ["district", "کینال ڈویژن"],

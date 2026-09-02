@@ -8,7 +8,7 @@ import { printFardRecord } from "@/lib/fardPrint";
 import RateAbianaBox, { computeAbiana, DEFAULT_RATE_CONFIG, cropOptionsFor, SEASON_LABEL } from "@/components/tawan/RateAbianaBox";
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
-const EMPTY_ROW = { name: "", khasra: "", area: "", crop: "Khareef", abiana: "", phone: "" };
+const EMPTY_ROW = { name: "", khasra: "", area: "", crop: "Khareef", abiana: "", phone: "", mozah: "" };
 
 // Pakistani mobile format: 11 digits, "03" prefix fixed, dash after 4 → 0300-1234567
 function formatPkPhone(raw) {
@@ -29,7 +29,7 @@ function buildFardHeader(d) {
     <>
       فرد مسروبہ ناجائز آبپاشی موگہ نمبری{"\u2009"}
       <span dir="ltr" style={{ display: "inline-block" }}>{mogha}</span>
-      {"\u2009"}،{"\u2009"}راجباہ {d.rajbah || "_____"}،{"\u2009"}موضع {d.village || "_____"}،{"\u2009"}ضلعداری سیکشن {d.section || "_____"}،{"\u2009"}سب ڈویژن {d.tehsil || "_____"}،{"\u2009"}کینال ڈویژن {d.district || "_____"}
+      {"\u2009"}،{"\u2009"}راجباہ {d.rajbah || "_____"}،{"\u2009"}موضع {d.village2 ? `${d.village || "_____"} و ${d.village2}` : (d.village || "_____")}،{"\u2009"}ضلعداری سیکشن {d.section || "_____"}،{"\u2009"}سب ڈویژن {d.tehsil || "_____"}،{"\u2009"}کینال ڈویژن {d.district || "_____"}
     </>
   );
 }
@@ -115,7 +115,25 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
                     </div>
                   </td>
                   <td className="border border-slate-400 text-center px-1 py-0.5">{i + 1}</td>
-                  <td className="border border-slate-400 px-1 py-0.5"><Input value={r.name} onChange={(e) => updateRow(i, "name", e.target.value)} dir="rtl" className="h-8 text-sm border-0 px-1" style={{ fontFamily: URDU }} /></td>
+                  <td className="border border-slate-400 px-1 py-0.5">
+                    <Input value={r.name} onChange={(e) => updateRow(i, "name", e.target.value)} dir="rtl" className="h-8 text-sm border-0 px-1" style={{ fontFamily: URDU }} />
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <select
+                        value={r.mozah || ""}
+                        onChange={(e) => updateRow(i, "mozah", e.target.value)}
+                        dir="rtl"
+                        className="h-6 text-[10px] border border-slate-300 rounded px-0.5 bg-white"
+                        style={{ fontFamily: URDU }}
+                      >
+                        <option value="">موضع</option>
+                        <option value="1">{record.village || "موضع ۱"}</option>
+                        <option value="2">{record.village2 || "موضع ۲"}</option>
+                      </select>
+                      {r.mozah && (r.mozah === "1" ? record.village : record.village2) ? (
+                        <span className="text-[10px] text-slate-600 truncate" style={{ fontFamily: URDU }}>({r.mozah === "1" ? record.village : record.village2})</span>
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="border border-slate-400 px-1 py-0.5"><FractionCell value={r.khasra} onChange={(v) => updateRow(i, "khasra", v)} onPicker={() => setPicker({ row: i })} /></td>
                   <td className="border border-slate-400 px-1 py-0.5"><Input value={r.area} onChange={(e) => updateRow(i, "area", e.target.value)} type="number" className="h-8 text-sm border-0 px-1 text-center" /></td>
                   <td className="border border-slate-400 px-1 py-0.5">
