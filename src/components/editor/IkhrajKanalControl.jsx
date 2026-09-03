@@ -97,7 +97,7 @@ export default function IkhrajKanalControl({ local, commit, allObjects = [] }) {
                     className={`font-mono text-[10px] font-bold truncate w-16 text-left ${isOpen ? "text-blue-600" : "text-slate-700"}`} dir="ltr" title={acreLabel}>{a}</button>
                   <input type="range" min={0} max={8} value={cnt}
                     onChange={(e) => setCount(idx, +e.target.value)}
-                    className="flex-1" style={{ accentColor: GREEN }} />
+                    className="flex-1 min-w-0" style={{ accentColor: GREEN }} />
                   <span className="text-[10px] font-mono font-bold w-8 text-right" style={{ color: EX_COL }}>{cnt} K</span>
                 </div>
                 {isOpen && (

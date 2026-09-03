@@ -148,6 +148,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
           {selectedObj.type === "muraba" && (
             <>
               <Separator className="bg-slate-100" />
+              <KanalFillControl local={local} commit={commitMultiple} title="Muraba Colour filling" allObjects={allObjects} />
               <Field label="Muraba No." value={local.label || ""} onChange={v => commit("label", v)} placeholder="e.g. 1" hint="Double-click plot on map to edit label at centroid" />
               <Field label="Label 2 (below Mouza line)" value={local.label2 || ""} onChange={v => commit("label2", v)} placeholder="e.g. 1-A" hint="Shown only when a Mouza boundary splits this parcel into 2 mouzas" />
               <Field label="Owner Name" value={local.ownerName || ""} onChange={v => commit("ownerName", v)} placeholder="Owner name" icon={<User className="w-3 h-3" />} />
@@ -157,7 +158,6 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               </div>
               <ExclusionToggle local={local} commit={commit} commitMultiple={commitMultiple} allObjects={allObjects} />
               <MustateelStyleControl local={local} onApplyAll={onUpdateAllMurabas} onResetAll={onResetAllMurabas} type="muraba" />
-              <KanalFillControl local={local} commit={commitMultiple} title="Muraba Colour filling" allObjects={allObjects} />
               {(() => {
                 const hasMurabaFill = !!(local.fillColor && local.fillColor.trim() && local.fillColor.startsWith("#")) || (local.acreUses && local.acreUses.some(u => u && u.color));
                 return hasMurabaFill ? (
@@ -493,7 +493,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                     onClick={() => commit("arrowScale", Math.max(0, +((local.arrowScale ?? 1) - 0.1).toFixed(1)))}>−</Button>
                   <input type="range" min={0} max={2} step={0.1} value={local.arrowScale ?? 1}
                     onChange={e => commit("arrowScale", parseFloat(e.target.value))}
-                    className="flex-1 h-1 accent-cyan-500 cursor-pointer" />
+                    className="flex-1 min-w-0 h-1 accent-cyan-500 cursor-pointer" />
                   <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                     onClick={() => commit("arrowScale", Math.min(2, +((local.arrowScale ?? 1) + 0.1).toFixed(1)))}>+</Button>
                   <span className="text-xs text-slate-600 font-mono w-10 text-center">{(local.arrowScale ?? 1).toFixed(1)}×</span>
@@ -551,7 +551,7 @@ function SpacingControl({ label, value, min, max, step, onChange, unit }) {
           onClick={() => onChange(Math.max(min, value - step))}>−</Button>
         <input type="range" min={min} max={max} step={step} value={value}
           onChange={e => onChange(parseInt(e.target.value, 10))}
-          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+          className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
         <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
           onClick={() => onChange(Math.min(max, value + step))}>+</Button>
         <span className="text-xs text-slate-600 font-mono w-10 text-center">{value}{unit}</span>
@@ -575,7 +575,7 @@ function KhalWidthControl({ value, onChange }) {
           onClick={() => onChange(Math.max(min, +(clamped - 0.5).toFixed(1)))}>−</Button>
         <input type="range" min={min} max={max} step={0.5} value={clamped}
           onChange={e => onChange(parseFloat(e.target.value))}
-          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+          className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
         <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
           onClick={() => onChange(Math.min(max, +(clamped + 0.5).toFixed(1)))}>+</Button>
         <span className="text-xs text-slate-600 font-mono w-10 text-center">{clamped}ft</span>
@@ -599,7 +599,7 @@ function CanalWidthControl({ name, value, onChange }) {
           onClick={() => onChange(Math.max(min, clamped - 1))}>−</Button>
         <input type="range" min={min} max={max} step={1} value={clamped}
           onChange={e => onChange(parseInt(e.target.value, 10))}
-          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+          className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
         <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
           onClick={() => onChange(Math.min(max, clamped + 1))}>+</Button>
         <span className="text-xs text-slate-600 font-mono w-10 text-center">{clamped}ft</span>
@@ -622,17 +622,23 @@ function ExclusionToggle({ local, commit, commitMultiple, allObjects = [] }) {
         <Switch checked={!!local.excluded} onCheckedChange={v => commit("excluded", v)} className="scale-75" />
       </div>
       {local.excluded && (
-        <div className="flex items-center gap-2 border-t border-slate-200 pt-2">
-          <label className="text-[9px] text-slate-400 shrink-0">Fill</label>
-          <input type="color" value={exclusionColor}
-            onChange={e => commit("exclusionColor", e.target.value)}
-            className="h-5 w-7 rounded cursor-pointer border border-slate-200" />
-          <label className="text-[9px] text-slate-400 shrink-0" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>اسپیسنگ</label>
-          <input type="range" min={8} max={120} step={2} value={exclusionSpacing}
-            onChange={e => commit("exclusionSpacing", parseInt(e.target.value))}
-            className="flex-1 h-1 accent-blue-500 cursor-pointer" />
-          <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5 shrink-0 min-w-[36px] text-center">{exclusionSpacing}</span>
-        </div>
+        <>
+          <div className="flex items-center gap-2 border-t border-slate-200 pt-2">
+            <label className="text-[9px] text-slate-400 shrink-0">Fill</label>
+            <input type="color" value={exclusionColor}
+              onChange={e => commit("exclusionColor", e.target.value)}
+              className="h-5 w-7 rounded cursor-pointer border border-slate-200" />
+            <label className="text-[9px] text-slate-400 shrink-0" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>اسپیسنگ</label>
+            <input type="range" min={8} max={120} step={2} value={exclusionSpacing}
+              onChange={e => commit("exclusionSpacing", parseInt(e.target.value))}
+              className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
+            <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5 shrink-0 min-w-[36px] text-center">{exclusionSpacing}</span>
+          </div>
+          {/* Value scale under the spacing slider */}
+          <div className="flex justify-between px-10 text-[7px] font-mono text-slate-400" dir="ltr">
+            <span>8</span><span>36</span><span>64</span><span>92</span><span>120</span>
+          </div>
+        </>
       )}
       {isParcel && local.excluded && <IkhrajKanalControl local={local} commit={commitMultiple} allObjects={allObjects} />}
     </div>
@@ -665,7 +671,7 @@ function FillStyleControl({ local, commit }) {
         <label className="text-[9px] text-slate-400 shrink-0">Opacity</label>
         <input type="range" min={0} max={1} step={0.05} value={local.fillOpacity || 0.35}
           onChange={e => commit("fillOpacity", parseFloat(e.target.value))}
-          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+          className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
         <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((local.fillOpacity || 0.35) * 100)}%</span>
       </div>
       {local.fillStyle !== "solid" && local.fillStyle && (
@@ -673,7 +679,7 @@ function FillStyleControl({ local, commit }) {
           <label className="text-[9px] text-slate-400 shrink-0">Spacing</label>
           <input type="range" min={4} max={24} step={2} value={local.fillSpacing || 8}
             onChange={e => commit("fillSpacing", parseInt(e.target.value))}
-            className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+            className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
           <span className="text-[9px] font-mono text-slate-500 w-6">{local.fillSpacing || 8}px</span>
         </div>
       )}
@@ -707,14 +713,14 @@ function KillaStyleControl({ local, commit }) {
           <label className="text-[9px] text-slate-400 w-12 shrink-0">Width</label>
           <input type="range" min={0.5} max={5} step={0.5} value={ks.strokeWidth || 1}
             onChange={e => updateKs("strokeWidth", parseFloat(e.target.value))}
-            className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+            className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
           <span className="text-[9px] font-mono text-slate-500 w-6">{ks.strokeWidth || 1}px</span>
         </div>
         <div className="flex items-center gap-2">
           <label className="text-[9px] text-slate-400 w-12 shrink-0">Opacity</label>
           <input type="range" min={0} max={1} step={0.05} value={ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.15}
             onChange={e => updateKs("strokeOpacity", parseFloat(e.target.value))}
-            className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+            className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
           <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((ks.strokeOpacity !== undefined ? ks.strokeOpacity : 0.15) * 100)}%</span>
         </div>
         <div className="flex items-center gap-2">
@@ -756,7 +762,7 @@ function MustateelStyleControl({ local, onApplyAll, onResetAll, type = "mustatee
         <label className="text-[9px] text-slate-400 shrink-0">Opacity</label>
         <input type="range" min={0} max={1} step={0.05} value={local.fillOpacity ?? 0.10}
           onChange={e => onApplyAll({ fillOpacity: parseFloat(e.target.value) })}
-          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+          className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
         <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((local.fillOpacity ?? 0.10) * 100)}%</span>
       </div>
     </div>
@@ -778,7 +784,7 @@ function FillControl({ local, commit }) {
         <label className="text-[9px] text-slate-400 shrink-0">Opacity</label>
         <input type="range" min={0} max={1} step={0.05} value={local.fillOpacity ?? 0.10}
           onChange={e => commit("fillOpacity", parseFloat(e.target.value))}
-          className="flex-1 h-1 accent-blue-500 cursor-pointer" />
+          className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
         <span className="text-[9px] font-mono text-slate-500 w-6">{Math.round((local.fillOpacity ?? 0.10) * 100)}%</span>
       </div>
     </div>
