@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves, Map as MapIcon, Satellite } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -946,17 +946,18 @@ export default function GeoMap() {
   // is not tainted, fits the view to the placed overlay, then restores the map.
   const handleCaptureSatellite = async ({ bw } = {}) => {
     const map = mapRef.current;
-    if (!map || !overlay?.transform) throw new Error("Place the map overlay first");
+    const transform = activeOverlay?.transform;
+    if (!map || !transform) throw new Error("Place the map overlay first");
     const allLatLngs = [];
     for (const o of mapObjects) {
       if (["mustateel", "muraba", "acre"].includes(o.type)) {
         const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
-        for (const [cx, cy] of corners) allLatLngs.push(overlay.transform.transform(cx, cy));
+        for (const [cx, cy] of corners) allLatLngs.push(transform.transform(cx, cy));
       } else if (o.points?.length) {
-        for (const p of o.points) allLatLngs.push(overlay.transform.transform(p.x, p.y));
+        for (const p of o.points) allLatLngs.push(transform.transform(p.x, p.y));
       } else if (o.start && o.end) {
-        allLatLngs.push(overlay.transform.transform(o.start.x, o.start.y));
-        allLatLngs.push(overlay.transform.transform(o.end.x, o.end.y));
+        allLatLngs.push(transform.transform(o.start.x, o.start.y));
+        allLatLngs.push(transform.transform(o.end.x, o.end.y));
       }
     }
     const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
@@ -1094,19 +1095,17 @@ export default function GeoMap() {
         zoomControl={false}
         attributionControl={false}
       >
-        {viewMode === "overlay" && !capturing && <TileLayer url={tileUrl} maxZoom={20} />}
+        {!capturing && <TileLayer url={tileUrl} maxZoom={20} />}
         <MapController onMapClick={handleMapClick} onMapInstance={handleMapInstance} onZoomChange={setZoom} />
         <MouseTracker />
-        {viewMode === "overlay" && (
-          <GPSTracker active={gpsActive} onPosition={(pos, acc) => { setGpsPosition(pos); setGpsAccuracy(acc); }} />
-        )}
+        <GPSTracker active={gpsActive} onPosition={(pos, acc) => { setGpsPosition(pos); setGpsAccuracy(acc); }} />
 
         {/* GPS marker + accuracy circle */}
-        {viewMode === "overlay" && gpsAccuracyCircle}
-        {viewMode === "overlay" && gpsPosition && <Marker position={[gpsPosition.lat, gpsPosition.lng]} icon={GPS_ICON} />}
+        {gpsAccuracyCircle}
+        {gpsPosition && <Marker position={[gpsPosition.lat, gpsPosition.lng]} icon={GPS_ICON} />}
 
-        {/* Show all saved maps of the selected mouza automatically (View + Overlay modes) */}
-        {filters.village && (
+        {/* All saved (placed) mogas — always visible in Mouza Map View, mouza-filtered in Overlay */}
+        {!capturing && (viewMode === "view" || filters.village) && (
           <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} />
         )}
 
@@ -1201,7 +1200,7 @@ export default function GeoMap() {
         )}
 
         {/* Completed measurements — click to delete · coordinates shown */}
-        {viewMode === "overlay" && !capturing && measurements.map(m => {
+        {!capturing && measurements.map(m => {
           const delOpts = { color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.15, weight: 3 };
           let coord;
           if (m.type === "circle") coord = m.center;
@@ -1254,10 +1253,10 @@ export default function GeoMap() {
         })}
 
         {/* Draft preview */}
-        {viewMode === "overlay" && !capturing && draftPreview}
+        {!capturing && draftPreview}
 
         {/* User markers with popup */}
-        {viewMode === "overlay" && !capturing && markers.map(m => (
+        {!capturing && markers.map(m => (
           <Marker key={m.id} position={[m.latlng.lat, m.latlng.lng]} icon={coloredIcon(m.color)}>
             <MarkerPopup marker={m} onUpdate={handleMarkerUpdate} onDelete={handleMarkerDelete} />
           </Marker>
@@ -1287,7 +1286,7 @@ export default function GeoMap() {
       <ZoomControls
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
-        onGPS={viewMode === "overlay" ? handleGPS : null}
+        onGPS={handleGPS}
         gpsActive={gpsActive}
         onPlaceByCoords={viewMode === "overlay" ? () => setShowCoordDialog(true) : null}
         onPlaceByCoordsLower={viewMode === "overlay" ? () => setShowLowerLeftDialog(true) : null}
@@ -1296,19 +1295,27 @@ export default function GeoMap() {
       />
       <Compass />
 
-      {/* Mode toggle — Map View / Map Overlay */}
-      <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[1001] flex items-center bg-white/95 backdrop-blur rounded-full shadow-xl p-0.5">
+      {/* Sub-module switcher — Mouza Map View / Mouza Map Overlay */}
+      <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[1001] flex items-center bg-white/95 backdrop-blur rounded-full shadow-xl p-1 gap-1">
         <button
           onClick={() => { setViewMode("view"); setActiveTool(null); setKhalTool(null); setDraft(null); }}
-          className={`flex items-center gap-1.5 px-3 h-7 rounded-full text-xs font-bold transition-all ${viewMode === "view" ? "bg-blue-600 text-white" : "text-slate-600"}`}
+          className={`flex items-center gap-2 px-4 h-9 rounded-full transition-all ${viewMode === "view" ? "bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-md" : "text-slate-600 hover:bg-slate-100"}`}
         >
-          <MapPin className="w-3.5 h-3.5" /> نقشہ ویو
+          <MapIcon className="w-4 h-4" />
+          <span className="flex flex-col items-start leading-tight">
+            <span className="text-xs font-bold">مواضعات کا نقشہ</span>
+            <span className="text-[7px] font-semibold uppercase tracking-widest opacity-80">Mouza Map View</span>
+          </span>
         </button>
         <button
           onClick={() => setViewMode("overlay")}
-          className={`flex items-center gap-1.5 px-3 h-7 rounded-full text-xs font-bold transition-all ${viewMode === "overlay" ? "bg-blue-600 text-white" : "text-slate-600"}`}
+          className={`flex items-center gap-2 px-4 h-9 rounded-full transition-all ${viewMode === "overlay" ? "bg-gradient-to-r from-blue-600 to-indigo-500 text-white shadow-md" : "text-slate-600 hover:bg-slate-100"}`}
         >
-          <Layers className="w-3.5 h-3.5" /> نقشہ اوورلے
+          <Satellite className="w-4 h-4" />
+          <span className="flex flex-col items-start leading-tight">
+            <span className="text-xs font-bold">نقشہ اوورلے</span>
+            <span className="text-[7px] font-semibold uppercase tracking-widest opacity-80">Map Overlay · GIS</span>
+          </span>
         </button>
       </div>
 
@@ -1409,21 +1416,20 @@ export default function GeoMap() {
         </div>
       )}
 
-      {viewMode === "overlay" && (
-        <DrawingToolbar
-          activeTool={activeTool}
-          onToolChange={(t) => { setActiveTool(t); if (t) setKhalTool(null); }}
-          onClear={handleClearMeasurements}
-          onExport={handleExport}
-          onLayerToggle={() => setLayerVisible(v => !v)}
-          layerVisible={layerVisible}
-          khalTool={khalTool}
-          onKhalToolChange={(t) => { setKhalTool(t); if (t) setActiveTool(null); }}
-        />
-      )}
+      <DrawingToolbar
+        activeTool={activeTool}
+        onToolChange={(t) => { setActiveTool(t); if (t) setKhalTool(null); }}
+        onClear={handleClearMeasurements}
+        onExport={handleExport}
+        onLayerToggle={() => setLayerVisible(v => !v)}
+        layerVisible={layerVisible}
+        khalTool={khalTool}
+        onKhalToolChange={(t) => { setKhalTool(t); if (t) setActiveTool(null); }}
+        showKhal={viewMode === "overlay"}
+      />
 
       {/* Live measurement info */}
-      {viewMode === "overlay" && <MeasurementInfo measurement={liveMeasurement} draft={draft} zoom={zoom} />}
+      <MeasurementInfo measurement={liveMeasurement} draft={draft} zoom={zoom} />
 
       {/* Placement hint — two-click mode with live coordinates */}
       {viewMode === "overlay" && placingStep > 0 && selectedMapId && (
@@ -1442,7 +1448,7 @@ export default function GeoMap() {
       )}
 
       {/* Active tool hint */}
-      {viewMode === "overlay" && activeTool && !liveMeasurement && (
+      {activeTool && !liveMeasurement && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-black/80 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center">
           {activeTool === "line" && "Click points to measure distance (ft) · Double-click to finish"}
           {activeTool === "polygon" && "Click to add vertices · Double-click to finish (shows acres/kanal)"}
@@ -1453,7 +1459,7 @@ export default function GeoMap() {
       )}
 
       {/* Delete hint — always visible when measurements exist */}
-      {viewMode === "overlay" && measurements.length > 0 && !activeTool && (
+      {measurements.length > 0 && !activeTool && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-red-600/90 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <Trash2 className="w-3 h-3" />
           Click any measurement to delete · {measurements.length} active
@@ -1476,19 +1482,17 @@ export default function GeoMap() {
         mouseLatLng={lowerLeftPoint || mouseLatLng}
       />
 
-      {/* Export dialog — PNG / PDF / SVG with moga filter */}
-      {viewMode === "overlay" && (
-        <GeoMapExportDialog
-          open={showExportDialog}
-          onClose={() => setShowExportDialog(false)}
-          mapData={selectedMap}
-          objects={mapObjects}
-          colorSettings={editorSettings?.colors || {}}
-          selectedMoga={selectedMoga}
-          overlayReady={!!overlay}
-          onCaptureSatellite={handleCaptureSatellite}
-        />
-      )}
+      {/* Export dialog — PNG / PDF / SVG with moga filter (both sub-modules) */}
+      <GeoMapExportDialog
+        open={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        mapData={selectedMap}
+        objects={mapObjects}
+        colorSettings={editorSettings?.colors || {}}
+        selectedMoga={selectedMoga}
+        overlayReady={!!activeOverlay}
+        onCaptureSatellite={handleCaptureSatellite}
+      />
 
       {/* Farmer patch allocation dialog (cell-based) */}
       <AllocationDialog
@@ -1526,16 +1530,14 @@ export default function GeoMap() {
         saving={savingRegister}
       />
 
-      {/* Hybrid / Satellite toggle (overlay mode only) */}
-      {viewMode === "overlay" && (
-        <button
-          onClick={() => setHybrid(v => !v)}
-          className="absolute bottom-5 right-3 z-[1000] flex items-center gap-1.5 px-4 h-9 bg-[#1A4550] text-white text-xs font-bold rounded-full shadow-xl hover:bg-[#2C5E6D] transition-colors"
-        >
-          {hybrid ? "Hybrid Satellite" : "Pure Satellite"}
-          <ChevronDown className="w-3.5 h-3.5" />
-        </button>
-      )}
+      {/* Hybrid / Satellite toggle (both sub-modules) */}
+      <button
+        onClick={() => setHybrid(v => !v)}
+        className="absolute bottom-5 right-3 z-[1000] flex items-center gap-1.5 px-4 h-9 bg-[#1A4550] text-white text-xs font-bold rounded-full shadow-xl hover:bg-[#2C5E6D] transition-colors"
+      >
+        {hybrid ? "Hybrid Satellite" : "Pure Satellite"}
+        <ChevronDown className="w-3.5 h-3.5" />
+      </button>
     </div>
   );
 }
