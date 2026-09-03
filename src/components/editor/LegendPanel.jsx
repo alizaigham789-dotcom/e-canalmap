@@ -9,6 +9,7 @@ const ITEMS = [
   { label: "Khal / Watercourse", color: "#2563eb", style: "solid", thickness: 2.5, desc: "Bold blue line", layerKey: "khal" },
   { label: "Road", color: "#d97706", style: "double", thickness: 2, desc: "Dual line + ROAD label", layerKey: "road" },
   { label: "Chakbandi Line", color: "#22c55e", style: "cross", thickness: 3.5, desc: "Land consolidation boundary", key: "chakbandiStroke", layerKey: "chakbandi" },
+  { label: "Chakbandi Ikhraj", color: "#000000", style: "hatch", thickness: 1, desc: "Excluded parcel hatch" },
   { label: "Outlet / Moga", color: "#06b6d4", style: "arrow", thickness: 2, desc: "Directional water outlet", key: "outletStroke", layerKey: "outlet" },
 ];
 
@@ -26,6 +27,7 @@ export default function LegendPanel({ colorSettings, killaVisibility, onKillaVis
     "#2563eb",
     "#d97706",
     getColor("chakbandiStroke", "#22c55e"),
+    "#000000",
     getColor("outletStroke", "#06b6d4"),
   ];
 
@@ -78,6 +80,18 @@ export default function LegendPanel({ colorSettings, killaVisibility, onKillaVis
                       <line x1="0" y1="10" x2="40" y2="10" stroke={color} strokeWidth="3" />
                       <line x1="10" y1="4" x2="10" y2="16" stroke={color} strokeWidth="2" />
                       <line x1="25" y1="4" x2="25" y2="16" stroke={color} strokeWidth="2" />
+                    </>
+                  )}
+                  {item.style === "hatch" && (
+                    <>
+                      <defs><clipPath id="ik-clip"><rect x="2" y="5" width="36" height="10" /></clipPath></defs>
+                      <rect x="2" y="5" width="36" height="10" fill="none" stroke={color} strokeWidth="0.8" />
+                      <g clipPath="url(#ik-clip)">
+                        {Array.from({ length: 13 }, (_, k) => {
+                          const x = -10 + k * 4;
+                          return <line key={k} x1={x} y1={5} x2={x + 10} y2={15} stroke={color} strokeWidth="0.7" />;
+                        })}
+                      </g>
                     </>
                   )}
                   {item.style === "solid" && (

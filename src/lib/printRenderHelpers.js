@@ -943,6 +943,13 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = nu
       svg += `<line x1="${symX}" y1="${(iy-3*S).toFixed(1)}" x2="${symX+symW}" y2="${(iy-3*S).toFixed(1)}" stroke="${item.color}" stroke-width="${(2*S).toFixed(1)}"/>`;
       svg += `<line x1="${symX}" y1="${(iy+3*S).toFixed(1)}" x2="${symX+symW}" y2="${(iy+3*S).toFixed(1)}" stroke="${item.color}" stroke-width="${(2*S).toFixed(1)}"/>`;
       for (let t=0;t<3;t++) { const tx=symX+symW*(0.2+0.3*t); svg += `<line x1="${tx.toFixed(1)}" y1="${(iy-4*S).toFixed(1)}" x2="${tx.toFixed(1)}" y2="${(iy+4*S).toFixed(1)}" stroke="#78350f" stroke-width="${S}"/>`; }
+    } else if (item.type === "hatch") {
+      const gh = 10*S, gy = iy - gh/2;
+      svg += `<clipPath id="ikhraj-leg-${i}"><rect x="${symX.toFixed(1)}" y="${gy.toFixed(1)}" width="${symW}" height="${gh.toFixed(1)}"/></clipPath>`;
+      svg += `<rect x="${symX.toFixed(1)}" y="${gy.toFixed(1)}" width="${symW}" height="${gh.toFixed(1)}" fill="none" stroke="${item.color}" stroke-width="${(0.8*S).toFixed(1)}"/>`;
+      for (let x = -gh; x < symW + gh; x += 3*S) {
+        svg += `<line x1="${(symX+x).toFixed(1)}" y1="${gy.toFixed(1)}" x2="${(symX+x+gh).toFixed(1)}" y2="${(gy+gh).toFixed(1)}" stroke="${item.color}" stroke-width="${(0.8*S).toFixed(1)}" clip-path="url(#ikhraj-leg-${i})"/>`;
+      }
     } else if (item.type === "fill") {
       svg += `<rect x="${symX}" y="${(iy-5*S).toFixed(1)}" width="${symW}" height="${(10*S).toFixed(1)}" fill="${item.color}" fill-opacity="0.80" stroke="${item.color}" stroke-width="${S}"/>`;
     }
@@ -995,6 +1002,8 @@ function legendItems(C, objects, landUses) {
   if (has("road")) items.push({ label: "راستہ", color: C.roadStroke || "#b45309", type: "line_thick" });
   if (has("railway")) items.push({ label: "ریلوے", color: C.railwayStroke || "#4b5563", type: "railway" });
   if (has("chakbandi")) items.push({ label: "چکبندی", color: C.chakbandiStroke || "#22c55e", type: "cross" });
+  const hasIkhraj = objects ? objects.some(o => (o.type === "mustateel" || o.type === "muraba" || o.type === "acre") && o.excluded) : false;
+  if (hasIkhraj) items.push({ label: "چکبندی اخراج", color: "#000000", type: "hatch" });
   if (has("outlet")) items.push({ label: "موگہ", color: C.outletStroke || "#dc2626", type: "arrow" });
   if (has("mouza")) items.push({ label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" });
   if (hasParcel) items.push({ label: "مستطیل", color: C.mustateelStroke || "#000000", type: "mustateel" });
@@ -1126,6 +1135,17 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBound
       ctx.beginPath(); ctx.moveTo(symX, iy+3*S*scale); ctx.lineTo(symX+symW, iy+3*S*scale); ctx.stroke();
       ctx.strokeStyle = "#78350f"; ctx.lineWidth = S*scale;
       for (let t=0;t<3;t++) { const tx=symX+symW*(0.2+0.3*t); ctx.beginPath(); ctx.moveTo(tx, iy-4*S*scale); ctx.lineTo(tx, iy+4*S*scale); ctx.stroke(); }
+    } else if (item.type === "hatch") {
+      const gh = 10*S*scale, gy = iy - gh/2;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(symX, gy, symW, gh); ctx.clip();
+      ctx.strokeStyle = item.color; ctx.lineWidth = 0.8*S*scale; ctx.setLineDash([]);
+      for (let x = -gh; x < symW + gh; x += 3*S*scale) {
+        ctx.beginPath(); ctx.moveTo(symX+x, gy); ctx.lineTo(symX+x+gh, gy+gh); ctx.stroke();
+      }
+      ctx.restore();
+      ctx.strokeStyle = item.color; ctx.lineWidth = 0.8*S*scale;
+      ctx.strokeRect(symX, gy, symW, gh);
     } else if (item.type === "fill") {
       ctx.globalAlpha = 0.80; ctx.fillStyle = item.color;
       ctx.fillRect(symX, iy - 5*S*scale, symW, 10*S*scale);
