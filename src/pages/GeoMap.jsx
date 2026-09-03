@@ -180,6 +180,7 @@ export default function GeoMap() {
   const [savingRegister, setSavingRegister] = useState(false);
   const [existingRegId, setExistingRegId] = useState(null);
   const [selectedMuraba, setSelectedMuraba] = useState("");
+  const [dummyDialog, setDummyDialog] = useState(null); // { dummy, geo } — dummy mustateel attach
 
   // Measurement tools state
   const [markers, setMarkers] = useState([]); // user markers
@@ -1044,6 +1045,58 @@ export default function GeoMap() {
     }
   };
 
+  // ─── DUMMY MUSTATEEL ATTACH ───────────────────────────────────
+  // Clicking a dummy cell at the edge of the placed moga opens a dialog to
+  // type a Khasra number. On confirm, the unplaced moga containing that
+  // mustateel is auto-placed so its matching mustateel lands on the dummy.
+  const handleDummyClick = useCallback((dummy) => {
+    if (!activeOverlay?.transform) return;
+    const geo = activeOverlay.transform.transform(dummy.x, dummy.y);
+    setDummyDialog({ dummy, geo });
+  }, [activeOverlay]);
+
+  const handleDummyConfirm = async (match, dummyGeo) => {
+    const targetMap = (maps || []).find((m) => m.id === match.id);
+    if (!targetMap?.drawing_data) return;
+    let bObjects;
+    try {
+      bObjects = DrawingStateManager.deserialize(targetMap.drawing_data);
+    } catch {
+      toast.error("نقشہ ڈیٹا خراب ہے");
+      return;
+    }
+    const placement = computePlacementForMustateel(bObjects, match.must, dummyGeo);
+    if (!placement) {
+      toast.error("پلیس نہیں ہوا");
+      return;
+    }
+    try {
+      await base44.entities.LandMap.update(match.id, {
+        geo_placement_lat: placement.lat,
+        geo_placement_lng: placement.lng,
+        geo_rotation: 0,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+      toast.success(`موگہ ${match.mogaNumber} کہسڑا ${match.must.label} پر جڑ گیا`);
+    } catch (e) {
+      toast.error("محفوظ نہیں ہوا");
+    }
+  };
+
+  const handleDummyRemove = async (mapId) => {
+    try {
+      await base44.entities.LandMap.update(mapId, {
+        geo_placement_lat: null,
+        geo_placement_lng: null,
+        geo_rotation: 0,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+      toast.success("موگہ ہٹا دیا گیا");
+    } catch (e) {
+      toast.error("ہٹایا نہیں گیا");
+    }
+  };
+
   // Capture the live satellite map + cadastral overlay as a single canvas (for export).
   // Swaps in a CORS-enabled imagery layer (ArcGIS World Imagery) so the captured canvas
   // is not tainted, fits the view to the placed overlay, then restores the map.
@@ -1222,6 +1275,16 @@ export default function GeoMap() {
             village={selectedMap?.village || filters.village}
             selectedMapId={selectedMapId}
             onMoved={handleMogaMoved}
+          />
+        )}
+
+        {/* Dummy mustateel cells at the edges of the selected moga — click to attach a new moga */}
+        {viewMode === "overlay" && activeOverlay?.transform && !capturing && selectedMoga && (
+          <DummyMustateelLayer
+            objects={mapObjects}
+            overlay={activeOverlay}
+            selectedMoga={selectedMoga}
+            onClick={handleDummyClick}
           />
         )}
 
@@ -1650,6 +1713,19 @@ export default function GeoMap() {
         info={registerInfo}
         onSave={handleAddPatch}
         onClose={() => setPatchDialog(null)}
+      />
+
+      {/* Dummy mustateel attach dialog — chain a new moga off an edge cell */}
+      <DummyMustateelDialog
+        open={!!dummyDialog}
+        dummy={dummyDialog?.dummy}
+        dummyGeo={dummyDialog?.geo}
+        maps={maps}
+        village={selectedMap?.village || filters.village}
+        placedMapId={selectedMapId}
+        onConfirm={handleDummyConfirm}
+        onRemove={handleDummyRemove}
+        onClose={() => setDummyDialog(null)}
       />
 
       {/* Form 1 Register */}
