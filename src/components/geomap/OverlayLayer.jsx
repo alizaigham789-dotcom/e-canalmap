@@ -456,15 +456,24 @@ function OutletMarker({ obj, latlngs, zoom }) {
           </span>
         </Tooltip>
       </CircleMarker>
-      {/* Arrow at end — using a marker with rotation */}
+      {/* Arrow at end — pointed head at the end point, tail toward the line's origin */}
       {(() => {
         const p1 = latlngs[latlngs.length - 2], p2 = latlngs[latlngs.length - 1];
-        const angle = Math.atan2(p2.lng - p1.lng, p2.lat - p1.lat) * 180 / Math.PI;
+        // Bearing (clockwise from north) of the last segment, p1 → p2
+        const bearing = Math.atan2(p2.lng - p1.lng, p2.lat - p1.lat) * 180 / Math.PI;
+        // CSS rotate(0°) points east; bearing 0 = north → offset by -90°
+        const rot = bearing - 90;
+        const color = obj.outletColor || "#06b6d4";
         const arrowIcon = L.divIcon({
-          html: `<div style="transform: rotate(${angle}deg); font-size: 18px; color: ${obj.outletColor || "#06b6d4"}; line-height: 1;">➤</div>`,
+          html: `<div style="transform: rotate(${rot}deg); transform-origin: 26px 10px; line-height: 0;">
+            <svg width="28" height="20" viewBox="0 0 28 20" xmlns="http://www.w3.org/2000/svg">
+              <line x1="3" y1="10" x2="19" y2="10" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M15 3 L26 10 L15 17 Z" fill="${color}" stroke="#ffffff" stroke-width="1" stroke-linejoin="round"/>
+            </svg>
+          </div>`,
           className: "",
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
+          iconSize: [28, 20],
+          iconAnchor: [26, 10],
         });
         return <Marker position={[p2.lat, p2.lng]} icon={arrowIcon} />;
       })()}
