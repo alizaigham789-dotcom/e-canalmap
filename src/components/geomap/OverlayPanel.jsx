@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle, Save, Loader2, Network } from "lucide-react";
+import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle, Save, Loader2, Network, Lightbulb } from "lucide-react";
 
 export default function OverlayPanel({
   maps,
@@ -24,6 +24,8 @@ export default function OverlayPanel({
   villageMogaCount,
   onSaveAllMogas,
   savingAllMogas,
+  suggestions,
+  onPlaceSuggestion,
   onClose,
 }) {
   const mustateels = mustateelAreas || [];
@@ -197,6 +199,34 @@ export default function OverlayPanel({
               <p className="text-[9px] text-white/40 text-center -mt-1">
                 {villageMogaCount} اور موگہ اسی گاؤں کے آرینج ہوں گے
               </p>
+            )}
+
+            {/* Suggested next moga — chains off placed mogas via Khasra continuity */}
+            {suggestions && suggestions.length > 0 && (
+              <div className="bg-indigo-600/15 rounded-lg p-2.5 space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Lightbulb className="w-3.5 h-3.5 text-indigo-300" />
+                  <span className="text-[10px] text-white/70 font-semibold">Suggested Next Moga</span>
+                </div>
+                <p className="text-[9px] text-white/40 leading-relaxed">
+                  یہ موگہ موجودہ پلیس شدہ موگہ کے مستطیل نمبر سے مل کر بغیر فاصلے ایک نقشہ بناتے ہیں — ایک کلک سے پلیس کریں۔
+                </p>
+                {suggestions.slice(0, 6).map((s) => (
+                  <button
+                    key={s.mapId}
+                    onClick={() => onPlaceSuggestion(s)}
+                    className="w-full flex items-center justify-between bg-white/10 hover:bg-indigo-600/30 text-white text-[10px] font-medium px-2 py-1.5 rounded-md transition-all"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3 text-indigo-300" />
+                      موگہ {s.mogaNumber || "—"}
+                    </span>
+                    <span className="text-white/50 text-[9px]">
+                      کہسڑا {s.matchedLabel} · {s.method === "overlap" ? "merge" : "adjacent"}
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
             <button
               onClick={onEditLowerCorner}

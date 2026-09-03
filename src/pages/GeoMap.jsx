@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves, Map as MapIcon, Satellite } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves, Map as MapIcon, Satellite, Move } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -29,7 +29,9 @@ import { remainingKanal, acreAllocations, kanalUsedInAcre, parcelKillaCells } fr
 import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import { inverseTransform } from "@/lib/geoOverlay";
-import { arrangeMogas, autoAttachPlacement } from "@/lib/mogaArrange";
+import { arrangeMogas, autoAttachPlacement, suggestNextMogas } from "@/lib/mogaArrange";
+import MogaMoveLayer from "@/components/geomap/MogaMoveLayer";
+import MogaToolsToolbar from "@/components/geomap/MogaToolsToolbar";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
   polygonAreaSqMeters, sqMetersToUnits,
@@ -167,6 +169,7 @@ export default function GeoMap() {
   const [showForm1, setShowForm1] = useState(false);
   const [allocTool, setAllocTool] = useState(null); // null | "cell" | "draw" | "edit"
   const [khalTool, setKhalTool] = useState(null); // null | "draw" | "edit"
+  const [moveTool, setMoveTool] = useState(false); // drag-to-move placed mogas
   const [allocations, setAllocations] = useState([]);
   const [allocCell, setAllocCell] = useState(null);
   const [patchDialog, setPatchDialog] = useState(null);
@@ -248,6 +251,15 @@ export default function GeoMap() {
     (!filters.village || m.village === filters.village) &&
     (!filters.rajbah || m.rajbah === filters.rajbah)
   ), [maps, filters]);
+
+  // Suggested next mogas — unplaced maps of the selected mouza that can chain
+  // off the already-placed mogas via mustateel Khasra continuity (555 → 556).
+  const suggestions = useMemo(() => {
+    if (viewMode !== "overlay") return [];
+    const v = selectedMap?.village || filters.village;
+    if (!v) return [];
+    return suggestNextMogas(maps || [], v);
+  }, [maps, selectedMap, filters.village, viewMode]);
 
   // Moga numbers available across the filtered maps (for the top cascade).
   const filterMogas = useMemo(() => {
@@ -1001,6 +1013,35 @@ export default function GeoMap() {
     }
   };
 
+  // Drag-to-move a placed moga — updates its saved geo placement anchor.
+  const handleMogaMoved = async (mapId, latlng) => {
+    try {
+      await base44.entities.LandMap.update(mapId, {
+        geo_placement_lat: latlng.lat,
+        geo_placement_lng: latlng.lng,
+      });
+      queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+    } catch (e) {
+      toast.error("موگہ move نہیں ہوا");
+    }
+  };
+
+  // One-click place a suggested next moga at its computed chaining position.
+  const handlePlaceSuggestion = async (sug) => {
+    try {
+      await base44.entities.LandMap.update(sug.mapId, {
+        geo_placement_lat: sug.placement.lat,
+        geo_placement_lng: sug.placement.lng,
+        geo_rotation: 0,
+      });
+      queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+      toast.success(`موگہ ${sug.mogaNumber} کہسڑا ${sug.matchedLabel} پر جڑ گیا`);
+      handleSelectMap(sug.mapId, true);
+    } catch (e) {
+      toast.error("موگہ پلیس نہیں ہوا");
+    }
+  };
+
   // Capture the live satellite map + cadastral overlay as a single canvas (for export).
   // Swaps in a CORS-enabled imagery layer (ArcGIS World Imagery) so the captured canvas
   // is not tainted, fits the view to the placed overlay, then restores the map.
@@ -1167,6 +1208,16 @@ export default function GeoMap() {
         {/* All saved (placed) mogas — always visible in both modes so previously-placed mogas stay on screen */}
         {!capturing && (viewMode === "view" || viewMode === "overlay") && (
           <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} />
+        )}
+
+        {/* Moga move layer — draggable markers to reposition placed mogas */}
+        {viewMode === "overlay" && moveTool && !capturing && (
+          <MogaMoveLayer
+            maps={villageMaps}
+            village={selectedMap?.village || filters.village}
+            selectedMapId={selectedMapId}
+            onMoved={handleMogaMoved}
+          />
         )}
 
         {/* Overlay layer — all map details */}
@@ -1418,6 +1469,8 @@ export default function GeoMap() {
           onSaveAllMogas={handleSaveAllMogas}
           savingAllMogas={savingAllMogas}
           villageMogaCount={(maps || []).filter(m => m.village === selectedMap?.village && m.id !== selectedMap?.id && m.geo_placement_lat == null).length}
+          suggestions={suggestions}
+          onPlaceSuggestion={handlePlaceSuggestion}
           onClose={() => setShowOverlayPanel(false)}
         />
       )}
@@ -1489,6 +1542,24 @@ export default function GeoMap() {
         onKhalToolChange={(t) => { setKhalTool(t); if (t) setActiveTool(null); }}
         showKhal={viewMode === "overlay"}
       />
+
+      {/* Moga tools — Hand (pan) + Move (drag placed mogas) — overlay mode only */}
+      {viewMode === "overlay" && (
+        <MogaToolsToolbar
+          moveTool={moveTool}
+          onToggleMove={() => {
+            setMoveTool((v) => !v);
+            if (!moveTool) { setActiveTool(null); setKhalTool(null); }
+          }}
+          onHand={() => { setMoveTool(false); setActiveTool(null); setKhalTool(null); }}
+        />
+      )}
+
+      {moveTool && viewMode === "overlay" && (
+        <div className="absolute bottom-36 left-16 z-[1001] bg-indigo-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
+          <Move className="w-3 h-3" /> کسی پلیس شدہ موگہ کے نشان کو کھینچ کر اسے دوسری جگہ منتقل کریں
+        </div>
+      )}
 
       {/* Live measurement info */}
       <MeasurementInfo measurement={liveMeasurement} draft={draft} zoom={zoom} />

@@ -280,3 +280,59 @@ export function autoAttachPlacement(maps, newMap) {
   if (!placement) return null;
   return { placement, matchedLabel: best.bMust.label, method: best.method };
 }
+
+// ============================================================
+// SUGGEST NEXT MOGAS — given the currently-placed mogas of a
+// village, return the unplaced moga maps that can chain off them
+// (exact Khasra match → merge, or consecutive number → adjacent
+// with zero gap). Each suggestion includes the computed placement
+// so the user can place it in one click.
+// Returns [{ mapId, mogaNumber, village, matchedLabel, method, placement }]
+// ============================================================
+export function suggestNextMogas(maps, village) {
+  const placedMust = new Map();
+  const placedIds = new Set();
+  for (const m of maps || []) {
+    if (!m || m.geo_placement_lat == null || m.geo_placement_lng == null) continue;
+    if (village && m.village && m.village !== village) continue;
+    if (!m.drawing_data) continue;
+    placedIds.add(m.id);
+    let objs;
+    try { objs = DrawingStateManager.deserialize(m.drawing_data); } catch { continue; }
+    const t = computeOneClickTransform({ lat: m.geo_placement_lat, lng: m.geo_placement_lng }, objs, m.geo_rotation || 0);
+    if (!t) continue;
+    for (const must of getMapMustateels(m)) {
+      if (!placedMust.has(must.label)) placedMust.set(must.label, t.transform(must.x, must.y));
+    }
+  }
+  if (!placedMust.size) return [];
+
+  const suggestions = [];
+  for (const m of maps || []) {
+    if (!m || placedIds.has(m.id) || m.geo_placement_lat != null) continue;
+    if (village && m.village && m.village !== village) continue;
+    if (!m.drawing_data) continue;
+    const bMusts = getMapMustateels(m);
+    if (!bMusts.length) continue;
+    let best = null;
+    for (const bm of bMusts) {
+      if (placedMust.has(bm.label)) { best = { bMust: bm, targetGeo: placedMust.get(bm.label), method: "overlap" }; break; }
+    }
+    if (!best) {
+      for (const bm of bMusts) {
+        const n = parseInt(bm.label);
+        if (isNaN(n)) continue;
+        if (placedMust.has(String(n - 1))) { best = { bMust: bm, targetGeo: offsetGeoEast(placedMust.get(String(n - 1)), MUST_W_FT), method: "adjacent-right" }; break; }
+        if (placedMust.has(String(n + 1))) { best = { bMust: bm, targetGeo: offsetGeoEast(placedMust.get(String(n + 1)), -MUST_W_FT), method: "adjacent-left" }; break; }
+      }
+    }
+    if (!best) continue;
+    let bObjects;
+    try { bObjects = DrawingStateManager.deserialize(m.drawing_data); } catch { continue; }
+    const placement = computePlacementForMustateel(bObjects, best.bMust, best.targetGeo);
+    if (!placement) continue;
+    suggestions.push({ mapId: m.id, mogaNumber: m.moga_number || "", village: m.village || "", matchedLabel: best.bMust.label, method: best.method, placement });
+  }
+  suggestions.sort((a, b) => parseInt(a.mogaNumber) - parseInt(b.mogaNumber));
+  return suggestions;
+}
