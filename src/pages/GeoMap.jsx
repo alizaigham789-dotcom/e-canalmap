@@ -29,9 +29,11 @@ import { remainingKanal, acreAllocations, kanalUsedInAcre, parcelKillaCells } fr
 import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import { inverseTransform } from "@/lib/geoOverlay";
-import { arrangeMogas, autoAttachPlacement, suggestNextMogas } from "@/lib/mogaArrange";
+import { arrangeMogas, autoAttachPlacement, suggestNextMogas, computePlacementForMustateel } from "@/lib/mogaArrange";
 import MogaMoveLayer from "@/components/geomap/MogaMoveLayer";
 import MogaToolsToolbar from "@/components/geomap/MogaToolsToolbar";
+import DummyMustateelLayer from "@/components/geomap/DummyMustateelLayer";
+import DummyMustateelDialog from "@/components/geomap/DummyMustateelDialog";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
   polygonAreaSqMeters, sqMetersToUnits,

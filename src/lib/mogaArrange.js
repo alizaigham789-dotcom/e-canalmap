@@ -401,3 +401,61 @@ export function snapPlacementToGrid(movedMap, draggedGeo, maps, village) {
   const placement = computePlacementForMustateel(movedObjs, movedFirst, snappedGridOrigin);
   return placement || draggedGeo;
 }
+
+// ============================================================
+// EDGE DUMMY MUSTATEELS — for the selected moga's mustateel set,
+// compute "dummy" rectangle positions on the OUTSIDE of every
+// boundary mustateel (left / right / top / bottom). Each dummy is
+// one mustateel-size cell sitting adjacent to an edge mustateel,
+// ready for the user to click and attach a new moga there.
+// Returns [{ x, y, w, h, side }]
+// ============================================================
+export function getEdgeDummyMustateels(objects, mogaFilter) {
+  const musts = objects.filter(
+    (o) => o.type === "mustateel" && o.label &&
+      (!mogaFilter || !o.mogaNumber || String(o.mogaNumber) === String(mogaFilter))
+  );
+  if (!musts.length) return [];
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const m of musts) {
+    minX = Math.min(minX, m.x);
+    minY = Math.min(minY, m.y);
+    maxX = Math.max(maxX, m.x + m.w);
+    maxY = Math.max(maxY, m.y + m.h);
+  }
+  const dummies = [];
+  const seen = new Set();
+  const add = (x, y, w, h, side) => {
+    const key = `${Math.round(x)},${Math.round(y)}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    dummies.push({ x, y, w, h, side });
+  };
+  for (const m of musts) {
+    if (Math.abs(m.x - minX) < 1) add(m.x - m.w, m.y, m.w, m.h, "left");
+    if (Math.abs(m.x + m.w - maxX) < 1) add(m.x + m.w, m.y, m.w, m.h, "right");
+    if (Math.abs(m.y - minY) < 1) add(m.x, m.y - m.h, m.w, m.h, "top");
+    if (Math.abs(m.y + m.h - maxY) < 1) add(m.x, m.y + m.h, m.w, m.h, "bottom");
+  }
+  return dummies;
+}
+
+// Find unplaced maps of the same village that contain a mustateel with the
+// given Khasra label. Excludes already-placed maps and the given exclude ids.
+// Returns [{ map, must }] — must is the matching mustateel canvas rect.
+export function findUnplacedMogasByLabel(maps, village, label, excludeIds = []) {
+  const lbl = String(label).trim();
+  if (!lbl) return [];
+  const ex = new Set(excludeIds);
+  const out = [];
+  for (const m of maps || []) {
+    if (!m || ex.has(m.id)) continue;
+    if (m.geo_placement_lat != null) continue;
+    if (village && m.village && m.village !== village) continue;
+    if (!m.drawing_data) continue;
+    const musts = getMapMustateels(m);
+    const match = musts.find((mu) => mu.label === lbl);
+    if (match) out.push({ map: m, must: match });
+  }
+  return out;
+}
