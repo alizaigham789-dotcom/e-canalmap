@@ -425,17 +425,17 @@ export function getEdgeDummyMustateels(objects, mogaFilter) {
   }
   const dummies = [];
   const seen = new Set();
-  const add = (x, y, w, h, side) => {
+  const add = (x, y, w, h, side, srcLabel) => {
     const key = `${Math.round(x)},${Math.round(y)}`;
     if (seen.has(key)) return;
     seen.add(key);
-    dummies.push({ x, y, w, h, side });
+    dummies.push({ x, y, w, h, side, srcLabel: srcLabel || "" });
   };
   for (const m of musts) {
-    if (Math.abs(m.x - minX) < 1) add(m.x - m.w, m.y, m.w, m.h, "left");
-    if (Math.abs(m.x + m.w - maxX) < 1) add(m.x + m.w, m.y, m.w, m.h, "right");
-    if (Math.abs(m.y - minY) < 1) add(m.x, m.y - m.h, m.w, m.h, "top");
-    if (Math.abs(m.y + m.h - maxY) < 1) add(m.x, m.y + m.h, m.w, m.h, "bottom");
+    if (Math.abs(m.x - minX) < 1) add(m.x - m.w, m.y, m.w, m.h, "left", m.label);
+    if (Math.abs(m.x + m.w - maxX) < 1) add(m.x + m.w, m.y, m.w, m.h, "right", m.label);
+    if (Math.abs(m.y - minY) < 1) add(m.x, m.y - m.h, m.w, m.h, "top", m.label);
+    if (Math.abs(m.y + m.h - maxY) < 1) add(m.x, m.y + m.h, m.w, m.h, "bottom", m.label);
   }
   return dummies;
 }
