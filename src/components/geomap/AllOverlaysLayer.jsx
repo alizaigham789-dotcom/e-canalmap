@@ -8,11 +8,17 @@ import OverlayLayer from "@/components/geomap/OverlayLayer";
 // map is excluded (it is rendered by the main interactive OverlayLayer).
 // Show-all overlays are non-interactive (no killa grid, no mustateel click) —
 // purely a visual overview.
+//
+// Same-number mustateels shared between adjacent mogas are merged: only the
+// first moga (in render order) draws a given mustateel label, so overlapping
+// same-number mustateels appear as a single boundary (no "double mustateel").
 export default function AllOverlaysLayer({ maps, excludeId, zoom }) {
   const EMPTY = useMemo(() => new Set(), []);
 
-  const overlays = useMemo(() => {
+  const { overlays, skipMap } = useMemo(() => {
     const out = [];
+    const labelOwner = new Map(); // label -> first moga id that claimed it
+    const skipByMoga = new Map(); // mogaId -> Set<label> to skip (already drawn by another moga)
     for (const m of maps) {
       if (!m || m.id === excludeId) continue;
       if (m.geo_placement_lat == null || m.geo_placement_lng == null) continue;
@@ -29,9 +35,24 @@ export default function AllOverlaysLayer({ maps, excludeId, zoom }) {
         objects,
         m.geo_rotation || 0
       );
-      if (transform) out.push({ id: m.id, objects, transform });
+      if (!transform) continue;
+      out.push({ id: m.id, objects, transform });
+
+      const skip = new Set();
+      for (const o of objects) {
+        if ((o.type === "mustateel" || o.type === "muraba") && o.label) {
+          const lbl = String(o.label).trim();
+          if (!lbl) continue;
+          if (labelOwner.has(lbl) && labelOwner.get(lbl) !== m.id) {
+            skip.add(lbl); // another moga already draws this label → merge
+          } else {
+            labelOwner.set(lbl, m.id);
+          }
+        }
+      }
+      skipByMoga.set(m.id, skip);
     }
-    return out;
+    return { overlays: out, skipMap: skipByMoga };
   }, [maps, excludeId]);
 
   return (
@@ -45,6 +66,7 @@ export default function AllOverlaysLayer({ maps, excludeId, zoom }) {
           killaVisible={false}
           mogaFilter={null}
           activeMustateelIds={EMPTY}
+          skipLabels={skipMap.get(o.id) || EMPTY}
         />
       ))}
     </>

@@ -520,16 +520,20 @@ function computeKillaLatLngs(obj, transform) {
   });
 }
 
-export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick }) {
+export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels }) {
   const geoObjects = useMemo(() => {
     if (!transform || !objects.length) return [];
-    const filtered = mogaFilter
-      ? objects.filter(o => {
-           if (o.type === "chakbandi") return o.mogaNumber === mogaFilter;
-           if (o.type === "mustateel") return o.mogaNumber === mogaFilter || !o.mogaNumber;
-           return true;
-         })
-      : objects;
+    const filtered = objects.filter(o => {
+      // Merge same-number mustateels shared across mogas: if another moga
+      // already draws this label, skip it here so only one boundary shows.
+      if (skipLabels && skipLabels.size && (o.type === "mustateel" || o.type === "muraba") && o.label && skipLabels.has(String(o.label).trim())) return false;
+      if (mogaFilter) {
+        if (o.type === "chakbandi") return o.mogaNumber === mogaFilter;
+        if (o.type === "mustateel") return o.mogaNumber === mogaFilter || !o.mogaNumber;
+        return true;
+      }
+      return true;
+    });
     const sorted = [...filtered].sort((a, b) => DRAW_ORDER.indexOf(a.type) - DRAW_ORDER.indexOf(b.type));
     return sorted.map(obj => {
       let latlngs, killaLatLngs = null;
@@ -546,7 +550,7 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
       const ccaCenter = obj.type === "chakbandi" && obj.centerLabel ? computeCcaCenter(obj, objects, transform) : null;
       return { obj, latlngs, killaLatLngs, ccaCenter };
     }).filter(Boolean);
-  }, [objects, transform, mogaFilter, killaVisible]);
+  }, [objects, transform, mogaFilter, killaVisible, skipLabels]);
 
   return (
     <>

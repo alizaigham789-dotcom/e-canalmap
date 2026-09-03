@@ -1213,7 +1213,7 @@ export default function GeoMap() {
         {/* Moga move layer — draggable markers to reposition placed mogas */}
         {viewMode === "overlay" && moveTool && !capturing && (
           <MogaMoveLayer
-            maps={villageMaps}
+            maps={maps}
             village={selectedMap?.village || filters.village}
             selectedMapId={selectedMapId}
             onMoved={handleMogaMoved}
