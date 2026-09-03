@@ -416,26 +416,31 @@ export function getEdgeDummyMustateels(objects, mogaFilter) {
       (!mogaFilter || !o.mogaNumber || String(o.mogaNumber) === String(mogaFilter))
   );
   if (!musts.length) return [];
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const m of musts) {
-    minX = Math.min(minX, m.x);
-    minY = Math.min(minY, m.y);
-    maxX = Math.max(maxX, m.x + m.w);
-    maxY = Math.max(maxY, m.y + m.h);
-  }
   const dummies = [];
   const seen = new Set();
+  const TOL = 3; // canvas-unit tolerance for "adjacent"
   const add = (x, y, w, h, side, srcLabel) => {
     const key = `${Math.round(x)},${Math.round(y)}`;
     if (seen.has(key)) return;
+    // Skip if a real mustateel already occupies this position
+    const occupied = musts.some(m => Math.abs(m.x - x) < TOL && Math.abs(m.y - y) < TOL);
+    if (occupied) return;
     seen.add(key);
     dummies.push({ x, y, w, h, side, srcLabel: srcLabel || "" });
   };
   for (const m of musts) {
-    if (Math.abs(m.x - minX) < 1) add(m.x - m.w, m.y, m.w, m.h, "left", m.label);
-    if (Math.abs(m.x + m.w - maxX) < 1) add(m.x + m.w, m.y, m.w, m.h, "right", m.label);
-    if (Math.abs(m.y - minY) < 1) add(m.x, m.y - m.h, m.w, m.h, "top", m.label);
-    if (Math.abs(m.y + m.h - maxY) < 1) add(m.x, m.y + m.h, m.w, m.h, "bottom", m.label);
+    // Left side open? (no mustateel ending at this one's left edge, same row)
+    const hasLeft = musts.some(o => Math.abs((o.x + o.w) - m.x) < TOL && Math.abs(o.y - m.y) < TOL && Math.abs(o.h - m.h) < TOL);
+    if (!hasLeft) add(m.x - m.w, m.y, m.w, m.h, "left", m.label);
+    // Right side open?
+    const hasRight = musts.some(o => Math.abs(o.x - (m.x + m.w)) < TOL && Math.abs(o.y - m.y) < TOL && Math.abs(o.h - m.h) < TOL);
+    if (!hasRight) add(m.x + m.w, m.y, m.w, m.h, "right", m.label);
+    // Top side open?
+    const hasTop = musts.some(o => Math.abs((o.y + o.h) - m.y) < TOL && Math.abs(o.x - m.x) < TOL && Math.abs(o.w - m.w) < TOL);
+    if (!hasTop) add(m.x, m.y - m.h, m.w, m.h, "top", m.label);
+    // Bottom side open?
+    const hasBottom = musts.some(o => Math.abs(o.y - (m.y + m.h)) < TOL && Math.abs(o.x - m.x) < TOL && Math.abs(o.w - m.w) < TOL);
+    if (!hasBottom) add(m.x, m.y + m.h, m.w, m.h, "bottom", m.label);
   }
   return dummies;
 }

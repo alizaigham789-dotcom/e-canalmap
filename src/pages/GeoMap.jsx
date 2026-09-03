@@ -1278,8 +1278,8 @@ export default function GeoMap() {
           />
         )}
 
-        {/* Dummy mustateel cells at the edges of the selected moga — click to attach a new moga */}
-        {viewMode === "overlay" && activeOverlay?.transform && !capturing && selectedMoga && (
+        {/* Dummy mustateel cells on every open side of the placed moga — click to attach a new moga */}
+        {viewMode === "overlay" && activeOverlay?.transform && !capturing && (
           <DummyMustateelLayer
             objects={mapObjects}
             overlay={activeOverlay}
