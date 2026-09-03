@@ -1460,10 +1460,10 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
             </div>
           )}
           {/* Legend toggle */}
-          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+          <label className="flex items-center gap-2 cursor-pointer select-none bg-white rounded-lg px-2.5 py-1.5 border border-slate-300 hover:border-blue-400 transition-colors">
             <input type="checkbox" checked={showLegendInPrint} onChange={e => setShowLegendInPrint(e.target.checked)}
-              className="w-3 h-3 accent-blue-500" />
-            <span className="text-[10px] text-slate-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>علامات دکھائیں</span>
+              className="w-4 h-4 accent-blue-600 cursor-pointer" />
+            <span className="text-[12px] font-medium text-slate-700" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>علامات دکھائیں</span>
           </label>
           {/* Page margin (left/right) — 0 = full page, no margin */}
           <div className="flex items-center gap-1.5 bg-white rounded-lg px-2 py-1 border border-slate-300">
