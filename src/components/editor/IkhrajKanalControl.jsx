@@ -38,6 +38,13 @@ export default function IkhrajKanalControl({ local, commit, allObjects = [] }) {
     setOpenAcre(n > 0 && n < 8 ? idx + 1 : null);
   };
 
+  // Whole-acre quick toggle — click removes that acre's ikhraj lines, click again restores them.
+  const toggleAcreWhole = (idx) => {
+    const exK = excludedKanals.slice();
+    exK[idx] = exK[idx] ? null : { boxes: BOXES.slice() };
+    write(exK);
+  };
+
   const toggleBox = (idx, b) => {
     const f = excludedKanals[idx];
     if (!f) return;
@@ -56,6 +63,24 @@ export default function IkhrajKanalControl({ local, commit, allObjects = [] }) {
       <label className="text-[9px] text-slate-400 uppercase tracking-wider block mb-1" style={URDU}>
         کنال وار اخراج — سلائیڈر سے تعداد، پھر کنال منتخب کریں
       </label>
+
+      {/* Whole-acre quick toggle grid (like the colour-fill KILLA grid): click an acre
+          to end its ikhraj lines, click again to bring them back. With the exclusion
+          switch ON, ALL acres are excluded by default — so every box starts active. */}
+      <div className="grid grid-cols-5 gap-1">
+        {Array.from({ length: total }, (_, i) => {
+          const on = !!excludedKanals[i];
+          return (
+            <button key={i} onClick={() => toggleAcreWhole(i)}
+              className="relative h-8 rounded border text-[9px] flex items-center justify-center overflow-hidden"
+              style={{ background: on ? EX_COL : "#fff", borderColor: on ? EX_COL : "#cbd5e1", color: on ? "#fff" : "#94a3b8" }}
+              title={on ? "اخراج لائنیں لگی ہیں — کلک سے ختم کریں" : "اخراج آف — کلک سے لائنیں لگائیں"}>
+              <span className="absolute top-0 left-0.5 text-[7px] font-bold" style={{ color: on ? "#e2e8f0" : "#64748b" }}>{i + 1}</span>
+              {on && <span style={URDU} className="text-[8px] leading-none">اخراج</span>}
+            </button>
+          );
+        })}
+      </div>
 
       {selectedAcres.length > 0 ? (
         <div className="space-y-1.5 max-h-64 overflow-y-auto touch-scroll">
