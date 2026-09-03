@@ -1,7 +1,9 @@
 import React, { useMemo } from "react";
-import { Polygon, Marker, Tooltip } from "react-leaflet";
+import { Polygon, Marker } from "react-leaflet";
 import L from "leaflet";
-import { getEdgeDummyMustateels } from "@/lib/mogaArrange";
+import { getEdgeDummyMustateels, getMapMustateels } from "@/lib/mogaArrange";
+import { computeOneClickTransform } from "@/lib/geoOverlay";
+import { DrawingStateManager } from "@/lib/gisEngine";
 
 // Suggested next Khasra number for a dummy — based on the adjacent
 // mustateel's label and which side the dummy sits on.
@@ -30,17 +32,52 @@ function plusIcon(num) {
   });
 }
 
-// Renders full-size yellow "dummy" mustateel cells around the boundary of the
-// selected moga. Each dummy is one mustateel-sized rectangle sitting adjacent
-// to an edge mustateel, with a "+" icon and the suggested next Khasra number.
-// Clicking opens the attach dialog so the user can chain a new moga here.
-export default function DummyMustateelLayer({ objects, overlay, selectedMoga, onClick }) {
+// Collect the geo top-left corners of all mustateels from already-placed mogas
+// (excluding the current map). Used to suppress dummies that would sit on top
+// of a placed moga's mustateel — so when two mogas are chained, the inner dummies
+// between them disappear and only the outer-boundary dummies remain.
+function placedMustateelGeoCorners(maps, excludeId) {
+  const corners = [];
+  for (const m of maps || []) {
+    if (!m || m.id === excludeId) continue;
+    if (m.geo_placement_lat == null || m.geo_placement_lng == null) continue;
+    if (!m.drawing_data) continue;
+    let objs;
+    try { objs = DrawingStateManager.deserialize(m.drawing_data); } catch { continue; }
+    const t = computeOneClickTransform(
+      { lat: m.geo_placement_lat, lng: m.geo_placement_lng },
+      objs,
+      m.geo_rotation || 0
+    );
+    if (!t) continue;
+    for (const must of getMapMustateels(m)) {
+      const tl = t.transform(must.x, must.y);
+      corners.push({ lat: tl.lat, lng: tl.lng });
+    }
+  }
+  return corners;
+}
+
+// Renders full-size yellow "dummy" mustateel cells on every open side of the
+// placed moga. Each dummy is one mustateel-sized rectangle with a "+" icon and
+// the suggested next Khasra number badge. Dummies that overlap an already-placed
+// adjacent moga's mustateel are hidden so only the outer boundary shows.
+export default function DummyMustateelLayer({ objects, overlay, selectedMoga, onClick, maps, excludeMapId }) {
   const dummies = useMemo(
     () => getEdgeDummyMustateels(objects, selectedMoga),
     [objects, selectedMoga]
   );
 
+  const occupiedCorners = useMemo(
+    () => placedMustateelGeoCorners(maps, excludeMapId),
+    [maps, excludeMapId]
+  );
+
   if (!overlay?.transform || !dummies.length) return null;
+
+  // ~2 m tolerance in degrees — enough to catch mustateel corners that align
+  // after chaining, without removing dummies that are merely nearby.
+  const TOL = 0.00002;
 
   return (
     <>
@@ -53,6 +90,12 @@ export default function DummyMustateelLayer({ objects, overlay, selectedMoga, on
         ].map(([cx, cy]) => overlay.transform.transform(cx, cy));
         const center = overlay.transform.transform(d.x + d.w / 2, d.y + d.h / 2);
         const num = nextNumber(d.srcLabel, d.side);
+        // Skip this dummy if a placed adjacent moga already occupies its corner
+        const tl = corners[0];
+        const isOccupied = occupiedCorners.some(
+          (c) => Math.abs(c.lat - tl.lat) < TOL && Math.abs(c.lng - tl.lng) < TOL
+        );
+        if (isOccupied) return null;
         return (
           <React.Fragment key={i}>
             <Polygon
@@ -70,13 +113,7 @@ export default function DummyMustateelLayer({ objects, overlay, selectedMoga, on
                   onClick(d);
                 },
               }}
-            >
-              <Tooltip permanent direction="center" className="khal-label" opacity={1}>
-                <span style={{ fontSize: "11px", fontWeight: 800, color: "#854d0e", backgroundColor: "rgba(255,255,255,0.95)", padding: "2px 8px", borderRadius: 4, fontFamily: "'Noto Nastaliq Urdu', sans-serif", whiteSpace: "nowrap", border: "1px solid #eab308" }}>
-                  {num != null ? `کہسڑا ${num}` : "موگہ جوڑیں"}
-                </span>
-              </Tooltip>
-            </Polygon>
+            />
             <Marker position={[center.lat, center.lng]} icon={plusIcon(num)} interactive={false} />
           </React.Fragment>
         );

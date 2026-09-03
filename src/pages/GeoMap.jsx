@@ -1285,6 +1285,8 @@ export default function GeoMap() {
             overlay={activeOverlay}
             selectedMoga={selectedMoga}
             onClick={handleDummyClick}
+            maps={villageMaps}
+            excludeMapId={selectedMapId}
           />
         )}
 
