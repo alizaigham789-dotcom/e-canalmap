@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { X, Printer, ZoomIn, ZoomOut, FileText } from "lucide-react";
 import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, calculateTotalGCA, calculateChakbandiGCA, calculateChakbandiLoopGCA, buildPrintHeaderHTML, buildPrintFooterHTML, mogaNumberFont, canalNameFont, getOutletDimensions } from "@/lib/gisEngine";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
-import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, svgMogaInfo, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel, svgRailwayTracks } from "@/lib/printRenderHelpers";
+import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, svgMogaInfo, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel, svgRailwayTracks, svgKanalFills, acreHasFill } from "@/lib/printRenderHelpers";
 import { collectLandUses } from "@/lib/landUsePalette";
 import { buildSideBoundarySVG, buildCanalStyleSVG, isNewCanalStyle } from "@/lib/canalStyles";
 import { Move, Download, Share2, Loader2 } from "lucide-react";
@@ -116,7 +116,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null, showLabe
     const killaFontSize = Math.max(6, Math.min(cellW, cellH) * 0.28);
     for (let r = 0; r < 5; r++) {
       for (let c = 0; c < 2; c++) {
-        if (acreUseHasLabel(obj, killaGrid[r][c])) continue; // corner number drawn by svgAcreUses
+        if (acreHasFill(obj, killaGrid[r][c])) continue; // filled cell — colour shows, number hidden
         killaLabels += `<text x="${obj.x + c*cellW + cellW/2}" y="${obj.y + r*cellH + cellH/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${killaFontSize}" fill="${strokeColor}" fill-opacity="0.75">${killaGrid[r][c]}</text>`;
       }
     }
@@ -149,6 +149,7 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null, showLabe
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
   ${svgAcreUses(obj, showKilla, strokeColor, showLabels)}
+  ${svgKanalFills(obj)}
   ${killaLabels}
   ${obj.excluded ? svgExclusionHatch(obj, `must_${idx}`) : ""}
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness)}" stroke-linejoin="miter"/>
@@ -176,6 +177,7 @@ function svgMuraba(obj, C, idx, showKilla = true, mouzaSplit = null, showNameLab
     const killaFontSize = Math.max(5, Math.min(cellW, cellH) * 0.24);
     for (let r = 0; r < 5; r++) {
       for (let c = 0; c < 5; c++) {
+        if (acreHasFill(obj, killaGrid[r][c])) continue; // filled cell — colour shows, number hidden
         killaLabels += `<text x="${obj.x + c*cellW + cellW/2}" y="${obj.y + r*cellH + cellH/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${killaFontSize}" fill="${strokeColor}" fill-opacity="0.70">${killaGrid[r][c]}</text>`;
       }
     }
@@ -203,6 +205,7 @@ function svgMuraba(obj, C, idx, showKilla = true, mouzaSplit = null, showNameLab
 <g key="murb_${idx}">
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" />
   ${gridLines}
+  ${svgKanalFills(obj)}
   ${killaLabels}
   ${obj.excluded ? svgExclusionHatch(obj, `murb_${idx}`) : ""}
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="none" stroke="${strokeColor}" stroke-width="${MUSTATEEL_SCALE.boundaryWidth(obj.boundaryThickness)}" stroke-linejoin="miter"/>

@@ -4,7 +4,8 @@
 // and canal name text-on-path — used by PrintPreview & ExportDialog
 // ============================================================
 
-import { getParallelPolyline, DIMENSIONS, getMustateeelKillaGrid, escapeHtml, pointInPolygon, getChakbandiLoopPolygon, polygonInteriorPoint } from "@/lib/gisEngine";
+import { getParallelPolyline, DIMENSIONS, getMustateeelKillaGrid, escapeHtml, pointInPolygon, getChakbandiLoopPolygon, polygonInteriorPoint, getKanalBoxes, getKanalFills, getMustateelKillaCells, getMurabaKillaCells, acresToAcreKanalText } from "@/lib/gisEngine";
+import { getAcreUses } from "@/lib/landUsePalette";
 
 // Detect Urdu/Arabic script — switches canal name rendering to a connected
 // RTL label in Jameel Noori Nastaleeq (char-by-char on-path breaks the joins).
@@ -730,6 +731,62 @@ export function acreUseHasLabel(obj, kn) {
   return !!(u && u.label);
 }
 
+// Does killa `kn` on this parcel have any colour fill (full-acre acreUse OR per-kanal)?
+// Used to hide the killa number on filled cells so the colour shows through cleanly.
+export function acreHasFill(obj, kn) {
+  const uses = obj && obj.acreUses;
+  if (uses) { const u = uses[kn - 1]; if (u && u.color) return true; }
+  const fills = getKanalFills(obj);
+  const f = fills[kn - 1];
+  return !!(f && f.color && f.boxes && f.boxes.length > 0);
+}
+
+// SVG: per-kanal box fills — coloured sub-kanal cells within selected acres.
+// Each box can carry its own colour via fill.boxColors[b]; boxes without an
+// override fall back to the acre fill colour — matching the editor canvas.
+export function svgKanalFills(obj) {
+  const fills = getKanalFills(obj);
+  if (!fills || !fills.some(f => f)) return "";
+  const cells = obj.type === "muraba" ? getMurabaKillaCells(obj) : getMustateelKillaCells(obj);
+  let svg = "";
+  for (const cell of cells) {
+    const f = fills[cell.killa - 1];
+    if (!f || !f.color || !f.boxes || f.boxes.length === 0) continue;
+    for (const b of getKanalBoxes(cell)) {
+      if (!f.boxes.includes(b.box)) continue;
+      const bc = f.boxColors && f.boxColors[b.box];
+      const col = (bc && bc.color) || f.color;
+      svg += `<rect x="${b.x.toFixed(1)}" y="${b.y.toFixed(1)}" width="${b.w.toFixed(1)}" height="${b.h.toFixed(1)}" fill="${col}" fill-opacity="0.85" stroke="${col}" stroke-width="1.2"/>`;
+    }
+  }
+  return svg;
+}
+
+// Per-label acre totals across all parcels — full acres from acreUses + 1/8 acre
+// per filled kanal box (using each box's own colour/label override). Returns a Map
+// keyed by "color|label" → acres (float). Used by the legend to show each label's
+// total area (e.g. "آبادی (۵ ایکڑ ۳ کنال)").
+export function computeLandUseAcreTotals(objects) {
+  const totals = new Map();
+  const add = (color, label, acres) => {
+    if (!color || !label) return;
+    const key = color + "|" + label;
+    totals.set(key, (totals.get(key) || 0) + acres);
+  };
+  for (const o of objects || []) {
+    if (o.type !== "mustateel" && o.type !== "muraba") continue;
+    for (const u of getAcreUses(o)) if (u && u.color && u.label) add(u.color, u.label, 1);
+    for (const f of getKanalFills(o)) {
+      if (!f || !f.boxes || f.boxes.length === 0) continue;
+      for (const b of f.boxes) {
+        const bc = f.boxColors && f.boxColors[b];
+        add((bc && bc.color) || f.color, (bc && bc.label) || f.label, 1 / 8);
+      }
+    }
+  }
+  return totals;
+}
+
 // ─── SVG: per-acre (killa) land-use fills + Urdu labels for a mustateel ────
 // Coloured cell fills (آبادی/قبرستان/فیکٹری/...), centered Urdu labels, and
 // corner killa numbers (when showKilla) for cells that have a land-use assigned.
@@ -738,8 +795,6 @@ export function svgAcreUses(obj, showKilla, strokeColor, showLabels = true) {
   if (!uses || !uses.some(u => u && u.color)) return "";
   const cellW = obj.w / 2, cellH = obj.h / 5;
   const grid = getMustateeelKillaGrid();
-  const labelFont = Math.max(7, Math.min(cellW, cellH) * 0.24);
-  const cornerFont = Math.max(6, labelFont * 0.7);
   let svg = "";
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 2; c++) {
@@ -749,10 +804,8 @@ export function svgAcreUses(obj, showKilla, strokeColor, showLabels = true) {
       const cx = obj.x + c * cellW, cy = obj.y + r * cellH;
       svg += `<rect x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" width="${cellW.toFixed(1)}" height="${cellH.toFixed(1)}" fill="${use.color}" fill-opacity="0.80" stroke="${use.color}" stroke-width="1.2"/>`;
       // Acre-use label text is shown in the LEGEND only — inside the mustateel we
-      // keep just the colour fill + a small corner killa number (no centered label).
-      if (use.label && showLabels && showKilla) {
-        svg += `<text x="${(cx + 2).toFixed(1)}" y="${(cy + 2).toFixed(1)}" text-anchor="start" dominant-baseline="hanging" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cornerFont.toFixed(1)}" fill="${strokeColor}" fill-opacity="0.75">${kn}</text>`;
-      }
+      // keep just the colour fill (killa number is hidden on filled cells so the
+      // colour shows through clearly).
     }
   }
   return svg;
@@ -937,8 +990,15 @@ function legendItems(C, objects, landUses) {
   if (has("outlet")) items.push({ label: "موگہ", color: C.outletStroke || "#dc2626", type: "arrow" });
   if (has("mouza")) items.push({ label: "موضع", color: (!C.mouzaStroke || C.mouzaStroke === "#000000") ? "#dc2626" : C.mouzaStroke, type: "dashed" });
   if (hasParcel) items.push({ label: "مستطیل", color: C.mustateelStroke || "#000000", type: "mustateel" });
+  // Per-label acre totals — append each label's total area (e.g. "آبادی (۵ ایکڑ ۳ کنال)")
+  // so the legend shows how many acres are آبادی vs خالی etc., per the user's label.
+  const acreTotals = objects ? computeLandUseAcreTotals(objects) : null;
   for (const u of (landUses || [])) {
-    if (u && u.color && u.label) items.push({ label: u.label, color: u.color, type: "fill" });
+    if (u && u.color && u.label) {
+      const tot = acreTotals ? acreTotals.get(u.color + "|" + u.label) : null;
+      const totTxt = (tot != null && tot > 0) ? ` (${acresToAcreKanalText(tot)})` : "";
+      items.push({ label: u.label + totTxt, color: u.color, type: "fill" });
+    }
   }
   return items;
 }
