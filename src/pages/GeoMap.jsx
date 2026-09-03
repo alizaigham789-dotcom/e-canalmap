@@ -895,6 +895,18 @@ export default function GeoMap() {
     const obj = mapObjects.find(o =>
       (o.type === "mustateel" || o.type === "muraba") && o.label === mustNo
     );
+    // Auto-fill moga number, rajbah, mouza from the selected map / mustateel
+    if (selectedMap) {
+      const mogaNo = obj?.mogaNumber || selectedMap.moga_number || "";
+      if (mogaNo) setSelectedMoga(String(mogaNo));
+      setFilters(prev => ({
+        ...prev,
+        rajbah: selectedMap.rajbah || prev.rajbah,
+        village: selectedMap.village || prev.village,
+        district: selectedMap.district || prev.district,
+        tehsil: selectedMap.tehsil || prev.tehsil,
+      }));
+    }
     if (obj) handleMustateelClick(obj.id);
   };
 
@@ -903,7 +915,15 @@ export default function GeoMap() {
       const next = { ...prev, [field]: value };
       if (field === "district") { next.tehsil = ""; next.village = ""; next.rajbah = ""; }
       if (field === "tehsil") { next.village = ""; next.rajbah = ""; }
-      if (field === "village") { next.rajbah = ""; }
+      if (field === "village") {
+        next.rajbah = "";
+        // Auto-fill district and tehsil from the selected mouza's maps
+        const mouzaMap = (maps || []).find(m => m.village === value);
+        if (mouzaMap) {
+          next.district = mouzaMap.district || "";
+          next.tehsil = mouzaMap.tehsil || "";
+        }
+      }
       return next;
     });
   };
