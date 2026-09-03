@@ -135,6 +135,7 @@ export default function GeoMap() {
   const [center] = useState([32.2889, 72.3525]);
   const [zoom, setZoom] = useState(13);
   const [hybrid, setHybrid] = useState(true);
+  const [viewMode, setViewMode] = useState("overlay"); // "overlay" | "view"
   const [activeTool, setActiveTool] = useState(null);
   const [filters, setFilters] = useState({ district: "", tehsil: "", village: "", rajbah: "" });
 
@@ -198,6 +199,19 @@ export default function GeoMap() {
     if (!selectedMap?.drawing_data) return [];
     return DrawingStateManager.deserialize(selectedMap.drawing_data);
   }, [selectedMap]);
+
+  // Map View mode — synthetic transform anchored at map center (no satellite).
+  // Renders the cadastral drawing in leaflet at true scale so the user can view
+  // the map and run Form 1 allocation without georeferencing.
+  const viewTransform = useMemo(() => {
+    if (viewMode !== "view" || !mapObjects.length) return null;
+    return computeOneClickTransform({ lat: center[0], lng: center[1] }, mapObjects, 0);
+  }, [viewMode, mapObjects, center]);
+
+  const activeOverlay = useMemo(() => {
+    if (viewMode === "view" && viewTransform) return { transform: viewTransform, rotation: 0, placementPoint: null };
+    return overlay;
+  }, [viewMode, viewTransform, overlay]);
 
   // Parse editor settings for export (colors, killa visibility)
   const editorSettings = useMemo(() => {
@@ -446,6 +460,7 @@ export default function GeoMap() {
   // If the map has saved geo_placement, restore it at that exact location; otherwise
   // enter one-click placement mode so the user can place it fresh.
   useEffect(() => {
+    if (viewMode !== "overlay") return;
     if (!selectedMap || !mapObjects.length) return;
     if (autoPlacedRef.current === selectedMap.id) return;
     autoPlacedRef.current = selectedMap.id;
@@ -486,6 +501,28 @@ export default function GeoMap() {
       if (mapRef.current) mapRef.current.flyTo(mapRef.current.getCenter(), 18, { duration: 0.6 });
     }
   }, [selectedMap, mapObjects]);
+
+  // Map View mode — fit the whole cadastral drawing on screen (no satellite).
+  useEffect(() => {
+    if (viewMode !== "view" || !viewTransform || !mapRef.current || !mapObjects.length) return;
+    const allLatLngs = [];
+    for (const o of mapObjects) {
+      if (["mustateel", "muraba", "acre"].includes(o.type)) {
+        const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
+        for (const [cx, cy] of corners) allLatLngs.push(viewTransform.transform(cx, cy));
+      } else if (o.points?.length) {
+        for (const p of o.points) allLatLngs.push(viewTransform.transform(p.x, p.y));
+      } else if (o.start && o.end) {
+        allLatLngs.push(viewTransform.transform(o.start.x, o.start.y));
+        allLatLngs.push(viewTransform.transform(o.end.x, o.end.y));
+      }
+    }
+    const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+    if (valid.length) {
+      const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
+      mapRef.current.flyToBounds(bounds, { padding: [60, 60], maxZoom: 19, duration: 0.6 });
+    }
+  }, [viewMode, viewTransform, mapObjects]);
 
   // When a moga is selected and the overlay is placed, fly to just that moga's
   // bounds (not the full map) so only the selected moga fills the screen.
@@ -734,7 +771,14 @@ export default function GeoMap() {
       (!filters.village || m.village === filters.village) &&
       String(m.moga_number) === String(moga)
     );
-    if (match && match.id !== selectedMapId) handleSelectMap(match.id, true);
+    if (match && match.id !== selectedMapId) {
+      handleSelectMap(match.id, true);
+      // If the newly selected moga's map has no saved placement, open the
+      // coordinate dialog so the user can place this fresh moga and save it.
+      if (viewMode === "overlay" && match.geo_placement_lat == null) {
+        setTimeout(() => setShowCoordDialog(true), 400);
+      }
+    }
   };
 
   const handleSelectMuraba = (mustNo) => {
@@ -941,15 +985,15 @@ export default function GeoMap() {
     // Zoom in to the clicked mustateel — on mobile this focuses one mustateel
     // while neighbours stay as clickable boundaries; clicking another pans to it.
     const obj = mapObjects.find(o => o.id === id);
-    if (obj && overlay?.transform && mapRef.current) {
+    if (obj && activeOverlay?.transform && mapRef.current) {
       const corners = [[obj.x, obj.y], [obj.x + obj.w, obj.y], [obj.x + obj.w, obj.y + obj.h], [obj.x, obj.y + obj.h]];
-      const latlngs = corners.map(([cx, cy]) => overlay.transform.transform(cx, cy)).filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+      const latlngs = corners.map(([cx, cy]) => activeOverlay.transform.transform(cx, cy)).filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
       if (latlngs.length) {
         const bounds = L.latLngBounds(latlngs.map(p => [p.lat, p.lng]));
         mapRef.current.flyToBounds(bounds, { padding: [20, 20], maxZoom: 20, duration: 0.6 });
       }
     }
-  }, [mapObjects, overlay]);
+  }, [mapObjects, activeOverlay]);
 
   const handleClearMeasurements = () => { setMeasurements([]); setDraft(null); setLiveMeasurement(null); };
   const handleDeleteMeasurement = (id) => { setMeasurements(prev => prev.filter(m => m.id !== id)); };
@@ -1024,25 +1068,27 @@ export default function GeoMap() {
         zoomControl={false}
         attributionControl={false}
       >
-        {!capturing && <TileLayer url={tileUrl} maxZoom={20} />}
+        {viewMode === "overlay" && !capturing && <TileLayer url={tileUrl} maxZoom={20} />}
         <MapController onMapClick={handleMapClick} onMapInstance={handleMapInstance} onZoomChange={setZoom} />
         <MouseTracker />
-        <GPSTracker active={gpsActive} onPosition={(pos, acc) => { setGpsPosition(pos); setGpsAccuracy(acc); }} />
+        {viewMode === "overlay" && (
+          <GPSTracker active={gpsActive} onPosition={(pos, acc) => { setGpsPosition(pos); setGpsAccuracy(acc); }} />
+        )}
 
         {/* GPS marker + accuracy circle */}
-        {gpsAccuracyCircle}
-        {gpsPosition && <Marker position={[gpsPosition.lat, gpsPosition.lng]} icon={GPS_ICON} />}
+        {viewMode === "overlay" && gpsAccuracyCircle}
+        {viewMode === "overlay" && gpsPosition && <Marker position={[gpsPosition.lat, gpsPosition.lng]} icon={GPS_ICON} />}
 
         {/* Show all maps of the selected mouza automatically */}
-        {filters.village && (
+        {viewMode === "overlay" && filters.village && (
           <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} />
         )}
 
         {/* Overlay layer — all map details */}
-        {layerVisible && overlay?.transform && (
+        {layerVisible && activeOverlay?.transform && (
           <OverlayLayer
             objects={mapObjects}
-            transform={overlay.transform}
+            transform={activeOverlay.transform}
             zoom={zoom}
             killaVisible={killaVisible}
             mogaFilter={selectedMoga}
@@ -1052,10 +1098,10 @@ export default function GeoMap() {
         )}
 
         {/* Allocation layer — clickable killa (acre) cells + allocated highlights */}
-        {overlay?.transform && !capturing && (
+        {activeOverlay?.transform && !capturing && (
           <AllocationLayer
             objects={mapObjects}
-            overlay={overlay}
+            overlay={activeOverlay}
             selectedMoga={selectedMoga}
             allocations={allocations}
             mode={allocTool === "cell"}
@@ -1064,12 +1110,12 @@ export default function GeoMap() {
         )}
 
         {/* Patch draw/edit layer — freehand closed polygons for farmer patches */}
-        {overlay?.transform && !capturing && (
+        {viewMode === "overlay" && activeOverlay?.transform && !capturing && (
           <PatchDrawLayer
             drawMode={allocTool === "draw"}
             editMode={allocTool === "edit"}
             objects={mapObjects}
-            overlay={overlay}
+            overlay={activeOverlay}
             selectedMoga={selectedMoga}
             patches={patchesWithGeometry}
             activePatchId={activePatchId}
@@ -1080,11 +1126,11 @@ export default function GeoMap() {
         )}
 
         {/* Khal draw/edit layer — watercourse drawing & vertex editing on satellite */}
-        {overlay?.transform && !capturing && (
+        {viewMode === "overlay" && activeOverlay?.transform && !capturing && (
           <KhalDrawLayer
             drawMode={khalTool === "draw"}
             editMode={khalTool === "edit"}
-            overlay={overlay}
+            overlay={activeOverlay}
             objects={mapObjects}
             onKhalDrawn={handleKhalDrawn}
             onKhalUpdated={handleKhalUpdated}
@@ -1093,7 +1139,7 @@ export default function GeoMap() {
         )}
 
         {/* Corner placement marker — shows where the map corner is placed + coordinates */}
-        {placementPoint && !capturing && (
+        {viewMode === "overlay" && placementPoint && !capturing && (
           <Marker position={[placementPoint.lat, placementPoint.lng]} icon={cornerPlaceIcon()}>
             <Tooltip permanent direction="right" className="placement-coords-tooltip">
               <div className="text-[10px] font-mono leading-tight">
@@ -1108,7 +1154,7 @@ export default function GeoMap() {
         )}
 
         {/* Lower-left anchor marker — shown only while placing (rotation set via slider / coordinate button after placement) */}
-        {lowerLeftPoint && !capturing && (
+        {viewMode === "overlay" && lowerLeftPoint && !capturing && (
           <Marker
             position={[lowerLeftPoint.lat, lowerLeftPoint.lng]}
             icon={lowerLeftIcon()}
@@ -1128,7 +1174,7 @@ export default function GeoMap() {
         )}
 
         {/* Completed measurements — click to delete · coordinates shown */}
-        {!capturing && measurements.map(m => {
+        {viewMode === "overlay" && !capturing && measurements.map(m => {
           const delOpts = { color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.15, weight: 3 };
           let coord;
           if (m.type === "circle") coord = m.center;
@@ -1181,10 +1227,10 @@ export default function GeoMap() {
         })}
 
         {/* Draft preview */}
-        {!capturing && draftPreview}
+        {viewMode === "overlay" && !capturing && draftPreview}
 
         {/* User markers with popup */}
-        {!capturing && markers.map(m => (
+        {viewMode === "overlay" && !capturing && markers.map(m => (
           <Marker key={m.id} position={[m.latlng.lat, m.latlng.lng]} icon={coloredIcon(m.color)}>
             <MarkerPopup marker={m} onUpdate={handleMarkerUpdate} onDelete={handleMarkerDelete} />
           </Marker>
@@ -1214,25 +1260,43 @@ export default function GeoMap() {
       <ZoomControls
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
-        onGPS={handleGPS}
+        onGPS={viewMode === "overlay" ? handleGPS : null}
         gpsActive={gpsActive}
-        onPlaceByCoords={() => setShowCoordDialog(true)}
-        onPlaceByCoordsLower={() => setShowLowerLeftDialog(true)}
+        onPlaceByCoords={viewMode === "overlay" ? () => setShowCoordDialog(true) : null}
+        onPlaceByCoordsLower={viewMode === "overlay" ? () => setShowLowerLeftDialog(true) : null}
         onEditPatch={() => setAllocTool((v) => (v === "edit" ? null : "edit"))}
         editActive={allocTool === "edit"}
       />
       <Compass />
 
-      {/* Overlay toggle — left side */}
-      <button
-        onClick={() => setShowOverlayPanel(v => !v)}
-        className={`absolute top-14 left-3 z-[1000] flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
-      >
-        <Layers className="w-3.5 h-3.5" />
-        GIS Overlay
-      </button>
+      {/* Mode toggle — Map View / Map Overlay */}
+      <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[1001] flex items-center bg-white/95 backdrop-blur rounded-full shadow-xl p-0.5">
+        <button
+          onClick={() => { setViewMode("view"); setActiveTool(null); setKhalTool(null); setDraft(null); }}
+          className={`flex items-center gap-1.5 px-3 h-7 rounded-full text-xs font-bold transition-all ${viewMode === "view" ? "bg-blue-600 text-white" : "text-slate-600"}`}
+        >
+          <MapPin className="w-3.5 h-3.5" /> نقشہ ویو
+        </button>
+        <button
+          onClick={() => setViewMode("overlay")}
+          className={`flex items-center gap-1.5 px-3 h-7 rounded-full text-xs font-bold transition-all ${viewMode === "overlay" ? "bg-blue-600 text-white" : "text-slate-600"}`}
+        >
+          <Layers className="w-3.5 h-3.5" /> نقشہ اوورلے
+        </button>
+      </div>
 
-      {showOverlayPanel && (
+      {/* Overlay toggle — left side (overlay mode only) */}
+      {viewMode === "overlay" && (
+        <button
+          onClick={() => setShowOverlayPanel(v => !v)}
+          className={`absolute top-14 left-3 z-[1000] flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          GIS Overlay
+        </button>
+      )}
+
+      {viewMode === "overlay" && showOverlayPanel && (
         <OverlayPanel
           maps={maps || []}
           selectedMapId={selectedMapId}
@@ -1262,7 +1326,7 @@ export default function GeoMap() {
         />
       )}
 
-      {overlay && (
+      {activeOverlay && (
         <AllocationToolbar
           killaVisible={killaVisible}
           onToggleKilla={() => setKillaVisible(v => !v)}
@@ -1272,38 +1336,38 @@ export default function GeoMap() {
         />
       )}
 
-      {allocTool === "cell" && overlay && (
+      {allocTool === "cell" && activeOverlay && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-green-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <MapPin className="w-3 h-3" /> مستطیل کے کسی ایکڑ سیل پر کلک کریں — زمیندار کا حصہ الاٹ کریں
         </div>
       )}
 
-      {allocTool === "draw" && overlay && (
+      {allocTool === "draw" && activeOverlay && viewMode === "overlay" && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-indigo-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <PenTool className="w-3 h-3" /> نقشے پر کلک کر کے کلوزد پیچ بنائیں — ڈبل کلک سے مکمل کریں
         </div>
       )}
 
-      {allocTool === "edit" && overlay && (
+      {allocTool === "edit" && activeOverlay && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-orange-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <Pencil className="w-3 h-3" /> کسی الوٹ شدہ پیچ پر کلک کریں — نوڈس کو کھینچ کر ایڈجسٹ کریں
         </div>
       )}
 
-      {khalTool === "draw" && overlay && (
+      {khalTool === "draw" && activeOverlay && viewMode === "overlay" && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-blue-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <Waves className="w-3 h-3" /> نقشے پر کلک کر کے خال بنائیں — ڈبل کلک سے مکمل کریں
         </div>
       )}
 
-      {khalTool === "edit" && overlay && (
+      {khalTool === "edit" && activeOverlay && viewMode === "overlay" && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-orange-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <Pencil className="w-3 h-3" /> کسی خال پر کلک کریں — نوڈس کو کھینچ کر ایڈجسٹ کریں، × سے حذف کریں
         </div>
       )}
 
       {/* Always-on khal edit hint — long-press / double-click any khal to edit */}
-      {overlay && !khalTool && khalsExist && (
+      {viewMode === "overlay" && activeOverlay && !khalTool && khalsExist && (
         <div className="absolute bottom-48 left-1/2 -translate-x-1/2 z-[1000] bg-blue-600/90 text-white text-[10px] font-medium px-3 h-7 rounded-full shadow-xl flex items-center gap-1.5">
           <Waves className="w-3 h-3" />
           خال پر ڈبل کلک یا لانگ پریس کریں — نوڈس کھینچ کر ایڈٹ کریں
@@ -1311,29 +1375,31 @@ export default function GeoMap() {
       )}
 
       {/* Click mustateel hint */}
-      {overlay && killaVisible && activeMustateelIds.size === 0 && (
+      {activeOverlay && killaVisible && activeMustateelIds.size === 0 && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1000] bg-black/80 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <MapPin className="w-3 h-3" />
           کسی مستطیل پر کلک کریں — کلا نمبر اور گرڈ لائنز دکھائی دیں گے
         </div>
       )}
 
-      <DrawingToolbar
-        activeTool={activeTool}
-        onToolChange={(t) => { setActiveTool(t); if (t) setKhalTool(null); }}
-        onClear={handleClearMeasurements}
-        onExport={handleExport}
-        onLayerToggle={() => setLayerVisible(v => !v)}
-        layerVisible={layerVisible}
-        khalTool={khalTool}
-        onKhalToolChange={(t) => { setKhalTool(t); if (t) setActiveTool(null); }}
-      />
+      {viewMode === "overlay" && (
+        <DrawingToolbar
+          activeTool={activeTool}
+          onToolChange={(t) => { setActiveTool(t); if (t) setKhalTool(null); }}
+          onClear={handleClearMeasurements}
+          onExport={handleExport}
+          onLayerToggle={() => setLayerVisible(v => !v)}
+          layerVisible={layerVisible}
+          khalTool={khalTool}
+          onKhalToolChange={(t) => { setKhalTool(t); if (t) setActiveTool(null); }}
+        />
+      )}
 
       {/* Live measurement info */}
-      <MeasurementInfo measurement={liveMeasurement} draft={draft} zoom={zoom} />
+      {viewMode === "overlay" && <MeasurementInfo measurement={liveMeasurement} draft={draft} zoom={zoom} />}
 
       {/* Placement hint — two-click mode with live coordinates */}
-      {placingStep > 0 && selectedMapId && (
+      {viewMode === "overlay" && placingStep > 0 && selectedMapId && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 z-[1001] text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl flex flex-col items-center gap-0.5 animate-pulse pointer-events-none"
           style={{ background: "#dc2626" }}>
           <div className="flex items-center gap-2">
@@ -1349,7 +1415,7 @@ export default function GeoMap() {
       )}
 
       {/* Active tool hint */}
-      {activeTool && !liveMeasurement && (
+      {viewMode === "overlay" && activeTool && !liveMeasurement && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-black/80 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center">
           {activeTool === "line" && "Click points to measure distance (ft) · Double-click to finish"}
           {activeTool === "polygon" && "Click to add vertices · Double-click to finish (shows acres/kanal)"}
@@ -1360,7 +1426,7 @@ export default function GeoMap() {
       )}
 
       {/* Delete hint — always visible when measurements exist */}
-      {measurements.length > 0 && !activeTool && (
+      {viewMode === "overlay" && measurements.length > 0 && !activeTool && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-red-600/90 text-white text-[11px] font-medium px-3 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <Trash2 className="w-3 h-3" />
           Click any measurement to delete · {measurements.length} active
@@ -1369,7 +1435,7 @@ export default function GeoMap() {
 
       {/* Coordinate input dialog — type lat/lng to place map */}
       <CoordinateDialog
-        open={showCoordDialog}
+        open={viewMode === "overlay" && showCoordDialog}
         onClose={() => setShowCoordDialog(false)}
         onPlace={handlePlaceByCoords}
         mouseLatLng={mouseLatLng}
@@ -1377,23 +1443,25 @@ export default function GeoMap() {
 
       {/* Manual coordinate input for lower-left (green) corner */}
       <CoordinateDialog
-        open={showLowerLeftDialog}
+        open={viewMode === "overlay" && showLowerLeftDialog}
         onClose={() => setShowLowerLeftDialog(false)}
         onPlace={handleLowerLeftByCoords}
         mouseLatLng={lowerLeftPoint || mouseLatLng}
       />
 
       {/* Export dialog — PNG / PDF / SVG with moga filter */}
-      <GeoMapExportDialog
-        open={showExportDialog}
-        onClose={() => setShowExportDialog(false)}
-        mapData={selectedMap}
-        objects={mapObjects}
-        colorSettings={editorSettings?.colors || {}}
-        selectedMoga={selectedMoga}
-        overlayReady={!!overlay}
-        onCaptureSatellite={handleCaptureSatellite}
-      />
+      {viewMode === "overlay" && (
+        <GeoMapExportDialog
+          open={showExportDialog}
+          onClose={() => setShowExportDialog(false)}
+          mapData={selectedMap}
+          objects={mapObjects}
+          colorSettings={editorSettings?.colors || {}}
+          selectedMoga={selectedMoga}
+          overlayReady={!!overlay}
+          onCaptureSatellite={handleCaptureSatellite}
+        />
+      )}
 
       {/* Farmer patch allocation dialog (cell-based) */}
       <AllocationDialog
@@ -1431,14 +1499,16 @@ export default function GeoMap() {
         saving={savingRegister}
       />
 
-      {/* Hybrid / Satellite toggle */}
-      <button
-        onClick={() => setHybrid(v => !v)}
-        className="absolute bottom-5 right-3 z-[1000] flex items-center gap-1.5 px-4 h-9 bg-[#1A4550] text-white text-xs font-bold rounded-full shadow-xl hover:bg-[#2C5E6D] transition-colors"
-      >
-        {hybrid ? "Hybrid Satellite" : "Pure Satellite"}
-        <ChevronDown className="w-3.5 h-3.5" />
-      </button>
+      {/* Hybrid / Satellite toggle (overlay mode only) */}
+      {viewMode === "overlay" && (
+        <button
+          onClick={() => setHybrid(v => !v)}
+          className="absolute bottom-5 right-3 z-[1000] flex items-center gap-1.5 px-4 h-9 bg-[#1A4550] text-white text-xs font-bold rounded-full shadow-xl hover:bg-[#2C5E6D] transition-colors"
+        >
+          {hybrid ? "Hybrid Satellite" : "Pure Satellite"}
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+      )}
     </div>
   );
 }
