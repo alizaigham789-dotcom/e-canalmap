@@ -87,7 +87,19 @@ export default function KanalFillControl({ local, commit, title = "Mustateel Col
     }
     const nu = acreUses.slice(), nf = kanalFills.slice();
     if (boxes.length === 0) { nf[idx] = null; }
-    else if (boxes.length === 8) { nu[idx] = { color: f.color, label: f.label }; nf[idx] = null; }
+    else if (boxes.length === 8) {
+      // Only collapse to a full-acre fill when ALL 8 boxes share the same colour.
+      // If the user gave different boxes different colours, keep the per-kanal
+      // fills intact so the individual colours are preserved (not overwritten).
+      const cols = boxes.map((x) => (boxColors[x] && boxColors[x].color) || f.color);
+      const allSame = cols.every((c) => c === cols[0]);
+      if (allSame) {
+        const lbl = (boxColors[boxes[0]] && boxColors[boxes[0]].label) || f.label;
+        nu[idx] = { color: cols[0], label: lbl }; nf[idx] = null;
+      } else {
+        nf[idx] = { ...f, boxes, boxColors };
+      }
+    }
     else { nf[idx] = { ...f, boxes, boxColors }; }
     write(nu, nf);
   };
