@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { X, Save } from "lucide-react";
+import { X, Save, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AutocompleteInput from "@/components/editor/AutocompleteInput";
 
@@ -44,6 +44,8 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
     zilladar_section: "", tehsil: "", district: "", mogha_side: "L",
   });
   const titleTouched = useRef(false);
+  // مواضعات — one box per village (min 2), joined with "و" into the saved village string
+  const [villages, setVillages] = useState(["", ""]);
 
   // Fetch existing maps once — shared/cached with MapList via the same query key
   const { data: maps = [] } = useQuery({
@@ -59,6 +61,9 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
     acc[key] = Array.from(set).sort((a, b) => a.localeCompare(b, "ur"));
     return acc;
   }, {});
+  // Individual village names for the مواضعات boxes — split previously joined values ("X و Y")
+  const villageSuggestions = [...new Set(suggestions.village.flatMap(s => String(s).split(/\s+و\s+/)))]
+    .filter(Boolean).sort((a, b) => a.localeCompare(b, "ur"));
 
   useEffect(() => {
     if (mapData) {
@@ -76,6 +81,9 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
       // If the saved title is custom (≠ auto-derived), don't overwrite it on field changes.
       titleTouched.current = !!mapData.title && mapData.title !== buildAutoTitle(next);
       setForm(next);
+      // Parse the joined village string ("X و Y") into one box per village
+      const parsed = (mapData.village || "").split(/\s+و\s+/).map(s => s.trim()).filter(Boolean);
+      setVillages(parsed.length ? [...parsed, ...Array(Math.max(0, 2 - parsed.length)).fill("")] : ["", ""]);
     }
   }, [mapData, open]);
 
@@ -90,6 +98,20 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
     }
     return next;
   });
+
+  // مواضعات — update one village box; syncs the joined "X و Y" string + auto title
+  const setVillageAt = (i, val) => {
+    const next = [...villages];
+    next[i] = val;
+    setVillages(next);
+    const joined = next.map(s => s.trim()).filter(Boolean).join(" و ");
+    setForm(p => {
+      const nf = { ...p, village: joined };
+      if (!titleTouched.current) nf.title = buildAutoTitle(nf);
+      return nf;
+    });
+  };
+  const addVillage = () => setVillages(prev => [...prev, ""]);
 
   const handleSave = () => {
     onSave({ ...form, moga_number: form.moga_number.replace(/\D/g, "") });
@@ -119,7 +141,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
             خاکہ دستی&nbsp;&nbsp;
             موگہ نمبری <bdi dir="ltr">{form.moga_number ? `${form.moga_number}/${form.mogha_side}` : "_____"}</bdi>&nbsp;&nbsp;
             راجباہ {form.rajbah || "_____"}&nbsp;&nbsp;
-            موضع {form.village || "_____"}&nbsp;&nbsp;
+            {(form.village || "").split(/\s+و\s+/).filter(Boolean).length > 1 ? "مواضعات" : "موضع"} {form.village || "_____"}&nbsp;&nbsp;
             ضلعداری سیکشن {form.zilladar_section || "_____"}&nbsp;&nbsp;
             تحصیل {form.tehsil || "_____"}&nbsp;&nbsp;
             ضلع {form.district || "_____"}
@@ -165,9 +187,22 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
               suggestions={suggestions.rajbah} placeholder="Canal / Minor name" className={inputClass} />
           </Field>
 
-          <Field label="موضع">
-            <AutocompleteInput value={form.village} onChange={v => f("village", v)}
-              suggestions={suggestions.village} placeholder="Village / Mozah" className={inputClass} />
+          <Field label="مواضعات">
+            <div className="flex flex-wrap items-center gap-2">
+              {villages.map((v, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && (
+                    <span className="text-sm font-bold text-slate-700" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>و</span>
+                  )}
+                  <AutocompleteInput value={v} onChange={val => setVillageAt(i, val)}
+                    suggestions={villageSuggestions} placeholder="Village / Mozah" className={`${inputClass} flex-1 min-w-[120px]`} />
+                </React.Fragment>
+              ))}
+              <button onClick={addVillage} title="مزید موضع شامل کریں"
+                className="h-10 w-10 shrink-0 border border-dashed border-slate-300 rounded-xl text-slate-500 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center">
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
           </Field>
 
           <Field label="ضلعداری سیکشن">
