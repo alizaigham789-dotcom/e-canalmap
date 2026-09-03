@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Trash2, Printer, FileText, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Printer, FileText, Save, Users } from "lucide-react";
 import BandubastPicker from "@/components/warabandi/BandubastPicker";
 import FractionCell from "@/components/warabandi/FractionCell";
-import { printFardRecord } from "@/lib/fardPrint";
+import { printFardRecord, printQasiranList } from "@/lib/fardPrint";
 import RateAbianaBox, { computeAbiana, DEFAULT_RATE_CONFIG, cropOptionsFor, SEASON_LABEL } from "@/components/tawan/RateAbianaBox";
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
@@ -78,6 +78,7 @@ export default function FardMasroobaForm({ record, onSave, onBack }) {
           <Button onClick={save} size="sm" className="gap-1 text-xs"><Save className="w-3.5 h-3.5" /> محفوظ</Button>
           <Button onClick={print} size="sm" variant="outline" className="gap-1 text-xs"><Printer className="w-3.5 h-3.5" /> پرنٹ</Button>
           <Button onClick={print} size="sm" variant="outline" className="gap-1 text-xs"><FileText className="w-3.5 h-3.5" /> PDF</Button>
+          <Button onClick={() => printQasiranList({ ...record, rows_json: JSON.stringify(rows) })} size="sm" variant="outline" className="gap-1 text-xs"><Users className="w-3.5 h-3.5" /> قاصرین فہرست</Button>
         </div>
         <Button onClick={onBack} variant="ghost" size="icon" className="w-8 h-8 text-slate-500"><ArrowLeft className="w-4 h-4" /></Button>
       </div>
