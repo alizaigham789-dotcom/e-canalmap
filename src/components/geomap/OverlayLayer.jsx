@@ -36,7 +36,6 @@ function KillaGridLines({ obj, transform, zoom, forceVisible }) {
 
 // Killa label as a CircleMarker with permanent tooltip
 function KillaLabel({ num, latlng, zoom }) {
-  if (zoom < 16) return null;
   return (
     <CircleMarker
       center={latlng}
@@ -97,8 +96,8 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
         )}
       </Polygon>
       {/* Killa grid lines — clicked/active mustateel, or all parcels in cell-allocation mode */}
-      {showKilla && (isActive || gridAll) && <KillaGridLines obj={obj} transform={transform} zoom={zoom} forceVisible={gridAll} />}
-      {showKilla && isActive && killaLatLngs && zoom >= 16 && killaLatLngs.map((k, i) => (
+      {showKilla && (isActive || gridAll) && <KillaGridLines obj={obj} transform={transform} zoom={zoom} forceVisible={gridAll || isActive} />}
+      {showKilla && isActive && killaLatLngs && killaLatLngs.map((k, i) => (
         <KillaLabel key={i} num={k.num} latlng={k.latlng} zoom={zoom} />
       ))}
     </>
@@ -144,8 +143,8 @@ function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, i
         )}
       </Polygon>
       {/* Acre grid lines — clicked/active muraba, or all parcels in cell-allocation mode */}
-      {showKilla && (isActive || gridAll) && <KillaGridLines obj={obj} transform={transform} zoom={zoom} forceVisible={gridAll} />}
-      {showKilla && isActive && killaLatLngs && zoom >= 16 && killaLatLngs.map((k, i) => (
+      {showKilla && (isActive || gridAll) && <KillaGridLines obj={obj} transform={transform} zoom={zoom} forceVisible={gridAll || isActive} />}
+      {showKilla && isActive && killaLatLngs && killaLatLngs.map((k, i) => (
         <KillaLabel key={i} num={k.num} latlng={k.latlng} zoom={zoom} />
       ))}
     </>
