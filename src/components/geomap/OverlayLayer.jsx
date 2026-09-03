@@ -104,10 +104,13 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
 function MurabaLabel({ obj, latlngs, zoom }) {
   const acres = useMemo(() => sqMetersToUnits(polygonAreaSqMeters(latlngs)).acres, [latlngs]);
   const fontSize = labelFontSize(zoom);
+  // Bold boundary — same treatment as mustateel (boundaryThickness-driven weight)
+  const boundaryThickness = obj.boundaryThickness || 5;
+  const lineWeight = Math.max(3, boundaryThickness * 1.2);
   return (
     <Polygon
       positions={latlngs.map(p => [p.lat, p.lng])}
-      pathOptions={{ color: "#f97316", fillColor: "#f97316", fillOpacity: 0.08, weight: 2 }}
+      pathOptions={{ color: "#f97316", fillColor: "#f97316", fillOpacity: 0.08, weight: lineWeight, opacity: 1 }}
     >
       <Tooltip permanent direction="center" className="muraba-label" opacity={1}>
         <div style={{ fontSize: `${fontSize}px`, fontWeight: 700, color: "#c2410c", textAlign: "center", lineHeight: 1.15 }}>
@@ -124,7 +127,7 @@ function AcreLabel({ obj, latlngs, zoom }) {
   return (
     <Polygon
       positions={latlngs.map(p => [p.lat, p.lng])}
-      pathOptions={{ color: "#facc15", fillColor: "#facc15", fillOpacity: 0.08, weight: 2, opacity: 0.9 }}
+      pathOptions={{ color: "#facc15", fillColor: "#facc15", fillOpacity: 0, weight: 0, opacity: 0 }}
     >
       {obj.label && (
         <Tooltip permanent direction="center" className="acre-label" opacity={1}>
