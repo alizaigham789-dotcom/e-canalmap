@@ -37,11 +37,12 @@ export default function DummyMustateelDialog({ open, dummy, dummyGeo, maps, vill
         must,
       }))
     );
-    setSelectedMapId("");
+    // Auto-select the first match so the user can confirm immediately
+    setSelectedMapId(ms.length > 0 ? ms[0].map.id : "");
   }, [label, open, maps, village, placedMapId]);
 
   const handleConfirm = () => {
-    const match = matches.find((m) => m.id === selectedMapId);
+    const match = matches.find((m) => m.id === selectedMapId) || matches[0];
     if (!match || !dummyGeo) return;
     onConfirm(match, dummyGeo);
     setPlacedInfo({ mapId: match.id, mogaNumber: match.mogaNumber, title: match.title, label: match.must.label });
@@ -91,6 +92,7 @@ export default function DummyMustateelDialog({ open, dummy, dummyGeo, maps, vill
                   type="text"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && matches.length > 0) handleConfirm(); }}
                   placeholder="کہسڑا نمبر (مستطیل نمبر) درج کریں"
                   className="w-full h-10 pr-10 pl-3 rounded-lg border border-slate-200 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-right"
                   style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}
