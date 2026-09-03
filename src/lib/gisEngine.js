@@ -1527,7 +1527,8 @@ export function buildMapHeaderText(mapData) {
   const tehsil = mapData?.tehsil || "_____";
   const district = mapData?.district || "_____";
   const mogaToken = `${number}${side ? `/${side}` : ""}`;
-  return `خاکہ دستی\u2009\u2009موگہ نمبری\u2009\u2066${mogaToken}\u2069،\u2009راجباہ ${rajbah}،\u2009موضع ${village}،\u2009ضلعداری سیکشن ${zilladarSection}،\u2009سب ڈویژن ${tehsil}،\u2009کینال ڈویژن ${district}`;
+  const villageLabel = String(village).split(/\s+و\s+/).filter(Boolean).length > 1 ? "مواضعات" : "موضع";
+  return `خاکہ دستی\u2009\u2009موگہ نمبری\u2009\u2066${mogaToken}\u2069،\u2009راجباہ ${rajbah}،\u2009${villageLabel} ${village}،\u2009ضلعداری سیکشن ${zilladarSection}،\u2009سب ڈویژن ${tehsil}،\u2009کینال ڈویژن ${district}`;
 }
 
 // Bordered single-line header box for print/export output — auto-shrinks to fit one line
