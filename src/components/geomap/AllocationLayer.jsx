@@ -55,7 +55,7 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
             {/* Base acre cell — dashed boundary, vacant */}
             <Polygon
               positions={latlngs.map((p) => [p.lat, p.lng])}
-              pathOptions={{ color: "#dc2626", fillColor: "#000000", fillOpacity: 0, weight: 1, dashArray: "4,4", interactive: mode }}
+              pathOptions={{ color: "#dc2626", fillColor: "#000000", fillOpacity: 0, weight: mode ? 1 : 0, dashArray: "4,4", interactive: mode }}
               eventHandlers={
                 mode
                   ? {
