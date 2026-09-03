@@ -853,34 +853,36 @@ export function drawAcreUsesOnCanvas(ctx, obj, showKilla, strokeColor, showLabel
 export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = null, customPos = null, landUses = [], objects = null) {
   const items = legendItems(C, objects, landUses);
 
-  // Proportional to viewBox — smaller when few mustateels, bigger when many
-  const _baseDim = Math.min(viewW, viewH);
-  const lf = Math.max(16, Math.min(80, _baseDim * 0.035));
+  // FIXED bottom-left legend (English/LTR left side): width = 2 mustateel widths
+  // per the mustateel data dims, height follows the item count ("data ky hisab sy").
+  // Only scaled down when it would not fit inside the viewBox.
+  const MUST_W = DIMENSIONS.MUSTATEEL.width;
+  const _wPerLf = 94 / 17.6;                             // legendW per unit of lf
+  const _hPerLf = 2.4 + 1.4 * items.length + 6 / 17.6;   // legendH per unit of lf
+  let lf = (2 * MUST_W) / _wPerLf;                       // target: 2 mustateel widths wide
+  lf = Math.min(lf, (viewW * 0.92) / _wPerLf, (viewH * 0.92) / _hPerLf);
+  lf = Math.max(12, lf);
   const S = lf / 17.6;
   const colSignW = 34 * S, colNameW = 42 * S, pad = 6 * S;
   const legendW = colSignW + colNameW + pad * 3;
   const headerH = lf * 1.3, colHdrH = lf * 1.1, rowH = lf * 1.4;
   const legendH = headerH + colHdrH + items.length * rowH + pad;
-  // Find the corner with least overlap with map objects
   const _pad = 8 * S;
-  const _obj = objectsBounds || { minX: viewX + 80, minY: viewY + 80, maxX: viewX + viewW - 80, maxY: viewY + viewH - 80 };
-  const _cands = [
-    { lx: viewX + _pad, ly: viewY + viewH - legendH - _pad },
-    { lx: viewX + viewW - legendW - _pad, ly: viewY + viewH - legendH - _pad },
-    { lx: viewX + _pad, ly: viewY + _pad },
-    { lx: viewX + viewW - legendW - _pad, ly: viewY + _pad },
-  ];
-  let lx = _cands[0].lx, ly = _cands[0].ly, _bestOv = Infinity;
+  // Position: just below where the drawn mustateels end, on the English (LTR)
+  // left side — aligned with the leftmost parcel, clamped inside the viewBox.
+  const _parcels = (objects || []).filter(o => o.type === "mustateel" || o.type === "muraba" || o.type === "acre");
+  let _pMinX = Infinity, _pMaxY = -Infinity;
+  for (const p of _parcels) { _pMinX = Math.min(_pMinX, p.x); _pMaxY = Math.max(_pMaxY, p.y + (p.h || 0)); }
+  let lx, ly;
   if (customPos) {
     lx = customPos.x; ly = customPos.y;
   } else {
-    for (const _c of _cands) {
-      const _rx = _c.lx + legendW, _ry = _c.ly + legendH;
-      const _ox = Math.max(0, Math.min(_rx, _obj.maxX) - Math.max(_c.lx, _obj.minX));
-      const _oy = Math.max(0, Math.min(_ry, _obj.maxY) - Math.max(_c.ly, _obj.minY));
-      const _ov = _ox * _oy;
-      if (_ov < _bestOv) { _bestOv = _ov; lx = _c.lx; ly = _c.ly; }
-    }
+    lx = isFinite(_pMinX) ? Math.max(viewX + _pad, _pMinX) : viewX + _pad;
+    lx = Math.min(lx, viewX + viewW - legendW - _pad);
+    lx = Math.max(lx, viewX + _pad);
+    const _below = isFinite(_pMaxY) ? _pMaxY + _pad : viewY + viewH - legendH - _pad;
+    ly = Math.min(_below, viewY + viewH - legendH - _pad);
+    ly = Math.max(ly, viewY + _pad);
   }
   const nameColX = lx + pad;
   const signColX = lx + pad * 2 + colNameW;
