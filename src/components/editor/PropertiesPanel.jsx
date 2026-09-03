@@ -627,11 +627,11 @@ function ExclusionToggle({ local, commit, commitMultiple, allObjects = [] }) {
           <input type="color" value={exclusionColor}
             onChange={e => commit("exclusionColor", e.target.value)}
             className="h-5 w-7 rounded cursor-pointer border border-slate-200" />
-          <label className="text-[9px] text-slate-400 shrink-0">Spacing</label>
-          <input type="range" min={8} max={60} step={2} value={exclusionSpacing}
+          <label className="text-[9px] text-slate-400 shrink-0" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>اسپیسنگ</label>
+          <input type="range" min={8} max={120} step={2} value={exclusionSpacing}
             onChange={e => commit("exclusionSpacing", parseInt(e.target.value))}
             className="flex-1 h-1 accent-blue-500 cursor-pointer" />
-          <span className="text-[9px] font-mono text-slate-500 w-6">{exclusionSpacing}</span>
+          <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5 shrink-0 min-w-[36px] text-center">{exclusionSpacing}</span>
         </div>
       )}
       {isParcel && local.excluded && <IkhrajKanalControl local={local} commit={commitMultiple} allObjects={allObjects} />}
