@@ -818,6 +818,18 @@ export default function GeoMap() {
         queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
       } catch {}
     }
+    // Auto-fill the district/tehsil/mouza/canal cascade from the selected map's
+    // header data so the top dropdowns match the map being overlaid, and only
+    // the selected canal's maps remain available.
+    const mapData = (maps || []).find(m => m.id === id);
+    if (mapData) {
+      setFilters({
+        district: mapData.district || "",
+        tehsil: mapData.tehsil || "",
+        village: mapData.village || "",
+        rajbah: mapData.rajbah || "",
+      });
+    }
     setSelectedMapId(id);
     if (!keepMoga) setSelectedMoga("");
     setPlacementPoint(null);
@@ -833,9 +845,12 @@ export default function GeoMap() {
   const handleSelectMogaTop = (moga) => {
     setSelectedMoga(moga);
     setSelectedMuraba("");
-    // Direct moga select — match across ALL maps (not just current filters) and
-    // auto-fill the district/tehsil/mouza/rajbah cascade from the map's header data.
-    const match = (maps || []).find(m => String(m.moga_number) === String(moga));
+    // Direct moga select — match within the current canal's maps first (so the
+    // same moga number in another canal doesn't grab the wrong map), then fall
+    // back to all maps. Filters auto-fill from the matched map's header data.
+    const pool = villageMaps.length ? villageMaps : (maps || []);
+    const match = pool.find(m => String(m.moga_number) === String(moga))
+      || (maps || []).find(m => String(m.moga_number) === String(moga));
     if (match) {
       setFilters({
         district: match.district || "",
@@ -1379,7 +1394,7 @@ export default function GeoMap() {
 
       {viewMode === "overlay" && showOverlayPanel && (
         <OverlayPanel
-          maps={maps || []}
+          maps={villageMaps}
           selectedMapId={selectedMapId}
           onSelectMap={handleSelectMap}
           availableMogas={availableMogas}
