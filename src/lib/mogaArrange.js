@@ -202,3 +202,81 @@ export function arrangeMogas(maps, anchorMap, opts = {}) {
   }
   return { results };
 }
+
+// ============================================================
+// AUTO-ATTACH ONE MAP — when a new moga's map is selected in
+// GeoMap Overlay mode and it has no saved placement, snap it
+// beside the already-placed mogas of the same mouza:
+//   • exact Khasra match  → merge at the same geo point
+//   • consecutive number  → one mustateel-width right/left,
+//     same row (never above/below), zero gap in between.
+// Returns { placement, matchedLabel, method } or null when no
+// placed map shares/continues a mustateel number with it.
+// ============================================================
+export function autoAttachPlacement(maps, newMap) {
+  if (!newMap || !newMap.drawing_data) return null;
+  const bMusts = getMapMustateels(newMap);
+  if (!bMusts.length) return null;
+
+  // Reference pool: mustateel label → geo top-left corner, from every
+  // placed map of the same village (excluding the new map itself).
+  const placedMust = new Map();
+  const village = newMap.village;
+  for (const m of maps || []) {
+    if (!m || m.id === newMap.id) continue;
+    if (m.geo_placement_lat == null || m.geo_placement_lng == null) continue;
+    if (village && m.village && m.village !== village) continue;
+    if (!m.drawing_data) continue;
+    let objs;
+    try {
+      objs = DrawingStateManager.deserialize(m.drawing_data);
+    } catch {
+      continue;
+    }
+    const t = computeOneClickTransform(
+      { lat: m.geo_placement_lat, lng: m.geo_placement_lng },
+      objs,
+      m.geo_rotation || 0
+    );
+    if (!t) continue;
+    for (const must of getMapMustateels(m)) {
+      if (!placedMust.has(must.label)) placedMust.set(must.label, t.transform(must.x, must.y));
+    }
+  }
+  if (!placedMust.size) return null;
+
+  let bObjects;
+  try {
+    bObjects = DrawingStateManager.deserialize(newMap.drawing_data);
+  } catch {
+    return null;
+  }
+
+  // Same matching strategies as arrangeMogas: exact merge, then adjacent right/left.
+  let best = null;
+  for (const bm of bMusts) {
+    if (placedMust.has(bm.label)) {
+      best = { bMust: bm, targetGeo: placedMust.get(bm.label), method: "overlap" };
+      break;
+    }
+  }
+  if (!best) {
+    for (const bm of bMusts) {
+      const n = parseInt(bm.label);
+      if (isNaN(n)) continue;
+      if (placedMust.has(String(n - 1))) {
+        best = { bMust: bm, targetGeo: offsetGeoEast(placedMust.get(String(n - 1)), MUST_W_FT), method: "adjacent-right" };
+        break;
+      }
+      if (placedMust.has(String(n + 1))) {
+        best = { bMust: bm, targetGeo: offsetGeoEast(placedMust.get(String(n + 1)), -MUST_W_FT), method: "adjacent-left" };
+        break;
+      }
+    }
+  }
+  if (!best) return null;
+
+  const placement = computePlacementForMustateel(bObjects, best.bMust, best.targetGeo);
+  if (!placement) return null;
+  return { placement, matchedLabel: best.bMust.label, method: best.method };
+}

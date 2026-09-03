@@ -29,7 +29,7 @@ import { remainingKanal, acreAllocations, kanalUsedInAcre, parcelKillaCells } fr
 import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import { inverseTransform } from "@/lib/geoOverlay";
-import { arrangeMogas } from "@/lib/mogaArrange";
+import { arrangeMogas, autoAttachPlacement } from "@/lib/mogaArrange";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
   polygonAreaSqMeters, sqMetersToUnits,
@@ -504,12 +504,45 @@ export default function GeoMap() {
         }
       }
     } else {
+      // No saved placement — try to AUTO-ATTACH beside the placed mogas of the same
+      // mouza (matching mustateel Khasra numbers, side-by-side, no gap, same row).
+      const attach = autoAttachPlacement(maps, selectedMap);
+      if (attach) {
+        const transform = computeOneClickTransform(attach.placement, mapObjects, 0);
+        if (transform) {
+          setOverlay({ transform, rotation: 0, placementPoint: attach.placement });
+          setPlacementPoint(attach.placement);
+          setOverlaySaved(false);
+          setPlacingStep(0);
+          const bc = getBottomMustateelCorner(mapObjects);
+          if (bc) setLowerLeftPoint(transform.transform(bc.x, bc.y));
+          const allLatLngs = [];
+          for (const o of mapObjects) {
+            if (["mustateel", "muraba", "acre"].includes(o.type)) {
+              const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
+              for (const [cx, cy] of corners) allLatLngs.push(transform.transform(cx, cy));
+            } else if (o.points?.length) {
+              for (const p of o.points) allLatLngs.push(transform.transform(p.x, p.y));
+            } else if (o.start && o.end) {
+              allLatLngs.push(transform.transform(o.start.x, o.start.y));
+              allLatLngs.push(transform.transform(o.end.x, o.end.y));
+            }
+          }
+          const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+          if (valid.length && mapRef.current) {
+            const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
+            mapRef.current.flyToBounds(bounds, { padding: [80, 80], duration: 0.8 });
+          }
+          toast.success(`نیا موگہ پہلے نقشے سے جڑ گیا — کہسڑا ${attach.matchedLabel}`);
+          return;
+        }
+      }
       setPlacingStep(1);
       // Enter placement mode at a high zoom so the map is placed accurately over
       // high-resolution satellite tiles (clearer Earth image in the exported PDF).
       if (mapRef.current) mapRef.current.flyTo(mapRef.current.getCenter(), 18, { duration: 0.6 });
     }
-  }, [selectedMap, mapObjects]);
+  }, [selectedMap, mapObjects, maps]);
 
   // Map View mode — fit the whole cadastral drawing on screen (no satellite).
   useEffect(() => {
@@ -799,11 +832,9 @@ export default function GeoMap() {
     }
     if (match && match.id !== selectedMapId) {
       handleSelectMap(match.id, true);
-      // If the newly selected moga's map has no saved placement, open the
-      // coordinate dialog so the user can place this fresh moga and save it.
-      if (viewMode === "overlay" && match.geo_placement_lat == null) {
-        setTimeout(() => setShowCoordDialog(true), 400);
-      }
+      // Unplaced mogas now auto-attach beside the placed maps of the mouza
+      // (see the auto-place effect); manual placement mode only opens when
+      // no mustateel Khasra number matches the placed maps.
     }
   };
 
