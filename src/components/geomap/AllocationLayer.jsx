@@ -11,7 +11,7 @@ import {
 // Renders clickable killa (acre) cells over each mustateel/muraba of the selected moga.
 // The filled area inside each acre is proportional to the kanal allotted (used/8);
 // the remaining portion stays vacant (dashed boundary). Clickable only in allocation mode.
-export default function AllocationLayer({ objects, overlay, selectedMoga, allocations, mode, onCellClick, activeMustateelIds }) {
+export default function AllocationLayer({ objects, overlay, selectedMoga, allocations, mode, onCellClick, activeMustateelIds, onMustateelClick }) {
   const cells = useMemo(() => {
     if (!overlay?.transform) return [];
     const out = [];
@@ -56,17 +56,14 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
             {/* Base acre cell — dashed boundary, vacant */}
             <Polygon
               positions={latlngs.map((p) => [p.lat, p.lng])}
-              pathOptions={{ color: "#dc2626", fillColor: "#000000", fillOpacity: 0, weight: mode ? 1 : 0, dashArray: "4,4", interactive: mode }}
-              eventHandlers={
-                mode
-                  ? {
-                      click: (e) => {
-                        L.DomEvent.stopPropagation(e);
-                        onCellClick(obj, mustNo, acre);
-                      },
-                    }
-                  : {}
-              }
+              pathOptions={{ color: "#dc2626", fillColor: "#000000", fillOpacity: 0, weight: mode ? 1 : 0, dashArray: "4,4", interactive: true }}
+              eventHandlers={{
+                click: (e) => {
+                  L.DomEvent.stopPropagation(e);
+                  if (mode) onCellClick(obj, mustNo, acre);
+                  else onMustateelClick && onMustateelClick(obj.id);
+                },
+              }}
             >
               {(isActive || label) && (
                 <Tooltip permanent direction="center" className="killa-label" opacity={1}>
@@ -79,7 +76,7 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {isActive && <span style={{ color: "#16a34a" }}>{acre}</span>}
+                    {isActive && <span style={{ color: "#facc15" }}>{acre}</span>}
                     {isActive && label ? " · " : ""}
                     {label}
                   </span>

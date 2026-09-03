@@ -29,6 +29,15 @@ function KillaGridLines({ obj, transform, zoom, forceVisible }) {
     const hR = transform.transform(x + w, y + r * cellH);
     lines.push([[hL.lat, hL.lng], [hR.lat, hR.lng]]);
   }
+  // Outer mustateel/muraba boundary drawn as yellow grid lines so the boundary itself is gridded
+  const bTL = transform.transform(x, y);
+  const bTR = transform.transform(x + w, y);
+  const bBR = transform.transform(x + w, y + h);
+  const bBL = transform.transform(x, y + h);
+  lines.push([[bTL.lat, bTL.lng], [bTR.lat, bTR.lng]]);
+  lines.push([[bTR.lat, bTR.lng], [bBR.lat, bBR.lng]]);
+  lines.push([[bBR.lat, bBR.lng], [bBL.lat, bBL.lng]]);
+  lines.push([[bBL.lat, bBL.lng], [bTL.lat, bTL.lng]]);
   return lines.map((pts, i) => (
     <Polyline key={i} positions={pts} pathOptions={{ color: "#facc15", weight: 2.5, opacity: 0.9 }} />
   ));

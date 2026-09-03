@@ -803,7 +803,21 @@ export default function GeoMap() {
     handleLowerLeftDrag(coords);
   };
 
-  const handleSelectMap = (id, keepMoga = false) => {
+  const handleSelectMap = async (id, keepMoga = false) => {
+    // Persist the current overlay before switching so the placed moga stays
+    // visible (AllOverlaysLayer renders saved placements) and the next moga
+    // can auto-attach beside it.
+    if (selectedMapId && placementPoint && id !== selectedMapId) {
+      try {
+        await base44.entities.LandMap.update(selectedMapId, {
+          geo_placement_lat: placementPoint.lat,
+          geo_placement_lng: placementPoint.lng,
+          geo_rotation: overlay?.rotation || 0,
+          geo_moga_filter: selectedMoga || "",
+        });
+        queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+      } catch {}
+    }
     setSelectedMapId(id);
     if (!keepMoga) setSelectedMoga("");
     setPlacementPoint(null);
@@ -1135,8 +1149,8 @@ export default function GeoMap() {
         {gpsAccuracyCircle}
         {gpsPosition && <Marker position={[gpsPosition.lat, gpsPosition.lng]} icon={GPS_ICON} />}
 
-        {/* All saved (placed) mogas — always visible in Mouza Map View, mouza-filtered in Overlay */}
-        {!capturing && (viewMode === "view" || filters.village) && (
+        {/* All saved (placed) mogas — always visible in both modes so previously-placed mogas stay on screen */}
+        {!capturing && (viewMode === "view" || viewMode === "overlay") && (
           <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} />
         )}
 
@@ -1164,6 +1178,7 @@ export default function GeoMap() {
             mode={allocTool === "cell"}
             onCellClick={handleCellClick}
             activeMustateelIds={activeMustateelIds}
+            onMustateelClick={handleMustateelClick}
           />
         )}
 
