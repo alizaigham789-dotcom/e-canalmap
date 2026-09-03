@@ -1,7 +1,7 @@
 import React, { useMemo, memo } from "react";
 import { Polygon, Polyline, Tooltip, CircleMarker, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
-import { getMustateeelKillaGrid, DIMENSIONS } from "@/lib/gisEngine";
+import { getMustateelKillaCells, getMurabaKillaCells, DIMENSIONS } from "@/lib/gisEngine";
 import { canvasRectToLatLngs, canvasPolylineToLatLngs, polygonAreaSqMeters, sqMetersToUnits, computeCcaCenter } from "@/lib/geoOverlay";
 
 function labelFontSize(zoom) {
@@ -14,11 +14,15 @@ function KillaGridLines({ obj, transform, zoom }) {
   if (zoom < 15) return null;
   const lines = [];
   const { x, y, w, h } = obj;
-  const cellW = w / 2, cellH = h / 5;
-  // Vertical line down the middle
-  const vTop = transform.transform(x + cellW, y);
-  const vBot = transform.transform(x + cellW, y + h);
-  lines.push([[vTop.lat, vTop.lng], [vBot.lat, vBot.lng]]);
+  // Mustateel = 2 cols × 5 rows, Muraba = 5 cols × 5 rows (25 acres)
+  const cols = obj.type === "muraba" ? 5 : 2;
+  const cellW = w / cols, cellH = h / 5;
+  // Vertical lines between columns
+  for (let c = 1; c < cols; c++) {
+    const vTop = transform.transform(x + c * cellW, y);
+    const vBot = transform.transform(x + c * cellW, y + h);
+    lines.push([[vTop.lat, vTop.lng], [vBot.lat, vBot.lng]]);
+  }
   // 4 horizontal lines (between 5 rows)
   for (let r = 1; r < 5; r++) {
     const hL = transform.transform(x, y + r * cellH);
@@ -40,7 +44,7 @@ function KillaLabel({ num, latlng, zoom }) {
       pathOptions={{ opacity: 0, fillOpacity: 0 }}
     >
       <Tooltip permanent direction="center" opacity={1} className="killa-label">
-        <span style={{ fontSize: `${Math.max(8, labelFontSize(zoom) * 0.6)}px`, fontWeight: 700, color: "#facc15", textShadow: "1px 1px 2px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9)" }}>{num}</span>
+        <span style={{ fontSize: `${Math.max(8, labelFontSize(zoom) * 0.6)}px`, fontWeight: 700, color: "#16a34a", textShadow: "1px 1px 2px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9)" }}>{num}</span>
       </Tooltip>
     </CircleMarker>
   );
@@ -101,24 +105,52 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
   );
 }
 
-function MurabaLabel({ obj, latlngs, zoom }) {
+function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, onClick }) {
+  const map = useMap();
   const acres = useMemo(() => sqMetersToUnits(polygonAreaSqMeters(latlngs)).acres, [latlngs]);
-  const fontSize = labelFontSize(zoom);
   // Bold boundary — same treatment as mustateel (boundaryThickness-driven weight)
   const boundaryThickness = obj.boundaryThickness || 5;
   const lineWeight = Math.max(3, boundaryThickness * 1.2);
+
+  // Auto-fit font size — same as mustateel so the label stays inside the boundary
+  const { numSize, showLabel } = useMemo(() => {
+    const px = latlngs.map(p => map.latLngToLayerPoint([p.lat, p.lng]));
+    const xs = px.map(p => p.x), ys = px.map(p => p.y);
+    const w = Math.max(...xs) - Math.min(...xs);
+    const h = Math.max(...ys) - Math.min(...ys);
+    const minDim = Math.min(w, h);
+    if (minDim < 34) return { numSize: 0, showLabel: false };
+    return { numSize: Math.max(8, Math.min(30, minDim * 0.3)), showLabel: true };
+  }, [latlngs, map, zoom]);
+
   return (
-    <Polygon
-      positions={latlngs.map(p => [p.lat, p.lng])}
-      pathOptions={{ color: "#f97316", fillColor: "#f97316", fillOpacity: 0.08, weight: lineWeight, opacity: 1 }}
-    >
-      <Tooltip permanent direction="center" className="muraba-label" opacity={1}>
-        <div style={{ fontSize: `${fontSize}px`, fontWeight: 700, color: "#c2410c", textAlign: "center", lineHeight: 1.15 }}>
-          {obj.label && <div>{obj.label}</div>}
-          <div style={{ fontSize: `${fontSize * 0.78}px`, color: "#9a3412" }}>{acres.toFixed(2)} ac</div>
-        </div>
-      </Tooltip>
-    </Polygon>
+    <>
+      <Polygon
+        positions={latlngs.map(p => [p.lat, p.lng])}
+        pathOptions={{
+          color: isActive ? "#ff0000" : "#f97316",
+          fillColor: isActive ? "#ef4444" : "#f97316",
+          fillOpacity: isActive ? 0.18 : 0.08,
+          weight: isActive ? lineWeight + 1.5 : lineWeight,
+          opacity: 1,
+        }}
+        eventHandlers={{ click: (e) => { L.DomEvent.stopPropagation(e); onClick && onClick(obj.id); } }}
+      >
+        {showLabel && (
+          <Tooltip permanent direction="center" className="muraba-label" opacity={1}>
+            <div style={{ fontSize: `${numSize}px`, fontWeight: 800, color: "#c2410c", textAlign: "center", lineHeight: 1.1, whiteSpace: "nowrap", textShadow: "0 0 3px #fff, 0 0 3px #fff" }}>
+              {obj.label && <div>{obj.label}</div>}
+              <div style={{ fontSize: `${Math.max(7, numSize * 0.45)}px`, color: "#9a3412" }}>{acres.toFixed(2)} ac</div>
+            </div>
+          </Tooltip>
+        )}
+      </Polygon>
+      {/* Acre grid lines — only for the clicked/active muraba */}
+      {showKilla && isActive && <KillaGridLines obj={obj} transform={transform} zoom={zoom} />}
+      {showKilla && isActive && killaLatLngs && zoom >= 16 && killaLatLngs.map((k, i) => (
+        <KillaLabel key={i} num={k.num} latlng={k.latlng} zoom={zoom} />
+      ))}
+    </>
   );
 }
 
@@ -472,17 +504,11 @@ const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "canal", "kh
 
 // Precompute killa center lat/lng for mustateels
 function computeKillaLatLngs(obj, transform) {
-  const grid = getMustateeelKillaGrid();
-  const cellW = obj.w / 2, cellH = obj.h / 5;
-  const result = [];
-  for (let r = 0; r < 5; r++) {
-    for (let c = 0; c < 2; c++) {
-      const cx = obj.x + c * cellW + cellW / 2;
-      const cy = obj.y + r * cellH + cellH / 2;
-      result.push({ num: grid[r][c], latlng: [transform.transform(cx, cy).lat, transform.transform(cx, cy).lng] });
-    }
-  }
-  return result;
+  const cells = obj.type === "muraba" ? getMurabaKillaCells(obj) : getMustateelKillaCells(obj);
+  return cells.map(cell => {
+    const p = transform.transform(cell.x + cell.w / 2, cell.y + cell.h / 2);
+    return { num: cell.killa, latlng: [p.lat, p.lng] };
+  });
 }
 
 export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, onMustateelClick }) {
@@ -500,7 +526,7 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
       let latlngs, killaLatLngs = null;
       if (["mustateel", "muraba", "acre"].includes(obj.type)) {
         latlngs = canvasRectToLatLngs(obj, transform);
-        if (obj.type === "mustateel" && killaVisible) {
+        if ((obj.type === "mustateel" || obj.type === "muraba") && killaVisible) {
           killaLatLngs = computeKillaLatLngs(obj, transform);
         }
       } else if (obj.start && obj.end) {
@@ -518,7 +544,7 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
       {geoObjects.map(({ obj, latlngs, killaLatLngs, ccaCenter }) => {
         switch (obj.type) {
           case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} onClick={onMustateelClick} />;
-          case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
+          case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} onClick={onMustateelClick} />;
           case "acre": return <MemoAcre key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
           case "khal": return <MemoKhal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
