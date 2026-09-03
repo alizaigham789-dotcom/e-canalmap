@@ -1113,6 +1113,9 @@ export default function GeoMap() {
     // Zoom in to the clicked mustateel — on mobile this focuses one mustateel
     // while neighbours stay as clickable boundaries; clicking another pans to it.
     const obj = mapObjects.find(o => o.id === id);
+    // Reflect the clicked mustateel in the top moga → muraba cascade so the
+    // selected muraba shows next to the moga (both View & Overlay modes).
+    if (obj?.label) setSelectedMuraba(String(obj.label));
     if (obj && activeOverlay?.transform && mapRef.current) {
       const corners = [[obj.x, obj.y], [obj.x + obj.w, obj.y], [obj.x + obj.w, obj.y + obj.h], [obj.x, obj.y + obj.h]];
       const latlngs = corners.map(([cx, cy]) => activeOverlay.transform.transform(cx, cy)).filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
