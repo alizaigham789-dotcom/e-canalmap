@@ -286,9 +286,9 @@ export default function GeoMap() {
   }, [mapObjects]);
 
   const mogaMustateels = useMemo(() => mapObjects
-    .filter(o => (o.type === "mustateel" || o.type === "muraba") && (!selectedMoga || String(o.mogaNumber) === String(selectedMoga)) && o.label)
+    .filter(o => (o.type === "mustateel" || o.type === "muraba") && o.label)
     .map(o => ({ mustNo: o.label, acreCount: parcelKillaCells(o).length }))
-    .sort((a, b) => +a.mustNo - +b.mustNo), [mapObjects, selectedMoga]);
+    .sort((a, b) => +a.mustNo - +b.mustNo), [mapObjects]);
 
   const patchesWithGeometry = useMemo(() => allocations.filter((a) => a.geometry), [allocations]);
   const khalsExist = useMemo(() => mapObjects.some(o => o.type === "khal"), [mapObjects]);
@@ -560,8 +560,10 @@ export default function GeoMap() {
   }, [selectedMap, mapObjects, maps]);
 
   // Map View mode — fit the whole cadastral drawing on screen (no satellite).
+  // When a specific moga is selected, skip — the fly-to-moga effect handles it.
   useEffect(() => {
     if (viewMode !== "view" || !viewTransform || !mapRef.current || !mapObjects.length) return;
+    if (selectedMoga) return; // a specific moga is selected → fly-to-moga effect handles it
     const collect = (objs, t, arr) => {
       for (const o of objs) {
         if (["mustateel", "muraba", "acre"].includes(o.type)) {
@@ -591,28 +593,29 @@ export default function GeoMap() {
       const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
       mapRef.current.flyToBounds(bounds, { padding: [60, 60], maxZoom: 19, duration: 0.6 });
     }
-  }, [viewMode, viewTransform, mapObjects, villageMaps, selectedMapId, selectedMap]);
+  }, [viewMode, viewTransform, mapObjects, villageMaps, selectedMapId, selectedMap, selectedMoga]);
 
   // When a moga is selected and the overlay is placed, fly to just that moga's
   // bounds (not the full map) so only the selected moga fills the screen.
+  // Uses activeOverlay so it works in both View and Overlay modes.
+  // The map is already switched to match the selected moga, so all its
+  // mustateels/murabas belong to that moga (many older maps don't set
+  // mogaNumber on each mustateel, so we don't filter by it).
   useEffect(() => {
-    if (!selectedMoga || !overlay?.transform || !mapRef.current) return;
-    const mogaObjs = mapObjects.filter(o =>
-      (o.type === "mustateel" || o.type === "muraba") &&
-      String(o.mogaNumber) === String(selectedMoga)
-    );
+    if (!selectedMoga || !activeOverlay?.transform || !mapRef.current) return;
+    const mogaObjs = mapObjects.filter(o => o.type === "mustateel" || o.type === "muraba");
     if (mogaObjs.length === 0) return;
     const allLatLngs = [];
     for (const o of mogaObjs) {
       const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
-      for (const [cx, cy] of corners) allLatLngs.push(overlay.transform.transform(cx, cy));
+      for (const [cx, cy] of corners) allLatLngs.push(activeOverlay.transform.transform(cx, cy));
     }
     const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
     if (valid.length) {
       const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
       mapRef.current.flyToBounds(bounds, { padding: [50, 50], maxZoom: 19, duration: 0.8 });
     }
-  }, [selectedMoga, overlay, mapObjects]);
+  }, [selectedMoga, activeOverlay, mapObjects]);
 
   // Auto-save the overlay placement (debounced) so it persists at the exact
   // coordinate it was placed — only an explicit delete removes it. No data loss.
@@ -885,9 +888,7 @@ export default function GeoMap() {
   const handleSelectMuraba = (mustNo) => {
     setSelectedMuraba(mustNo);
     const obj = mapObjects.find(o =>
-      (o.type === "mustateel" || o.type === "muraba") &&
-      o.label === mustNo &&
-      (!selectedMoga || String(o.mogaNumber) === String(selectedMoga))
+      (o.type === "mustateel" || o.type === "muraba") && o.label === mustNo
     );
     if (obj) handleMustateelClick(obj.id);
   };
