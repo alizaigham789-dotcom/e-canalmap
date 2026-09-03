@@ -309,7 +309,7 @@ export default function MapList() {
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-20">
       {/* Header */}
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Link to="/">
               <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100">
@@ -338,7 +338,7 @@ export default function MapList() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-5">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-5">
         {/* Search */}
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -386,7 +386,7 @@ export default function MapList() {
             )}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {filtered.map(map => (
               <div key={map.id} className={`bg-white border rounded-xl p-3 hover:border-blue-300 hover:shadow-md transition-all shadow-sm ${selectedIds.has(map.id) ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"}`}>
                 <div className="flex items-center gap-3">

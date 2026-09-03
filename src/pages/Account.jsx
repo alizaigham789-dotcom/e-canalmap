@@ -77,7 +77,7 @@ export default function Account() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 pb-24 antialiased">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm safe-top">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-2">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2">
           <button
             onClick={() => navigate("/")}
             className="w-11 h-11 -ml-1 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
@@ -91,7 +91,7 @@ export default function Account() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-6 space-y-5">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-5">
         {/* Profile card */}
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
           <div className="flex items-center gap-4">

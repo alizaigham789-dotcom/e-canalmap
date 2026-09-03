@@ -8,7 +8,7 @@ export default function KhalMismari() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-20">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
-        <div className="max-w-md mx-auto px-5 py-3 flex items-center gap-2">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2">
           <Link to="/">
             <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100">
               <ArrowLeft className="w-4 h-4" />
@@ -21,7 +21,7 @@ export default function KhalMismari() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-5 py-16 text-center">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-16 text-center">
         <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center mx-auto mb-5 shadow-lg">
           <Pickaxe className="w-9 h-9 text-white" />
         </div>

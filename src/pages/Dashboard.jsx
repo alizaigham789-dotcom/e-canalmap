@@ -193,7 +193,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-100 text-slate-800 pb-20 antialiased">
       {/* Header */}
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm safe-top">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/30 ring-1 ring-white/30">
               <Globe className="w-5 h-5 text-white" strokeWidth={2.2} />
@@ -227,7 +227,7 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-md mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* Greeting */}
         <div className="mb-5">
           <h2 className="text-lg font-bold font-heading text-slate-800">
@@ -237,7 +237,7 @@ export default function Dashboard() {
         </div>
 
         {/* Module Cards — 2-column grid, responsive on all screens */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {orderedModules.map((mod) => {
             const needsSub = mod.id === "map-editor" || mod.id === "geo-map" || mod.id === "moga-merge";
             const subLocked = needsSub && !hasAccess;

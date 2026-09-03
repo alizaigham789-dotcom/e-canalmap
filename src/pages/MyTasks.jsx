@@ -109,7 +109,7 @@ export default function MyTasks() {
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-2">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2">
           <button onClick={() => navigate("/canal-patwari")} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-slate-100">
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -120,7 +120,7 @@ export default function MyTasks() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-5 space-y-3">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-5 space-y-3">
         {!myRole && me && (
           <p className="text-center text-sm text-slate-400 py-6" style={{ fontFamily: URDU }}>
             آپ کا کردار zilladar یا patwari نہیں ہے۔

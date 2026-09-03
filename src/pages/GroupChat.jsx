@@ -39,7 +39,7 @@ export default function GroupChat() {
           </div>
         ))}
       </div>
-      <div className="fixed bottom-20 left-0 right-0 max-w-md mx-auto px-5">
+      <div className="fixed bottom-20 left-0 right-0 max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center gap-2 bg-white rounded-2xl shadow-md ring-1 ring-slate-200/70 p-2">
           <input
             value={draft}

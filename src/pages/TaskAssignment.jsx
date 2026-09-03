@@ -116,7 +116,7 @@ export default function TaskAssignment() {
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-2">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2">
           <button onClick={() => navigate("/deputy-collector")} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-slate-100">
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -127,7 +127,7 @@ export default function TaskAssignment() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-5 space-y-5">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-5 space-y-5">
         {/* Assignment form */}
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/70 p-4 space-y-3">
           <p className="text-xs font-semibold text-slate-600 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-emerald-500" /> علاقہ منتخب کریں</p>

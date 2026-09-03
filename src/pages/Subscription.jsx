@@ -72,7 +72,7 @@ export default function Subscription() {
     <div className="min-h-screen bg-slate-100 text-slate-800">
       {/* Header */}
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-2">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2">
           <button
             onClick={() => navigate("/")}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100"
@@ -83,7 +83,7 @@ export default function Subscription() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-6 space-y-5">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-5">
         {/* Active status */}
         {isAdmin ? (
           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">

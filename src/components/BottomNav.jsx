@@ -18,7 +18,7 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-lg sm:max-w-md sm:mx-auto sm:rounded-t-2xl safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-lg sm:max-w-2xl sm:mx-auto sm:rounded-t-2xl safe-bottom">
       <div className="flex items-center justify-around h-16">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;

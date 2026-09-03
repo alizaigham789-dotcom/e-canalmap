@@ -262,7 +262,7 @@ export default function ParatWarabandi() {
     return (
       <div className="min-h-screen bg-slate-50 pb-20">
         <header className="border-b border-slate-200 bg-white/90 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
-          <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Link to="/">
                 <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100">
@@ -280,7 +280,7 @@ export default function ParatWarabandi() {
           </div>
         </header>
 
-        <main className="max-w-md mx-auto px-4 py-5">
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
           <div className="mb-3 relative">
             <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
@@ -337,7 +337,7 @@ export default function ParatWarabandi() {
               </div>
             )
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {filteredRecords.map(rec => {
                 const moghaDisplay = `${rec.mogha_number || ""}/${rec.mogha_side || "R"}`;
                 const hdr = parseHeader(rec);
