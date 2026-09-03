@@ -241,8 +241,14 @@ function svgExclusionHatch(obj, idx) {
     const rect = rects[i];
     const id = `excl_${idx}_${i}`;
     let lines = "";
-    for (let d = -rect.h; d < rect.w; d += spacing) {
-      lines += `<line x1="${(rect.x + d).toFixed(1)}" y1="${rect.y.toFixed(1)}" x2="${(rect.x + d + rect.h).toFixed(1)}" y2="${(rect.y + rect.h).toFixed(1)}" stroke="${color}" stroke-width="${width}"/>`;
+    // Globally-anchored 45° family (y − x = k·spacing) — hatch lines stay continuous
+    // & aligned across all acres/kanal boxes; spacing only changes the density.
+    const sp = Math.max(1, spacing);
+    const cMin = Math.floor((rect.y - rect.x - rect.w) / sp) * sp;
+    const cMax = rect.y + rect.h - rect.x;
+    for (let c = cMin; c <= cMax; c += sp) {
+      const x0 = rect.x - rect.h, x1 = rect.x + rect.w;
+      lines += `<line x1="${x0.toFixed(1)}" y1="${(x0 + c).toFixed(1)}" x2="${x1.toFixed(1)}" y2="${(x1 + c).toFixed(1)}" stroke="${color}" stroke-width="${width}"/>`;
     }
     result += `<clipPath id="${id}"><rect x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}"/></clipPath><g clip-path="url(#${id})">${lines}</g>`;
   }

@@ -1669,9 +1669,16 @@ export function drawExclusionHatchOnCanvas(ctx, obj, zoom) {
     ctx.rect(rect.x, rect.y, rect.w, rect.h);
     ctx.clip();
     ctx.beginPath();
-    for (let d = -rect.h; d < rect.w; d += spacing) {
-      ctx.moveTo(rect.x + d, rect.y);
-      ctx.lineTo(rect.x + d + rect.h, rect.y + rect.h);
+    // Globally-anchored 45° line family (y − x = k·spacing): every acre/kanal box
+    // draws its own slice of the SAME lines, so the hatch stays continuous and
+    // aligned across acres — spacing only changes density, never the phase.
+    const sp = Math.max(1, spacing);
+    const cMin = Math.floor((rect.y - rect.x - rect.w) / sp) * sp;
+    const cMax = rect.y + rect.h - rect.x;
+    for (let c = cMin; c <= cMax; c += sp) {
+      const x0 = rect.x - rect.h, x1 = rect.x + rect.w;
+      ctx.moveTo(x0, x0 + c);
+      ctx.lineTo(x1, x1 + c);
     }
     ctx.stroke();
     ctx.restore();
