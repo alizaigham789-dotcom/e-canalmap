@@ -205,8 +205,17 @@ export default function GeoMap() {
   // the map and run Form 1 allocation without georeferencing.
   const viewTransform = useMemo(() => {
     if (viewMode !== "view" || !mapObjects.length) return null;
+    // Prefer the saved geo placement so placed mogas line up together in View mode
+    if (selectedMap?.geo_placement_lat != null && selectedMap?.geo_placement_lng != null) {
+      const t = computeOneClickTransform(
+        { lat: selectedMap.geo_placement_lat, lng: selectedMap.geo_placement_lng },
+        mapObjects,
+        selectedMap.geo_rotation || 0
+      );
+      if (t) return t;
+    }
     return computeOneClickTransform({ lat: center[0], lng: center[1] }, mapObjects, 0);
-  }, [viewMode, mapObjects, center]);
+  }, [viewMode, mapObjects, selectedMap, center]);
 
   const activeOverlay = useMemo(() => {
     if (viewMode === "view" && viewTransform) return { transform: viewTransform, rotation: 0, placementPoint: null };
@@ -505,16 +514,28 @@ export default function GeoMap() {
   // Map View mode — fit the whole cadastral drawing on screen (no satellite).
   useEffect(() => {
     if (viewMode !== "view" || !viewTransform || !mapRef.current || !mapObjects.length) return;
+    const collect = (objs, t, arr) => {
+      for (const o of objs) {
+        if (["mustateel", "muraba", "acre"].includes(o.type)) {
+          const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
+          for (const [cx, cy] of corners) arr.push(t.transform(cx, cy));
+        } else if (o.points?.length) {
+          for (const p of o.points) arr.push(t.transform(p.x, p.y));
+        } else if (o.start && o.end) {
+          arr.push(t.transform(o.start.x, o.start.y));
+          arr.push(t.transform(o.end.x, o.end.y));
+        }
+      }
+    };
     const allLatLngs = [];
-    for (const o of mapObjects) {
-      if (["mustateel", "muraba", "acre"].includes(o.type)) {
-        const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
-        for (const [cx, cy] of corners) allLatLngs.push(viewTransform.transform(cx, cy));
-      } else if (o.points?.length) {
-        for (const p of o.points) allLatLngs.push(viewTransform.transform(p.x, p.y));
-      } else if (o.start && o.end) {
-        allLatLngs.push(viewTransform.transform(o.start.x, o.start.y));
-        allLatLngs.push(viewTransform.transform(o.end.x, o.end.y));
+    collect(mapObjects, viewTransform, allLatLngs);
+    // When the selected map is placed, fit to ALL saved mogas of the mouza together
+    if (selectedMap?.geo_placement_lat != null) {
+      for (const m of villageMaps) {
+        if (m.id === selectedMapId || m.geo_placement_lat == null || m.geo_placement_lng == null || !m.drawing_data) continue;
+        const objs = DrawingStateManager.deserialize(m.drawing_data);
+        const t = computeOneClickTransform({ lat: m.geo_placement_lat, lng: m.geo_placement_lng }, objs, m.geo_rotation || 0);
+        if (t) collect(objs, t, allLatLngs);
       }
     }
     const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
@@ -522,7 +543,7 @@ export default function GeoMap() {
       const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
       mapRef.current.flyToBounds(bounds, { padding: [60, 60], maxZoom: 19, duration: 0.6 });
     }
-  }, [viewMode, viewTransform, mapObjects]);
+  }, [viewMode, viewTransform, mapObjects, villageMaps, selectedMapId, selectedMap]);
 
   // When a moga is selected and the overlay is placed, fly to just that moga's
   // bounds (not the full map) so only the selected moga fills the screen.
@@ -765,12 +786,17 @@ export default function GeoMap() {
   const handleSelectMogaTop = (moga) => {
     setSelectedMoga(moga);
     setSelectedMuraba("");
-    const match = (maps || []).find(m =>
-      (!filters.district || m.district === filters.district) &&
-      (!filters.tehsil || m.tehsil === filters.tehsil) &&
-      (!filters.village || m.village === filters.village) &&
-      String(m.moga_number) === String(moga)
-    );
+    // Direct moga select — match across ALL maps (not just current filters) and
+    // auto-fill the district/tehsil/mouza/rajbah cascade from the map's header data.
+    const match = (maps || []).find(m => String(m.moga_number) === String(moga));
+    if (match) {
+      setFilters({
+        district: match.district || "",
+        tehsil: match.tehsil || "",
+        village: match.village || "",
+        rajbah: match.rajbah || "",
+      });
+    }
     if (match && match.id !== selectedMapId) {
       handleSelectMap(match.id, true);
       // If the newly selected moga's map has no saved placement, open the
@@ -1079,8 +1105,8 @@ export default function GeoMap() {
         {viewMode === "overlay" && gpsAccuracyCircle}
         {viewMode === "overlay" && gpsPosition && <Marker position={[gpsPosition.lat, gpsPosition.lng]} icon={GPS_ICON} />}
 
-        {/* Show all maps of the selected mouza automatically */}
-        {viewMode === "overlay" && filters.village && (
+        {/* Show all saved maps of the selected mouza automatically (View + Overlay modes) */}
+        {filters.village && (
           <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} />
         )}
 
@@ -1093,6 +1119,7 @@ export default function GeoMap() {
             killaVisible={killaVisible}
             mogaFilter={selectedMoga}
             activeMustateelIds={activeMustateelIds}
+            gridAll={allocTool === "cell"}
             onMustateelClick={handleMustateelClick}
           />
         )}

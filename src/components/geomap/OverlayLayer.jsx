@@ -2,7 +2,7 @@ import React, { useMemo, memo } from "react";
 import { Polygon, Polyline, Tooltip, CircleMarker, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import { getMustateelKillaCells, getMurabaKillaCells, DIMENSIONS } from "@/lib/gisEngine";
-import { canvasRectToLatLngs, canvasPolylineToLatLngs, polygonAreaSqMeters, sqMetersToUnits, computeCcaCenter } from "@/lib/geoOverlay";
+import { canvasRectToLatLngs, canvasPolylineToLatLngs, computeCcaCenter } from "@/lib/geoOverlay";
 
 function labelFontSize(zoom) {
   return Math.max(8, Math.min(16, 9 + (zoom - 14) * 1.2));
@@ -10,8 +10,8 @@ function labelFontSize(zoom) {
 
 // ─── KILLA GRID LINES for mustateel ──────────────────────────────
 // Draws the internal subdivision lines (2 cols × 5 rows) — RED, enhanced visibility.
-function KillaGridLines({ obj, transform, zoom }) {
-  if (zoom < 15) return null;
+function KillaGridLines({ obj, transform, zoom, forceVisible }) {
+  if (zoom < 15 && !forceVisible) return null;
   const lines = [];
   const { x, y, w, h } = obj;
   // Mustateel = 2 cols × 5 rows, Muraba = 5 cols × 5 rows (25 acres)
@@ -50,7 +50,7 @@ function KillaLabel({ num, latlng, zoom }) {
   );
 }
 
-function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, onClick }) {
+function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, gridAll, onClick }) {
   const map = useMap();
   const boundaryThickness = obj.boundaryThickness || 5;
   const lineWeight = Math.max(3, boundaryThickness * 1.2);
@@ -96,8 +96,8 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
           </Tooltip>
         )}
       </Polygon>
-      {/* Killa grid lines — only for the clicked/active mustateel */}
-      {showKilla && isActive && <KillaGridLines obj={obj} transform={transform} zoom={zoom} />}
+      {/* Killa grid lines — clicked/active mustateel, or all parcels in cell-allocation mode */}
+      {showKilla && (isActive || gridAll) && <KillaGridLines obj={obj} transform={transform} zoom={zoom} forceVisible={gridAll} />}
       {showKilla && isActive && killaLatLngs && zoom >= 16 && killaLatLngs.map((k, i) => (
         <KillaLabel key={i} num={k.num} latlng={k.latlng} zoom={zoom} />
       ))}
@@ -105,9 +105,8 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
   );
 }
 
-function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, onClick }) {
+function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, gridAll, onClick }) {
   const map = useMap();
-  const acres = useMemo(() => sqMetersToUnits(polygonAreaSqMeters(latlngs)).acres, [latlngs]);
   // Bold boundary — same treatment as mustateel (boundaryThickness-driven weight)
   const boundaryThickness = obj.boundaryThickness || 5;
   const lineWeight = Math.max(3, boundaryThickness * 1.2);
@@ -140,13 +139,12 @@ function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, i
           <Tooltip permanent direction="center" className="muraba-label" opacity={1}>
             <div style={{ fontSize: `${numSize}px`, fontWeight: 800, color: "#c2410c", textAlign: "center", lineHeight: 1.1, whiteSpace: "nowrap", textShadow: "0 0 3px #fff, 0 0 3px #fff" }}>
               {obj.label && <div>{obj.label}</div>}
-              <div style={{ fontSize: `${Math.max(7, numSize * 0.45)}px`, color: "#9a3412" }}>{acres.toFixed(2)} ac</div>
             </div>
           </Tooltip>
         )}
       </Polygon>
-      {/* Acre grid lines — only for the clicked/active muraba */}
-      {showKilla && isActive && <KillaGridLines obj={obj} transform={transform} zoom={zoom} />}
+      {/* Acre grid lines — clicked/active muraba, or all parcels in cell-allocation mode */}
+      {showKilla && (isActive || gridAll) && <KillaGridLines obj={obj} transform={transform} zoom={zoom} forceVisible={gridAll} />}
       {showKilla && isActive && killaLatLngs && zoom >= 16 && killaLatLngs.map((k, i) => (
         <KillaLabel key={i} num={k.num} latlng={k.latlng} zoom={zoom} />
       ))}
@@ -511,7 +509,7 @@ function computeKillaLatLngs(obj, transform) {
   });
 }
 
-export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, onMustateelClick }) {
+export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick }) {
   const geoObjects = useMemo(() => {
     if (!transform || !objects.length) return [];
     const filtered = mogaFilter
@@ -543,8 +541,8 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
     <>
       {geoObjects.map(({ obj, latlngs, killaLatLngs, ccaCenter }) => {
         switch (obj.type) {
-          case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} onClick={onMustateelClick} />;
-          case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} onClick={onMustateelClick} />;
+          case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} />;
+          case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} />;
           case "acre": return <MemoAcre key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
           case "khal": return <MemoKhal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
