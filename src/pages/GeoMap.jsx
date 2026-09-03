@@ -34,6 +34,7 @@ import MogaMoveLayer from "@/components/geomap/MogaMoveLayer";
 import MogaToolsToolbar from "@/components/geomap/MogaToolsToolbar";
 import DummyMustateelLayer from "@/components/geomap/DummyMustateelLayer";
 import DummyMustateelDialog from "@/components/geomap/DummyMustateelDialog";
+import GeoMapHub from "@/components/geomap/GeoMapHub";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
   polygonAreaSqMeters, sqMetersToUnits,
@@ -140,6 +141,7 @@ export default function GeoMap() {
   const [zoom, setZoom] = useState(13);
   const [hybrid, setHybrid] = useState(true);
   const [viewMode, setViewMode] = useState("overlay"); // "overlay" | "view"
+  const [entered, setEntered] = useState(false); // hub → sub-module entry
   const [activeTool, setActiveTool] = useState(null);
   const [filters, setFilters] = useState({ district: "", tehsil: "", village: "", rajbah: "" });
 
@@ -1243,6 +1245,8 @@ export default function GeoMap() {
     return null;
   }, [draft, mouseLatLng]);
 
+  if (!entered) return <GeoMapHub onSelect={(mode) => { setViewMode(mode); setEntered(true); }} />;
+
   return (
     <div className="fixed inset-0 bg-[#0f1923] z-40">
       <MapContainer
@@ -1456,7 +1460,7 @@ export default function GeoMap() {
         tehsil={filters.tehsil}
         village={filters.village}
         onSelect={handleFilterSelect}
-        onMenu={() => navigate("/")}
+        onMenu={() => setEntered(false)}
         rajbahs={rajbahs}
         rajbah={filters.rajbah}
         mogas={filterMogas}
@@ -1478,30 +1482,6 @@ export default function GeoMap() {
         editActive={allocTool === "edit"}
       />
       <Compass />
-
-      {/* Sub-module switcher — Mouza Map View / Mouza Map Overlay */}
-      <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[1001] flex items-center bg-white/95 backdrop-blur rounded-full shadow-xl p-1 gap-1">
-        <button
-          onClick={() => { setViewMode("view"); setActiveTool(null); setKhalTool(null); setDraft(null); }}
-          className={`flex items-center gap-2 px-4 h-9 rounded-full transition-all ${viewMode === "view" ? "bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-md" : "text-slate-600 hover:bg-slate-100"}`}
-        >
-          <MapIcon className="w-4 h-4" />
-          <span className="flex flex-col items-start leading-tight">
-            <span className="text-xs font-bold">مواضعات کا نقشہ</span>
-            <span className="text-[7px] font-semibold uppercase tracking-widest opacity-80">Mouza Map View</span>
-          </span>
-        </button>
-        <button
-          onClick={() => setViewMode("overlay")}
-          className={`flex items-center gap-2 px-4 h-9 rounded-full transition-all ${viewMode === "overlay" ? "bg-gradient-to-r from-blue-600 to-indigo-500 text-white shadow-md" : "text-slate-600 hover:bg-slate-100"}`}
-        >
-          <Satellite className="w-4 h-4" />
-          <span className="flex flex-col items-start leading-tight">
-            <span className="text-xs font-bold">نقشہ اوورلے</span>
-            <span className="text-[7px] font-semibold uppercase tracking-widest opacity-80">Map Overlay · GIS</span>
-          </span>
-        </button>
-      </div>
 
       {/* Overlay toggle — left side (overlay mode only) */}
       {viewMode === "overlay" && (
