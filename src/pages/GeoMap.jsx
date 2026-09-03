@@ -1163,6 +1163,7 @@ export default function GeoMap() {
             allocations={allocations}
             mode={allocTool === "cell"}
             onCellClick={handleCellClick}
+            activeMustateelIds={activeMustateelIds}
           />
         )}
 

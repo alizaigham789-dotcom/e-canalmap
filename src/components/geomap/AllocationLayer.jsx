@@ -11,7 +11,7 @@ import {
 // Renders clickable killa (acre) cells over each mustateel/muraba of the selected moga.
 // The filled area inside each acre is proportional to the kanal allotted (used/8);
 // the remaining portion stays vacant (dashed boundary). Clickable only in allocation mode.
-export default function AllocationLayer({ objects, overlay, selectedMoga, allocations, mode, onCellClick }) {
+export default function AllocationLayer({ objects, overlay, selectedMoga, allocations, mode, onCellClick, activeMustateelIds }) {
   const cells = useMemo(() => {
     if (!overlay?.transform) return [];
     const out = [];
@@ -40,6 +40,7 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
         const acs = acreAllocations(allocations, mustNo, acre);
         const frac = Math.max(0, Math.min(1, used / 8));
         const label = acs.map((a) => `${(a.farmer_name || "?").slice(0, 12)} ${a.kanal}K`).join(" / ");
+        const isActive = activeMustateelIds?.has(obj.id);
         // Filled sub-rectangle — left portion of the acre = used/8 of its width
         const fillLatLngs =
           frac > 0
@@ -67,17 +68,19 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
                   : {}
               }
             >
-              {label && (
+              {(isActive || label) && (
                 <Tooltip permanent direction="center" className="killa-label" opacity={1}>
                   <span
                     style={{
-                      fontSize: "9px",
+                      fontSize: "10px",
                       fontWeight: 700,
                       color: "#fff",
                       textShadow: "0 0 2px #000, 0 0 2px #000",
                       whiteSpace: "nowrap",
                     }}
                   >
+                    {isActive && <span style={{ color: "#16a34a" }}>{acre}</span>}
+                    {isActive && label ? " · " : ""}
                     {label}
                   </span>
                 </Tooltip>
