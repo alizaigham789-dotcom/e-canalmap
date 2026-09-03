@@ -863,7 +863,13 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = nu
   lf = Math.min(lf, (viewW * 0.92) / _wPerLf, (viewH * 0.92) / _hPerLf);
   lf = Math.max(12, lf);
   const S = lf / 17.6;
-  const colSignW = 34 * S, colNameW = 42 * S, pad = 6 * S;
+  const colSignW = 34 * S, pad = 6 * S;
+  // Auto-width: when the longest label doesn't fit, the legend grows to the RIGHT —
+  // up to 3 mustateel widths total (default 2). The name column absorbs the growth.
+  let colNameW = 42 * S;
+  const charW = lf * 0.52; // approx Urdu glyph advance at font-size lf
+  const needNameW = items.reduce((m, it) => Math.max(m, (it.label || "").length * charW), 0) + pad;
+  if (needNameW > colNameW) colNameW = Math.min(needNameW, colNameW + 47 * S);
   const legendW = colSignW + colNameW + pad * 3;
   const headerH = lf * 1.3, colHdrH = lf * 1.1, rowH = lf * 1.4;
   const legendH = headerH + colHdrH + items.length * rowH + pad;
@@ -1011,7 +1017,12 @@ export function drawLegendOnCanvas(ctx, canvasW, canvasH, C, scale = 1, objBound
   // 3× bigger; table style with black header
   const S = 7.5;
   const lf = MUSTATEEL_LABEL_FONT * scale;
-  const colSignW = 34 * S * scale, colNameW = 42 * S * scale, pad = 6 * S * scale;
+  const colSignW = 34 * S * scale, pad = 6 * S * scale;
+  // Auto-width: grow right to fit the longest label — up to 3 mustateel widths total.
+  let colNameW = 42 * S * scale;
+  const charW = lf * 0.52;
+  const needNameW = items.reduce((m, it) => Math.max(m, (it.label || "").length * charW), 0) + pad;
+  if (needNameW > colNameW) colNameW = Math.min(needNameW, colNameW + 47 * S * scale);
   const legendW = colSignW + colNameW + pad * 3;
   const headerH = lf * 1.3, colHdrH = lf * 1.1, rowH = lf * 1.4;
   const legendH = headerH + colHdrH + items.length * rowH + pad;
