@@ -188,7 +188,7 @@ export default function KanalFillControl({ local, commit, title = "Mustateel Col
                   <div key={a} className={`border rounded p-1.5 bg-white ${isOpen ? "border-blue-400 shadow-sm" : "border-slate-200"}`}>
                     <div className="flex items-center gap-2">
                       <button type="button" onClick={() => cnt > 0 && setOpenAcre(isOpen ? null : a)}
-                        className={`font-mono text-[10px] font-bold truncate w-16 text-left ${isOpen ? "text-blue-600" : "text-slate-700"}`} dir="ltr" title={acreLabel}>{acreLabel}/{a}</button>
+                        className={`font-mono text-[10px] font-bold truncate w-16 text-left ${isOpen ? "text-blue-600" : "text-slate-700"}`} dir="ltr" title={acreLabel}>{a}</button>
                       <input type="range" min={0} max={8} value={cnt}
                         onChange={(e) => setCount(idx, +e.target.value)}
                         className="flex-1" style={{ accentColor: GREEN }} />
