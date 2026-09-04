@@ -168,6 +168,7 @@ export default function GeoMap() {
   const [layerVisible, setLayerVisible] = useState(true);
   const [activeMustateelIds, setActiveMustateelIds] = useState(() => new Set());
   const autoPlacedRef = useRef(null);
+  const suppressAutoSaveRef = useRef(null); // blocks the debounced placement save while a map's placement is being deleted
   const [savingOverlay, setSavingOverlay] = useState(false);
   const [overlaySaved, setOverlaySaved] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -394,12 +395,12 @@ export default function GeoMap() {
       prev.map((a) => {
         if (a.id !== id) return a;
         const area = patchArea(latlngs);
-        const covered = coveredAcres(latlngs, mapObjects, overlay?.transform, selectedMoga);
+        const covered = coveredAcres(latlngs, mapObjects, activeOverlay?.transform, selectedMoga);
         const khasra = khasraListFromCovered(covered);
         return { ...a, geometry: latlngs, kanal: area.kanal, acres: area.acres, khasra: khasra.join("; ") };
       })
     );
-  }, [mapObjects, overlay, selectedMoga]);
+  }, [mapObjects, activeOverlay, selectedMoga]);
 
   // ─── KHAL DRAW / EDIT (GeoMap) ───────────────────────────────
   // Save a new khal drawn on the satellite map into the map's drawing_data.
@@ -628,6 +629,8 @@ export default function GeoMap() {
   useEffect(() => {
     if (!selectedMapId || !placementPoint || !overlay?.transform) return;
     const timer = setTimeout(() => {
+      // Don't re-save a placement that is currently being removed (Remove Overlay)
+      if (suppressAutoSaveRef.current === selectedMapId) return;
       base44.entities.LandMap.update(selectedMapId, {
         geo_placement_lat: placementPoint.lat,
         geo_placement_lng: placementPoint.lng,
@@ -930,6 +933,9 @@ export default function GeoMap() {
   };
 
   const handleClearOverlay = async () => {
+    // Block the debounced auto-save FIRST — otherwise it can re-save the old
+    // placement while the delete request is in flight and the map reappears.
+    if (selectedMapId) suppressAutoSaveRef.current = selectedMapId;
     // Persistently remove the saved overlay placement so it doesn't auto-restore.
     if (selectedMapId) {
       try {
@@ -954,6 +960,7 @@ export default function GeoMap() {
     setActiveMustateelIds(new Set());
     setOverlaySaved(false);
     setSelectedMuraba("");
+    suppressAutoSaveRef.current = null;
   };
 
   const handleRePlace = () => {
@@ -1357,8 +1364,8 @@ export default function GeoMap() {
           />
         )}
 
-        {/* Patch draw/edit layer — freehand closed polygons for farmer patches */}
-        {viewMode === "overlay" && activeOverlay?.transform && !capturing && (
+        {/* Patch draw/edit layer — freehand closed polygons for farmer patches (Overlay + View) */}
+        {activeOverlay?.transform && !capturing && (
           <PatchDrawLayer
             drawMode={allocTool === "draw"}
             editMode={allocTool === "edit"}
@@ -1577,7 +1584,7 @@ export default function GeoMap() {
         </div>
       )}
 
-      {allocTool === "draw" && activeOverlay && viewMode === "overlay" && (
+      {allocTool === "draw" && activeOverlay && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-indigo-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <PenTool className="w-3 h-3" /> نقشے پر کلک کر کے کلوزد پیچ بنائیں — ڈبل کلک سے مکمل کریں
         </div>
