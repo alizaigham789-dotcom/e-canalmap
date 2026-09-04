@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle, Save, Loader2, Network, Lightbulb, Search } from "lucide-react";
+import MapSelect from "@/components/geomap/MapSelect";
 
 export default function OverlayPanel({
   maps,
@@ -38,33 +39,22 @@ export default function OverlayPanel({
 
   return (
     <div className="absolute top-14 right-3 z-[1000] w-72 bg-[#1B2A3A] rounded-xl shadow-2xl border border-white/10 overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 h-10 bg-[#15212E]">
+      {/* Header — sticky so the X close button stays above the map-select dropdown */}
+      <div className="flex items-center justify-between px-3 h-10 bg-[#15212E] sticky top-0 z-20">
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-blue-400" />
           <span className="text-xs font-bold text-white tracking-wide">GIS Overlay</span>
         </div>
-        <button onClick={onClose} className="w-6 h-6 flex items-center justify-center text-white/60 hover:text-white">
+        <button onClick={onClose} className="w-6 h-6 flex items-center justify-center text-white/60 hover:text-white shrink-0">
           <X className="w-4 h-4" />
         </button>
       </div>
 
       <div className="p-3 space-y-2.5 max-h-[calc(100vh-200px)] overflow-y-auto">
-        {/* Map selector */}
+        {/* Map selector — custom searchable dropdown (replaces native select) */}
         <div>
           <label className="text-[10px] text-white/50 font-semibold uppercase tracking-wide block mb-1">Select Cadastral Map</label>
-          <select
-            value={selectedMapId}
-            onChange={(e) => onSelectMap(e.target.value)}
-            className="w-full bg-white/10 text-white text-xs font-medium px-2.5 h-8 rounded-md border border-white/15 cursor-pointer hover:bg-white/15 focus:outline-none focus:ring-1 focus:ring-blue-400"
-          >
-            <option value="" className="text-slate-700">— Pick a map —</option>
-            {maps.map(m => (
-              <option key={m.id} value={m.id} className="text-slate-700">
-                {m.title}{m.village ? ` · ${m.village}` : ""}
-              </option>
-            ))}
-          </select>
+          <MapSelect maps={maps} value={selectedMapId} onChange={onSelectMap} />
         </div>
 
         {/* Moga selector */}

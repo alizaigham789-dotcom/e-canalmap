@@ -256,8 +256,7 @@ export default function GeoMap() {
   const villageMaps = useMemo(() => (maps || []).filter(m =>
     (!filters.district || m.district === filters.district) &&
     (!filters.tehsil || m.tehsil === filters.tehsil) &&
-    (!filters.village || m.village === filters.village) &&
-    (!filters.rajbah || m.rajbah === filters.rajbah)
+    (!filters.village || m.village === filters.village)
   ), [maps, filters]);
 
   // Suggested next mogas — unplaced maps of the selected mouza that can chain
@@ -284,11 +283,14 @@ export default function GeoMap() {
 
   const availableMogas = useMemo(() => {
     const s = new Set();
+    // Always include the selected map's own moga number so the filter shows
+    // even when mustateels don't carry a per-parcel mogaNumber tag.
+    if (selectedMap?.moga_number) s.add(String(selectedMap.moga_number));
     for (const o of mapObjects) {
       if ((o.type === "chakbandi" || o.type === "mustateel") && o.mogaNumber) s.add(o.mogaNumber);
     }
     return [...s].sort((a, b) => parseInt(a) - parseInt(b));
-  }, [mapObjects]);
+  }, [mapObjects, selectedMap]);
 
   const mogaMustateels = useMemo(() => mapObjects
     .filter(o => (o.type === "mustateel" || o.type === "muraba") && o.label)
