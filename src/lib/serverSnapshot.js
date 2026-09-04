@@ -19,15 +19,20 @@ export function countNonParcels(objects) {
 
 // Upsert the peak snapshot for a map.
 // Returns the confirmed peak non-parcel count, or null if skipped/failed.
-export async function saveMaxSnapshot(mapId, { title, moga_number, objects, drawingData, viewport, editorSettings }) {
+// force=true (Permanent Save) updates the snapshot when the non-parcel count
+// is EQUAL so it reflects the latest parcel deletions — not stale deleted
+// mustateels from before the edit. The non-parcel peak is never downgraded.
+export async function saveMaxSnapshot(mapId, { title, moga_number, objects, drawingData, viewport, editorSettings, force }) {
   if (!mapId) return null;
   const np = countNonParcels(objects);
   if (np <= 0) return null; // never store a parcel-only/blank state as the peak
   try {
     const existing = await base44.entities.MapSnapshot.filter({ map_id: mapId });
     const prev = existing[0];
-    // Preserve a better existing snapshot — never downgrade the recovery source
-    if (prev && prev.non_parcel_count >= np) return prev.non_parcel_count;
+    // Never downgrade the non-parcel peak — preserves the recovery source.
+    // With force, allow equal-count updates so parcel deletions are synced.
+    if (prev && prev.non_parcel_count > np) return prev.non_parcel_count;
+    if (prev && prev.non_parcel_count === np && !force) return prev.non_parcel_count;
     const payload = {
       map_id: mapId,
       map_title: title || "",

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -67,6 +68,7 @@ const DEFAULT_COLORS = {
 };
 
 export default function Editor() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
   const mapId = urlParams.get("id");
@@ -349,10 +351,20 @@ export default function Editor() {
       if (idbObjs) candidates.push({ src: "indexeddb", objects: idbObjs, viewport: idbViewport, settings: idbSettings, np: countNonParcels(idbObjs), total: idbObjs.length });
       if (snapObjs) candidates.push({ src: "server_snapshot", objects: snapObjs, viewport: snapViewport, settings: snapSettings, np: countNonParcels(snapObjs), total: snapObjs.length });
 
-      // Pick the version with the most non-parcel objects; tiebreak by total count
+      // Pick the version with the most non-parcel objects (recovers lost canals/chakbandis).
+      // When non-parcel counts are EQUAL, prefer the SERVER — it holds the latest
+      // user-intended state (including intentional parcel deletions). Backups/
+      // snapshots only win when they have STRICTLY more non-parcels, so deleted
+      // mustateels are not restored from a stale snapshot with a higher total count.
       let best = null;
       for (const c of candidates) {
-        if (!best || c.np > best.np || (c.np === best.np && c.total > best.total)) best = c;
+        if (!best) { best = c; continue; }
+        if (c.np > best.np) { best = c; continue; }
+        if (c.np === best.np) {
+          if (c.src === "server" && best.src !== "server") { best = c; continue; }
+          if (best.src === "server") continue; // server already wins — skip non-server
+          if (c.total > best.total) best = c; // among non-server: prefer higher total
+        }
       }
       if (!best) best = { src: "server", objects: [], viewport: mapData.viewport, settings: mapData.editor_settings, np: 0, total: 0 };
 
@@ -1193,6 +1205,58 @@ export default function Editor() {
   // mouzas + outlets + damage markers) to the server, bypassing the data-loss safeguard.
   // Updates the loaded non-parcel count so future auto-saves use the new baseline.
   const [permSaving, setPermSaving] = useState(false);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
+  const [closingWithSave, setClosingWithSave] = useState(false);
+
+  // Close the map — if there are objects, ask the user to save first.
+  // On "Save & Close", force-save to the server then navigate away.
+  // On "Close without saving", navigate immediately (local backups still exist).
+  const handleCloseRequest = () => {
+    if (dsmRef.current.objects.length === 0 || !loadedMapIdRef.current) {
+      navigate("/");
+      return;
+    }
+    setShowCloseDialog(true);
+  };
+
+  const handleCloseWithSave = async () => {
+    setShowCloseDialog(false);
+    setClosingWithSave(true);
+    forceSaveRef.current = true;
+    const allObjs = dsmRef.current.objects;
+    const parcels = dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length;
+    try {
+      const drawing_data = await storeDrawingData(allObjs);
+      await base44.entities.LandMap.update(mapId, {
+        drawing_data,
+        total_parcels: parcels,
+        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+        editor_settings: settingsRef.current(),
+      });
+      // Force-sync the snapshot so deleted parcels are not restored on reopen
+      saveMaxSnapshot(mapId, {
+        title: mapData?.title, moga_number: mapData?.moga_number,
+        objects: allObjs, drawingData: drawing_data,
+        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+        editorSettings: settingsRef.current(),
+        force: true,
+      }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ["maps"] });
+      loadedNonParcelCountRef.current = countNonParcels(allObjs);
+    } catch {
+      toast.error("محفوظ ناکام — نقشہ بند نہیں ہوا");
+      setClosingWithSave(false);
+      return;
+    }
+    setClosingWithSave(false);
+    navigate("/");
+  };
+
+  const handleCloseWithoutSave = () => {
+    setShowCloseDialog(false);
+    navigate("/");
+  };
+
   const handlePermanentSave = async () => {
     if (!mapId) return;
     const allObjs = dsmRef.current.objects;
@@ -1234,7 +1298,16 @@ export default function Editor() {
       // Auto-heal on next load will restore from the server snapshot if a higher peak exists.
       loadedNonParcelCountRef.current = nonParcels;
       queryClient.invalidateQueries({ queryKey: ["maps"] });
-      trySnapshot();
+      // Force-sync the server snapshot so it reflects the current state (including
+      // parcel deletions). Without this, the snapshot keeps stale deleted mustateels
+      // and the recovery logic could restore them on next load.
+      saveMaxSnapshot(mapId, {
+        title: mapData?.title, moga_number: mapData?.moga_number,
+        objects: allObjs, drawingData: drawing_data,
+        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
+        editorSettings: settingsRef.current(),
+        force: true,
+      }).then(result => { if (result != null) serverMaxNonParcelRef.current = result; }).catch(() => {});
       toast.success(`Permanent Save complete — ${allObjs.length} objects (${parcels} parcels, ${nonParcels} lines/features)`, { duration: 3000 });
       setPermSaving(false);
     }).catch(() => {
@@ -1355,6 +1428,7 @@ export default function Editor() {
         onExport={() => { saveRef.current(); setShowExport(true); }}
         onEditDetails={() => setShowMapDetails(true)}
         onRecovery={() => setShowRecovery(true)}
+        onClose={handleCloseRequest}
       />
 
       <MapHeaderLine mapData={mapData} />
@@ -1763,6 +1837,29 @@ export default function Editor() {
                 }
                 setShowGroupDialog(false);
               }}>Save Group Name</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Close Map — save confirmation dialog */}
+      {showCloseDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-80 space-y-4" dir="rtl">
+            <h3 className="text-base font-bold text-slate-800 font-heading" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
+              نقشہ بند کرنے سے پہلے محفوظ کریں؟
+            </h3>
+            <p className="text-sm text-slate-600" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
+              آپ کی تبدیلیاں ابھی سرور پر محفوظ نہیں ہوئیں۔ "محفوظ کریں اور بند کریں" دبائیں تاکہ تبدیلیاں مستقل محفوظ ہو جائیں۔
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={handleCloseWithoutSave} disabled={closingWithSave}>
+                بند کریں (محفوظ نہ کریں)
+              </Button>
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5" onClick={handleCloseWithSave} disabled={closingWithSave}>
+                {closingWithSave ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                محفوظ کریں اور بند کریں
+              </Button>
             </div>
           </div>
         </div>

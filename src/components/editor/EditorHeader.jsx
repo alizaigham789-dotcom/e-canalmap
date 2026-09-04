@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +16,7 @@ const STATUS_COLORS = {
 export default function EditorHeader({
   mapData, onSave, onPermanentSave, permSaving, onStatusChange, isSaving,
   activeTool, onStopDrawing, canalDraftActive,
-  onUndoPoint, onExport, onEditDetails, onRecovery
+  onUndoPoint, onExport, onEditDetails, onRecovery, onClose
 }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
@@ -37,11 +36,9 @@ export default function EditorHeader({
 
   return (
     <header className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border-b border-slate-200 shrink-0 shadow-sm overflow-x-auto no-scrollbar">
-      <Link to="/" className="shrink-0">
-        <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100">
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-      </Link>
+      <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0" onClick={onClose}>
+        <ArrowLeft className="w-4 h-4" />
+      </Button>
 
       <div className="hidden sm:block w-px h-6 bg-slate-200 shrink-0" />
 
