@@ -528,9 +528,10 @@ export default function GeoMap() {
       // mouza (matching mustateel Khasra numbers, side-by-side, no gap, same row).
       const attach = autoAttachPlacement(maps, selectedMap);
       if (attach) {
-        const transform = computeOneClickTransform(attach.placement, mapObjects, 0);
+        const attachRot = attach.rotation || 0;
+        const transform = computeOneClickTransform(attach.placement, mapObjects, attachRot);
         if (transform) {
-          setOverlay({ transform, rotation: 0, placementPoint: attach.placement });
+          setOverlay({ transform, rotation: attachRot, placementPoint: attach.placement });
           setPlacementPoint(attach.placement);
           setOverlaySaved(false);
           setPlacingStep(0);
@@ -981,12 +982,12 @@ export default function GeoMap() {
     try {
       const { results, error } = arrangeMogas(maps, selectedMap);
       if (error) { toast.error(error); setArranging(false); return; }
-      // Save each computed placement to the server
+      // Save each computed placement to the server (inheriting the anchor's rotation)
       for (const r of results) {
         await base44.entities.LandMap.update(r.mapId, {
           geo_placement_lat: r.placement.lat,
           geo_placement_lng: r.placement.lng,
-          geo_rotation: 0,
+          geo_rotation: r.rotation || 0,
         });
       }
       await queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
@@ -1061,7 +1062,7 @@ export default function GeoMap() {
       await base44.entities.LandMap.update(sug.mapId, {
         geo_placement_lat: sug.placement.lat,
         geo_placement_lng: sug.placement.lng,
-        geo_rotation: 0,
+        geo_rotation: sug.rotation || 0,
       });
       queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
       toast.success(`موگہ ${sug.mogaNumber} کہسڑا ${sug.matchedLabel} پر جڑ گیا`);
@@ -1091,7 +1092,10 @@ export default function GeoMap() {
       toast.error("نقشہ ڈیٹا خراب ہے");
       return;
     }
-    const placement = computePlacementForMustateel(bObjects, match.must, dummyGeo);
+    // Inherit the reference (currently placed) moga's rotation so the chained
+    // moga stays on the same rotated grid — no separate rotation needed.
+    const refRotation = overlay?.rotation || selectedMap?.geo_rotation || 0;
+    const placement = computePlacementForMustateel(bObjects, match.must, dummyGeo, refRotation);
     if (!placement) {
       toast.error("پلیس نہیں ہوا");
       return;
@@ -1100,7 +1104,7 @@ export default function GeoMap() {
       await base44.entities.LandMap.update(match.id, {
         geo_placement_lat: placement.lat,
         geo_placement_lng: placement.lng,
-        geo_rotation: 0,
+        geo_rotation: refRotation,
       });
       await queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
       toast.success(`موگہ ${match.mogaNumber} کہسڑا ${match.must.label} پر جڑ گیا`);

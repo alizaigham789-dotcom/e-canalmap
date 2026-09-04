@@ -50,36 +50,28 @@ export function getMapMustateels(map) {
 // Given map B's objects and a mustateel canvas corner that should land at
 // targetGeo, compute the geo placement point for B's overlay (the
 // topmost-leftmost mustateel corner anchor used by computeOneClickTransform).
-export function computePlacementForMustateel(bObjects, mustCanvas, targetGeo) {
+// Compute the geo placement anchor for map B so that `mustCanvas` (a mustateel
+// in B's canvas) lands exactly at `targetGeo`, inheriting the reference moga's
+// rotation so chained mogas stay aligned to the same grid orientation.
+export function computePlacementForMustateel(bObjects, mustCanvas, targetGeo, rotation = 0) {
   const bbox = getParcelBoundingBox(bObjects);
   if (!bbox) return null;
   const { minX, minY } = bbox;
   // offset (feet) from the anchor corner to this mustateel's top-left corner
   const dxFt = mustCanvas.x - minX;
   const dyFt = mustCanvas.y - minY;
-  // At rotation 0°: east = dxFt * FT_TO_M, north = -dyFt * FT_TO_M
-  const eastM = dxFt * FT_TO_M;
-  const northM = -dyFt * FT_TO_M;
+  const east0 = dxFt * FT_TO_M;
+  const north0 = -dyFt * FT_TO_M;
+  const rad = (rotation * Math.PI) / 180;
+  const cosR = Math.cos(rad), sinR = Math.sin(rad);
+  const east = east0 * cosR - north0 * sinR;
+  const north = east0 * sinR + north0 * cosR;
   const cosLat = Math.cos((targetGeo.lat * Math.PI) / 180);
   const mPerDegLng = M_PER_DEG_LAT * cosLat;
   return {
-    lat: targetGeo.lat - northM / M_PER_DEG_LAT,
-    lng: targetGeo.lng - eastM / mPerDegLng,
+    lat: targetGeo.lat - north / M_PER_DEG_LAT,
+    lng: targetGeo.lng - east / mPerDegLng,
   };
-}
-
-// Offset a geo point east by a given number of feet (at rotation 0°).
-function offsetGeoEast(geo, feet) {
-  const cosLat = Math.cos((geo.lat * Math.PI) / 180);
-  const mPerDegLng = M_PER_DEG_LAT * cosLat;
-  const eastM = feet * FT_TO_M;
-  return { lat: geo.lat, lng: geo.lng + eastM / mPerDegLng };
-}
-
-// Offset a geo point south by a given number of feet (for row wrapping).
-function offsetGeoSouth(geo, feet) {
-  const northM = -feet * FT_TO_M; // south = negative north
-  return { lat: geo.lat + northM / M_PER_DEG_LAT, lng: geo.lng };
 }
 
 // Main entry. `maps` = all LandMaps; `anchorMap` = the already-placed map.
@@ -111,10 +103,11 @@ export function arrangeMogas(maps, anchorMap, opts = {}) {
   );
   if (!anchorTransform) return { error: "Could not compute anchor overlay transform." };
 
-  // Reference pool: label → geo position (top-left corner of the mustateel)
+  // Reference pool: label → { geo, transform, rotation, must }
+  const anchorRot = anchorMap.geo_rotation || 0;
   const placedMust = new Map();
   for (const m of anchorMustateels) {
-    placedMust.set(m.label, anchorTransform.transform(m.x, m.y));
+    placedMust.set(m.label, { geo: anchorTransform.transform(m.x, m.y), transform: anchorTransform, rotation: anchorRot, must: m });
   }
 
   // Candidate maps: same village as anchor, not the anchor itself.
@@ -140,27 +133,30 @@ export function arrangeMogas(maps, anchorMap, opts = {}) {
     const bMusts = getMapMustateels(mapB);
     if (!bMusts.length) continue;
 
-    let best = null; // { bMust, targetGeo, method }
+    let best = null; // { bMust, targetGeo, rotation, method }
 
     // Strategy 1: exact label match → overlap (merge, no duplicate)
     for (const bm of bMusts) {
       if (placedMust.has(bm.label)) {
-        best = { bMust: bm, targetGeo: placedMust.get(bm.label), method: "overlap" };
+        const ref = placedMust.get(bm.label);
+        best = { bMust: bm, targetGeo: ref.geo, rotation: ref.rotation, method: "overlap" };
         break;
       }
     }
 
-    // Strategy 2: consecutive numbers → place adjacent (right / left / below)
+    // Strategy 2: consecutive numbers → place adjacent (right / left)
     if (!best) {
       for (const bm of bMusts) {
         const n = parseInt(bm.label);
         if (isNaN(n)) continue;
         if (placedMust.has(String(n - 1))) {
-          best = { bMust: bm, targetGeo: offsetGeoEast(placedMust.get(String(n - 1)), MUST_W_FT), method: "adjacent-right" };
+          const ref = placedMust.get(String(n - 1));
+          best = { bMust: bm, targetGeo: ref.transform.transform(ref.must.x + MUST_W_FT, ref.must.y), rotation: ref.rotation, method: "adjacent-right" };
           break;
         }
         if (placedMust.has(String(n + 1))) {
-          best = { bMust: bm, targetGeo: offsetGeoEast(placedMust.get(String(n + 1)), -MUST_W_FT), method: "adjacent-left" };
+          const ref = placedMust.get(String(n + 1));
+          best = { bMust: bm, targetGeo: ref.transform.transform(ref.must.x - MUST_W_FT, ref.must.y), rotation: ref.rotation, method: "adjacent-left" };
           break;
         }
       }
@@ -174,7 +170,7 @@ export function arrangeMogas(maps, anchorMap, opts = {}) {
     } catch {
       continue;
     }
-    const placement = computePlacementForMustateel(bObjects, best.bMust, best.targetGeo);
+    const placement = computePlacementForMustateel(bObjects, best.bMust, best.targetGeo, best.rotation);
     if (!placement) continue;
 
     results.push({
@@ -182,16 +178,17 @@ export function arrangeMogas(maps, anchorMap, opts = {}) {
       mapTitle: mapB.title,
       mogaNumber: mapB.moga_number || "",
       placement,
+      rotation: best.rotation,
       matchedLabel: best.bMust.label,
       method: best.method,
     });
 
     // Add B's mustateels to the reference pool so later maps can chain.
-    const bTransform = computeOneClickTransform(placement, bObjects, 0);
+    const bTransform = computeOneClickTransform(placement, bObjects, best.rotation);
     if (bTransform) {
       for (const bm of bMusts) {
         if (!placedMust.has(bm.label)) {
-          placedMust.set(bm.label, bTransform.transform(bm.x, bm.y));
+          placedMust.set(bm.label, { geo: bTransform.transform(bm.x, bm.y), transform: bTransform, rotation: best.rotation, must: bm });
         }
       }
     }
@@ -218,8 +215,10 @@ export function autoAttachPlacement(maps, newMap) {
   const bMusts = getMapMustateels(newMap);
   if (!bMusts.length) return null;
 
-  // Reference pool: mustateel label → geo top-left corner, from every
-  // placed map of the same village (excluding the new map itself).
+  // Reference pool: mustateel label → { geo, transform, rotation, must },
+  // from every placed map of the same village (excluding the new map itself).
+  // Storing the transform + rotation lets chained mogas inherit the first
+  // moga's rotation so the whole mouza stays on one aligned grid.
   const placedMust = new Map();
   const village = newMap.village;
   for (const m of maps || []) {
@@ -233,14 +232,15 @@ export function autoAttachPlacement(maps, newMap) {
     } catch {
       continue;
     }
+    const rot = m.geo_rotation || 0;
     const t = computeOneClickTransform(
       { lat: m.geo_placement_lat, lng: m.geo_placement_lng },
       objs,
-      m.geo_rotation || 0
+      rot
     );
     if (!t) continue;
     for (const must of getMapMustateels(m)) {
-      if (!placedMust.has(must.label)) placedMust.set(must.label, t.transform(must.x, must.y));
+      if (!placedMust.has(must.label)) placedMust.set(must.label, { geo: t.transform(must.x, must.y), transform: t, rotation: rot, must });
     }
   }
   if (!placedMust.size) return null;
@@ -253,10 +253,13 @@ export function autoAttachPlacement(maps, newMap) {
   }
 
   // Same matching strategies as arrangeMogas: exact merge, then adjacent right/left.
+  // Adjacent offsets are computed through the reference transform so rotation
+  // is inherited — the dummy lands one mustateel-width away along the rotated grid.
   let best = null;
   for (const bm of bMusts) {
     if (placedMust.has(bm.label)) {
-      best = { bMust: bm, targetGeo: placedMust.get(bm.label), method: "overlap" };
+      const ref = placedMust.get(bm.label);
+      best = { bMust: bm, targetGeo: ref.geo, rotation: ref.rotation, method: "overlap" };
       break;
     }
   }
@@ -265,20 +268,22 @@ export function autoAttachPlacement(maps, newMap) {
       const n = parseInt(bm.label);
       if (isNaN(n)) continue;
       if (placedMust.has(String(n - 1))) {
-        best = { bMust: bm, targetGeo: offsetGeoEast(placedMust.get(String(n - 1)), MUST_W_FT), method: "adjacent-right" };
+        const ref = placedMust.get(String(n - 1));
+        best = { bMust: bm, targetGeo: ref.transform.transform(ref.must.x + MUST_W_FT, ref.must.y), rotation: ref.rotation, method: "adjacent-right" };
         break;
       }
       if (placedMust.has(String(n + 1))) {
-        best = { bMust: bm, targetGeo: offsetGeoEast(placedMust.get(String(n + 1)), -MUST_W_FT), method: "adjacent-left" };
+        const ref = placedMust.get(String(n + 1));
+        best = { bMust: bm, targetGeo: ref.transform.transform(ref.must.x - MUST_W_FT, ref.must.y), rotation: ref.rotation, method: "adjacent-left" };
         break;
       }
     }
   }
   if (!best) return null;
 
-  const placement = computePlacementForMustateel(bObjects, best.bMust, best.targetGeo);
+  const placement = computePlacementForMustateel(bObjects, best.bMust, best.targetGeo, best.rotation);
   if (!placement) return null;
-  return { placement, matchedLabel: best.bMust.label, method: best.method };
+  return { placement, matchedLabel: best.bMust.label, method: best.method, rotation: best.rotation };
 }
 
 // ============================================================
@@ -299,10 +304,11 @@ export function suggestNextMogas(maps, village) {
     placedIds.add(m.id);
     let objs;
     try { objs = DrawingStateManager.deserialize(m.drawing_data); } catch { continue; }
-    const t = computeOneClickTransform({ lat: m.geo_placement_lat, lng: m.geo_placement_lng }, objs, m.geo_rotation || 0);
+    const rot = m.geo_rotation || 0;
+    const t = computeOneClickTransform({ lat: m.geo_placement_lat, lng: m.geo_placement_lng }, objs, rot);
     if (!t) continue;
     for (const must of getMapMustateels(m)) {
-      if (!placedMust.has(must.label)) placedMust.set(must.label, t.transform(must.x, must.y));
+      if (!placedMust.has(must.label)) placedMust.set(must.label, { geo: t.transform(must.x, must.y), transform: t, rotation: rot, must });
     }
   }
   if (!placedMust.size) return [];
@@ -316,22 +322,34 @@ export function suggestNextMogas(maps, village) {
     if (!bMusts.length) continue;
     let best = null;
     for (const bm of bMusts) {
-      if (placedMust.has(bm.label)) { best = { bMust: bm, targetGeo: placedMust.get(bm.label), method: "overlap" }; break; }
+      if (placedMust.has(bm.label)) {
+        const ref = placedMust.get(bm.label);
+        best = { bMust: bm, targetGeo: ref.geo, rotation: ref.rotation, method: "overlap" };
+        break;
+      }
     }
     if (!best) {
       for (const bm of bMusts) {
         const n = parseInt(bm.label);
         if (isNaN(n)) continue;
-        if (placedMust.has(String(n - 1))) { best = { bMust: bm, targetGeo: offsetGeoEast(placedMust.get(String(n - 1)), MUST_W_FT), method: "adjacent-right" }; break; }
-        if (placedMust.has(String(n + 1))) { best = { bMust: bm, targetGeo: offsetGeoEast(placedMust.get(String(n + 1)), -MUST_W_FT), method: "adjacent-left" }; break; }
+        if (placedMust.has(String(n - 1))) {
+          const ref = placedMust.get(String(n - 1));
+          best = { bMust: bm, targetGeo: ref.transform.transform(ref.must.x + MUST_W_FT, ref.must.y), rotation: ref.rotation, method: "adjacent-right" };
+          break;
+        }
+        if (placedMust.has(String(n + 1))) {
+          const ref = placedMust.get(String(n + 1));
+          best = { bMust: bm, targetGeo: ref.transform.transform(ref.must.x - MUST_W_FT, ref.must.y), rotation: ref.rotation, method: "adjacent-left" };
+          break;
+        }
       }
     }
     if (!best) continue;
     let bObjects;
     try { bObjects = DrawingStateManager.deserialize(m.drawing_data); } catch { continue; }
-    const placement = computePlacementForMustateel(bObjects, best.bMust, best.targetGeo);
+    const placement = computePlacementForMustateel(bObjects, best.bMust, best.targetGeo, best.rotation);
     if (!placement) continue;
-    suggestions.push({ mapId: m.id, mogaNumber: m.moga_number || "", village: m.village || "", matchedLabel: best.bMust.label, method: best.method, placement });
+    suggestions.push({ mapId: m.id, mogaNumber: m.moga_number || "", village: m.village || "", matchedLabel: best.bMust.label, method: best.method, placement, rotation: best.rotation });
   }
   suggestions.sort((a, b) => parseInt(a.mogaNumber) - parseInt(b.mogaNumber));
   return suggestions;
