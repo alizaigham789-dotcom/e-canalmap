@@ -280,6 +280,18 @@ export default function GeoMap() {
     return [...s].sort((a, b) => +a - +b);
   }, [maps, filters]);
 
+  // Map View mode — only show mogas that have already been overlaid (placed)
+  // on the satellite map. Selecting one flies to its placed location.
+  const placedMogas = useMemo(() => {
+    const s = new Set();
+    for (const m of villageMaps) {
+      if (m.geo_placement_lat != null && m.geo_placement_lng != null && m.moga_number) {
+        s.add(String(m.moga_number));
+      }
+    }
+    return [...s].sort((a, b) => +a - +b);
+  }, [villageMaps]);
+
   const availableMogas = useMemo(() => {
     const s = new Set();
     // Always include the selected map's own moga number so the filter shows
@@ -1504,7 +1516,7 @@ export default function GeoMap() {
         onMenu={() => setEntered(false)}
         rajbahs={rajbahs}
         rajbah={filters.rajbah}
-        mogas={viewMode === "overlay" ? availableMogas : filterMogas}
+        mogas={viewMode === "overlay" ? availableMogas : placedMogas}
         selectedMoga={selectedMoga}
         onSelectMoga={viewMode === "overlay" ? setSelectedMoga : handleSelectMogaTop}
         murabas={mogaMustateels.map(m => m.mustNo)}
