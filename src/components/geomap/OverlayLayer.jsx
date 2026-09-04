@@ -400,11 +400,11 @@ function ChakbandiLine({ obj, latlngs, zoom, transform, ccaCenter }) {
     <>
       <Polyline
         positions={latlngs.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: "#00cc00", weight: lineWeight + 1, opacity: 1 }}
+        pathOptions={{ color: "#00cc00", weight: lineWeight + 1, opacity: 1, pane: "chakbandiTop" }}
       />
       {/* Cross pattern marks */}
       {crossMarks.map((pts, i) => (
-        <Polyline key={i} positions={pts} pathOptions={{ color: "#00cc00", weight: Math.max(2.5, lineWeight * 0.9), opacity: 1 }} />
+        <Polyline key={i} positions={pts} pathOptions={{ color: "#00cc00", weight: Math.max(2.5, lineWeight * 0.9), opacity: 1, pane: "chakbandiTop" }} />
       ))}
       {obj.name && (
         <Tooltip permanent direction="top" className="chakbandi-label" opacity={0.9}>
@@ -521,6 +521,18 @@ function computeKillaLatLngs(obj, transform) {
 }
 
 export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels }) {
+  const map = useMap();
+  // Create a dedicated top pane for chakbandi boundary lines so they always
+  // render above mustateel/muraba polygons — even across multiple placed mogas
+  // (where a later moga's parcels would otherwise cover an earlier moga's
+  // chakbandi). Runs during render so the pane exists before layers mount.
+  useMemo(() => {
+    if (map && !map.getPane("chakbandiTop")) {
+      const pane = map.createPane("chakbandiTop", map.getPane("overlayPane"));
+      if (pane) pane.style.zIndex = 450;
+    }
+  }, [map]);
+
   const geoObjects = useMemo(() => {
     if (!transform || !objects.length) return [];
     const filtered = objects.filter(o => {
