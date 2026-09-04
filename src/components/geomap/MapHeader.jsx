@@ -18,6 +18,7 @@ export default function MapHeader({
   onSelectMuraba,
   rajbahs,
   rajbah,
+  viewMode,
 }) {
   const Select = ({ placeholder, value, options, field, onChange }) => (
     <div className="relative shrink-0">
@@ -41,10 +42,10 @@ export default function MapHeader({
         <Menu className="w-5 h-5" />
       </button>
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1">
-        <Select placeholder="District" value={district} options={districts} field="district" />
-        <Select placeholder="Tehsil" value={tehsil} options={tehsils} field="tehsil" />
-        <Select placeholder="Mouza" value={village} options={villages} field="village" />
-        <Select placeholder="Rajbah" value={rajbah} options={rajbahs || []} field="rajbah" />
+        {viewMode !== "overlay" && <Select placeholder="District" value={district} options={districts} field="district" />}
+        {viewMode !== "overlay" && <Select placeholder="Tehsil" value={tehsil} options={tehsils} field="tehsil" />}
+        {viewMode !== "overlay" && <Select placeholder="Mouza" value={village} options={villages} field="village" />}
+        {viewMode !== "overlay" && <Select placeholder="Rajbah" value={rajbah} options={rajbahs || []} field="rajbah" />}
         <Select placeholder="Moga" value={selectedMoga} options={mogas || []} onChange={onSelectMoga} />
         <Select placeholder="Select Muraba" value={selectedMuraba} options={murabas || []} onChange={onSelectMuraba} />
       </div>

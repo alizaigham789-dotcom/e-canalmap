@@ -1514,12 +1514,13 @@ export default function GeoMap() {
         onMenu={() => setEntered(false)}
         rajbahs={rajbahs}
         rajbah={filters.rajbah}
-        mogas={filterMogas}
+        mogas={viewMode === "overlay" ? availableMogas : filterMogas}
         selectedMoga={selectedMoga}
-        onSelectMoga={handleSelectMogaTop}
+        onSelectMoga={viewMode === "overlay" ? setSelectedMoga : handleSelectMogaTop}
         murabas={mogaMustateels.map(m => m.mustNo)}
         selectedMuraba={selectedMuraba}
         onSelectMuraba={handleSelectMuraba}
+        viewMode={viewMode}
       />
 
       <ZoomControls
