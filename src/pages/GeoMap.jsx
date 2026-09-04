@@ -194,10 +194,24 @@ export default function GeoMap() {
   const [mouseLatLng, setMouseLatLng] = useState(null);
 
   // ─── DATA ────────────────────────────────────────────────────
-  const { data: maps } = useQuery({
+  const { data: currentUser } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: rawMaps } = useQuery({
     queryKey: ["geomap-maps"],
     queryFn: () => base44.entities.LandMap.list("-updated_date", 500),
   });
+
+  // Per-user isolation: a regular user only sees their own maps in the GIS
+  // overlay (mogas they created in the map editor). Admins see all maps.
+  const maps = useMemo(() => {
+    const all = rawMaps || [];
+    if (!currentUser) return all;
+    if (currentUser.role === "admin") return all;
+    return all.filter((m) => m.created_by_id === currentUser.id);
+  }, [rawMaps, currentUser]);
 
   const { data: selectedMap } = useQuery({
     queryKey: ["geomap-map", selectedMapId],
@@ -1516,9 +1530,9 @@ export default function GeoMap() {
         onMenu={() => setEntered(false)}
         rajbahs={rajbahs}
         rajbah={filters.rajbah}
-        mogas={viewMode === "overlay" ? availableMogas : placedMogas}
+        mogas={placedMogas}
         selectedMoga={selectedMoga}
-        onSelectMoga={viewMode === "overlay" ? setSelectedMoga : handleSelectMogaTop}
+        onSelectMoga={handleSelectMogaTop}
         murabas={mogaMustateels.map(m => m.mustNo)}
         selectedMuraba={selectedMuraba}
         onSelectMuraba={handleSelectMuraba}
