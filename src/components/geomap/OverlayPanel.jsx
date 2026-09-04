@@ -1,5 +1,5 @@
-import React from "react";
-import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle, Save, Loader2, Network, Lightbulb } from "lucide-react";
+import React, { useState } from "react";
+import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle, Save, Loader2, Network, Lightbulb, Search } from "lucide-react";
 
 export default function OverlayPanel({
   maps,
@@ -32,6 +32,9 @@ export default function OverlayPanel({
   const totalAcres = mustateels.reduce((s, m) => s + m.acres, 0);
   const expectedAcres = mustateels.reduce((s, m) => s + m.expected, 0);
   const accuracyPct = expectedAcres > 0 ? Math.min(100, (1 - Math.abs(totalAcres - expectedAcres) / expectedAcres) * 100) : 0;
+
+  const [mogaSearch, setMogaSearch] = useState("");
+  const filteredMogas = (availableMogas || []).filter(m => String(m).includes(mogaSearch.trim()));
 
   return (
     <div className="absolute top-14 right-3 z-[1000] w-72 bg-[#1B2A3A] rounded-xl shadow-2xl border border-white/10 overflow-hidden">
@@ -68,6 +71,18 @@ export default function OverlayPanel({
         {availableMogas.length > 0 && overlayReady && (
           <div>
             <label className="text-[10px] text-white/50 font-semibold uppercase tracking-wide block mb-1">Moga Filter</label>
+            {availableMogas.length > 8 && (
+              <div className="relative mb-1.5">
+                <Search className="w-3 h-3 text-white/40 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={mogaSearch}
+                  onChange={(e) => setMogaSearch(e.target.value)}
+                  placeholder="Search Moga…"
+                  className="w-full h-7 pr-7 pl-2 bg-white/10 text-white text-[10px] font-medium rounded-md border border-white/15 focus:outline-none focus:ring-1 focus:ring-blue-400 placeholder:text-white/30 text-right"
+                />
+              </div>
+            )}
             <div className="flex flex-wrap gap-1">
               <button
                 onClick={() => onSelectMoga("")}
@@ -75,7 +90,7 @@ export default function OverlayPanel({
               >
                 All
               </button>
-              {availableMogas.map(m => (
+              {filteredMogas.map(m => (
                 <button key={m}
                   onClick={() => onSelectMoga(selectedMoga === m ? "" : m)}
                   className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${selectedMoga === m ? "bg-green-600 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"}`}
@@ -83,6 +98,9 @@ export default function OverlayPanel({
                   {m}
                 </button>
               ))}
+              {filteredMogas.length === 0 && (
+                <span className="text-[9px] text-white/40 py-1">کوئی موگہ نہیں ملا</span>
+              )}
             </div>
           </div>
         )}
