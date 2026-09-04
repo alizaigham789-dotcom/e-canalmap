@@ -416,8 +416,12 @@ export function snapPlacementToGrid(movedMap, draggedGeo, maps, village) {
     lng: refGridOrigin.lng + (snapEast * FT_TO_M) / mPerDegLng,
   };
 
-  const placement = computePlacementForMustateel(movedObjs, movedFirst, snappedGridOrigin);
-  return placement || draggedGeo;
+  // Inherit the reference moga's rotation so the dragged moga stays on the
+  // same rotated grid — boundaries align exactly, no gap or angle mismatch.
+  const refRot = bestRef.geo_rotation || 0;
+  const placement = computePlacementForMustateel(movedObjs, movedFirst, snappedGridOrigin, refRot);
+  if (!placement) return { ...draggedGeo, rotation: refRot };
+  return { ...placement, rotation: refRot };
 }
 
 // ============================================================

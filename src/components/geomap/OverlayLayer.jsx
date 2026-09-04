@@ -528,7 +528,7 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
       // already draws this label, skip it here so only one boundary shows.
       if (skipLabels && skipLabels.size && (o.type === "mustateel" || o.type === "muraba") && o.label && skipLabels.has(String(o.label).trim())) return false;
       if (mogaFilter) {
-        if (o.type === "chakbandi") return o.mogaNumber === mogaFilter;
+        if (o.type === "chakbandi") return o.mogaNumber === mogaFilter || !o.mogaNumber;
         if (o.type === "mustateel") return o.mogaNumber === mogaFilter || !o.mogaNumber;
         return true;
       }

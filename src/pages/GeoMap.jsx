@@ -1043,12 +1043,14 @@ export default function GeoMap() {
     }
   };
 
-  // Drag-to-move a placed moga — updates its saved geo placement anchor.
+  // Drag-to-move a placed moga — updates its saved geo placement anchor and
+  // inherits the reference moga's rotation so the grid stays aligned.
   const handleMogaMoved = async (mapId, latlng) => {
     try {
       await base44.entities.LandMap.update(mapId, {
         geo_placement_lat: latlng.lat,
         geo_placement_lng: latlng.lng,
+        geo_rotation: latlng.rotation != null ? latlng.rotation : 0,
       });
       queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
     } catch (e) {
