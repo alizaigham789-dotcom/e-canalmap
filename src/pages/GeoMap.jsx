@@ -36,7 +36,6 @@ import DummyMustateelLayer from "@/components/geomap/DummyMustateelLayer";
 import DummyMustateelDialog from "@/components/geomap/DummyMustateelDialog";
 import GeoMapHub from "@/components/geomap/GeoMapHub";
 import SavedMogaClickLayer from "@/components/geomap/SavedMogaClickLayer";
-import SavedMogaPropertiesDialog from "@/components/geomap/SavedMogaPropertiesDialog";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
   polygonAreaSqMeters, sqMetersToUnits,
@@ -185,7 +184,6 @@ export default function GeoMap() {
   const [existingRegId, setExistingRegId] = useState(null);
   const [selectedMuraba, setSelectedMuraba] = useState("");
   const [dummyDialog, setDummyDialog] = useState(null); // { dummy, geo } — dummy mustateel attach
-  const [savedMogaDialog, setSavedMogaDialog] = useState(null); // clicked saved moga → properties
 
   // Measurement tools state
   const [markers, setMarkers] = useState([]); // user markers
@@ -1125,29 +1123,6 @@ export default function GeoMap() {
     }
   };
 
-  // Remove a saved (placed) moga's geo placement from the properties dialog
-  const handleSavedMogaRemove = async (mapData) => {
-    try {
-      await base44.entities.LandMap.update(mapData.id, {
-        geo_placement_lat: null,
-        geo_placement_lng: null,
-        geo_rotation: 0,
-        geo_moga_filter: "",
-      });
-      await queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
-      setSavedMogaDialog(null);
-      toast.success("موگہ ہٹا دیا گیا");
-    } catch (e) {
-      toast.error("ہٹایا نہیں گیا");
-    }
-  };
-
-  // Open a saved moga for editing (switches to it as the active map)
-  const handleSavedMogaSelect = (mapData) => {
-    setSavedMogaDialog(null);
-    handleSelectMap(mapData.id);
-  };
-
   // Capture the live satellite map + cadastral overlay as a single canvas (for export).
   // Swaps in a CORS-enabled imagery layer (ArcGIS World Imagery) so the captured canvas
   // is not tainted, fits the view to the placed overlay, then restores the map.
@@ -1321,9 +1296,9 @@ export default function GeoMap() {
           <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} />
         )}
 
-        {/* Click layer for saved mogas — click to open properties + remove */}
+        {/* Click layer for saved mogas — click to select it as the active overlay */}
         {viewMode === "overlay" && !capturing && (
-          <SavedMogaClickLayer maps={villageMaps} excludeId={selectedMapId} onMogaClick={setSavedMogaDialog} />
+          <SavedMogaClickLayer maps={villageMaps} excludeId={selectedMapId} onMogaClick={(mapData) => handleSelectMap(mapData.id)} />
         )}
 
         {/* Moga move layer — draggable markers to reposition placed mogas */}
@@ -1763,15 +1738,6 @@ export default function GeoMap() {
         onConfirm={handleDummyConfirm}
         onRemove={handleDummyRemove}
         onClose={() => setDummyDialog(null)}
-      />
-
-      {/* Saved moga properties — click a placed moga to view info + remove */}
-      <SavedMogaPropertiesDialog
-        open={!!savedMogaDialog}
-        mapData={savedMogaDialog}
-        onRemove={handleSavedMogaRemove}
-        onSelect={handleSavedMogaSelect}
-        onClose={() => setSavedMogaDialog(null)}
       />
 
       {/* Form 1 Register */}
