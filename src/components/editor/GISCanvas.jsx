@@ -1136,6 +1136,7 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (activeTool === "chakbandi") onChakbandiFinish();
     if (activeTool === "khal") onKhalFinish();
     if (activeTool === "road") onRoadFinish();
+    if (activeTool === "railway") onRailwayFinish();
     if (activeTool === "bridge") onBridgeFinish();
     if (activeTool === "mouza") onMouzaFinish();
     if (activeTool === "select") {
@@ -1181,7 +1182,7 @@ const GISCanvas = forwardRef(function GISCanvas(
         setEditingLabel({ id: hit.id, kind: "moga", value: hit.mogha_number || "", value2: hit.mogha_side || "" });
       }
     }
-  }, [activeTool, pan, zoom, selectedId, onSelect, onUpdateObject, onCanalFinish, onChakbandiFinish, onKhalFinish, onRoadFinish, onBridgeFinish, onMouzaFinish, onDamageMarkerClick]);
+  }, [activeTool, pan, zoom, selectedId, onSelect, onUpdateObject, onCanalFinish, onChakbandiFinish, onKhalFinish, onRoadFinish, onRailwayFinish, onBridgeFinish, onMouzaFinish, onDamageMarkerClick]);
 
   const commitLabelEdit = useCallback(() => {
     if (!editingLabel) return;
@@ -1230,12 +1231,13 @@ const GISCanvas = forwardRef(function GISCanvas(
     // Double-tap → finish line drawing (canal/khal/road/mouza/chakbandi) — mobile parity with desktop double-click
     const now = Date.now();
     const last = lastTapRef.current;
-    if ((now - last.time < 350) && Math.hypot(touch.clientX - last.x, touch.clientY - last.y) < 30 && ["canal","khal","road","mouza","chakbandi"].includes(activeTool)) {
+    if ((now - last.time < 350) && Math.hypot(touch.clientX - last.x, touch.clientY - last.y) < 30 && ["canal","khal","road","railway","mouza","chakbandi"].includes(activeTool)) {
       clearLongPress();
       justFinishedRef.current = true;
       if (activeTool === "canal") onCanalFinish();
       else if (activeTool === "khal") onKhalFinish();
       else if (activeTool === "road") onRoadFinish();
+      else if (activeTool === "railway") onRailwayFinish();
       else if (activeTool === "mouza") onMouzaFinish();
       else if (activeTool === "chakbandi") onChakbandiFinish();
       lastTapRef.current = { time: 0, x: 0, y: 0 };
@@ -1278,7 +1280,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
     }
     handleMouseDown(touch);
-  }, [activeTool, pan, zoom, handleMouseDown, onSelect, onCanalFinish, onKhalFinish, onRoadFinish, onMouzaFinish, onChakbandiFinish]);
+  }, [activeTool, pan, zoom, handleMouseDown, onSelect, onCanalFinish, onKhalFinish, onRoadFinish, onRailwayFinish, onMouzaFinish, onChakbandiFinish]);
 
   const handleTouchMove = useCallback((e) => {
     // Pinch-to-zoom: two fingers → zoom toward pinch center
