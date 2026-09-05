@@ -521,7 +521,7 @@ function computeKillaLatLngs(obj, transform) {
   });
 }
 
-export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels, showCanals = true }) {
+export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels, showCanals = true, chakbandiOnly = false }) {
   const map = useMap();
   // Create the dedicated top pane ONCE (guarded) — multiple OverlayLayer
   // instances share it. react-leaflet's <Pane> throws if the name already
@@ -571,6 +571,20 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
   const regularObjects = geoObjects.filter(({ obj }) => obj.type !== "chakbandi");
   const chakbandiObjects = geoObjects.filter(({ obj }) => obj.type === "chakbandi");
 
+  // Chakbandi-only pass: renders just the green boundary lines so callers can
+  // place them in a final render pass (after all mustateels from every moga).
+  // Leaflet SVG stacks by DOM order, so rendering chakbandis last guarantees
+  // they stay on top — never hidden under another moga's mustateel polygons.
+  if (chakbandiOnly) {
+    return (
+      <>
+        {chakbandiObjects.map(({ obj, latlngs, ccaCenter }) => (
+          <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} ccaCenter={ccaCenter} />
+        ))}
+      </>
+    );
+  }
+
   return (
     <>
       {regularObjects.map(({ obj, latlngs, killaLatLngs, ccaCenter }) => {
@@ -586,9 +600,6 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
           default: return null;
         }
       })}
-      {chakbandiObjects.map(({ obj, latlngs, ccaCenter }) => (
-        <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} ccaCenter={ccaCenter} />
-      ))}
     </>
   );
 }

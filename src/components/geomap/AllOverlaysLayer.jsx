@@ -12,7 +12,7 @@ import OverlayLayer from "@/components/geomap/OverlayLayer";
 // Same-number mustateels shared between adjacent mogas are merged: only the
 // first moga (in render order) draws a given mustateel label, so overlapping
 // same-number mustateels appear as a single boundary (no "double mustateel").
-export default function AllOverlaysLayer({ maps, excludeId, zoom, showCanals = true }) {
+export default function AllOverlaysLayer({ maps, excludeId, zoom, showCanals = true, chakbandiOnly = false }) {
   const EMPTY = useMemo(() => new Set(), []);
 
   const { overlays, skipMap } = useMemo(() => {
@@ -59,7 +59,7 @@ export default function AllOverlaysLayer({ maps, excludeId, zoom, showCanals = t
     <>
       {overlays.map((o) => (
         <OverlayLayer
-          key={o.id}
+          key={`${o.id}-${chakbandiOnly ? "ch" : "base"}`}
           objects={o.objects}
           transform={o.transform}
           zoom={zoom}
@@ -68,6 +68,7 @@ export default function AllOverlaysLayer({ maps, excludeId, zoom, showCanals = t
           activeMustateelIds={EMPTY}
           skipLabels={skipMap.get(o.id) || EMPTY}
           showCanals={showCanals}
+          chakbandiOnly={chakbandiOnly}
         />
       ))}
     </>

@@ -1396,6 +1396,23 @@ export default function GeoMap() {
             showCanals={showCanals}
           />
         )}
+        {/* Chakbandi lines render in a FINAL pass — after all mustateels from
+            every placed moga — so they always stay on top. Leaflet SVG stacks
+            by DOM order, so a moga's mustateels can never hide another moga's
+            chakbandi boundary. */}
+        {!capturing && (viewMode === "view" || viewMode === "overlay") && (
+          <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} showCanals={showCanals} chakbandiOnly />
+        )}
+        {layerVisible && activeOverlay?.transform && (
+          <OverlayLayer
+            objects={mapObjects}
+            transform={activeOverlay.transform}
+            zoom={zoom}
+            mogaFilter={selectedMoga}
+            showCanals={showCanals}
+            chakbandiOnly
+          />
+        )}
 
         {/* Allocation layer — clickable killa (acre) cells + allocated highlights */}
         {activeOverlay?.transform && !capturing && (
