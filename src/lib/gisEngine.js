@@ -720,6 +720,9 @@ export function createRailway(points, name = "") {
     id: `railway_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "railway", points: points.map(p => ({ ...p })), name,
     width: DIMENSIONS.RAILWAY_WIDTH,
+    fillColor: "#9ca3af",   // ballast fill — gray by default (same control as road)
+    edgeColor: "#4b5563",   // side/boundary lines — dark gray by default (same control as road)
+    edgeWidth: 2,           // side line width in feet (same control as road)
     railwayStyle: 1, // 1=Single comb, 2=Double ladder
     tieSpacing: 28,  // distance between perpendicular ticks (feet)
     gaugeWidth: 17,  // rail separation for style 2 (feet)

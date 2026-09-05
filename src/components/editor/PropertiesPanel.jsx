@@ -279,6 +279,23 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
             <>
               <Separator className="bg-slate-100" />
               <Field label="Railway Name" value={local.name || ""} onChange={v => commit("name", v)} placeholder="e.g. Main Line" />
+              <SpacingControl label="Railway Width" value={local.width || 24} min={4} max={150} step={2} onChange={v => commit("width", v)} unit="ft" />
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Ballast Colour</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={local.fillColor || "#9ca3af"} onChange={e => commit("fillColor", e.target.value)} className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
+                  <span className="text-xs text-slate-600">Railway fill</span>
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Side Line Colour</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={local.edgeColor || "#4b5563"} onChange={e => commit("edgeColor", e.target.value)} className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
+                  <span className="text-xs text-slate-600">Boundary lines</span>
+                </div>
+              </div>
+              <SpacingControl label="Side Line Width" value={local.edgeWidth || 2} min={1} max={10} step={1} onChange={v => commit("edgeWidth", v)} unit="ft" />
+              <Separator className="bg-slate-100" />
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Railway Style</label>
                 <div className="grid grid-cols-2 gap-1">
@@ -298,7 +315,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                 <SpacingControl label="Gauge Width (چوڑائی)" value={local.gaugeWidth !== undefined ? local.gaugeWidth : Math.round((local.width || 24) * 0.7)} min={8} max={60} step={2} onChange={v => commit("gaugeWidth", v)} unit="ft" />
               )}
               <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Line Colour</label>
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Rails Colour</label>
                 <div className="flex items-center gap-2">
                   <input type="color" value={local.railColor || "#1a1a1a"} onChange={e => commit("railColor", e.target.value)} className="h-6 w-8 rounded cursor-pointer border border-slate-200" />
                   <span className="text-xs text-slate-600">Rails + Ties</span>

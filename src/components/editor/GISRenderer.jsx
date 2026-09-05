@@ -1023,8 +1023,43 @@ export function drawRailwayTracks(ctx, points, width, style, opts, zoom, isSelec
 
 export function drawRailway(ctx, obj, isSelected, zoom, C) {
   if (!obj.points || obj.points.length < 2) return;
+
+  // ── Road-style body (same properties as road: width, fillColor, edgeColor, edgeWidth) ──
+  const halfW = (obj.width || DIMENSIONS.RAILWAY_WIDTH) / 2;
+  const left = getParallelPolyline(obj.points, -halfW);
+  const right = getParallelPolyline(obj.points, halfW);
+
+  // Ballast fill — gray by default, customizable via fillColor (same control as road)
+  ctx.fillStyle = obj.fillColor || "#9ca3af";
+  ctx.beginPath();
+  drawSmoothPath(ctx, left);
+  ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
+  drawSmoothPath(ctx, [...right].reverse());
+  ctx.closePath(); ctx.fill();
+
+  // Side lines (casing edges) — customizable via edgeColor/edgeWidth (same control as road)
+  const edgeColor = isSelected ? "#fcd34d" : (obj.edgeColor || "#4b5563");
+  const edgeW = (obj.edgeWidth || 2) / zoom;
+  ctx.strokeStyle = edgeColor;
+  ctx.lineWidth = isSelected ? edgeW + 1/zoom : edgeW;
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  for (const side of [left, right]) {
+    ctx.beginPath();
+    drawSmoothPath(ctx, side);
+    ctx.stroke();
+  }
+  // Rectangular end caps
+  ctx.lineWidth = edgeW * 0.8;
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y); ctx.lineTo(right[0].x, right[0].y);
+  ctx.moveTo(left[left.length-1].x, left[left.length-1].y);
+  ctx.lineTo(right[right.length-1].x, right[right.length-1].y);
+  ctx.stroke();
+
+  // ── Railway tracks overlay (rails + ties) on top of the body ──
   drawRailwayTracks(ctx, obj.points, obj.width || 24, obj.railwayStyle || 1,
     { railColor: obj.railColor, tieColor: obj.tieColor, tieSpacing: obj.tieSpacing, gaugeWidth: obj.gaugeWidth }, zoom, isSelected);
+
   if (obj.name && zoom > 0.3) {
     const mid = Math.floor(obj.points.length / 2);
     const p = obj.points[mid];
