@@ -528,7 +528,7 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
   // chakbandi). Runs during render so the pane exists before layers mount.
   useMemo(() => {
     if (map && !map.getPane("chakbandiTop")) {
-      const pane = map.createPane("chakbandiTop", map.getPane("overlayPane"));
+      const pane = map.createPane("chakbandiTop");
       if (pane) pane.style.zIndex = 450;
     }
   }, [map]);

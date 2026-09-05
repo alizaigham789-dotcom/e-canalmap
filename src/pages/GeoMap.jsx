@@ -1135,15 +1135,34 @@ export default function GeoMap() {
       toast.error("پلیس نہیں ہوا");
       return;
     }
+    // Optimistically reflect the placement in the maps cache so the new moga
+    // appears on the map INSTANTLY — no waiting for a full re-fetch of all maps.
+    queryClient.setQueryData(["geomap-maps"], (old) => {
+      if (!Array.isArray(old)) return old;
+      return old.map((m) =>
+        m.id === match.id
+          ? { ...m, geo_placement_lat: placement.lat, geo_placement_lng: placement.lng, geo_rotation: refRotation }
+          : m
+      );
+    });
     try {
       await base44.entities.LandMap.update(match.id, {
         geo_placement_lat: placement.lat,
         geo_placement_lng: placement.lng,
         geo_rotation: refRotation,
       });
-      await queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
       toast.success(`موگہ ${match.mogaNumber} کہسڑا ${match.must.label} پر جڑ گیا`);
+      queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
     } catch (e) {
+      // Revert the optimistic update if the save failed
+      queryClient.setQueryData(["geomap-maps"], (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((m) =>
+          m.id === match.id
+            ? { ...m, geo_placement_lat: null, geo_placement_lng: null, geo_rotation: 0 }
+            : m
+        );
+      });
       toast.error("محفوظ نہیں ہوا");
     }
   };
