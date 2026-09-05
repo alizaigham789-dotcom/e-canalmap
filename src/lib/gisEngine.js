@@ -1686,8 +1686,8 @@ export function hitTest(wx, wy, objects, eraser = false) {
           if (distToLineSegment(wx, wy, o.points[j].x, o.points[j].y, o.points[j+1].x, o.points[j+1].y) < 12) return o;
         }
       }
-    } else if (["canal", "chakbandi", "khal", "road", "railway"].includes(o.type)) {
-      const lineWidth = o.width || (o.type === "canal" ? 14 : o.type === "khal" ? 8 : o.type === "road" ? 28 : o.type === "railway" ? 24 : 14);
+    } else if (["canal", "chakbandi", "khal", "road", "railway", "bridge"].includes(o.type)) {
+      const lineWidth = o.width || (o.type === "canal" ? 14 : o.type === "khal" ? 8 : o.type === "road" ? 28 : o.type === "railway" ? 24 : o.type === "bridge" ? 28 : 14);
       const thresh = o.type === "chakbandi" ? Math.max(7, lineWidth / 2 + 1)
         : Math.max(15, lineWidth / 2 + 8);
       for (let j = 0; j < o.points.length - 1; j++) {
