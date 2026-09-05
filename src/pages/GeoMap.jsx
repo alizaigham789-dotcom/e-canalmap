@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves, Map as MapIcon, Satellite, Move } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves, Map as MapIcon, Satellite, Move, Eye, EyeOff } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -166,6 +166,7 @@ export default function GeoMap() {
   const [overlay, setOverlay] = useState(null); // { transform, rotation, placementPoint }
   const [killaVisible, setKillaVisible] = useState(true);
   const [layerVisible, setLayerVisible] = useState(true);
+  const [showCanals, setShowCanals] = useState(true);
   const [activeMustateelIds, setActiveMustateelIds] = useState(() => new Set());
   const autoPlacedRef = useRef(null);
   const suppressAutoSaveRef = useRef(null); // blocks the debounced placement save while a map's placement is being deleted
@@ -1351,7 +1352,7 @@ export default function GeoMap() {
 
         {/* All saved (placed) mogas — always visible in both modes so previously-placed mogas stay on screen */}
         {!capturing && (viewMode === "view" || viewMode === "overlay") && (
-          <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} />
+          <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} showCanals={showCanals} />
         )}
 
         {/* Click layer for saved mogas — click to select it as the active overlay */}
@@ -1392,6 +1393,7 @@ export default function GeoMap() {
             activeMustateelIds={activeMustateelIds}
             gridAll={allocTool === "cell"}
             onMustateelClick={handleMustateelClick}
+            showCanals={showCanals}
           />
         )}
 
@@ -1815,6 +1817,13 @@ export default function GeoMap() {
       />
 
       {/* Hybrid / Satellite toggle (both sub-modules) */}
+      <button
+        onClick={() => setShowCanals(v => !v)}
+        className={`absolute bottom-16 right-3 z-[1000] flex items-center justify-center w-9 h-9 rounded-full shadow-xl transition-colors ${showCanals ? "bg-[#1A4550] text-white" : "bg-white/20 text-white/40"}`}
+        title={showCanals ? "Canals On — click to hide" : "Canals Off — click to show"}
+      >
+        {showCanals ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+      </button>
       <button
         onClick={() => setHybrid(v => !v)}
         className="absolute bottom-5 right-3 z-[1000] flex items-center gap-1.5 px-4 h-9 bg-[#1A4550] text-white text-xs font-bold rounded-full shadow-xl hover:bg-[#2C5E6D] transition-colors"

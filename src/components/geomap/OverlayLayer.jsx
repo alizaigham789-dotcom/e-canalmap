@@ -1,5 +1,5 @@
 import React, { useMemo, memo } from "react";
-import { Polygon, Polyline, Tooltip, CircleMarker, Marker, useMap } from "react-leaflet";
+import { Polygon, Polyline, Tooltip, CircleMarker, Marker, useMap, Pane } from "react-leaflet";
 import L from "leaflet";
 import { getMustateelKillaCells, getMurabaKillaCells, DIMENSIONS } from "@/lib/gisEngine";
 import { canvasRectToLatLngs, canvasPolylineToLatLngs, computeCcaCenter } from "@/lib/geoOverlay";
@@ -520,22 +520,11 @@ function computeKillaLatLngs(obj, transform) {
   });
 }
 
-export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels }) {
-  const map = useMap();
-  // Create a dedicated top pane for chakbandi boundary lines so they always
-  // render above mustateel/muraba polygons — even across multiple placed mogas
-  // (where a later moga's parcels would otherwise cover an earlier moga's
-  // chakbandi). Runs during render so the pane exists before layers mount.
-  useMemo(() => {
-    if (map && !map.getPane("chakbandiTop")) {
-      const pane = map.createPane("chakbandiTop");
-      if (pane) pane.style.zIndex = 450;
-    }
-  }, [map]);
-
+export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels, showCanals = true }) {
   const geoObjects = useMemo(() => {
     if (!transform || !objects.length) return [];
     const filtered = objects.filter(o => {
+      if (!showCanals && o.type === "canal") return false;
       // Merge same-number mustateels shared across mogas: if another moga
       // already draws this label, skip it here so only one boundary shows.
       if (skipLabels && skipLabels.size && (o.type === "mustateel" || o.type === "muraba") && o.label && skipLabels.has(String(o.label).trim())) return false;
@@ -562,11 +551,17 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
       const ccaCenter = obj.type === "chakbandi" && obj.centerLabel ? computeCcaCenter(obj, objects, transform) : null;
       return { obj, latlngs, killaLatLngs, ccaCenter };
     }).filter(Boolean);
-  }, [objects, transform, mogaFilter, killaVisible, skipLabels]);
+  }, [objects, transform, mogaFilter, killaVisible, skipLabels, showCanals]);
+
+  // Chakbandis render in a dedicated top pane (z-index above the default
+  // overlay pane) so green boundary lines always stay above mustateel/muraba
+  // polygons — even across multiple placed mogas in AllOverlaysLayer.
+  const regularObjects = geoObjects.filter(({ obj }) => obj.type !== "chakbandi");
+  const chakbandiObjects = geoObjects.filter(({ obj }) => obj.type === "chakbandi");
 
   return (
     <>
-      {geoObjects.map(({ obj, latlngs, killaLatLngs, ccaCenter }) => {
+      {regularObjects.map(({ obj, latlngs, killaLatLngs, ccaCenter }) => {
         switch (obj.type) {
           case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} />;
           case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} />;
@@ -574,12 +569,16 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
           case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
           case "khal": return <MemoKhal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
           case "road": return <MemoRoad key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
-          case "chakbandi": return <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} ccaCenter={ccaCenter} />;
           case "mouza": return <MemoMouza key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "outlet": return <MemoOutlet key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           default: return null;
         }
       })}
+      <Pane name="chakbandiTop" style={{ zIndex: 450 }}>
+        {chakbandiObjects.map(({ obj, latlngs, ccaCenter }) => (
+          <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} ccaCenter={ccaCenter} />
+        ))}
+      </Pane>
     </>
   );
 }
