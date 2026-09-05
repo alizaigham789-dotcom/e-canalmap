@@ -1231,13 +1231,14 @@ const GISCanvas = forwardRef(function GISCanvas(
     // Double-tap → finish line drawing (canal/khal/road/mouza/chakbandi) — mobile parity with desktop double-click
     const now = Date.now();
     const last = lastTapRef.current;
-    if ((now - last.time < 350) && Math.hypot(touch.clientX - last.x, touch.clientY - last.y) < 30 && ["canal","khal","road","railway","mouza","chakbandi"].includes(activeTool)) {
+    if ((now - last.time < 350) && Math.hypot(touch.clientX - last.x, touch.clientY - last.y) < 30 && ["canal","khal","road","railway","bridge","mouza","chakbandi"].includes(activeTool)) {
       clearLongPress();
       justFinishedRef.current = true;
       if (activeTool === "canal") onCanalFinish();
       else if (activeTool === "khal") onKhalFinish();
       else if (activeTool === "road") onRoadFinish();
       else if (activeTool === "railway") onRailwayFinish();
+      else if (activeTool === "bridge") onBridgeFinish();
       else if (activeTool === "mouza") onMouzaFinish();
       else if (activeTool === "chakbandi") onChakbandiFinish();
       lastTapRef.current = { time: 0, x: 0, y: 0 };
@@ -1280,7 +1281,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       }
     }
     handleMouseDown(touch);
-  }, [activeTool, pan, zoom, handleMouseDown, onSelect, onCanalFinish, onKhalFinish, onRoadFinish, onRailwayFinish, onMouzaFinish, onChakbandiFinish]);
+  }, [activeTool, pan, zoom, handleMouseDown, onSelect, onCanalFinish, onKhalFinish, onRoadFinish, onRailwayFinish, onBridgeFinish, onMouzaFinish, onChakbandiFinish]);
 
   const handleTouchMove = useCallback((e) => {
     // Pinch-to-zoom: two fingers → zoom toward pinch center

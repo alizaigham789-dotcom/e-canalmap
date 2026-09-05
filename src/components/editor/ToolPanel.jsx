@@ -86,6 +86,7 @@ const TOOLS = [
   { id: "khal", name: "Khal", label: "Watercourse (W)", icon: Waves, group: "draw", color: "text-blue-500" },
   { id: "road", name: "Road", label: "Road (R)", icon: RoadIcon, group: "draw", color: "text-amber-400" },
   { id: "railway", name: "Railway", label: "Railway Track / ریلوے (T)", icon: RailwayIcon, group: "draw", color: "text-slate-600" },
+  { id: "bridge", name: "Bridge", label: "Bridge / پل (P)", icon: BridgeIcon, group: "draw", color: "text-red-400" },
   { id: "mouza", name: "Mouza", label: "Mouza Boundary (U)", icon: MouzaIcon, group: "draw", color: "text-slate-700" },
   { id: "damageMarker", name: "Damage", label: "Canal Damage Marker (G)", icon: AlertTriangle, group: "draw", color: "text-red-500" },
   { id: "measure", name: "Measure", label: "Measure Distance (X)", icon: Ruler, group: "draw", color: "text-purple-500" },

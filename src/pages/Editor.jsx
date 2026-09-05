@@ -23,7 +23,7 @@ import { collectLandUses } from "@/lib/landUsePalette";
 import { storeDrawingData, loadDrawingData, isDrawingDataUrl } from "@/lib/drawingDataStorage";
 import {
   DrawingStateManager,
-  createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createRailway, createOutlet, createChakbandi, createMouza,
+  createAcre, createMustateel, createMuraba, createCanal, createKhal, createRoad, createRailway, createBridge, createOutlet, createChakbandi, createMouza,
   createDamageMarker, createDamageMarkerLine, findNonOverlappingPosition, snapToNearestBoundary, autoAssignLabel, rectsOverlap, duplicateObjects,
   saveToClipboard, loadFromClipboard, hasClipboard, worldToScreen,
 } from "@/lib/gisEngine";
@@ -828,6 +828,22 @@ export default function Editor() {
     }
   }, []);
 
+  const handleBridgePointAdd = useCallback((pt) => {
+    setBridgeDraft(prev => prev ? [...prev, pt] : [pt]);
+  }, []);
+
+  const handleBridgeFinish = useCallback(() => {
+    const draft = bridgeDraftRef.current;
+    setBridgeDraft(null);
+    if (draft && draft.length >= 2) {
+      const bridge = createBridge(draft);
+      dsmRef.current.add(bridge);
+      setSelectedId(bridge.id);
+      syncObjects();
+      saveRef.current();
+    }
+  }, []);
+
   const handleMouzaPointAdd = useCallback((pt) => {
     setMouzaDraft(prev => prev ? [...prev, pt] : [pt]);
   }, []);
@@ -931,6 +947,8 @@ export default function Editor() {
     else if (activeTool === "road") setRoadDraft(null);
     if (activeTool === "railway" && railwayDraft && railwayDraft.length >= 2) handleRailwayFinish();
     else if (activeTool === "railway") setRailwayDraft(null);
+    if (activeTool === "bridge" && bridgeDraft && bridgeDraft.length >= 2) handleBridgeFinish();
+    else if (activeTool === "bridge") setBridgeDraft(null);
     if (activeTool === "mouza" && mouzaDraft && mouzaDraft.length >= 2) handleMouzaFinish();
     else if (activeTool === "mouza") setMouzaDraft(null);
     setActiveTool(tool);
@@ -947,6 +965,8 @@ export default function Editor() {
     else setRoadDraft(null);
     if (activeTool === "railway" && railwayDraft && railwayDraft.length >= 2) handleRailwayFinish();
     else setRailwayDraft(null);
+    if (activeTool === "bridge" && bridgeDraft && bridgeDraft.length >= 2) handleBridgeFinish();
+    else setBridgeDraft(null);
     if (activeTool === "mouza" && mouzaDraft && mouzaDraft.length >= 2) handleMouzaFinish();
     else setMouzaDraft(null);
     setOutletDraft(null);
@@ -1384,8 +1404,9 @@ export default function Editor() {
     if (khalDraft) setKhalDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
     if (roadDraft) setRoadDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
     if (railwayDraft) setRailwayDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
+    if (bridgeDraft) setBridgeDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
     if (mouzaDraft) setMouzaDraft(prev => prev && prev.length > 0 ? prev.slice(0, -1) : null);
-  }, [canalDraft, chakbandiDraft, khalDraft, roadDraft, railwayDraft, mouzaDraft]);
+  }, [canalDraft, chakbandiDraft, khalDraft, roadDraft, railwayDraft, bridgeDraft, mouzaDraft]);
 
   if (!mapId) {
     return (
@@ -1422,7 +1443,7 @@ export default function Editor() {
     );
   }
 
-  const draftActive = !!(canalDraft || chakbandiDraft || khalDraft || roadDraft || railwayDraft || mouzaDraft);
+  const draftActive = !!(canalDraft || chakbandiDraft || khalDraft || roadDraft || railwayDraft || bridgeDraft || mouzaDraft);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: bgColor }}>
@@ -1499,6 +1520,9 @@ export default function Editor() {
             railwayDraft={railwayDraft}
             onRailwayPointAdd={handleRailwayPointAdd}
             onRailwayFinish={handleRailwayFinish}
+            bridgeDraft={bridgeDraft}
+            onBridgePointAdd={handleBridgePointAdd}
+            onBridgeFinish={handleBridgeFinish}
             mouzaDraft={mouzaDraft}
             onMouzaPointAdd={handleMouzaPointAdd}
             onMouzaFinish={handleMouzaFinish}
