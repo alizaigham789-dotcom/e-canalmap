@@ -1,5 +1,5 @@
-import React, { useMemo, memo } from "react";
-import { Polygon, Polyline, Tooltip, CircleMarker, Marker, useMap, Pane } from "react-leaflet";
+import React, { useMemo, memo, useEffect } from "react";
+import { Polygon, Polyline, Tooltip, CircleMarker, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import { getMustateelKillaCells, getMurabaKillaCells, DIMENSIONS } from "@/lib/gisEngine";
 import { canvasRectToLatLngs, canvasPolylineToLatLngs, computeCcaCenter } from "@/lib/geoOverlay";
@@ -400,11 +400,12 @@ function ChakbandiLine({ obj, latlngs, zoom, transform, ccaCenter }) {
     <>
       <Polyline
         positions={latlngs.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: "#00cc00", weight: lineWeight + 1, opacity: 1, pane: "chakbandiTop" }}
+        pane="chakbandiTop"
+        pathOptions={{ color: "#00cc00", weight: lineWeight + 1, opacity: 1 }}
       />
       {/* Cross pattern marks */}
       {crossMarks.map((pts, i) => (
-        <Polyline key={i} positions={pts} pathOptions={{ color: "#00cc00", weight: Math.max(2.5, lineWeight * 0.9), opacity: 1, pane: "chakbandiTop" }} />
+        <Polyline key={i} positions={pts} pane="chakbandiTop" pathOptions={{ color: "#00cc00", weight: Math.max(2.5, lineWeight * 0.9), opacity: 1 }} />
       ))}
       {obj.name && (
         <Tooltip permanent direction="top" className="chakbandi-label" opacity={0.9}>
@@ -521,6 +522,17 @@ function computeKillaLatLngs(obj, transform) {
 }
 
 export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels, showCanals = true }) {
+  const map = useMap();
+  // Create the dedicated top pane ONCE (guarded) — multiple OverlayLayer
+  // instances share it. react-leaflet's <Pane> throws if the name already
+  // exists, so we create it manually with a getPane check instead.
+  useEffect(() => {
+    if (map && !map.getPane("chakbandiTop")) {
+      const pane = map.createPane("chakbandiTop");
+      if (pane) pane.style.zIndex = 450;
+    }
+  }, [map]);
+
   const geoObjects = useMemo(() => {
     if (!transform || !objects.length) return [];
     const filtered = objects.filter(o => {
@@ -574,11 +586,9 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
           default: return null;
         }
       })}
-      <Pane name="chakbandiTop" style={{ zIndex: 450 }}>
-        {chakbandiObjects.map(({ obj, latlngs, ccaCenter }) => (
-          <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} ccaCenter={ccaCenter} />
-        ))}
-      </Pane>
+      {chakbandiObjects.map(({ obj, latlngs, ccaCenter }) => (
+        <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} ccaCenter={ccaCenter} />
+      ))}
     </>
   );
 }
