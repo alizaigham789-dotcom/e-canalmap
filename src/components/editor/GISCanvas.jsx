@@ -1300,7 +1300,6 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (!touch) return;
     touchMoved.current = true;
     if (!isMoving.current) clearLongPress();
-    lastMouse.current = { x: touch.clientX, y: touch.clientY };
     handleMouseMove(touch);
   }, [handleMouseMove, onZoomChange]);
 
