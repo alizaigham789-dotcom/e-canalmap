@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import SubscriptionGate from '@/components/SubscriptionGate';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Route-level code splitting — each page loads in its own chunk so the
 // initial bundle stays small and the app opens fast. Heavy libs (three.js,
@@ -76,7 +77,7 @@ const AuthenticatedApp = () => {
         <Route path="/account" element={<Account />} />
         <Route path="/subscription" element={<Subscription />} />
         <Route element={<SubscriptionGate />}>
-          <Route path="/editor" element={<Editor />} />
+          <Route path="/editor" element={<ErrorBoundary label="Map Editor"><Editor /></ErrorBoundary>} />
           <Route path="/map-list" element={<MapList />} />
         </Route>
         <Route path="/admin" element={<AdminPanel />} />
