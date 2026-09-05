@@ -1220,7 +1220,6 @@ export default function Editor() {
   };
 
   const handleCloseWithSave = async () => {
-    setShowCloseDialog(false);
     setClosingWithSave(true);
     forceSaveRef.current = true;
     const allObjs = dsmRef.current.objects;
@@ -1243,13 +1242,13 @@ export default function Editor() {
       }).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ["maps"] });
       loadedNonParcelCountRef.current = countNonParcels(allObjs);
-    } catch {
-      toast.error("محفوظ ناکام — نقشہ بند نہیں ہوا");
+      setShowCloseDialog(false);
       setClosingWithSave(false);
-      return;
+      navigate("/");
+    } catch {
+      toast.error("محفوظ ناکام — دوبارہ کوشش کریں");
+      setClosingWithSave(false);
     }
-    setClosingWithSave(false);
-    navigate("/");
   };
 
   const handleCloseWithoutSave = () => {
@@ -1405,6 +1404,19 @@ export default function Editor() {
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin"></div>
           <p className="text-xs text-slate-500 font-mono">Loading map data…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Guard: if the query finished but returned no map (deleted / no permission),
+  // show a fallback instead of crashing on undefined mapData (white screen).
+  if (!mapData) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-sm text-slate-500">نقشہ نہیں ملا یا لوڈ نہیں ہوا۔</p>
+          <Button size="sm" variant="outline" onClick={() => navigate("/")}>ڈیش بورڈ پر واپس</Button>
         </div>
       </div>
     );
