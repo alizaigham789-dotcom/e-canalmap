@@ -941,23 +941,26 @@ export default function Editor() {
     if (!objs || objs.length === 0) return;
     objs.forEach(o => dsmRef.current.add(o));
     syncObjects();
-    // Auto-fit the view to the generated mustateels so they're visible on screen
-    const pts = objs.flatMap(o => [{ x: o.x, y: o.y }, { x: o.x + o.w, y: o.y + o.h }]);
-    const minX = Math.min(...pts.map(p => p.x));
-    const minY = Math.min(...pts.map(p => p.y));
-    const maxX = Math.max(...pts.map(p => p.x));
-    const maxY = Math.max(...pts.map(p => p.y));
-    const canvas = canvasRef.current?.getCanvas?.();
-    const cw = canvas?.clientWidth || (typeof window !== "undefined" ? window.innerWidth - 160 : 1000);
-    const ch = canvas?.clientHeight || (typeof window !== "undefined" ? window.innerHeight - 200 : 700);
-    const w = Math.max(1, maxX - minX);
-    const h = Math.max(1, maxY - minY);
-    const pad = 120;
-    const fitZoom = Math.min(20, Math.max(0.05, Math.min((cw - pad * 2) / w, (ch - pad * 2) / h)));
-    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-    setZoom(fitZoom);
-    setPan({ x: cw / 2 - cx * fitZoom, y: ch / 2 - cy * fitZoom });
-    setShowGridBuilder(false);
+    // Fit view to ALL mustateels so the whole grid stays visible as lines accumulate.
+    // The dialog is NOT closed — incremental drawing keeps it open (Close button exits).
+    const allMust = dsmRef.current.getByType("mustateel");
+    if (allMust.length > 0) {
+      const pts = allMust.flatMap(o => [{ x: o.x, y: o.y }, { x: o.x + o.w, y: o.y + o.h }]);
+      const minX = Math.min(...pts.map(p => p.x));
+      const minY = Math.min(...pts.map(p => p.y));
+      const maxX = Math.max(...pts.map(p => p.x));
+      const maxY = Math.max(...pts.map(p => p.y));
+      const canvas = canvasRef.current?.getCanvas?.();
+      const cw = canvas?.clientWidth || (typeof window !== "undefined" ? window.innerWidth - 160 : 1000);
+      const ch = canvas?.clientHeight || (typeof window !== "undefined" ? window.innerHeight - 200 : 700);
+      const w = Math.max(1, maxX - minX);
+      const h = Math.max(1, maxY - minY);
+      const pad = 120;
+      const fitZoom = Math.min(20, Math.max(0.05, Math.min((cw - pad * 2) / w, (ch - pad * 2) / h)));
+      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+      setZoom(fitZoom);
+      setPan({ x: cw / 2 - cx * fitZoom, y: ch / 2 - cy * fitZoom });
+    }
     toast.success(`${objs.length} mustateels drawn`);
   };
 
