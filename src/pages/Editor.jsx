@@ -269,6 +269,10 @@ export default function Editor() {
       } } : old);
       // Refresh the maps list so MapList shows updated parcel count / status
       queryClient.invalidateQueries({ queryKey: ["maps"] });
+      // Auto-sync to GeoMap: invalidate its overlay cache so a saved Moga record
+      // instantly reflects as an updated overlay when GeoMap is open / next opened.
+      queryClient.removeQueries({ queryKey: ["geomap-map", mapId] });
+      queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
       // Server-side peak snapshot — upsert when non-parcel count hits a new high
       trySnapshot();
     },
@@ -1313,6 +1317,8 @@ export default function Editor() {
           viewport: vp, editorSettings: settings, force: true,
         }).catch(() => {});
         queryClient.invalidateQueries({ queryKey: ["maps"] });
+        queryClient.removeQueries({ queryKey: ["geomap-map", mapId] });
+        queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
       } catch (err) {
         // Local backups already written above; the unmount cleanup + auto-heal
         // on next open will recover. Surface nothing — the user has already left.
@@ -1372,6 +1378,8 @@ export default function Editor() {
       // Auto-heal on next load will restore from the server snapshot if a higher peak exists.
       loadedNonParcelCountRef.current = nonParcels;
       queryClient.invalidateQueries({ queryKey: ["maps"] });
+      queryClient.removeQueries({ queryKey: ["geomap-map", mapId] });
+      queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
       // Force-sync the server snapshot so it reflects the current state (including
       // parcel deletions). Without this, the snapshot keeps stale deleted mustateels
       // and the recovery logic could restore them on next load.
