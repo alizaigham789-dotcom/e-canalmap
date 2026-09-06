@@ -203,6 +203,7 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
     if (!obj.points || obj.points.length < 2 || !transform) return { leftLine: [], rightLine: [], fillLatLngs: [] };
     const pts = obj.points;
     const left = [], right = [];
+    const MITER_LIMIT = 4;
     for (let i = 0; i < pts.length; i++) {
       let nx, ny;
       if (pts.length === 2) {
@@ -221,10 +222,20 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
         const dx1 = pts[i].x - pts[i-1].x, dy1 = pts[i].y - pts[i-1].y;
         const dx2 = pts[i+1].x - pts[i].x, dy2 = pts[i+1].y - pts[i].y;
         const len1 = Math.hypot(dx1, dy1) || 1, len2 = Math.hypot(dx2, dy2) || 1;
-        nx = (-dy1/len1 + -dy2/len2) / 2;
-        ny = (dx1/len1 + dx2/len2) / 2;
-        const nl = Math.hypot(nx, ny) || 1;
-        nx /= nl; ny /= nl;
+        const n1x = -dy1/len1, n1y = dx1/len1;
+        const n2x = -dy2/len2, n2y = dx2/len2;
+        let bx = (n1x + n2x) / 2, by = (n1y + n2y) / 2;
+        const bLen = Math.hypot(bx, by);
+        if (bLen > 1e-9) {
+          bx /= bLen; by /= bLen;
+          const dot = n1x * bx + n1y * by;
+          if (Math.abs(dot) > 1e-6) {
+            let miterFactor = 1 / dot;
+            if (miterFactor > MITER_LIMIT) miterFactor = MITER_LIMIT;
+            else if (miterFactor < -MITER_LIMIT) miterFactor = -MITER_LIMIT;
+            nx = bx * miterFactor; ny = by * miterFactor;
+          } else { nx = n1x; ny = n1y; }
+        } else { nx = n1x; ny = n1y; }
       }
       left.push(transform.transform(pts[i].x + nx * halfW, pts[i].y + ny * halfW));
       right.push(transform.transform(pts[i].x - nx * halfW, pts[i].y - ny * halfW));
@@ -275,6 +286,7 @@ function KhalLine({ obj, latlngs, zoom, transform }) {
     if (!obj.points || obj.points.length < 2 || !transform) return { leftLine: [], rightLine: [] };
     const pts = obj.points;
     const left = [], right = [];
+    const MITER_LIMIT = 4;
     for (let i = 0; i < pts.length; i++) {
       let nx, ny;
       if (pts.length === 2) {
@@ -290,8 +302,18 @@ function KhalLine({ obj, latlngs, zoom, transform }) {
         const dx1 = pts[i].x - pts[i-1].x, dy1 = pts[i].y - pts[i-1].y;
         const dx2 = pts[i+1].x - pts[i].x, dy2 = pts[i+1].y - pts[i].y;
         const len1 = Math.hypot(dx1, dy1) || 1, len2 = Math.hypot(dx2, dy2) || 1;
-        nx = (-dy1/len1 + -dy2/len2) / 2; ny = (dx1/len1 + dx2/len2) / 2;
-        const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl;
+        const n1x = -dy1/len1, n1y = dx1/len1, n2x = -dy2/len2, n2y = dx2/len2;
+        let bx = (n1x + n2x) / 2, by = (n1y + n2y) / 2;
+        const bLen = Math.hypot(bx, by);
+        if (bLen > 1e-9) {
+          bx /= bLen; by /= bLen;
+          const dot = n1x * bx + n1y * by;
+          if (Math.abs(dot) > 1e-6) {
+            let mf = 1 / dot;
+            if (mf > MITER_LIMIT) mf = MITER_LIMIT; else if (mf < -MITER_LIMIT) mf = -MITER_LIMIT;
+            nx = bx * mf; ny = by * mf;
+          } else { nx = n1x; ny = n1y; }
+        } else { nx = n1x; ny = n1y; }
       }
       left.push(transform.transform(pts[i].x + nx * halfW, pts[i].y + ny * halfW));
       right.push(transform.transform(pts[i].x - nx * halfW, pts[i].y - ny * halfW));
@@ -328,6 +350,7 @@ function RoadLine({ obj, latlngs, zoom, transform }) {
     if (!obj.points || obj.points.length < 2 || !transform) return { leftLine: [], rightLine: [] };
     const pts = obj.points;
     const left = [], right = [];
+    const MITER_LIMIT = 4;
     for (let i = 0; i < pts.length; i++) {
       let nx, ny;
       if (pts.length === 2) {
@@ -343,8 +366,18 @@ function RoadLine({ obj, latlngs, zoom, transform }) {
         const dx1 = pts[i].x - pts[i-1].x, dy1 = pts[i].y - pts[i-1].y;
         const dx2 = pts[i+1].x - pts[i].x, dy2 = pts[i+1].y - pts[i].y;
         const len1 = Math.hypot(dx1, dy1) || 1, len2 = Math.hypot(dx2, dy2) || 1;
-        nx = (-dy1/len1 + -dy2/len2) / 2; ny = (dx1/len1 + dx2/len2) / 2;
-        const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl;
+        const n1x = -dy1/len1, n1y = dx1/len1, n2x = -dy2/len2, n2y = dx2/len2;
+        let bx = (n1x + n2x) / 2, by = (n1y + n2y) / 2;
+        const bLen = Math.hypot(bx, by);
+        if (bLen > 1e-9) {
+          bx /= bLen; by /= bLen;
+          const dot = n1x * bx + n1y * by;
+          if (Math.abs(dot) > 1e-6) {
+            let mf = 1 / dot;
+            if (mf > MITER_LIMIT) mf = MITER_LIMIT; else if (mf < -MITER_LIMIT) mf = -MITER_LIMIT;
+            nx = bx * mf; ny = by * mf;
+          } else { nx = n1x; ny = n1y; }
+        } else { nx = n1x; ny = n1y; }
       }
       left.push(transform.transform(pts[i].x + nx * halfW, pts[i].y + ny * halfW));
       right.push(transform.transform(pts[i].x - nx * halfW, pts[i].y - ny * halfW));

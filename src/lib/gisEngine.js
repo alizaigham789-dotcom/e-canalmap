@@ -49,6 +49,13 @@ export function worldToScreen(wx, wy, panX, panY, zoom) {
 export function getParallelPolyline(points, offset) {
   if (points.length < 2) return points;
   const result = [];
+  // Miter limit caps how far the offset point extends along the bisector at sharp
+  // bends. Without miter correction the averaged normal produces a SHORTER
+  // perpendicular distance at bends → the canal pinches inward ("carpet fold").
+  // miterFactor = 1 / dot(n1, bisector) extends the point just enough to keep the
+  // perpendicular width equal to `offset` through every curve. The limit prevents
+  // infinite spikes on near-hairpin (≈180°) turns.
+  const MITER_LIMIT = 4;
   for (let i = 0; i < points.length; i++) {
     let nx = 0, ny = 0;
     if (i === 0) {
@@ -66,9 +73,26 @@ export function getParallelPolyline(points, offset) {
       if (len1 > 0 && len2 > 0) {
         const n1x = -dy1/len1, n1y = dx1/len1;
         const n2x = -dy2/len2, n2y = dx2/len2;
-        nx = (n1x + n2x) / 2; ny = (n1y + n2y) / 2;
-        const nLen = Math.hypot(nx, ny);
-        if (nLen > 0) { nx /= nLen; ny /= nLen; }
+        // Bisector = average of the two unit normals, normalized
+        let bx = (n1x + n2x) / 2, by = (n1y + n2y) / 2;
+        const bLen = Math.hypot(bx, by);
+        if (bLen > 1e-9) {
+          bx /= bLen; by /= bLen;
+          // Miter correction: extend along the bisector so the perpendicular
+          // distance from each segment stays exactly `offset` — no pinching.
+          const dot = n1x * bx + n1y * by;
+          if (Math.abs(dot) > 1e-6) {
+            let miterFactor = 1 / dot;
+            if (miterFactor > MITER_LIMIT) miterFactor = MITER_LIMIT;
+            else if (miterFactor < -MITER_LIMIT) miterFactor = -MITER_LIMIT;
+            nx = bx * miterFactor; ny = by * miterFactor;
+          } else {
+            nx = n1x; ny = n1y;
+          }
+        } else {
+          // Normals cancel (180° turn) — fall back to segment-1 normal
+          nx = n1x; ny = n1y;
+        }
       }
     }
     result.push({ x: points[i].x + nx * offset, y: points[i].y + ny * offset });
