@@ -1,26 +1,21 @@
 import React, { useState } from "react";
-import { ArrowRight, ArrowLeft, Grid3x3, X, Plus, Sparkles, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Grid3x3, X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { createMustateel, DIMENSIONS } from "@/lib/gisEngine";
-import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import AiMapDrawChat from "@/components/editor/AiMapDrawChat";
 
 // Incremental line-by-line mustateel builder.
 // Draw one line -> it stays on the map -> draw the next line below it.
 // Each line: Start # / End # / Below # / Direction. After drawing, the next
-// line auto-continues from the End # (chaining) but every field stays editable
-// so the user can place an arbitrary number below any mustateel (e.g. 1120
-// below 855, drawing right-to-left).
-// "AI Map Draw" tab: describe the layout in plain language; the AI returns a
-// list of mustateel lines which are drawn the same way.
+// line auto-continues from the End # (chaining) but every field stays editable.
+// "AI Map Draw" tab: an interactive assistant that asks step-by-step questions
+// and draws the full map (mustateels + canal + chakbandi).
 export default function MustateelGridDialog({ zoom, pan, canvasRef, objects = [], onAddObjects, onClose }) {
   const [line, setLine] = useState({ start: 1, end: 10, below: "", direction: "ltr" });
   const [history, setHistory] = useState([]);
   const [mode, setMode] = useState("builder");
-  const [aiPrompt, setAiPrompt] = useState("");
-  const [aiBusy, setAiBusy] = useState(false);
 
   const mustW = DIMENSIONS.MUSTATEEL.width;
   const mustH = DIMENSIONS.MUSTATEEL.height;
@@ -78,53 +73,6 @@ export default function MustateelGridDialog({ zoom, pan, canvasRef, objects = []
       direction: line.direction === "ltr" ? "rtl" : "ltr",
     });
     toast.success(`Drew ${generated.length} mustateels (${line.start}–${line.end})`);
-  };
-
-  // AI Map Draw — describe the layout in plain language; the AI returns a list of
-  // mustateel lines (start/end/below/direction) which we draw the same way.
-  const handleAiDraw = async () => {
-    if (!aiPrompt.trim()) { toast.warning("Enter a prompt first"); return; }
-    setAiBusy(true);
-    try {
-      const res = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a GIS assistant for a Pakistani cadastral map. The user wants to place "mustateel" (rectangular land parcels) on a grid. Each mustateel is numbered. Return a JSON list of horizontal lines to draw. Each line: { "start": <number>, "end": <number>, "below": <number_or_null>, "direction": "ltr"|"rtl" }. "below" is the mustateel NUMBER this line starts directly under (null for the first line, which starts at the map origin). "direction" is left-to-right ("ltr") or right-to-left ("rtl"). Draw a snake pattern by default (each next line below the previous, opposite direction). Parse numbers mentioned as ranges (e.g. "852 to 860" => start 852, end 860). User prompt: "${aiPrompt}". Return ONLY the JSON object.`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            lines: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  start: { type: "number" },
-                  end: { type: "number" },
-                  below: { type: ["number", "null"] },
-                  direction: { type: "string", enum: ["ltr", "rtl"] },
-                },
-                required: ["start", "end", "direction"],
-              },
-            },
-          },
-          required: ["lines"],
-        },
-      });
-      const lines = res?.lines || [];
-      if (lines.length === 0) { toast.error("AI did not return any lines"); return; }
-      const all = [];
-      lines.forEach(l => {
-        const gen = drawLine({ start: l.start, end: l.end, below: l.below ?? "", direction: l.direction });
-        all.push(...gen);
-      });
-      if (all.length === 0) { toast.error("No mustateels generated"); return; }
-      onAddObjects(all);
-      setHistory(h => [...h, ...lines.map(l => ({ start: l.start, end: l.end, below: l.below ?? "", direction: l.direction, count: Math.max(1, l.end - l.start + 1) }))]);
-      toast.success(`AI drew ${all.length} mustateels in ${lines.length} line(s)`);
-      setAiPrompt("");
-    } catch (e) {
-      toast.error("AI draw failed: " + (e?.message || "unknown error"));
-    } finally {
-      setAiBusy(false);
-    }
   };
 
   return (
@@ -200,18 +148,7 @@ export default function MustateelGridDialog({ zoom, pan, canvasRef, objects = []
             )}
           </>
         ) : (
-          <>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              Describe the mustateel layout in plain language. The AI returns a snake of lines and draws them on the map. Example: <i>"Draw mustateels 852 to 860, then 1120 to 1130 below 855 going right-to-left, then 31 to 45 below 30."</i>
-            </p>
-            <Textarea value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} rows={5}
-              placeholder="e.g. Draw mustateels 852 to 860, then 1120 to 1130 below 855 going right-to-left"
-              className="text-xs resize-none" />
-            <Button size="sm" className="w-full bg-violet-600 hover:bg-violet-700 text-white gap-1.5" onClick={handleAiDraw} disabled={aiBusy}>
-              {aiBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              {aiBusy ? "Drawing…" : "AI Draw Map"}
-            </Button>
-          </>
+          <AiMapDrawChat zoom={zoom} pan={pan} canvasRef={canvasRef} objects={objects} onAddObjects={onAddObjects} />
         )}
 
         <div className="flex gap-2 justify-end pt-1">
