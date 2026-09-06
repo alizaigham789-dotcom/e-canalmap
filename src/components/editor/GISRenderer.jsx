@@ -532,9 +532,10 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
     grad.addColorStop(1, "#1688C7");    // darker blue outline edge
     ctx.fillStyle = grad;
     ctx.beginPath();
-    drawSmoothPath(ctx, left);
+    ctx.moveTo(left[0].x, left[0].y);
+    for (const p of left) ctx.lineTo(p.x, p.y);
     ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
-    drawSmoothPath(ctx, [...right].reverse());
+    for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
     ctx.closePath();
     ctx.fill();
     // Subtle white shimmer down the centerline — gives the water a lively, beautiful feel
@@ -543,30 +544,36 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
     ctx.lineCap = "round";
     ctx.setLineDash([14 / zoom, 10 / zoom]);
     ctx.beginPath();
-    drawSmoothPath(ctx, obj.points);
+    ctx.moveTo(obj.points[0].x, obj.points[0].y);
+    for (const p of obj.points) ctx.lineTo(p.x, p.y);
     ctx.stroke();
     ctx.setLineDash([]);
-    // Blue boundary lines
+    // Blue boundary lines — straight segments with sharp miter corners: the canal
+    // follows the drawn vertex points exactly and turns sharply instead of curving.
     ctx.strokeStyle = strokeC;
     ctx.lineWidth = Math.max(2, 3 / zoom);
-    ctx.lineCap = "butt"; ctx.lineJoin = "round";
+    ctx.lineCap = "butt"; ctx.lineJoin = "miter";
     for (const side of [left, right]) {
       ctx.beginPath();
-      drawSmoothPath(ctx, side);
+      ctx.moveTo(side[0].x, side[0].y);
+      for (const p of side) ctx.lineTo(p.x, p.y);
       ctx.stroke();
     }
   } else {
     // 3D ribbon — soft glow halo + darker outline + body + inner highlight
     ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(obj.points[0].x, obj.points[0].y);
+    for (const p of obj.points) ctx.lineTo(p.x, p.y);
     ctx.strokeStyle = strokeC;
     ctx.lineWidth = w + 3;
-    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+    ctx.stroke();
     ctx.strokeStyle = fillC;
     ctx.lineWidth = w;
-    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+    ctx.stroke();
     ctx.strokeStyle = "rgba(255,255,255,0.30)";
     ctx.lineWidth = Math.max(1, w * 0.12);
-    ctx.beginPath(); drawSmoothPath(ctx, obj.points); ctx.stroke();
+    ctx.stroke();
   }
 
   // Layer 5: Canal name INSIDE the blue canal — repeats every ~5 acres along the path,

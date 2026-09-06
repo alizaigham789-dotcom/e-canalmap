@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
@@ -169,6 +169,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [showRecovery, setShowRecovery] = useState(false);
   const [search, setSearch] = useState("");
+  const carouselRef = useRef(null);
+  const [page, setPage] = useState(0);
 
   const { data: currentUser } = useQuery({
     queryKey: ["me"],
@@ -194,15 +196,47 @@ export default function Dashboard() {
     );
   }, [orderedModules, search]);
 
+  // Mobile module pages — 6 modules per screen (2 columns × 3 rows), swipe sideways
+  const modulePages = useMemo(() => {
+    const pages = [];
+    for (let i = 0; i < filteredModules.length; i += 6) pages.push(filteredModules.slice(i, i + 6));
+    return pages;
+  }, [filteredModules]);
+
+  // Reset the carousel to the first page whenever the search changes
+  useEffect(() => {
+    setPage(0);
+    if (carouselRef.current) carouselRef.current.scrollLeft = 0;
+  }, [search]);
+
+  const renderCard = (mod) => {
+    const needsSub = mod.id === "map-editor" || mod.id === "geo-map" || mod.id === "moga-merge";
+    const subLocked = needsSub && !hasAccess;
+    const isLocked = !isAdmin && mod.locked;
+    return (
+      <ModuleCard
+        key={mod.id}
+        mod={mod}
+        locked={isLocked}
+        subLocked={subLocked}
+        onClick={() => {
+          if (subLocked) { navigate("/subscription"); return; }
+          if (isLocked) return;
+          navigate(mod.path);
+        }}
+      />
+    );
+  };
+
   const recoveryMaps = [
     { id: "6a50caf149f33fc254601cbd", title: "21671R", moga_number: "21671" },
     { id: "6a50b6f0e3b0ded6529f78ac", title: "28000 R", moga_number: "28000" },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 pb-20 antialiased">
+    <div className="h-[100dvh] md:h-auto md:min-h-screen flex flex-col overflow-hidden md:overflow-visible bg-slate-100 text-slate-800 pb-[64px] md:pb-0 antialiased">
       {/* Header — compact, app-like on mobile */}
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm safe-top">
+      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm safe-top shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/30 ring-1 ring-white/30">
@@ -237,9 +271,9 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-6 flex-1 min-h-0 flex flex-col">
         {/* Greeting */}
-        <div className="mb-4">
+        <div className="mb-2 md:mb-4 shrink-0">
           <h2 className="text-lg font-bold font-heading text-slate-800">
             Welcome, {currentUser?.full_name?.split(" ")[0] || "User"}
           </h2>
@@ -247,7 +281,7 @@ export default function Dashboard() {
         </div>
 
         {/* Search bar — quick module access, app-like */}
-        <div className="mb-4 relative">
+        <div className="mb-2 md:mb-4 relative shrink-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
             type="text"
@@ -266,26 +300,43 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Module Cards — 2-column grid, responsive on all screens */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-          {filteredModules.map((mod) => {
-            const needsSub = mod.id === "map-editor" || mod.id === "geo-map" || mod.id === "moga-merge";
-            const subLocked = needsSub && !hasAccess;
-            const isLocked = !isAdmin && mod.locked;
-            return (
-              <ModuleCard
-                key={mod.id}
-                mod={mod}
-                locked={isLocked}
-                subLocked={subLocked}
-                onClick={() => {
-                  if (subLocked) { navigate("/subscription"); return; }
-                  if (isLocked) return;
-                  navigate(mod.path);
-                }}
-              />
-            );
-          })}
+        {/* Module Cards — desktop: responsive grid */}
+        <div className="hidden md:grid grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+          {filteredModules.map((mod) => renderCard(mod))}
+        </div>
+
+        {/* Mobile carousel — 6 modules per screen (2 cols × 3 rows), swipe sideways */}
+        <div className="md:hidden flex-1 min-h-0 flex flex-col">
+          <div
+            ref={carouselRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const p = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+              if (p !== page) setPage(p);
+            }}
+            className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden snap-x snap-mandatory no-scrollbar touch-scroll"
+          >
+            <div className="flex h-full">
+              {modulePages.map((pg, pi) => (
+                <div
+                  key={pi}
+                  className={`min-w-full h-full snap-start grid grid-cols-2 gap-2.5 ${pg.length === 6 ? "grid-rows-3" : "content-start"}`}
+                >
+                  {pg.map((mod) => renderCard(mod))}
+                </div>
+              ))}
+            </div>
+          </div>
+          {modulePages.length > 1 && (
+            <div className="flex items-center justify-center gap-1.5 pt-2">
+              {modulePages.map((_, pi) => (
+                <span
+                  key={pi}
+                  className={`h-1.5 rounded-full transition-all ${pi === page ? "w-5 bg-blue-600" : "w-1.5 bg-slate-300"}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </main>
 
