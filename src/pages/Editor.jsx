@@ -1296,16 +1296,17 @@ export default function Editor() {
       }).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ["maps"] });
       loadedNonParcelCountRef.current = countNonParcels(allObjs);
-      setShowCloseDialog(false);
-      navigate("/");
     } catch (err) {
-      // Show the REAL failure reason so the user knows why it didn't close,
-      // and keep the dialog open so they can retry or choose "close without save".
-      toast.error(`محفوظ ناکام: ${err?.message || "نامعلوم نقص"}`, { duration: 4000 });
+      // Save failed — tell the user, but still close & go back. The unmount
+      // cleanup + local backups (sessionStorage / IndexedDB) persist the state
+      // so it is recoverable on next open; the popup must NOT trap the user.
+      toast.error(`محفوظ ناکام: ${err?.message || "نامعلوم نقص"} — لوکل بیک اپ محفوظ ہے`, { duration: 4000 });
     } finally {
-      // Always reset the loading flag — even on error — so the button never
-      // gets stuck disabled (which was why "Save & Close" did nothing).
+      // ALWAYS close the dialog and navigate back — even if the server save
+      // threw — so "Save & Close" never leaves the user stuck on the popup.
+      setShowCloseDialog(false);
       setClosingWithSave(false);
+      navigate("/");
     }
   };
 

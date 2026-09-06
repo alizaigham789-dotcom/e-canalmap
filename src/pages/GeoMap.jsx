@@ -301,15 +301,26 @@ export default function GeoMap() {
 
   // Map View mode — only show mogas that have already been overlaid (placed)
   // on the satellite map. Selecting one flies to its placed location.
+  // All mogas that have been placed (overlaid & saved) across EVERY editor map —
+  // not just the filtered village, so saved mogas always surface in the cascade.
   const placedMogas = useMemo(() => {
     const s = new Set();
-    for (const m of villageMaps) {
+    for (const m of (maps || [])) {
       if (m.geo_placement_lat != null && m.geo_placement_lng != null && m.moga_number) {
         s.add(String(m.moga_number));
       }
     }
     return [...s].sort((a, b) => +a - +b);
-  }, [villageMaps]);
+  }, [maps]);
+
+  // Top moga cascade: Map View = only overlaid (placed) mogas; Overlay mode =
+  // every editor moga of the filtered mouza PLUS all placed mogas (so saved ones
+  // always show even when the village/rajbah filter changes).
+  const cascadeMogas = useMemo(() => {
+    if (viewMode === "view") return placedMogas;
+    const s = new Set([...filterMogas, ...placedMogas]);
+    return [...s].sort((a, b) => +a - +b);
+  }, [viewMode, filterMogas, placedMogas]);
 
   const availableMogas = useMemo(() => {
     const s = new Set();
@@ -1573,7 +1584,7 @@ export default function GeoMap() {
         onMenu={() => setEntered(false)}
         rajbahs={rajbahs}
         rajbah={filters.rajbah}
-        mogas={filterMogas}
+        mogas={cascadeMogas}
         selectedMoga={selectedMoga}
         onSelectMoga={handleSelectMogaTop}
         murabas={mogaMustateels.map(m => m.mustNo)}
@@ -1607,7 +1618,7 @@ export default function GeoMap() {
 
       {viewMode === "overlay" && showOverlayPanel && (
         <OverlayPanel
-          maps={villageMaps}
+          maps={maps}
           selectedMapId={selectedMapId}
           onSelectMap={handleSelectMap}
           availableMogas={availableMogas}
