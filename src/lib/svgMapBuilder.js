@@ -67,6 +67,21 @@ function parallelSmoothClosedPath(pts, offset) {
   return `${leftPath} L${rightRev[0].x},${rightRev[0].y} ${rightRevPart} Z`;
 }
 
+// ─── Straight-segment paths — canals turn sharply at each vertex (no smoothing) ─
+function pointsToLinePath(points) {
+  if (!points || points.length < 2) return "";
+  let d = `M${points[0].x},${points[0].y}`;
+  for (let i = 1; i < points.length; i++) d += ` L${points[i].x},${points[i].y}`;
+  return d;
+}
+function parallelLineClosedPath(pts, offset) {
+  if (!pts || pts.length < 2) return "";
+  const left = getParallelPolyline(pts, -offset);
+  const right = getParallelPolyline(pts, offset);
+  const rightRev = [...right].reverse();
+  return `${pointsToLinePath(left)} L${rightRev[0].x},${rightRev[0].y} ${pointsToLinePath(rightRev).replace(/^M[\d.,\s-]+/, "")} Z`;
+}
+
 // ─── SVG OBJECT RENDERERS ─────────────────────────────────────────────────────
 function svgExclusionHatch(obj, idx) {
   const spacing = obj.exclusionSpacing || 60;
@@ -266,21 +281,21 @@ function svgChakbandi(obj, C, idx, viewW) {
 function svgCanal(obj, C, idx, outlets) {
   if (!obj.points || obj.points.length < 2) return "";
   const w = (obj.width || DIMENSIONS.CANAL_WIDTH);
-  const centerPath = pointsToSmoothPath(obj.points);
+  const centerPath = pointsToLinePath(obj.points);
   const fillColor = C.canalFill || "rgba(163,218,244,0.70)";
   const strokeColor = C.canalStroke || "#2B7AB8";
   const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH);
   const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf, outlets) : "";
   if (obj.canalStyle === "flat") {
     const halfW = w / 2;
-    const fillPath = parallelSmoothClosedPath(obj.points, halfW);
+    const fillPath = parallelLineClosedPath(obj.points, halfW);
     const left = getParallelPolyline(obj.points, -halfW);
     const right = getParallelPolyline(obj.points, halfW);
     return `
 <g key="canal_${idx}">
   <path d="${fillPath}" fill="${fillColor}" />
-  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
-  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
+  <path d="${pointsToLinePath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="miter"/>
+  <path d="${pointsToLinePath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="miter"/>
   ${nameSvg}
 </g>`;
   }

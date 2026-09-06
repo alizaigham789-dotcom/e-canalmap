@@ -6,7 +6,7 @@
 // this module owns the 8 NEW styles + the Side Boundary feature.
 // ============================================================
 
-import { getParallelPolyline, drawSmoothPath, DIMENSIONS } from "@/lib/gisEngine";
+import { getParallelPolyline, DIMENSIONS } from "@/lib/gisEngine";
 
 export const CANAL_STYLES = [
   { key: "flat",         label: "Flat",        swatch: "#29A9E8" },
@@ -26,22 +26,29 @@ const NEW_STYLES = ["concrete", "earth", "water", "3dwater", "green", "greenWate
 export function isNewCanalStyle(style) { return NEW_STYLES.includes(style); }
 
 // ---- canvas geometry helpers ----
+// Straight segments — canals follow the drawn vertex points exactly and turn
+// sharply at each vertex (no spline smoothing), keeping constant width.
+function drawStraightPath(ctx, pts) {
+  if (!pts || pts.length < 2) return;
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+}
 function fillBetween(ctx, pts, halfW) {
   const left = getParallelPolyline(pts, -halfW);
   const right = getParallelPolyline(pts, halfW);
   ctx.beginPath();
-  drawSmoothPath(ctx, left);
+  drawStraightPath(ctx, left);
   ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
-  drawSmoothPath(ctx, [...right].reverse());
+  drawStraightPath(ctx, [...right].reverse());
   ctx.closePath();
   ctx.fill();
 }
-function strokeCenter(ctx, pts) { ctx.beginPath(); drawSmoothPath(ctx, pts); ctx.stroke(); }
-function strokeSide(ctx, side) { ctx.beginPath(); drawSmoothPath(ctx, side); ctx.stroke(); }
+function strokeCenter(ctx, pts) { ctx.beginPath(); drawStraightPath(ctx, pts); ctx.stroke(); }
+function strokeSide(ctx, side) { ctx.beginPath(); drawStraightPath(ctx, side); ctx.stroke(); }
 function bankLines(ctx, pts, halfW, color, lw) {
   const left = getParallelPolyline(pts, -halfW);
   const right = getParallelPolyline(pts, halfW);
-  ctx.strokeStyle = color; ctx.lineWidth = lw;
+  ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineJoin = "miter";
   strokeSide(ctx, left); strokeSide(ctx, right);
 }
 
@@ -64,15 +71,15 @@ export function drawSideBoundaryCanvas(ctx, obj, zoom, C) {
     const outer = getParallelPolyline(obj.points, outerOff);
     ctx.fillStyle = fill;
     ctx.beginPath();
-    drawSmoothPath(ctx, inner);
+    drawStraightPath(ctx, inner);
     ctx.lineTo(outer[outer.length - 1].x, outer[outer.length - 1].y);
-    drawSmoothPath(ctx, [...outer].reverse());
+    drawStraightPath(ctx, [...outer].reverse());
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = edge;
     ctx.lineWidth = Math.max(1, 1.5 / zoom);
     ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.beginPath(); drawSmoothPath(ctx, outer); ctx.stroke();
+    ctx.beginPath(); drawStraightPath(ctx, outer); ctx.stroke();
   };
   if (leftFt > 0) drawStrip(-halfW, -(halfW + leftFt));
   if (rightFt > 0) drawStrip(halfW, halfW + rightFt);
@@ -162,17 +169,11 @@ export function drawCanalStyleCanvas(ctx, obj, style, zoom, C) {
 // ============================================================
 // SVG smooth-path helpers
 // ============================================================
-function pointsToSmoothPath(pts, tension = 0.4) {
+function pointsToLinePath(pts) {
   if (!pts || pts.length < 2) return "";
   const f = (n) => Number(n).toFixed(1);
-  if (pts.length === 2) return `M${f(pts[0].x)},${f(pts[0].y)} L${f(pts[1].x)},${f(pts[1].y)}`;
   let d = `M${f(pts[0].x)},${f(pts[0].y)}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[Math.max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(i + 2, pts.length - 1)];
-    const cp1x = p1.x + (p2.x - p0.x) * tension / 2, cp1y = p1.y + (p2.y - p0.y) * tension / 2;
-    const cp2x = p2.x - (p3.x - p1.x) * tension / 2, cp2y = p2.y - (p3.y - p1.y) * tension / 2;
-    d += ` C${f(cp1x)},${f(cp1y)} ${f(cp2x)},${f(cp2y)} ${f(p2.x)},${f(p2.y)}`;
-  }
+  for (let i = 1; i < pts.length; i++) d += ` L${f(pts[i].x)},${f(pts[i].y)}`;
   return d;
 }
 function stripLeadM(d) { return d.replace(/^M[0-9.,\- ]+/, ""); }
@@ -180,28 +181,28 @@ function stripLeadM(d) { return d.replace(/^M[0-9.,\- ]+/, ""); }
 function fillPathD(pts, halfW) {
   const left = getParallelPolyline(pts, -halfW);
   const right = getParallelPolyline(pts, halfW);
-  let d = pointsToSmoothPath(left);
+  let d = pointsToLinePath(left);
   d += ` L${Number(right[right.length - 1].x).toFixed(1)},${Number(right[right.length - 1].y).toFixed(1)}`;
-  d += ` ${stripLeadM(pointsToSmoothPath([...right].reverse()))} Z`;
+  d += ` ${stripLeadM(pointsToLinePath([...right].reverse()))} Z`;
   return d;
 }
 function bandPathD(pts, innerOff, outerOff) {
   const inner = getParallelPolyline(pts, innerOff);
   const outer = getParallelPolyline(pts, outerOff);
-  let d = pointsToSmoothPath(inner);
+  let d = pointsToLinePath(inner);
   d += ` L${Number(outer[outer.length - 1].x).toFixed(1)},${Number(outer[outer.length - 1].y).toFixed(1)}`;
-  d += ` ${stripLeadM(pointsToSmoothPath([...outer].reverse()))} Z`;
+  d += ` ${stripLeadM(pointsToLinePath([...outer].reverse()))} Z`;
   return d;
 }
 function svgFill(pts, halfW, fill, opacity) {
   return `<path d="${fillPathD(pts, halfW)}" fill="${fill}"${opacity != null ? ` fill-opacity="${opacity}"` : ""}/>`;
 }
 function svgCenter(pts, stroke, width, dash) {
-  return `<path d="${pointsToSmoothPath(pts)}" fill="none" stroke="${stroke}" stroke-width="${Number(width).toFixed(2)}"${dash ? ` stroke-dasharray="${dash}"` : ""} stroke-linecap="round" stroke-linejoin="round"/>`;
+  return `<path d="${pointsToLinePath(pts)}" fill="none" stroke="${stroke}" stroke-width="${Number(width).toFixed(2)}"${dash ? ` stroke-dasharray="${dash}"` : ""} stroke-linecap="round" stroke-linejoin="round"/>`;
 }
 function svgBanks(pts, halfW, stroke, width) {
   const left = getParallelPolyline(pts, -halfW), right = getParallelPolyline(pts, halfW);
-  return `<path d="${pointsToSmoothPath(left)}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/><path d="${pointsToSmoothPath(right)}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  return `<path d="${pointsToLinePath(left)}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/><path d="${pointsToLinePath(right)}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
 }
 
 // ============================================================
@@ -220,7 +221,7 @@ export function buildSideBoundarySVG(obj, C) {
   const strip = (innerOff, outerOff) => {
     svg += `<path d="${bandPathD(obj.points, innerOff, outerOff)}" fill="${fill}"/>`;
     const outer = getParallelPolyline(obj.points, outerOff);
-    svg += `<path d="${pointsToSmoothPath(outer)}" fill="none" stroke="${edge}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    svg += `<path d="${pointsToLinePath(outer)}" fill="none" stroke="${edge}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
   };
   if (leftFt > 0) strip(-halfW, -(halfW + leftFt));
   if (rightFt > 0) strip(halfW, halfW + rightFt);
@@ -278,8 +279,8 @@ export function buildCanalStyleSVG(obj, style, C) {
         + svgBanks(pts, halfW, "#1e3a8a", 2);
     case "dashed":
       return svgFill(pts, halfW, "#3b82f6", 0.4)
-        + `<path d="${pointsToSmoothPath(getParallelPolyline(pts, -halfW))}" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="10,6" stroke-linecap="round" stroke-linejoin="round"/>`
-        + `<path d="${pointsToSmoothPath(getParallelPolyline(pts, halfW))}" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="10,6" stroke-linecap="round" stroke-linejoin="round"/>`
+        + `<path d="${pointsToLinePath(getParallelPolyline(pts, -halfW))}" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="10,6" stroke-linecap="round" stroke-linejoin="round"/>`
+        + `<path d="${pointsToLinePath(getParallelPolyline(pts, halfW))}" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="10,6" stroke-linecap="round" stroke-linejoin="round"/>`
         + svgCenter(pts, "#ffffff", Math.max(1.5, halfW * 0.1), "12,8");
     case "custom": {
       const c = custom || "#29A9E8";
