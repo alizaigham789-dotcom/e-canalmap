@@ -1278,40 +1278,51 @@ export default function Editor() {
   const handleCloseWithSave = async () => {
     if (closingWithSave) return; // guard against double-clicks
     setClosingWithSave(true);
+    // Commit any in-progress line drafts so they are included in the save.
+    commitActiveDrafts();
+    forceSaveRef.current = true;
+    const allObjs = dsmRef.current.objects;
+    const parcels = dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length;
+    const vp = JSON.stringify({ zoom: zoomRef.current, pan: panRef.current });
+    const settings = settingsRef.current();
+    // Synchronous local backups — written instantly so the data survives even
+    // if the background server save is interrupted by the navigation.
     try {
-      commitActiveDrafts();
-      forceSaveRef.current = true;
-      const allObjs = dsmRef.current.objects;
-      const parcels = dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length;
-      const drawing_data = await storeDrawingData(allObjs);
-      await base44.entities.LandMap.update(mapId, {
-        drawing_data,
-        total_parcels: parcels,
-        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
-        editor_settings: settingsRef.current(),
-      });
-      // Force-sync the snapshot so deleted parcels are not restored on reopen
-      saveMaxSnapshot(mapId, {
-        title: mapData?.title, moga_number: mapData?.moga_number,
-        objects: allObjs, drawingData: dsmRef.current.serialize(),
-        viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
-        editorSettings: settingsRef.current(),
-        force: true,
-      }).catch(() => {});
-      queryClient.invalidateQueries({ queryKey: ["maps"] });
-      loadedNonParcelCountRef.current = countNonParcels(allObjs);
-    } catch (err) {
-      // Save failed — tell the user, but still close & go back. The unmount
-      // cleanup + local backups (sessionStorage / IndexedDB) persist the state
-      // so it is recoverable on next open; the popup must NOT trap the user.
-      toast.error(`محفوظ ناکام: ${err?.message || "نامعلوم نقص"} — لوکل بیک اپ محفوظ ہے`, { duration: 4000 });
-    } finally {
-      // ALWAYS close the dialog and navigate back — even if the server save
-      // threw — so "Save & Close" never leaves the user stuck on the popup.
-      setShowCloseDialog(false);
-      setClosingWithSave(false);
-      navigate("/");
-    }
+      sessionStorage.setItem(`chakbandi_backup_${mapId}`, JSON.stringify({
+        objects: allObjs, viewport: vp, editorSettings: settings, timestamp: Date.now(),
+      }));
+    } catch {}
+    saveBackup(mapId, { objects: allObjs, viewport: vp, editorSettings: settings });
+    queryClient.setQueryData(["map", mapId], (old) => old ? {
+      ...old, drawing_data: dsmRef.current.serialize(), total_parcels: parcels, viewport: vp, editor_settings: settings,
+    } : old);
+    loadedNonParcelCountRef.current = countNonParcels(allObjs);
+    // Fire the cloud save in the BACKGROUND — do NOT await it. In a single-page
+    // app, client-side navigation does NOT cancel in-flight fetches, so the
+    // LandMap update + snapshot still complete on the server after we leave.
+    // This keeps "Save & Close" instant instead of waiting on a large upload.
+    (async () => {
+      try {
+        const drawing_data = await storeDrawingData(allObjs);
+        await base44.entities.LandMap.update(mapId, {
+          drawing_data, total_parcels: parcels, viewport: vp, editor_settings: settings,
+        });
+        saveMaxSnapshot(mapId, {
+          title: mapData?.title, moga_number: mapData?.moga_number,
+          objects: allObjs, drawingData: dsmRef.current.serialize(),
+          viewport: vp, editorSettings: settings, force: true,
+        }).catch(() => {});
+        queryClient.invalidateQueries({ queryKey: ["maps"] });
+      } catch (err) {
+        // Local backups already written above; the unmount cleanup + auto-heal
+        // on next open will recover. Surface nothing — the user has already left.
+        console.warn("[Save & Close] background save failed:", err?.message);
+      }
+    })();
+    // Close the popup and navigate back IMMEDIATELY.
+    setShowCloseDialog(false);
+    setClosingWithSave(false);
+    navigate("/");
   };
 
   const handleCloseWithoutSave = () => {
