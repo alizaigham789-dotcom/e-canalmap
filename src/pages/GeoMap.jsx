@@ -1169,6 +1169,9 @@ export default function GeoMap() {
       });
       toast.success(`موگہ ${match.mogaNumber} کہسڑا ${match.must.label} پر جڑ گیا`);
       queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+      // Switch the active overlay to the newly placed moga so it shows on the
+      // map immediately instead of staying on the previous moga.
+      handleSelectMap(match.id, true);
     } catch (e) {
       // Revert the optimistic update if the save failed
       queryClient.setQueryData(["geomap-maps"], (old) => {
@@ -1648,7 +1651,7 @@ export default function GeoMap() {
         />
       )}
 
-      {activeOverlay && (
+      {activeOverlay && viewMode === "view" && (
         <AllocationToolbar
           killaVisible={killaVisible}
           onToggleKilla={() => setKillaVisible(v => !v)}

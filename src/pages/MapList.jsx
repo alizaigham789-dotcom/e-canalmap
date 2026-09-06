@@ -110,7 +110,11 @@ export default function MapList() {
       // Clear every cache reference to the deleted map so it truly disappears
       // (the list refetch alone can leave a stale ["map", id] entry).
       queryClient.removeQueries({ queryKey: ["map", deletedId] });
+      queryClient.removeQueries({ queryKey: ["geomap-map", deletedId] });
       queryClient.invalidateQueries({ queryKey: ["maps"] });
+      // Refresh GeoMap's map list so the deleted moga disappears from the
+      // overlay and the moga cascade (placedMogas / filterMogas) instantly.
+      queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
       try { sessionStorage.removeItem(`chakbandi_backup_${deletedId}`); } catch {}
       setDeleteTarget(null);
       toast.success("نقشہ حذف ہو گیا");

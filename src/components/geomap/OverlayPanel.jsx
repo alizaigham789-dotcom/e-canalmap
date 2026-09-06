@@ -38,7 +38,7 @@ export default function OverlayPanel({
   const filteredMogas = (availableMogas || []).filter(m => String(m).includes(mogaSearch.trim()));
 
   return (
-    <div className="absolute top-14 right-3 z-[1000] w-72 bg-[#1B2A3A] rounded-xl shadow-2xl border border-white/10 overflow-hidden">
+    <div className="absolute top-14 right-3 z-[1000] w-64 bg-[#1B2A3A] rounded-xl shadow-2xl border border-white/10 overflow-hidden">
       {/* Header — sticky so the X close button stays above the map-select dropdown */}
       <div className="flex items-center justify-between px-3 h-10 bg-[#15212E] sticky top-0 z-20">
         <div className="flex items-center gap-2">
