@@ -510,6 +510,9 @@ export default function Editor() {
     const handler = () => {
       const currentMapId = mapIdRef.current;
       if (!currentMapId || !loadedMapIdRef.current) return;
+      // Commit any in-progress line drafts so a half-drawn chakbandi/canal/khal
+      // is not lost when the tab closes / refreshes.
+      commitActiveDrafts();
       try {
         sessionStorage.setItem(`chakbandi_backup_${currentMapId}`, JSON.stringify({
           objects: dsmRef.current.objects,
@@ -545,6 +548,10 @@ export default function Editor() {
         queryClient.invalidateQueries({ queryKey: ["maps"] });
         return;
       }
+      // Commit any in-progress line drafts (chakbandi/canal/khal/mouza drawn but not
+      // yet finished with double-tap) BEFORE saving — otherwise navigating away /
+      // closing loses the visible line (it lived only in draft state, not in dsmRef).
+      commitActiveDrafts();
       const objs = dsmRef.current.objects;
       if (objs.length === 0) {
         queryClient.removeQueries({ queryKey: ["map", currentMapId] });

@@ -1,5 +1,5 @@
 import React from "react";
-import { Menu, ChevronDown, Bell } from "lucide-react";
+import { ArrowLeft, ChevronDown, Bell } from "lucide-react";
 
 export default function MapHeader({
   districts,
@@ -38,8 +38,8 @@ export default function MapHeader({
 
   return (
     <div className="absolute top-0 left-0 right-0 z-[1000] bg-[#1B2A3A] px-3 h-12 flex items-center gap-2 shadow-lg">
-      <button onClick={onMenu} className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/10 rounded-md transition-colors shrink-0">
-        <Menu className="w-5 h-5" />
+      <button onClick={onMenu} title="Back" className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/10 rounded-md transition-colors shrink-0">
+        <ArrowLeft className="w-5 h-5" />
       </button>
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1">
         {viewMode !== "overlay" && <Select placeholder="District" value={district} options={districts} field="district" />}
