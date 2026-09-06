@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle, Save, Loader2, Search, Trash2 } from "lucide-react";
+import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle, Save, Loader2, Search } from "lucide-react";
 import MapSelect from "@/components/geomap/MapSelect";
 
 export default function OverlayPanel({
@@ -27,7 +27,6 @@ export default function OverlayPanel({
   savingAllMogas,
   suggestions,
   onPlaceSuggestion,
-  onDelete,
   onClose,
 }) {
   const mustateels = mustateelAreas || [];
@@ -44,7 +43,7 @@ export default function OverlayPanel({
       <div className="flex items-center justify-between px-3 h-10 bg-[#15212E] sticky top-0 z-20">
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-blue-400" />
-          <span className="text-xs font-bold text-white tracking-wide">GIS Overlay</span>
+          <span className="text-xs font-bold text-white tracking-wide">Map Overlay</span>
         </div>
         <button onClick={onClose} className="w-6 h-6 flex items-center justify-center text-white/60 hover:text-white shrink-0">
           <X className="w-4 h-4" />
@@ -190,11 +189,11 @@ export default function OverlayPanel({
               {savingAllMogas ? "محفوظ ہو رہے ہیں…" : "تمام موگہ محفوظ کریں"}
             </button>
             <button
-              onClick={onDelete}
-              className="w-full h-8 rounded-md text-xs font-bold bg-red-600/30 text-red-300 hover:bg-red-600/50 flex items-center justify-center gap-1.5 transition-all"
+              onClick={onClear}
+              className="w-full h-8 rounded-md text-xs font-bold bg-red-600/20 text-red-400 hover:bg-red-600/30 flex items-center justify-center gap-1.5 transition-all"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete
+              <X className="w-3.5 h-3.5" />
+              Remove Overlay
             </button>
           </>
         )}
