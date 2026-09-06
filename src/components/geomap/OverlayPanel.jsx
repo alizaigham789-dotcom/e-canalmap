@@ -27,6 +27,7 @@ export default function OverlayPanel({
   savingAllMogas,
   suggestions,
   onPlaceSuggestion,
+  onDelete,
   onClose,
 }) {
   const mustateels = mustateelAreas || [];
