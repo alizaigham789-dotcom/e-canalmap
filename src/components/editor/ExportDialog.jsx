@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Share2 } from "lucide-react";
 import { toast } from "sonner";
-import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, calculateChakbandiLoopGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, PAGE_SIZES, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
+import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, calculateChakbandiLoopGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, mogaInCanalFont, PAGE_SIZES, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas, svgAcreUses, acreUseHasLabel, drawAcreUsesOnCanvas, svgRailwayTracks, drawRailwayTracksCanvas as drawRailwayTracks } from "@/lib/printRenderHelpers";
 import { drawExclusionHatchOnCanvas, drawChakbandi } from "@/components/editor/GISRenderer";
 import { drawSideBoundaryCanvas, drawCanalStyleCanvas, buildSideBoundarySVG, buildCanalStyleSVG, isNewCanalStyle } from "@/lib/canalStyles";
@@ -307,7 +307,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         // Canal direction = perpendicular to the outlet shaft; keep upright like canal name text.
         let canalAng = ang + Math.PI / 2;
         if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
-        const cf = canalNameFont(o.canalWidth || DIMENSIONS.CANAL_WIDTH);
+        const cf = mogaInCanalFont(o.canalWidth || DIMENSIONS.CANAL_WIDTH);
         ctx.save();
         ctx.translate(sx, sy);
         ctx.rotate(canalAng);
@@ -628,7 +628,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         let canalAng = ang + Math.PI / 2;
         if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
         const canalAngDeg = canalAng * 180 / Math.PI;
-        const cf = canalNameFont(o.canalWidth || DIMENSIONS.CANAL_WIDTH);
+        const cf = mogaInCanalFont(o.canalWidth || DIMENSIONS.CANAL_WIDTH);
         mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="rgba(0,0,0,0.85)" stroke-width="${Math.max(2, cf * 0.18).toFixed(1)}" stroke-linejoin="round" fill="#FFD700">${mogaText}</text>`;
       }
       return `<g>

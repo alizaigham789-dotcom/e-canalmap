@@ -8,7 +8,7 @@ import {
   getKanalBoxes, getExcludedKanals,
   DIMENSIONS, CHAKBANDI_SCALE, MUSTATEEL_SCALE,
   getMustateelMouzaSplit, getMogaColor, effectiveKillaVisible,
-  mogaNumberFont, canalNameFont, getOutletDimensions,
+  mogaNumberFont, canalNameFont, mogaInCanalFont, getOutletDimensions,
 } from "@/lib/gisEngine";
 import {
   svgCanalNameOnPath, svgMogaFractionBox,
@@ -418,7 +418,7 @@ function svgOutlet(obj, C, idx) {
     let canalAng = angle + Math.PI / 2;
     if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
     const canalAngDeg = canalAng * 180 / Math.PI;
-    const cf = canalNameFont(obj.canalWidth || DIMENSIONS.CANAL_WIDTH);
+    const cf = mogaInCanalFont(obj.canalWidth || DIMENSIONS.CANAL_WIDTH);
     mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="rgba(0,0,0,0.85)" stroke-width="${Math.max(2, cf * 0.18).toFixed(1)}" stroke-linejoin="round" fill="#FFD700">${mogaText}</text>`;
   }
   return `<g key="outlet_${idx}">

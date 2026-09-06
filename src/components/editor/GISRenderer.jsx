@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, getKanalBoxes, getKanalFills, getExcludedKanals, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, getKanalBoxes, getKanalFills, getExcludedKanals, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, mogaInCanalFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, getOutletLabelPos, isUrduText, drawRailwayTracksCanvas } from "@/lib/printRenderHelpers";
 import { drawSideBoundaryCanvas, drawCanalStyleCanvas, isNewCanalStyle } from "@/lib/canalStyles";
 
@@ -580,7 +580,7 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   // follows canal geometry (straight or curved), highly visible colour, 5× font size.
   // English: char-by-char on path. Urdu: whole connected labels at the same intervals.
   if (obj.name) {
-    drawTextOnCanalPath(ctx, obj.points, obj.name, zoom);
+    drawTextOnCanalPath(ctx, obj.points, obj.name, zoom, obj.width || DIMENSIONS.CANAL_WIDTH);
   }
 }
 
@@ -589,9 +589,9 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
 // joins. So the Urdu name is drawn as whole rotated strings placed along the
 // canal centerline at regular intervals (every ~5 acres), kept upright, in
 // Jameel Noori Nastaleeq — repeating the same way the English name does.
-function drawCanalNameUrduEditor(ctx, points, text, zoom) {
-  const cfWorld = canalNameFont();
-  const cf = screenClampedFont(cfWorld, zoom, 12, 64);
+function drawCanalNameUrduEditor(ctx, points, text, zoom, width) {
+  // Proportional to the canal's own width — fills the whole canal, stays inside the banks
+  const cf = Math.max(12 / zoom, canalNameFont(width));
   const segLens = [];
   let totalLen = 0;
   for (let i = 0; i < points.length - 1; i++) {
@@ -637,11 +637,11 @@ function drawCanalNameUrduEditor(ctx, points, text, zoom) {
 // Draws text characters along the canal centerline so the label follows the
 // canal geometry (straight or curved). Repeats every `repeatSpacing` feet.
 // 5 acres ≈ 1100 ft of canal frontage (1 acre = 220 ft frontage).
-function drawTextOnCanalPath(ctx, points, text, zoom) {
+function drawTextOnCanalPath(ctx, points, text, zoom, width) {
   if (!points || points.length < 2 || !text) return;
-  if (isUrduText(text)) { drawCanalNameUrduEditor(ctx, points, text, zoom); return; }
-  const cfWorld = canalNameFont();
-  const cf = screenClampedFont(cfWorld, zoom, 12, 64);
+  if (isUrduText(text)) { drawCanalNameUrduEditor(ctx, points, text, zoom, width); return; }
+  // Proportional to the canal's own width — fills the whole canal, stays inside the banks
+  const cf = Math.max(12 / zoom, canalNameFont(width));
   ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -1121,7 +1121,7 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
     // Canal direction = perpendicular to the outlet shaft; keep upright like canal name text.
     let canalAng = angle + Math.PI / 2;
     if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
-    const cf = canalNameFont(obj.canalWidth || 100);
+    const cf = mogaInCanalFont(obj.canalWidth || 100);
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(canalAng);
