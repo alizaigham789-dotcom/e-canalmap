@@ -106,8 +106,12 @@ export default function MapList() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.LandMap.delete(id),
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
+      // Clear every cache reference to the deleted map so it truly disappears
+      // (the list refetch alone can leave a stale ["map", id] entry).
+      queryClient.removeQueries({ queryKey: ["map", deletedId] });
       queryClient.invalidateQueries({ queryKey: ["maps"] });
+      try { sessionStorage.removeItem(`chakbandi_backup_${deletedId}`); } catch {}
       setDeleteTarget(null);
       toast.success("نقشہ حذف ہو گیا");
     },
