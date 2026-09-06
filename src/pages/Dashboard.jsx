@@ -199,7 +199,7 @@ export default function Dashboard() {
   // Mobile module pages — 6 modules per screen (2 columns × 3 rows), swipe sideways
   const modulePages = useMemo(() => {
     const pages = [];
-    for (let i = 0; i < filteredModules.length; i += 6) pages.push(filteredModules.slice(i, i + 6));
+    for (let i = 0; i < filteredModules.length; i += 8) pages.push(filteredModules.slice(i, i + 8));
     return pages;
   }, [filteredModules]);
 
@@ -305,7 +305,7 @@ export default function Dashboard() {
           {filteredModules.map((mod) => renderCard(mod))}
         </div>
 
-        {/* Mobile carousel — 6 modules per screen (2 cols × 3 rows), swipe sideways */}
+        {/* Mobile carousel — 8 modules per screen (2 cols × 4 rows), swipe sideways */}
         <div className="md:hidden flex-1 min-h-0 flex flex-col">
           <div
             ref={carouselRef}
@@ -320,7 +320,7 @@ export default function Dashboard() {
               {modulePages.map((pg, pi) => (
                 <div
                   key={pi}
-                  className={`min-w-full h-full snap-start grid grid-cols-2 gap-2.5 ${pg.length === 6 ? "grid-rows-3" : "content-start"}`}
+                  className={`min-w-full h-full snap-start grid grid-cols-2 gap-2 ${pg.length === 8 ? "grid-rows-4" : "content-start"}`}
                 >
                   {pg.map((mod) => renderCard(mod))}
                 </div>
