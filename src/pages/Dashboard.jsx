@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
-import { Shield, LogOut, Globe, Database } from "lucide-react";
+import { Shield, LogOut, Globe, Database, Search, X } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import ModuleCard from "@/components/dashboard/ModuleCard";
 import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
@@ -168,6 +168,7 @@ const MODULES = [
 export default function Dashboard() {
   const navigate = useNavigate();
   const [showRecovery, setShowRecovery] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data: currentUser } = useQuery({
     queryKey: ["me"],
@@ -184,6 +185,15 @@ export default function Dashboard() {
     ? [...MODULES].sort((a, b) => (a.id === "deputy-collector" ? -1 : b.id === "deputy-collector" ? 1 : 0))
     : MODULES;
 
+  // Filter modules by search query (matches English or Urdu label)
+  const filteredModules = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return orderedModules;
+    return orderedModules.filter(
+      (m) => m.label.toLowerCase().includes(q) || m.labelUrdu.includes(search.trim())
+    );
+  }, [orderedModules, search]);
+
   const recoveryMaps = [
     { id: "6a50caf149f33fc254601cbd", title: "21671R", moga_number: "21671" },
     { id: "6a50b6f0e3b0ded6529f78ac", title: "28000 R", moga_number: "28000" },
@@ -191,35 +201,35 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 pb-20 antialiased">
-      {/* Header */}
+      {/* Header — compact, app-like on mobile */}
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-sm safe-top">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/30 ring-1 ring-white/30">
               <Globe className="w-5 h-5 text-white" strokeWidth={2.2} />
             </div>
             <div>
               <h1 className="text-sm font-bold font-heading tracking-wide text-slate-800">Canal E Record</h1>
-              <p className="text-[9px] text-slate-400 font-mono uppercase tracking-widest">Irrigation & Canal System</p>
+              <p className="hidden sm:block text-[9px] text-slate-400 font-mono uppercase tracking-widest">Irrigation & Canal System</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <button
               onClick={() => setShowRecovery(true)}
-              className="w-11 h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-slate-100 transition-colors"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-slate-100 transition-colors tap-target"
               title="Backup Recovery"
             >
               <Database className="w-5 h-5" strokeWidth={2} />
             </button>
             {currentUser?.role === "admin" && (
-              <button onClick={() => navigate("/admin")} className="w-11 h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors">
+              <button onClick={() => navigate("/admin")} className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors tap-target">
                 <Shield className="w-5 h-5" strokeWidth={2} />
               </button>
             )}
-            <button onClick={() => navigate("/account")} className="w-11 h-11 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-700 text-sm font-bold hover:bg-blue-200 transition-colors" title="Account & Settings">
+            <button onClick={() => navigate("/account")} className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-700 text-sm font-bold hover:bg-blue-200 transition-colors tap-target" title="Account & Settings">
               {currentUser?.full_name?.[0] || "U"}
             </button>
-            <button onClick={() => base44.auth.logout()} className="w-11 h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-slate-100 transition-colors">
+            <button onClick={() => base44.auth.logout()} className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-slate-100 transition-colors tap-target">
               <LogOut className="w-5 h-5" strokeWidth={2} />
             </button>
           </div>
@@ -229,16 +239,36 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* Greeting */}
-        <div className="mb-5">
+        <div className="mb-4">
           <h2 className="text-lg font-bold font-heading text-slate-800">
             Welcome, {currentUser?.full_name?.split(" ")[0] || "User"}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>ایک ماڈیول منتخب کریں</p>
         </div>
 
+        {/* Search bar — quick module access, app-like */}
+        <div className="mb-4 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search modules..."
+            className="w-full h-11 pl-10 pr-10 rounded-xl bg-white border border-slate-200 text-sm text-slate-700 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
         {/* Module Cards — 2-column grid, responsive on all screens */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-          {orderedModules.map((mod) => {
+          {filteredModules.map((mod) => {
             const needsSub = mod.id === "map-editor" || mod.id === "geo-map" || mod.id === "moga-merge";
             const subLocked = needsSub && !hasAccess;
             const isLocked = !isAdmin && mod.locked;
