@@ -1262,12 +1262,13 @@ export default function Editor() {
   };
 
   const handleCloseWithSave = async () => {
+    if (closingWithSave) return; // guard against double-clicks
     setClosingWithSave(true);
-    commitActiveDrafts();
-    forceSaveRef.current = true;
-    const allObjs = dsmRef.current.objects;
-    const parcels = dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length;
     try {
+      commitActiveDrafts();
+      forceSaveRef.current = true;
+      const allObjs = dsmRef.current.objects;
+      const parcels = dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length;
       const drawing_data = await storeDrawingData(allObjs);
       await base44.entities.LandMap.update(mapId, {
         drawing_data,
@@ -1286,10 +1287,14 @@ export default function Editor() {
       queryClient.invalidateQueries({ queryKey: ["maps"] });
       loadedNonParcelCountRef.current = countNonParcels(allObjs);
       setShowCloseDialog(false);
-      setClosingWithSave(false);
       navigate("/");
-    } catch {
-      toast.error("محفوظ ناکام — دوبارہ کوشش کریں");
+    } catch (err) {
+      // Show the REAL failure reason so the user knows why it didn't close,
+      // and keep the dialog open so they can retry or choose "close without save".
+      toast.error(`محفوظ ناکام: ${err?.message || "نامعلوم نقص"}`, { duration: 4000 });
+    } finally {
+      // Always reset the loading flag — even on error — so the button never
+      // gets stuck disabled (which was why "Save & Close" did nothing).
       setClosingWithSave(false);
     }
   };
