@@ -724,8 +724,9 @@ export default function Editor() {
     setCanalDraft(prev => prev ? [...prev, pt] : [pt]);
   }, []);
 
-  const handleCanalFinish = useCallback(() => {
+  const handleCanalFinish = useCallback((skipSave = false) => {
     const draft = canalDraftRef.current;
+    canalDraftRef.current = null; // prevent duplicate commits before the state re-render
     setCanalDraft(null);
     if (draft && draft.length >= 2) {
       const canal = createCanal(draft);
@@ -747,7 +748,7 @@ export default function Editor() {
       dsmRef.current.add(canal);
       setSelectedId(canal.id);
       syncObjects();
-      saveRef.current();
+      if (!skipSave) saveRef.current();
     }
   }, [mapData]);
 
@@ -755,15 +756,16 @@ export default function Editor() {
     setChakbandiDraft(prev => prev ? [...prev, pt] : [pt]);
   }, []);
 
-  const handleChakbandiFinish = useCallback(() => {
+  const handleChakbandiFinish = useCallback((skipSave = false) => {
     const draft = chakbandiDraftRef.current;
+    chakbandiDraftRef.current = null; // prevent duplicate commits before the state re-render
     setChakbandiDraft(null);
     if (draft && draft.length >= 2) {
       const cb = createChakbandi(draft);
       dsmRef.current.add(cb);
       setSelectedId(cb.id);
       syncObjects();
-      saveRef.current();
+      if (!skipSave) saveRef.current();
     }
   }, []);
 
@@ -771,8 +773,9 @@ export default function Editor() {
     setKhalDraft(prev => prev ? [...prev, pt] : [pt]);
   }, []);
 
-  const handleKhalFinish = useCallback(() => {
+  const handleKhalFinish = useCallback((skipSave = false) => {
     const draft = khalDraftRef.current;
+    khalDraftRef.current = null; // prevent duplicate commits before the state re-render
     setKhalDraft(null);
     if (draft && draft.length >= 2) {
       const khal = createKhal(draft);
@@ -792,7 +795,7 @@ export default function Editor() {
       dsmRef.current.add(khal);
       setSelectedId(khal.id);
       syncObjects();
-      saveRef.current();
+      if (!skipSave) saveRef.current();
     }
   }, []);
 
@@ -800,15 +803,16 @@ export default function Editor() {
     setRoadDraft(prev => prev ? [...prev, pt] : [pt]);
   }, []);
 
-  const handleRoadFinish = useCallback(() => {
+  const handleRoadFinish = useCallback((skipSave = false) => {
     const draft = roadDraftRef.current;
+    roadDraftRef.current = null; // prevent duplicate commits before the state re-render
     setRoadDraft(null);
     if (draft && draft.length >= 2) {
       const road = createRoad(draft);
       dsmRef.current.add(road);
       setSelectedId(road.id);
       syncObjects();
-      saveRef.current();
+      if (!skipSave) saveRef.current();
     }
   }, []);
 
@@ -816,15 +820,16 @@ export default function Editor() {
     setRailwayDraft(prev => prev ? [...prev, pt] : [pt]);
   }, []);
 
-  const handleRailwayFinish = useCallback(() => {
+  const handleRailwayFinish = useCallback((skipSave = false) => {
     const draft = railwayDraftRef.current;
+    railwayDraftRef.current = null; // prevent duplicate commits before the state re-render
     setRailwayDraft(null);
     if (draft && draft.length >= 2) {
       const railway = createRailway(draft);
       dsmRef.current.add(railway);
       setSelectedId(railway.id);
       syncObjects();
-      saveRef.current();
+      if (!skipSave) saveRef.current();
     }
   }, []);
 
@@ -832,15 +837,16 @@ export default function Editor() {
     setBridgeDraft(prev => prev ? [...prev, pt] : [pt]);
   }, []);
 
-  const handleBridgeFinish = useCallback(() => {
+  const handleBridgeFinish = useCallback((skipSave = false) => {
     const draft = bridgeDraftRef.current;
+    bridgeDraftRef.current = null; // prevent duplicate commits before the state re-render
     setBridgeDraft(null);
     if (draft && draft.length >= 2) {
       const bridge = createBridge(draft);
       dsmRef.current.add(bridge);
       setSelectedId(bridge.id);
       syncObjects();
-      saveRef.current();
+      if (!skipSave) saveRef.current();
     }
   }, []);
 
@@ -848,17 +854,32 @@ export default function Editor() {
     setMouzaDraft(prev => prev ? [...prev, pt] : [pt]);
   }, []);
 
-  const handleMouzaFinish = useCallback(() => {
+  const handleMouzaFinish = useCallback((skipSave = false) => {
     const draft = mouzaDraftRef.current;
+    mouzaDraftRef.current = null; // prevent duplicate commits before the state re-render
     setMouzaDraft(null);
     if (draft && draft.length >= 2) {
       const mouza = createMouza(draft);
       dsmRef.current.add(mouza);
       setSelectedId(mouza.id);
       syncObjects();
-      saveRef.current();
+      if (!skipSave) saveRef.current();
     }
   }, []);
+
+  // COMMIT ACTIVE DRAFTS — a line drawn on the canvas but not yet finished
+  // (double-tap / Stop) still lives in draft state only. Saving used to persist
+  // the map WITHOUT that visible line — the "chakbandi draws but never saves"
+  // bug. Every explicit save first commits any in-progress line drafts.
+  const commitActiveDrafts = () => {
+    handleChakbandiFinish(true);
+    handleCanalFinish(true);
+    handleKhalFinish(true);
+    handleRoadFinish(true);
+    handleRailwayFinish(true);
+    handleBridgeFinish(true);
+    handleMouzaFinish(true);
+  };
 
   const handleOutletStart = useCallback((pt, canalId) => {
     // Find the canal width to size the moga arrow proportionally
@@ -1209,6 +1230,7 @@ export default function Editor() {
 
   const handleSave = async (extra = {}) => {
     if (!mapId) return;
+    commitActiveDrafts();
     const parcels = dsmRef.current.getByType("mustateel").length +
       dsmRef.current.getByType("muraba").length;
     const drawing_data = await storeDrawingData(dsmRef.current.objects);
@@ -1241,6 +1263,7 @@ export default function Editor() {
 
   const handleCloseWithSave = async () => {
     setClosingWithSave(true);
+    commitActiveDrafts();
     forceSaveRef.current = true;
     const allObjs = dsmRef.current.objects;
     const parcels = dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length;
@@ -1278,6 +1301,7 @@ export default function Editor() {
 
   const handlePermanentSave = async () => {
     if (!mapId) return;
+    commitActiveDrafts();
     const allObjs = dsmRef.current.objects;
     const parcels = dsmRef.current.getByType("mustateel").length +
       dsmRef.current.getByType("muraba").length;
