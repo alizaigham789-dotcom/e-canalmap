@@ -16,19 +16,23 @@ let rowIdSeq = 1;
 // the user names. Add Row to keep drawing more lines.
 export default function MustateelGridDialog({ zoom, pan, canvasRef, objects = [], onAddObjects, onClose }) {
   const [rows, setRows] = useState([
-    { id: rowIdSeq++, start: 1, count: 10, below: "", direction: "ltr" },
+    { id: rowIdSeq++, start: 1, end: 10, below: "", direction: "ltr" },
   ]);
 
   const updateRow = (id, key, val) => setRows(rs => rs.map(r => r.id === id ? { ...r, [key]: val } : r));
 
   const addRow = () => setRows(rs => {
     const last = rs[rs.length - 1];
-    const lastCount = Number(last.count) || 0;
+    const lastStart = Number(last.start) || 0;
+    const lastEnd = Number(last.end) || lastStart;
+    // Next row continues from the previous End # (chaining), keeping the same length.
+    const lastCount = Math.max(1, lastEnd - lastStart + 1);
+    const nextStart = lastEnd + 1;
     return [...rs, {
       id: rowIdSeq++,
-      start: lastCount + 1,
-      count: last.count || 10,
-      below: String(lastCount),
+      start: nextStart,
+      end: nextStart + lastCount - 1,
+      below: String(lastEnd),
       direction: last.direction === "ltr" ? "rtl" : "ltr",
     }];
   });
@@ -63,7 +67,8 @@ export default function MustateelGridDialog({ zoom, pan, canvasRef, objects = []
     const generated = [];
     rows.forEach((row, idx) => {
       const start = Number(row.start) || 0;
-      const count = Math.max(1, Number(row.count) || 1);
+      const end = Number(row.end) || start;
+      const count = Math.max(1, end - start + 1);
       const anchor = findAnchor(row.below, generated);
       let x = anchor ? anchor.x : ox;
       let y = anchor ? anchor.y + mustH : oy;
@@ -90,7 +95,7 @@ export default function MustateelGridDialog({ zoom, pan, canvasRef, objects = []
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="w-4 h-4" /></button>
         </div>
         <p className="text-[11px] text-slate-500 leading-relaxed">
-          Each row draws a line of mustateels. Set <b>Start #</b>, how many (<b>Next</b>), which upper mustateel to start <b>below</b>, and the direction. Each row aligns directly under the mustateel number you enter.
+          Each row draws mustateels numbered from <b>Start #</b> to <b>End #</b>, starting <b>below</b> the mustateel number you enter. The next row continues from the previous End #.
         </p>
 
         <div className="space-y-2">
@@ -108,8 +113,8 @@ export default function MustateelGridDialog({ zoom, pan, canvasRef, objects = []
                   <Input type="number" value={row.start} onChange={e => updateRow(row.id, "start", e.target.value)} className="h-7 text-xs font-mono" />
                 </div>
                 <div>
-                  <label className="text-[9px] text-slate-400 uppercase block mb-0.5">Next</label>
-                  <Input type="number" value={row.count} onChange={e => updateRow(row.id, "count", e.target.value)} className="h-7 text-xs font-mono" />
+                  <label className="text-[9px] text-slate-400 uppercase block mb-0.5">End #</label>
+                  <Input type="number" value={row.end} onChange={e => updateRow(row.id, "end", e.target.value)} className="h-7 text-xs font-mono" />
                 </div>
                 <div>
                   <label className="text-[9px] text-slate-400 uppercase block mb-0.5">Below #</label>
