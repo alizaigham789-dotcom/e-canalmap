@@ -267,10 +267,14 @@ export default function GeoMap() {
 
   // All maps matching the current district/tehsil/village/rajbah filter — used to show
   // every moga of the selected mouza (or rajbah) together on the satellite map.
+  // All maps matching the current district/tehsil/village/rajbah filter — used to show
+  // every moga of the selected mouza (or rajbah) together on the satellite map.
+  // Rajbah is included so selecting a canal shows only that canal's mogas.
   const villageMaps = useMemo(() => (maps || []).filter(m =>
     (!filters.district || m.district === filters.district) &&
     (!filters.tehsil || m.tehsil === filters.tehsil) &&
-    (!filters.village || m.village === filters.village)
+    (!filters.village || m.village === filters.village) &&
+    (!filters.rajbah || m.rajbah === filters.rajbah)
   ), [maps, filters]);
 
   // Suggested next mogas — unplaced maps of the selected mouza that can chain
@@ -1569,7 +1573,7 @@ export default function GeoMap() {
         onMenu={() => setEntered(false)}
         rajbahs={rajbahs}
         rajbah={filters.rajbah}
-        mogas={placedMogas}
+        mogas={filterMogas}
         selectedMoga={selectedMoga}
         onSelectMoga={handleSelectMogaTop}
         murabas={mogaMustateels.map(m => m.mustNo)}
