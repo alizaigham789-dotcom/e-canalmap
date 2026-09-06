@@ -73,6 +73,20 @@ export default function Editor() {
   const urlParams = new URLSearchParams(window.location.search);
   const mapId = urlParams.get("id");
 
+  // Auto-sync: invalidate every cache that depends on this map's data so
+  // GeoMap, Warabandi Parat, Form 1, Fard Masrooba and Naqsha 27B all refresh
+  // instantly whenever a moga is saved in the editor.
+  const syncLinkedCaches = () => {
+    queryClient.removeQueries({ queryKey: ["geomap-map", mapId] });
+    queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+    queryClient.invalidateQueries({ queryKey: ["parat-records"] });
+    queryClient.invalidateQueries({ queryKey: ["warabandi-moga-maps"] });
+    queryClient.invalidateQueries({ queryKey: ["form1-registers-all"] });
+    queryClient.invalidateQueries({ queryKey: ["form1-register"] });
+    queryClient.invalidateQueries({ queryKey: ["fard-masrooba-records"] });
+    queryClient.invalidateQueries({ queryKey: ["naqsha27b"] });
+  };
+
   const [activeTool, setActiveTool] = useState("select");
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 100, y: 80 });
@@ -269,10 +283,8 @@ export default function Editor() {
       } } : old);
       // Refresh the maps list so MapList shows updated parcel count / status
       queryClient.invalidateQueries({ queryKey: ["maps"] });
-      // Auto-sync to GeoMap: invalidate its overlay cache so a saved Moga record
-      // instantly reflects as an updated overlay when GeoMap is open / next opened.
-      queryClient.removeQueries({ queryKey: ["geomap-map", mapId] });
-      queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+      // Auto-sync: GeoMap, Warabandi Parat, Form 1, Fard, Naqsha 27B all refresh
+      syncLinkedCaches();
       // Server-side peak snapshot — upsert when non-parcel count hits a new high
       trySnapshot();
     },
@@ -1317,8 +1329,7 @@ export default function Editor() {
           viewport: vp, editorSettings: settings, force: true,
         }).catch(() => {});
         queryClient.invalidateQueries({ queryKey: ["maps"] });
-        queryClient.removeQueries({ queryKey: ["geomap-map", mapId] });
-        queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+        syncLinkedCaches();
       } catch (err) {
         // Local backups already written above; the unmount cleanup + auto-heal
         // on next open will recover. Surface nothing — the user has already left.
@@ -1378,8 +1389,7 @@ export default function Editor() {
       // Auto-heal on next load will restore from the server snapshot if a higher peak exists.
       loadedNonParcelCountRef.current = nonParcels;
       queryClient.invalidateQueries({ queryKey: ["maps"] });
-      queryClient.removeQueries({ queryKey: ["geomap-map", mapId] });
-      queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+      syncLinkedCaches();
       // Force-sync the server snapshot so it reflects the current state (including
       // parcel deletions). Without this, the snapshot keeps stale deleted mustateels
       // and the recovery logic could restore them on next load.

@@ -1015,6 +1015,38 @@ export default function GeoMap() {
     if (mapRef.current) mapRef.current.flyTo(mapRef.current.getCenter(), 18, { duration: 0.6 });
   };
 
+  // Delete the selected moga's LandMap record entirely — removes it from both
+  // GeoMap (overlay) and the Map Editor (map list), not just the placement.
+  const handleDeleteMap = async () => {
+    if (!selectedMapId) return;
+    if (!window.confirm("یہ موگہ نقشہ مکمل حذف ہو جائے گا — GeoMap اور Map Editor دونوں سے۔")) return;
+    suppressAutoSaveRef.current = selectedMapId;
+    try {
+      await base44.entities.LandMap.delete(selectedMapId);
+    } catch (e) {
+      toast.error("حذف نہیں ہوا");
+      suppressAutoSaveRef.current = null;
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["geomap-maps"] });
+    queryClient.invalidateQueries({ queryKey: ["maps"] });
+    queryClient.removeQueries({ queryKey: ["geomap-map", selectedMapId] });
+    queryClient.removeQueries({ queryKey: ["map", selectedMapId] });
+    queryClient.invalidateQueries({ queryKey: ["form1-registers-all"] });
+    queryClient.invalidateQueries({ queryKey: ["form1-register"] });
+    setOverlay(null);
+    setPlacementPoint(null);
+    setLowerLeftPoint(null);
+    setPlacingStep(0);
+    setSelectedMapId("");
+    setSelectedMoga("");
+    setActiveMustateelIds(new Set());
+    setOverlaySaved(false);
+    setSelectedMuraba("");
+    suppressAutoSaveRef.current = null;
+    toast.success("موگہ نقشہ حذف ہو گیا");
+  };
+
   // ─── AUTO-ARRANGE MOGAS ──────────────────────────────────────
   // Uses the currently-selected (placed) map as the anchor, then matches
   // mustateel Khasra numbers across all other moga maps of the same village
@@ -1633,6 +1665,7 @@ export default function GeoMap() {
           onRotationChange={handleRotationChange}
           onRePlace={handleRePlace}
           onClear={handleClearOverlay}
+          onDelete={handleDeleteMap}
           onSave={handleSaveOverlay}
           saving={savingOverlay}
           saved={overlaySaved}
