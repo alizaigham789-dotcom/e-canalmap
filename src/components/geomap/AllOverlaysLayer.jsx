@@ -36,7 +36,12 @@ export default function AllOverlaysLayer({ maps, excludeId, zoom, showCanals = t
         m.geo_rotation || 0
       );
       if (!transform) continue;
-      out.push({ id: m.id, objects, transform });
+      // Parse this map's editor color settings so canal colours match the Map Editor
+      let colors = {};
+      if (m.editor_settings) {
+        try { colors = (JSON.parse(m.editor_settings)).colors || {}; } catch {}
+      }
+      out.push({ id: m.id, objects, transform, colors });
 
       const skip = new Set();
       for (const o of objects) {
@@ -69,6 +74,7 @@ export default function AllOverlaysLayer({ maps, excludeId, zoom, showCanals = t
           skipLabels={skipMap.get(o.id) || EMPTY}
           showCanals={showCanals}
           chakbandiOnly={chakbandiOnly}
+          colorSettings={o.colors}
         />
       ))}
     </>

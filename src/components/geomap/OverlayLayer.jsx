@@ -171,10 +171,32 @@ function AcreLabel({ obj, latlngs, zoom }) {
 }
 
 // ─── CANAL: flat style with parallel boundaries + water fill ─────
-// Same as map editor: two parallel blue boundary lines, blue water fill between.
-function CanalLine({ obj, latlngs, zoom, transform }) {
+// Reads colors from the canal object's own properties (set in the Map Editor
+// PropertiesPanel) and the editor's global colorSettings, so changes made in
+// the Map Editor are reflected here automatically.
+const CANAL_STYLE_COLORS = {
+  flat:        { fill: "#29A9E8", stroke: "#1688C7" },
+  "3d":        { fill: "#1d6fa5", stroke: "#1d6fa5" },
+  concrete:    { fill: "#9ca3af", stroke: "#6b7280" },
+  earth:       { fill: "#a16207", stroke: "#78350f" },
+  water:       { fill: "#1e90ff", stroke: "#0c6fb3" },
+  "3dwater":   { fill: "#0ea5e9", stroke: "#0284c7" },
+  green:       { fill: "#16a34a", stroke: "#15803d" },
+  greenWater:  { fill: "#16a34a", stroke: "#1d4ed8" },
+  engineering: { fill: "#2563eb", stroke: "#1e40af" },
+  dashed:      { fill: "#3b82f6", stroke: "#2563eb" },
+  custom:      { fill: "#29A9E8", stroke: "#1688C7" },
+};
+function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
   const fontSize = labelFontSize(zoom);
   const halfW = (obj.width || DIMENSIONS.CANAL_WIDTH || 14) / 2;
+  const C = colorSettings || {};
+  // Resolve canal colours: per-object custom → global editor settings → style default
+  const styleKey = obj.canalStyle || "flat";
+  const styleDef = CANAL_STYLE_COLORS[styleKey] || CANAL_STYLE_COLORS.flat;
+  const fillColor = obj.fillColor || C.canalFill || styleDef.fill;
+  const strokeColor = obj.strokeColor || C.canalStroke || styleDef.stroke;
+  const fillOpacity = obj.fillOpacity ?? 0.70;
 
   // Compute parallel offset in canvas space, then transform to lat/lng
   const { leftLine, rightLine, fillLatLngs } = useMemo(() => {
@@ -219,25 +241,27 @@ function CanalLine({ obj, latlngs, zoom, transform }) {
   }
 
   const boundaryWeight = Math.max(1.5, 3 - (18 - zoom) * 0.2);
+  const isDashed = styleKey === "dashed";
 
   return (
     <>
-      {/* Water fill polygon */}
+      {/* Water fill polygon — carries the canal name tooltip so it renders at the canal centre */}
       <Polygon
         positions={fillLatLngs.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: "#2B7AB8", fillColor: "#A3DAF4", fillOpacity: 0.70, weight: 0, opacity: 0 }}
-      />
+        pathOptions={{ color: strokeColor, fillColor, fillOpacity, weight: 0, opacity: 0 }}
+      >
+        {obj.name && (
+          <Tooltip permanent direction="center" className="canal-label" opacity={0.95}>
+            <span style={{ fontSize: `${fontSize * 0.68}px`, fontWeight: 700, color: "#FFD700", backgroundColor: "rgba(0,0,0,0.5)", padding: "1px 4px", borderRadius: 2 }}>
+              {obj.name}
+            </span>
+          </Tooltip>
+        )}
+      </Polygon>
       {/* Left boundary */}
-      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#2B7AB8", weight: boundaryWeight, opacity: 0.9 }} />
+      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined }} />
       {/* Right boundary */}
-      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#2B7AB8", weight: boundaryWeight, opacity: 0.9 }} />
-      {obj.name && (
-        <Tooltip permanent direction="center" className="canal-label" opacity={0.95}>
-          <span style={{ fontSize: `${fontSize * 0.68}px`, fontWeight: 700, color: "#FFD700", backgroundColor: "rgba(0,0,0,0.5)", padding: "1px 4px", borderRadius: 2 }}>
-            {obj.name}
-          </span>
-        </Tooltip>
-      )}
+      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined }} />
     </>
   );
 }
@@ -521,7 +545,7 @@ function computeKillaLatLngs(obj, transform) {
   });
 }
 
-export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels, showCanals = true, chakbandiOnly = false }) {
+export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels, showCanals = true, chakbandiOnly = false, colorSettings }) {
   const map = useMap();
   // Create the dedicated top pane ONCE (guarded) — multiple OverlayLayer
   // instances share it. react-leaflet's <Pane> throws if the name already
@@ -592,7 +616,7 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
           case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} />;
           case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} />;
           case "acre": return <MemoAcre key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
-          case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
+          case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} colorSettings={colorSettings} />;
           case "khal": return <MemoKhal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
           case "road": return <MemoRoad key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
           case "mouza": return <MemoMouza key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;

@@ -1394,6 +1394,7 @@ export default function GeoMap() {
             gridAll={allocTool === "cell"}
             onMustateelClick={handleMustateelClick}
             showCanals={showCanals}
+            colorSettings={editorSettings?.colors || {}}
           />
         )}
         {/* Chakbandi lines render in a FINAL pass — after all mustateels from
