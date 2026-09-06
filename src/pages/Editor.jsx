@@ -173,6 +173,10 @@ export default function Editor() {
 
   saveRef.current = async () => {
     if (!mapId) return;
+    // Commit any active line drafts (canal/chakbandi/khal/road/mouza drawn but
+    // not yet finished) BEFORE saving — otherwise an auto-save that fires while
+    // a line is mid-draw persists the map WITHOUT that visible line.
+    commitActiveDrafts();
     // DATA-LOSS SAFEGUARD: If non-parcel objects (canals, chakbandis, khals, mouzas, etc.)
     // suddenly dropped to 0 while the server had some, block auto-save to prevent
     // overwriting good server data with partial state. User can use "Permanent Save"
@@ -401,7 +405,7 @@ export default function Editor() {
         // Protect the recovered state with a fresh server peak snapshot
         saveMaxSnapshot(mapData.id, {
           title: mapData.title, moga_number: mapData.moga_number,
-          objects: best.objects, drawingData: recoveredPayload.drawing_data,
+          objects: best.objects, drawingData: dsmRef.current.serialize(),
           viewport: recoveredPayload.viewport, editorSettings: recoveredPayload.editor_settings,
         }).then(result => { if (result != null) serverMaxNonParcelRef.current = result; }).catch(() => {});
       }
@@ -1289,7 +1293,7 @@ export default function Editor() {
       // Force-sync the snapshot so deleted parcels are not restored on reopen
       saveMaxSnapshot(mapId, {
         title: mapData?.title, moga_number: mapData?.moga_number,
-        objects: allObjs, drawingData: drawing_data,
+        objects: allObjs, drawingData: dsmRef.current.serialize(),
         viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
         editorSettings: settingsRef.current(),
         force: true,
@@ -1362,7 +1366,7 @@ export default function Editor() {
       // and the recovery logic could restore them on next load.
       saveMaxSnapshot(mapId, {
         title: mapData?.title, moga_number: mapData?.moga_number,
-        objects: allObjs, drawingData: drawing_data,
+        objects: allObjs, drawingData: dsmRef.current.serialize(),
         viewport: JSON.stringify({ zoom: zoomRef.current, pan: panRef.current }),
         editorSettings: settingsRef.current(),
         force: true,
@@ -1391,6 +1395,8 @@ export default function Editor() {
   };
 
   const handleStatusChange = async (status) => {
+    // Commit active drafts so a status change never discards an unfinished line.
+    commitActiveDrafts();
     // Always include drawing_data + editor_settings — prevents objects/settings from being wiped on server
     const drawing_data = await storeDrawingData(dsmRef.current.objects);
     saveMutation.mutate({
