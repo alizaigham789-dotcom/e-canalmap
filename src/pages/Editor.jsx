@@ -364,47 +364,49 @@ export default function Editor() {
       const snapViewport = maxSnap?.viewport || null;
       const snapSettings = maxSnap?.editor_settings || null;
 
-      // Build candidate list with non-parcel + total counts
-      const candidates = [];
-      if (serverObjs.length > 0) candidates.push({ src: "server", objects: serverObjs, viewport: mapData.viewport, settings: mapData.editor_settings, np: serverNonParcelCount, total: serverObjs.length });
-      if (sessionObjs) candidates.push({ src: "session", objects: sessionObjs, viewport: sessionViewport, settings: sessionSettings, np: countNonParcels(sessionObjs), total: sessionObjs.length, clearSession: true });
-      if (idbObjs) candidates.push({ src: "indexeddb", objects: idbObjs, viewport: idbViewport, settings: idbSettings, np: countNonParcels(idbObjs), total: idbObjs.length });
-      if (snapObjs) candidates.push({ src: "server_snapshot", objects: snapObjs, viewport: snapViewport, settings: snapSettings, np: countNonParcels(snapObjs), total: snapObjs.length });
+      // ── SERVER IS THE SOURCE OF TRUTH ──────────────────────────────────
+      // The server holds the latest saved state (including intentional
+      // deletions/edits). Backups/snapshots are ONLY used to recover when the
+      // server is catastrophically empty (all objects lost). This ensures user
+      // edits always persist — old snapshots with more non-parcels no longer
+      // revert the user's latest deletions/changes.
+      let chosen = serverObjs;
+      let chosenViewport = mapData.viewport;
+      let chosenSettings = mapData.editor_settings;
+      let recoveredFrom = null;
 
-      // Pick the version with the most non-parcel objects (recovers lost canals/chakbandis).
-      // When non-parcel counts are EQUAL, prefer the SERVER — it holds the latest
-      // user-intended state (including intentional parcel deletions). Backups/
-      // snapshots only win when they have STRICTLY more non-parcels, so deleted
-      // mustateels are not restored from a stale snapshot with a higher total count.
-      let best = null;
-      for (const c of candidates) {
-        if (!best) { best = c; continue; }
-        if (c.np > best.np) { best = c; continue; }
-        if (c.np === best.np) {
-          if (c.src === "server" && best.src !== "server") { best = c; continue; }
-          if (best.src === "server") continue; // server already wins — skip non-server
-          if (c.total > best.total) best = c; // among non-server: prefer higher total
+      if (serverObjs.length === 0) {
+        // Server is empty — recover the most complete version from
+        // sessionStorage → IndexedDB → server snapshot (catastrophic data loss).
+        const candidates = [];
+        if (sessionObjs) candidates.push({ src: "session", objects: sessionObjs, viewport: sessionViewport, settings: sessionSettings, total: sessionObjs.length, clearSession: true });
+        if (idbObjs) candidates.push({ src: "indexeddb", objects: idbObjs, viewport: idbViewport, settings: idbSettings, total: idbObjs.length });
+        if (snapObjs) candidates.push({ src: "server_snapshot", objects: snapObjs, viewport: snapViewport, settings: snapSettings, total: snapObjs.length });
+        let best = null;
+        for (const c of candidates) { if (!best || c.total > best.total) best = c; }
+        if (best && best.objects.length > 0) {
+          chosen = best.objects;
+          chosenViewport = best.viewport;
+          chosenSettings = best.settings;
+          recoveredFrom = best.src;
+          if (best.clearSession) { try { sessionStorage.removeItem(backupKey); } catch {} }
         }
       }
-      if (!best) best = { src: "server", objects: [], viewport: mapData.viewport, settings: mapData.editor_settings, np: 0, total: 0 };
 
-      // Hydrate from the winning source
-      dsmRef.current = new DrawingStateManager(best.objects);
-      loadedNonParcelCountRef.current = best.np; // safeguard baseline (lowerable on explicit delete)
-      serverMaxNonParcelRef.current = Math.max(maxSnap?.non_parcel_count || 0, best.np); // peak tracker (only rises)
+      // Hydrate from the chosen source
+      dsmRef.current = new DrawingStateManager(chosen);
+      loadedNonParcelCountRef.current = countNonParcels(chosen);
+      serverMaxNonParcelRef.current = Math.max(maxSnap?.non_parcel_count || 0, countNonParcels(chosen));
       setObjects([...dsmRef.current.objects]);
       syncUndoRedo();
-      if (best.viewport) {
-        try { const vp = JSON.parse(best.viewport); if (vp.zoom) setZoom(vp.zoom); if (vp.pan) setPan(vp.pan); } catch {}
+      if (chosenViewport) {
+        try { const vp = JSON.parse(chosenViewport); if (vp.zoom) setZoom(vp.zoom); if (vp.pan) setPan(vp.pan); } catch {}
       }
-      applySettings(best.settings);
+      applySettings(chosenSettings);
 
-      // ── AUTO-HEAL: if a backup/snapshot won over the server (more non-parcels),
-      // push it back to the server AND refresh the peak snapshot so the recovered
-      // state is permanently protected cross-device. This is how 21671R / 28000 R
-      // get restored — whichever source has the canals/chakbandis heals the server.
-      if (best.src !== "server" && best.np > serverNonParcelCount) {
-        if (best.clearSession) { try { sessionStorage.removeItem(backupKey); } catch {} }
+      // Auto-heal: only when we recovered from a backup (server was empty),
+      // push the recovered state back to the server so it's protected cross-device.
+      if (recoveredFrom) {
         const recoveredPayload = {
           drawing_data: await storeDrawingData(dsmRef.current.objects),
           total_parcels: dsmRef.current.getByType("mustateel").length + dsmRef.current.getByType("muraba").length,
@@ -414,14 +416,12 @@ export default function Editor() {
         queryClient.setQueryData(["map", mapData.id], (old) => old ? { ...old, ...recoveredPayload } : old);
         base44.entities.LandMap.update(mapData.id, recoveredPayload).then(() => {
           queryClient.invalidateQueries({ queryKey: ["maps"] });
-          const srcLabel = best.src === "session" ? "session backup" : best.src === "server_snapshot" ? "server snapshot" : "crash backup";
-          toast.success(`Recovered ${best.np} non-parcel objects from ${srcLabel}`, { duration: 4000 });
+          toast.success(`Recovered ${dsmRef.current.objects.length} objects from ${recoveredFrom}`, { duration: 4000 });
         }).catch(() => {});
-        saveBackup(mapData.id, { objects: best.objects, viewport: best.viewport, editorSettings: best.settings });
-        // Protect the recovered state with a fresh server peak snapshot
+        saveBackup(mapData.id, { objects: chosen, viewport: chosenViewport, editorSettings: chosenSettings });
         saveMaxSnapshot(mapData.id, {
           title: mapData.title, moga_number: mapData.moga_number,
-          objects: best.objects, drawingData: dsmRef.current.serialize(),
+          objects: chosen, drawingData: dsmRef.current.serialize(),
           viewport: recoveredPayload.viewport, editorSettings: recoveredPayload.editor_settings,
         }).then(result => { if (result != null) serverMaxNonParcelRef.current = result; }).catch(() => {});
       }
