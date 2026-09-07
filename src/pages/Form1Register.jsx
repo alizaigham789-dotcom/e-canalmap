@@ -442,7 +442,7 @@ export default function Form1Register() {
           ) : (
             <div className="space-y-3">
               {filteredMoga.map(reg => {
-                const rows = parseRows(reg.rows_json).map(row => ({ ...row, moga_number: reg.moga_number || "", channel_name: reg.channel_name || "", outlet_side: reg.outlet_side || "" }));
+                const rows = parseRows(reg.rows_json).map(row => ({ ...row, moga_number: resolveMoga(reg) || "", channel_name: reg.channel_name || "", outlet_side: reg.outlet_side || "" }));
                 const groups = groupAllocations(rows);
                 const isOpen = expandedId === reg.id;
                 return (
