@@ -561,9 +561,9 @@ export default function GeoMap() {
           }
         }
         const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
-        if (valid.length && mapRef.current) {
+        if (valid.length) {
           const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
-          mapRef.current.flyToBounds(bounds, { padding: [80, 80], duration: 0.8 });
+          safeFly(m => m.flyToBounds(bounds, { padding: [80, 80], duration: 0.8 }));
         }
       }
     } else {
@@ -593,9 +593,9 @@ export default function GeoMap() {
             }
           }
           const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
-          if (valid.length && mapRef.current) {
+          if (valid.length) {
             const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
-            mapRef.current.flyToBounds(bounds, { padding: [80, 80], duration: 0.8 });
+            safeFly(m => m.flyToBounds(bounds, { padding: [80, 80], duration: 0.8 }));
           }
           toast.success(`نیا موگہ پہلے نقشے سے جڑ گیا — کہسڑا ${attach.matchedLabel}`);
           return;
@@ -640,7 +640,7 @@ export default function GeoMap() {
     const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
     if (valid.length) {
       const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
-      mapRef.current.flyToBounds(bounds, { padding: [60, 60], maxZoom: 19, duration: 0.6 });
+      safeFly(m => m.flyToBounds(bounds, { padding: [60, 60], maxZoom: 19, duration: 0.6 }));
     }
   }, [viewMode, viewTransform, mapObjects, villageMaps, selectedMapId, selectedMap, selectedMoga]);
 
@@ -666,7 +666,7 @@ export default function GeoMap() {
     const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
     if (valid.length) {
       const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
-      mapRef.current.flyToBounds(bounds, { padding: [50, 50], maxZoom: 19, duration: 0.8 });
+      safeFly(m => m.flyToBounds(bounds, { padding: [50, 50], maxZoom: 19, duration: 0.8 }));
     }
   }, [selectedMoga, activeOverlay, mapObjects]);
 
@@ -837,6 +837,16 @@ export default function GeoMap() {
 
   // ─── HANDLERS ─────────────────────────────────────────────────
   const handleMapInstance = useCallback((m) => { mapRef.current = m; }, []);
+
+  // Guard fly operations — Leaflet throws "Cannot read properties of undefined
+  // (reading '_leaflet_pos')" if flyTo/flyToBounds runs before the map's panes
+  // are fully initialized (effect firing right after mount). whenReady defers
+  // safely and runs immediately when the map is already ready.
+  const safeFly = useCallback((fn) => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.whenReady(() => { try { fn(map); } catch {} });
+  }, []);
 
   const handleZoomIn = () => mapRef.current?.flyTo(mapRef.current.getCenter(), mapRef.current.getZoom() + 1);
   const handleZoomOut = () => mapRef.current?.flyTo(mapRef.current.getCenter(), mapRef.current.getZoom() - 1);
