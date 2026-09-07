@@ -652,7 +652,11 @@ export default function GeoMap() {
   // mogaNumber on each mustateel, so we don't filter by it).
   useEffect(() => {
     if (!selectedMoga || !activeOverlay?.transform || !mapRef.current) return;
-    const mogaObjs = mapObjects.filter(o => o.type === "mustateel" || o.type === "muraba");
+    let mogaObjs = mapObjects.filter(o => o.type === "mustateel" || o.type === "muraba");
+    if (selectedMoga) {
+      const tagged = mogaObjs.filter(o => o.mogaNumber === selectedMoga);
+      if (tagged.length > 0) mogaObjs = tagged;
+    }
     if (mogaObjs.length === 0) return;
     const allLatLngs = [];
     for (const o of mogaObjs) {
@@ -693,14 +697,18 @@ export default function GeoMap() {
   // Mustateel area verification
   const mustateelAreas = useMemo(() => {
     if (!overlay?.transform) return [];
-    return mapObjects
-      .filter(o => o.type === "mustateel")
+    let musts = mapObjects.filter(o => o.type === "mustateel");
+    if (selectedMoga) {
+      const tagged = musts.filter(o => o.mogaNumber === selectedMoga);
+      if (tagged.length > 0) musts = tagged;
+    }
+    return musts
       .map(o => {
         const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
         const latlngs = corners.map(([cx, cy]) => overlay.transform.transform(cx, cy));
         return { id: o.id, label: o.label || "", acres: sqMetersToUnits(polygonAreaSqMeters(latlngs)).acres, expected: parcelExpectedAcres(o) };
       });
-  }, [overlay, mapObjects]);
+  }, [overlay, mapObjects, selectedMoga]);
 
   // ─── MAP CLICK HANDLER ───────────────────────────────────────
   const handleMapClick = useCallback((latlng) => {
@@ -1617,7 +1625,7 @@ export default function GeoMap() {
           className={`absolute top-14 left-3 z-[1000] flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
         >
           <Layers className="w-3.5 h-3.5" />
-          Map Overlay
+          GIS Overlay
         </button>
       )}
 

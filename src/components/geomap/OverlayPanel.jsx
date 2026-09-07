@@ -43,7 +43,7 @@ export default function OverlayPanel({
       <div className="flex items-center justify-between px-3 h-10 bg-[#15212E] sticky top-0 z-20">
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-blue-400" />
-          <span className="text-xs font-bold text-white tracking-wide">Map Overlay</span>
+          <span className="text-xs font-bold text-white tracking-wide">GIS Overlay</span>
         </div>
         <button onClick={onClose} className="w-6 h-6 flex items-center justify-center text-white/60 hover:text-white shrink-0">
           <X className="w-4 h-4" />
@@ -144,9 +144,15 @@ export default function OverlayPanel({
               </div>
             </div>
 
-            {/* Area verification — one-line summary + scrollable mustateel list */}
+            {/* Area verification — selected moga name + one-line summary + mustateel list */}
             {mustateels.length > 0 && (
               <div className="bg-white/5 rounded-lg p-2 space-y-1">
+                {selectedMoga && (
+                  <div className="flex items-center gap-1.5 text-[10px] text-cyan-300 font-bold pb-1 border-b border-white/10">
+                    <MapPin className="w-3 h-3" />
+                    موگہ {selectedMoga}
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-[10px]">
                   <span className="text-white/70 font-semibold">Area Verification</span>
                   <span className="font-mono">
