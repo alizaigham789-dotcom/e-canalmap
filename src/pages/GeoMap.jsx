@@ -995,8 +995,15 @@ export default function GeoMap() {
     if (selectedMapId) suppressAutoSaveRef.current = selectedMapId;
     // Persistently remove the saved overlay placement so it doesn't auto-restore.
     if (selectedMapId) {
+      // Optimistic: clear the placement in the caches INSTANTLY so the moga
+      // disappears from AllOverlaysLayer — no waiting for the refetch to land.
+      const clearedId = selectedMapId;
+      queryClient.setQueryData(["geomap-maps"], (old) =>
+        Array.isArray(old) ? old.map(m => m.id === clearedId ? { ...m, geo_placement_lat: null, geo_placement_lng: null, geo_rotation: 0 } : m) : old
+      );
+      queryClient.setQueryData(["geomap-map", clearedId], (old) => old ? { ...old, geo_placement_lat: null, geo_placement_lng: null, geo_rotation: 0 } : old);
       try {
-        await base44.entities.LandMap.update(selectedMapId, {
+        await base44.entities.LandMap.update(clearedId, {
           geo_placement_lat: null,
           geo_placement_lng: null,
           geo_rotation: 0,
