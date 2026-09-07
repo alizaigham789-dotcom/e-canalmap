@@ -1284,7 +1284,9 @@ export default function Editor() {
   // On "Save & Close", force-save to the server then navigate away.
   // On "Close without saving", navigate immediately (local backups still exist).
   const handleCloseRequest = () => {
-    if (dsmRef.current.objects.length === 0 || !loadedMapIdRef.current) {
+    // Only ask to save when there are actually unsaved edits (dirty). If nothing
+    // changed (or the last edit was already auto-saved), close immediately.
+    if (!loadedMapIdRef.current || !dirtyRef.current) {
       navigate("/");
       return;
     }
