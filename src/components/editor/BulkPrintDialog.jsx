@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Printer, Loader2, Eye, EyeOff } from "lucide-react";
 
-export default function BulkPrintDialog({ open, onClose, onPrint, selectedCount }) {
+function BulkPrintDialog({ open, onClose, onPrint, selectedCount }) {
   const [pageSize, setPageSize] = useState("A4");
   const [orientation, setOrientation] = useState("landscape");
   const [bwMode, setBwMode] = useState(false);
@@ -107,3 +107,6 @@ export default function BulkPrintDialog({ open, onClose, onPrint, selectedCount 
     </Dialog>
   );
 }
+
+export default BulkPrintDialog;
+export { BulkPrintDialog };

@@ -111,6 +111,9 @@ export default function MapList() {
       // (the list refetch alone can leave a stale ["map", id] entry).
       queryClient.removeQueries({ queryKey: ["map", deletedId] });
       queryClient.removeQueries({ queryKey: ["geomap-map", deletedId] });
+      // Optimistic: drop the deleted map from the list cache instantly so it
+      // disappears even before the refetch lands.
+      queryClient.setQueryData(["maps"], (old) => old ? old.filter(m => m.id !== deletedId) : old);
       queryClient.invalidateQueries({ queryKey: ["maps"] });
       // Refresh GeoMap's map list so the deleted moga disappears from the
       // overlay and the moga cascade (placedMogas / filterMogas) instantly.
@@ -613,10 +616,11 @@ export default function MapList() {
             کیا آپ واقعی <b>{deleteTarget?.title || "Untitled Map"}</b> کو مستقل طور پر حذف کرنا چاہتے ہیں؟ یہ واپس نہیں ہو گا۔
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="text-slate-600 gap-1.5">
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)} className="text-slate-600 gap-1.5">
               نہیں (No)
             </Button>
             <Button
+              type="button"
               onClick={() => deleteMutation.mutate(deleteTarget.id)}
               disabled={deleteMutation.isPending}
               className="bg-red-600 hover:bg-red-500 gap-2"
