@@ -313,14 +313,11 @@ export default function GeoMap() {
     return [...s].sort((a, b) => +a - +b);
   }, [maps]);
 
-  // Top moga cascade: Map View = only overlaid (placed) mogas; Overlay mode =
-  // every editor moga of the filtered mouza PLUS all placed mogas (so saved ones
-  // always show even when the village/rajbah filter changes).
-  const cascadeMogas = useMemo(() => {
-    if (viewMode === "view") return placedMogas;
-    const s = new Set([...filterMogas, ...placedMogas]);
-    return [...s].sort((a, b) => +a - +b);
-  }, [viewMode, filterMogas, placedMogas]);
+  // Top moga cascade — ONLY mogas currently placed (overlaid) on the satellite
+  // map. When a moga's overlay is removed (geo_placement nulled), it disappears
+  // from this dropdown immediately. Unplaced mogas are selected & placed via the
+  // GIS Overlay panel's Map Select dropdown instead.
+  const cascadeMogas = useMemo(() => placedMogas, [placedMogas]);
 
   const availableMogas = useMemo(() => {
     const s = new Set();
