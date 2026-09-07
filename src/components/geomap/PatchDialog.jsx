@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Save } from "lucide-react";
+import { formatCnic, formatPhone } from "@/lib/formatIds";
 
 const CROPS = ["Wheat", "Gram", "Fodder", "Mustard", "Rice", "Sugarcane", "Cotton", "Maize", "Orchard", "Abadi", "Khali", "Other"];
 const LAND_TYPES = ["CCA", "Fish Farm", "Forest", "Garden"];
@@ -106,8 +107,8 @@ export default function PatchDialog({ open, data, info, onSave, onClose }) {
           <div className="grid grid-cols-2 gap-2">
             <Field label="زمیندار کا نام (Name)" value={farmer_name} onChange={setFarmer} full />
             <Field label="ولدیت (Father)" value={father} onChange={setFather} full />
-            <Field label="فون نمبر (Phone)" value={phone} onChange={setPhone} placeholder="03xx-xxxxxxx" />
-            <Field label="شناختی کارڈ (CNIC)" value={cnic} onChange={setCnic} placeholder="xxxxx-xxxxxxx-x" />
+            <Field label="فون نمبر (Phone)" value={phone} onChange={setPhone} placeholder="03xx-xxxxxxx" format={formatPhone} />
+            <Field label="شناختی کارڈ (CNIC)" value={cnic} onChange={setCnic} placeholder="xxxxx-xxxxxxx-x" format={formatCnic} />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -121,8 +122,8 @@ export default function PatchDialog({ open, data, info, onSave, onClose }) {
             <div className="grid grid-cols-2 gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2">
               <div className="col-span-2 text-[9px] font-bold text-amber-700 uppercase">Tenant Details</div>
               <Field label="Tenant Name" value={tenant_name} onChange={setTenantName} full />
-              <Field label="Tenant Phone" value={tenant_phone} onChange={setTenantPhone} placeholder="03xx-xxxxxxx" />
-              <Field label="Tenant CNIC" value={tenant_cnic} onChange={setTenantCnic} placeholder="xxxxx-xxxxxxx-x" />
+              <Field label="Tenant Phone" value={tenant_phone} onChange={setTenantPhone} placeholder="03xx-xxxxxxx" format={formatPhone} />
+              <Field label="Tenant CNIC" value={tenant_cnic} onChange={setTenantCnic} placeholder="xxxxx-xxxxxxx-x" format={formatCnic} />
             </div>
           )}
 
@@ -138,14 +139,14 @@ export default function PatchDialog({ open, data, info, onSave, onClose }) {
   );
 }
 
-function Field({ label, value, onChange, placeholder, full }) {
+function Field({ label, value, onChange, placeholder, full, format }) {
   return (
     <div className={full ? "col-span-2" : ""}>
       <label className="text-[9px] font-bold text-slate-500 uppercase block mb-0.5">{label}</label>
       <input
         value={value}
         placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(format ? format(e.target.value) : e.target.value)}
         className="w-full h-8 text-xs px-2 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
       />
     </div>

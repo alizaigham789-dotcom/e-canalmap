@@ -1,16 +1,33 @@
 import React, { useState, useEffect } from "react";
 import { X, Save, AlertTriangle, Plus, Trash2, Lock } from "lucide-react";
 import { remainingKanal, acreAllocations, acresFromKanal } from "@/lib/allocationEngine";
+import { formatCnic, formatPhone } from "@/lib/formatIds";
 
 const CROPS = ["Wheat", "Gram", "Fodder", "Mustard", "Rice", "Sugarcane", "Cotton", "Maize", "Orchard", "Abadi", "Khali", "Other"];
 const LAND_TYPES = ["CCA", "Fish Farm", "Forest", "Garden"];
 const TENURE = ["Owner", "Tenant"];
 
+// Positions already taken by other farmers in this acre (1-8)
+const takenPositions = (allocations, mustateelNo, acre) => {
+  const taken = [];
+  for (const a of acreAllocations(allocations, mustateelNo, acre)) {
+    if (Array.isArray(a.positions)) taken.push(...a.positions);
+  }
+  return taken;
+};
+
+// Auto-select the first N available kanal positions (1-8 minus taken)
+const autoSelectPositions = (allocations, mustateelNo, acre, count) => {
+  const taken = takenPositions(allocations, mustateelNo, acre);
+  return [1, 2, 3, 4, 5, 6, 7, 8].filter((p) => !taken.includes(p)).slice(0, count);
+};
+
 // Cell-based allocation: pick a whole mustateel, toggle its acre subdivisions,
-// set kanal per acre, and add more mustateels in the same dialog. Acres already
-// fully allotted (8 kanal) are locked. Tenant fields appear when tenure=Tenant.
+// select which kanal positions (1-8) inside each acre the farmer gets, and add
+// more mustateels in the same dialog. Acres already fully allotted (8 kanal) are
+// locked. Tenant fields appear when tenure=Tenant.
 export default function AllocationDialog({ open, data, mustateels, allocations, info, onAllocate, onClose }) {
-  const [groups, setGroups] = useState([]); // [{ mustNo, acres: { acre: kanal } }]
+  const [groups, setGroups] = useState([]); // [{ mustNo, acres: { acre: kanal }, positions: { acre: [pos...] } }]
   const [farmer_name, setFarmer] = useState("");
   const [father, setFather] = useState("");
   const [phone, setPhone] = useState("");
@@ -26,7 +43,8 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
   useEffect(() => {
     if (open && data) {
       const rem = remainingKanal(allocations, data.mustNo, data.acre);
-      setGroups([{ mustNo: data.mustNo, acres: { [data.acre]: Math.min(8, rem || 8) } }]);
+      const sel = autoSelectPositions(allocations, data.mustNo, data.acre, Math.min(8, rem || 8));
+      setGroups([{ mustNo: data.mustNo, acres: { [data.acre]: sel.length }, positions: { [data.acre]: sel } }]);
       setFarmer("");
       setFather("");
       setPhone("");
@@ -49,47 +67,84 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
     setGroups((prev) =>
       prev.map((g, i) => {
         if (i !== gi) return g;
-        const next = { ...g, acres: { ...g.acres } };
-        if (next.acres[acre]) delete next.acres[acre];
-        else next.acres[acre] = Math.min(8, remainingKanal(allocations, g.mustNo, acre) || 8);
-        return next;
+        const acres = { ...g.acres };
+        const positions = { ...(g.positions || {}) };
+        if (acres[acre]) {
+          delete acres[acre];
+          delete positions[acre];
+        } else {
+          const rem = remainingKanal(allocations, g.mustNo, acre);
+          const sel = autoSelectPositions(allocations, g.mustNo, acre, Math.min(8, rem || 8));
+          acres[acre] = sel.length;
+          positions[acre] = sel;
+        }
+        return { ...g, acres, positions };
       })
     );
   };
 
-  const setAcreKanal = (gi, acre, k) => {
-    setGroups((prev) => prev.map((g, i) => (i === gi ? { ...g, acres: { ...g.acres, [acre]: k } } : g)));
+  // Toggle a single kanal position (1-8) inside an acre — the farmer picks which
+  // side / which specific kanal slots they want. Kanal count = selected positions.
+  const togglePosition = (gi, acre, pos) => {
+    setGroups((prev) =>
+      prev.map((g, i) => {
+        if (i !== gi) return g;
+        const positions = g.positions || {};
+        const cur = positions[acre] || [];
+        let next;
+        if (cur.includes(pos)) {
+          next = cur.filter((p) => p !== pos);
+        } else {
+          const rem = remainingKanal(allocations, g.mustNo, acre);
+          if (cur.length >= rem) return g; // can't select more than remaining
+          next = [...cur, pos].sort((a, b) => a - b);
+        }
+        return { ...g, positions: { ...positions, [acre]: next }, acres: { ...g.acres, [acre]: next.length } };
+      })
+    );
   };
 
-  // Select every non-locked acre in a mustateel at once (default kanal = full remaining).
+  // Select all available kanal positions in an acre
+  const selectAllPositions = (gi, acre) => {
+    setGroups((prev) =>
+      prev.map((g, i) => {
+        if (i !== gi) return g;
+        const sel = autoSelectPositions(allocations, g.mustNo, acre, 8);
+        return { ...g, positions: { ...(g.positions || {}), [acre]: sel }, acres: { ...g.acres, [acre]: sel.length } };
+      })
+    );
+  };
+
+  // Select every non-locked acre in a mustateel at once (all available kanal positions).
   const selectAllAcres = (gi) => {
     setGroups((prev) =>
       prev.map((g, i) => {
         if (i !== gi) return g;
         const count = acreCountFor(g.mustNo);
         const acres = {};
+        const positions = {};
         for (let acre = 1; acre <= count; acre++) {
           const rem = remainingKanal(allocations, g.mustNo, acre);
-          if (rem > 0) acres[acre] = Math.min(8, rem);
+          if (rem > 0) {
+            const sel = autoSelectPositions(allocations, g.mustNo, acre, rem);
+            acres[acre] = sel.length;
+            positions[acre] = sel;
+          }
         }
-        return { ...g, acres };
+        return { ...g, acres, positions };
       })
     );
   };
 
   // Deselect every acre in a mustateel group.
-  const clearAcres = (gi) => {
-    setGroups((prev) => prev.map((g, i) => (i === gi ? { ...g, acres: {} } : g)));
-  };
+  const clearAcres = (gi) => setGroups((prev) => prev.map((g, i) => (i === gi ? { ...g, acres: {}, positions: {} } : g)));
 
-  const changeMustateel = (gi, mustNo) => {
-    setGroups((prev) => prev.map((g, i) => (i === gi ? { mustNo, acres: {} } : g)));
-  };
+  const changeMustateel = (gi, mustNo) => setGroups((prev) => prev.map((g, i) => (i === gi ? { mustNo, acres: {}, positions: {} } : g)));
 
   const addGroup = () => {
     const used = new Set(groups.map((g) => g.mustNo));
     const next = mustateels.find((m) => !used.has(m.mustNo));
-    if (next) setGroups((prev) => [...prev, { mustNo: next.mustNo, acres: {} }]);
+    if (next) setGroups((prev) => [...prev, { mustNo: next.mustNo, acres: {}, positions: {} }]);
   };
 
   const removeGroup = (gi) => setGroups((prev) => prev.filter((_, i) => i !== gi));
@@ -120,6 +175,7 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
           phone: phone.trim(),
           cnic: cnic.trim(),
           kanal: k,
+          positions: g.positions?.[acre] || [],
           acres: acresFromKanal(k),
           crop_name: crop,
           land_type,
@@ -214,17 +270,51 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
                     );
                   })}
                 </div>
+                {/* Kanal position selector — 8 slots per acre (2 rows × 4 cols).
+                    The farmer picks which specific kanal positions (which side) they want. */}
                 {Object.entries(g.acres).length > 0 && (
-                  <div className="mt-2 space-y-1.5">
+                  <div className="mt-2 space-y-2">
                     {Object.entries(g.acres).map(([acre, k]) => {
                       const rem = remainingKanal(allocations, g.mustNo, +acre);
                       const maxK = Math.min(8, rem);
+                      const taken = takenPositions(allocations, g.mustNo, +acre);
+                      const selected = g.positions?.[acre] || [];
                       return (
-                        <div key={acre} className="flex items-center gap-2 bg-slate-50 rounded px-2 py-1">
-                          <span className="font-mono text-[10px] font-bold text-slate-700 w-16">{g.mustNo}/{acre}</span>
-                          <input type="range" min={1} max={maxK} value={Math.min(k, maxK)} onChange={(e) => setAcreKanal(gi, +acre, +e.target.value)} className="flex-1 accent-green-600" />
-                          <span className="text-[10px] font-mono font-bold text-green-700 w-10 text-right">{Math.min(k, maxK)} K</span>
-                          <button onClick={() => setAcreKanal(gi, +acre, maxK)} className="text-[9px] font-bold px-1.5 h-6 rounded bg-green-600 text-white hover:bg-green-700">All</button>
+                        <div key={acre} className="bg-slate-50 rounded px-2 py-1.5">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-mono text-[10px] font-bold text-slate-700">{g.mustNo}/{acre}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-mono font-bold text-green-700">{selected.length} K</span>
+                              <button onClick={() => selectAllPositions(gi, +acre)} className="text-[9px] font-bold px-1.5 h-5 rounded bg-green-600 text-white hover:bg-green-700">All</button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-4 gap-1">
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((pos) => {
+                              const isTaken = taken.includes(pos);
+                              const isSel = selected.includes(pos);
+                              const atMax = selected.length >= maxK;
+                              return (
+                                <button
+                                  key={pos}
+                                  disabled={isTaken}
+                                  onClick={() => togglePosition(gi, +acre, pos)}
+                                  title={isTaken ? "دوسرے زمیندار کی کنال" : `کنال پوزیشن ${pos}`}
+                                  className={`h-7 text-[10px] rounded font-bold border flex items-center justify-center ${
+                                    isTaken
+                                      ? "bg-slate-300 text-slate-500 border-slate-300 cursor-not-allowed"
+                                      : isSel
+                                      ? "bg-green-600 text-white border-green-600"
+                                      : atMax
+                                      ? "bg-slate-100 text-slate-400 border-slate-200"
+                                      : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-green-100"
+                                  }`}
+                                >
+                                  {isTaken ? <Lock className="w-2.5 h-2.5" /> : pos}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="text-[8px] text-slate-400 mt-1 text-center">8 کنال پوزیشن · منتخب کریں کہ کون سی سائیڈ کی کنال چاہیے (L۱‒۴ / R۵‒۸)</div>
                         </div>
                       );
                     })}
@@ -243,8 +333,8 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
           <div className="grid grid-cols-2 gap-2">
             <Field label="زمیندار کا نام (Name)" value={farmer_name} onChange={setFarmer} full />
             <Field label="ولدیت (Father)" value={father} onChange={setFather} full />
-            <Field label="فون نمبر (Phone)" value={phone} onChange={setPhone} placeholder="03xx-xxxxxxx" />
-            <Field label="شناختی کارڈ (CNIC)" value={cnic} onChange={setCnic} placeholder="xxxxx-xxxxxxx-x" />
+            <Field label="فون نمبر (Phone)" value={phone} onChange={setPhone} placeholder="03xx-xxxxxxx" format={formatPhone} />
+            <Field label="شناختی کارڈ (CNIC)" value={cnic} onChange={setCnic} placeholder="xxxxx-xxxxxxx-x" format={formatCnic} />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -260,8 +350,8 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
                 <AlertTriangle className="w-3 h-3" /> Tenant Details
               </div>
               <Field label="Tenant Name" value={tenant_name} onChange={setTenantName} full />
-              <Field label="Tenant Phone" value={tenant_phone} onChange={setTenantPhone} placeholder="03xx-xxxxxxx" />
-              <Field label="Tenant CNIC" value={tenant_cnic} onChange={setTenantCnic} placeholder="xxxxx-xxxxxxx-x" />
+              <Field label="Tenant Phone" value={tenant_phone} onChange={setTenantPhone} placeholder="03xx-xxxxxxx" format={formatPhone} />
+              <Field label="Tenant CNIC" value={tenant_cnic} onChange={setTenantCnic} placeholder="xxxxx-xxxxxxx-x" format={formatCnic} />
             </div>
           )}
 
@@ -274,11 +364,16 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
   );
 }
 
-function Field({ label, value, onChange, placeholder, full }) {
+function Field({ label, value, onChange, placeholder, full, format }) {
   return (
     <div className={full ? "col-span-2" : ""}>
       <label className="text-[9px] font-bold text-slate-500 uppercase block mb-0.5">{label}</label>
-      <input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="w-full h-8 text-xs px-2 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-green-400" />
+      <input
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(format ? format(e.target.value) : e.target.value)}
+        className="w-full h-8 text-xs px-2 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-green-400"
+      />
     </div>
   );
 }
