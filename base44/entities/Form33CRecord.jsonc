@@ -21,6 +21,11 @@
     "signatures_json": {
       "type": "string",
       "description": "JSON string of signature metadata"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description / notes for this record (up to 1000 characters)",
+      "maxLength": 1000
     }
   },
   "required": [

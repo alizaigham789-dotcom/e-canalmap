@@ -59,6 +59,11 @@
     "width": {
       "type": "string",
       "description": "Column width class (for table columns)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description / notes for this field config (up to 1000 characters)",
+      "maxLength": 1000
     }
   },
   "required": [

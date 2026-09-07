@@ -24,6 +24,11 @@
       "type": "number",
       "description": "The formula value (e.g. 6 for minutes per acre)"
     },
+    "description": {
+      "type": "string",
+      "description": "Optional description / notes for this formula (up to 1000 characters)",
+      "maxLength": 1000
+    },
     "enabled": {
       "type": "boolean",
       "default": true,

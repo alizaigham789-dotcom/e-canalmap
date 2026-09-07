@@ -49,6 +49,11 @@ export default function Login() {
           <Link to="/register" className="text-primary font-medium hover:underline">
             Create one
           </Link>
+          <div className="mt-3 text-xs text-muted-foreground">
+            <Link to="/about" className="hover:underline">About</Link>
+            {" · "}
+            <Link to="/contact" className="hover:underline">Contact</Link>
+          </div>
         </>
       }
     >

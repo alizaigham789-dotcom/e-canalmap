@@ -12,7 +12,8 @@
         "L",
         "R",
         ""
-      ]
+      ],
+      "description": "Mogha Side L/R"
     },
     "mouza": {
       "type": "string"
@@ -23,6 +24,11 @@
     "data_json": {
       "type": "string",
       "description": "JSON of full parat form state (header, rows, notes, cca, settings)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description / notes for this record (up to 1000 characters)",
+      "maxLength": 1000
     },
     "status": {
       "type": "string",

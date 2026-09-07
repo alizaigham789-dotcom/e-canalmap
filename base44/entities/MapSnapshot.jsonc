@@ -35,6 +35,11 @@
       "type": "number",
       "default": 0,
       "description": "Count of parcel objects (acre/mustateel/muraba) at capture time"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description / notes for this snapshot (up to 1000 characters)",
+      "maxLength": 1000
     }
   },
   "required": [
