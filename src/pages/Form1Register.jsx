@@ -105,8 +105,8 @@ function buildPrintHTML(meta, groups, mode = "moga") {
     const gRajbah = g.channel_name || meta.channel_name || "";
     const nameCell = `
       <div class="fname">${esc(g.farmer_name)} ولد: ${esc(g.father)}</div>
-      <div class="fcnic">شناختی کارڈ: ${esc(cnicFmt)}</div>
-      <div class="fphone">فون نمبر: ${esc(phoneFmt)}</div>
+      <div class="fcnic">شناختی کارڈ: <span dir="ltr" style="display:inline-block; font-family: monospace;">${esc(cnicFmt)}</span></div>
+      <div class="fphone">فون نمبر: <span dir="ltr" style="display:inline-block; font-family: monospace;">${esc(phoneFmt)}</span></div>
       <div class="ftot">کل رقبہ: ${esc(areaStr)}</div>`;
 
     const rowCount = Math.max(acres.length, 1);
@@ -357,8 +357,8 @@ export default function Form1Register() {
                       <td rowSpan={rowCount} className="border border-slate-300 text-center font-mono text-xs text-black">{g.khata_no}</td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-right px-2">
                         <div className="text-lg font-bold text-black whitespace-nowrap">{g.farmer_name} ولد: {g.father}</div>
-                        <div className="text-lg text-black mt-0.5">شناختی کارڈ: {formatCNIC(g.cnic)}</div>
-                        <div className="text-lg text-black mt-0.5">فون نمبر: {formatPhone(g.phone)}</div>
+                        <div className="text-lg text-black mt-0.5">شناختی کارڈ: <span dir="ltr" className="font-mono inline-block">{formatCNIC(g.cnic)}</span></div>
+                        <div className="text-lg text-black mt-0.5">فون نمبر: <span dir="ltr" className="font-mono inline-block">{formatPhone(g.phone)}</span></div>
                         <div className="text-sm font-bold text-black mt-0.5">کل رقبہ: {fmtArea(tot.kanal, tot.marla)}</div>
                       </td>
                     </>
