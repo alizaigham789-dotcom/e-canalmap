@@ -226,6 +226,25 @@ export default function Form1Register() {
     queryFn: () => base44.entities.Form1Register.list("-updated_date", 200),
   });
 
+  // Fetch all LandMaps so each register shows the actual moga number from its
+  // linked map (not the dropdown selection that happened to be active at save).
+  const { data: landMaps = [] } = useQuery({
+    queryKey: ["form1-landmaps"],
+    queryFn: () => base44.entities.LandMap.list("-updated_date", 500),
+  });
+  const mapById = useMemo(() => {
+    const m = new Map();
+    for (const lm of landMaps) m.set(lm.id, lm);
+    return m;
+  }, [landMaps]);
+
+  // Resolve the true moga number for a register: prefer the linked map's
+  // moga_number; fall back to the register's stored value.
+  const resolveMoga = (reg) => {
+    const lm = reg.map_id ? mapById.get(reg.map_id) : null;
+    return (lm?.moga_number || reg.moga_number || "").toString();
+  };
+
   // Mouza-wise: group registers by village/mouza, combine their rows (tagged with moga)
   const mouzaGroups = useMemo(() => {
     const map = new Map();
@@ -236,7 +255,7 @@ export default function Form1Register() {
       }
       const g = map.get(key);
       g.registers.push(r);
-      const rows = parseRows(r.rows_json).map(row => ({ ...row, moga_number: r.moga_number || "", channel_name: r.channel_name || "", outlet_side: r.outlet_side || "" }));
+      const rows = parseRows(r.rows_json).map(row => ({ ...row, moga_number: resolveMoga(r), channel_name: r.channel_name || "", outlet_side: r.outlet_side || "" }));
       g.allRows.push(...rows);
     }
     return [...map.values()];
@@ -263,7 +282,7 @@ export default function Form1Register() {
   }, [mouzaGroups, search]);
 
   const handlePrintMoga = (reg) => {
-    const rows = parseRows(reg.rows_json).map(row => ({ ...row, moga_number: reg.moga_number || "", channel_name: reg.channel_name || "", outlet_side: reg.outlet_side || "" }));
+    const rows = parseRows(reg.rows_json).map(row => ({ ...row, moga_number: resolveMoga(reg), channel_name: reg.channel_name || "", outlet_side: reg.outlet_side || "" }));
     const groups = groupAllocations(rows);
     if (groups.length === 0) { alert("اس رجسٹر میں کوئی ڈیٹا نہیں"); return; }
     const html = buildPrintHTML(reg, groups, "moga");
@@ -441,8 +460,8 @@ export default function Form1Register() {
                         <div className="text-right">
                           <p className="text-sm font-bold text-slate-800">{reg.map_title || "بے نام"}</p>
                           <p className="text-[10px] text-slate-500">
-                            موگہ: {reg.moga_number || "—"} &nbsp;|&nbsp; {reg.channel_name || "—"} &nbsp;|&nbsp; {reg.mouza || reg.village || "—"}
-                          </p>
+                             موگہ: {resolveMoga(reg) || "—"} &nbsp;|&nbsp; {reg.channel_name || "—"} &nbsp;|&nbsp; {reg.mouza || reg.village || "—"}
+                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

@@ -497,7 +497,7 @@ export default function GeoMap() {
     const payload = {
       map_id: selectedMapId,
       map_title: selectedMap?.title || "",
-      moga_number: selectedMoga || "",
+      moga_number: selectedMap?.moga_number || selectedMoga || "",
       village: registerInfo.village,
       tehsil: registerInfo.tehsil,
       district: registerInfo.district,
