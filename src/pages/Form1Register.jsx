@@ -104,8 +104,7 @@ function buildPrintHTML(meta, groups, mode = "moga") {
     const gMoga = `${g.moga_number || meta.moga_number || ""}${g.outlet_side || meta.outlet_side ? `-${g.outlet_side || meta.outlet_side}` : ""}`;
     const gRajbah = g.channel_name || meta.channel_name || "";
     const nameCell = `
-      <div class="fname">${esc(g.farmer_name)}</div>
-      <div class="fsub">ولد: ${esc(g.father)}</div>
+      <div class="fname">${esc(g.farmer_name)} ولد: ${esc(g.father)}</div>
       <div class="fcnic">شناختی کارڈ: ${esc(cnicFmt)}</div>
       <div class="fphone">فون نمبر: ${esc(phoneFmt)}</div>
       <div class="ftot">کل رقبہ: ${esc(areaStr)}</div>`;
@@ -119,7 +118,7 @@ function buildPrintHTML(meta, groups, mode = "moga") {
       if (isFirst) {
         bodyRows += `<td class="sr" rowspan="${rowCount}">${g.serial}</td>`;
         bodyRows += `<td rowspan="${rowCount}" class="rajbah">${esc(gRajbah)}</td>`;
-        bodyRows += `<td rowspan="${rowCount}" class="moga">${esc(gMoga)}</td>`;
+        bodyRows += `<td rowspan="${rowCount}" class="moga" dir="ltr">${esc(gMoga)}</td>`;
         bodyRows += `<td rowspan="${rowCount}" class="dawami"></td><td rowspan="${rowCount}" class="dawami"></td>`;
         bodyRows += `<td rowspan="${rowCount}" class="dawami"></td><td rowspan="${rowCount}" class="dawami"></td>`;
         bodyRows += `<td rowspan="${rowCount}" class="khata">${esc(g.khata_no)}</td>`;
@@ -350,15 +349,14 @@ export default function Form1Register() {
                     <>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center font-bold text-slate-700 bg-slate-100 text-base text-black">{g.serial}</td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center text-sm font-bold text-black">{g.channel_name || ""}</td>
-                      <td rowSpan={rowCount} className="border border-slate-300 text-center text-sm font-bold text-black font-mono">{gMoga}</td>
+                      <td rowSpan={rowCount} dir="ltr" className="border border-slate-300 text-center text-sm font-bold text-black font-mono">{gMoga}</td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center"></td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center"></td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center"></td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center"></td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-center font-mono text-xs text-black">{g.khata_no}</td>
                       <td rowSpan={rowCount} className="border border-slate-300 text-right px-2">
-                        <div className="text-lg font-bold text-black whitespace-nowrap">{g.farmer_name}</div>
-                        <div className="text-lg font-bold text-black mt-0.5 whitespace-nowrap">ولد: {g.father}</div>
+                        <div className="text-lg font-bold text-black whitespace-nowrap">{g.farmer_name} ولد: {g.father}</div>
                         <div className="text-lg text-black mt-0.5">شناختی کارڈ: {formatCNIC(g.cnic)}</div>
                         <div className="text-lg text-black mt-0.5">فون نمبر: {formatPhone(g.phone)}</div>
                         <div className="text-sm font-bold text-black mt-0.5">کل رقبہ: {fmtArea(tot.kanal, tot.marla)}</div>
