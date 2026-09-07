@@ -170,6 +170,7 @@ export default function GeoMap() {
   const [activeMustateelIds, setActiveMustateelIds] = useState(() => new Set());
   const autoPlacedRef = useRef(null);
   const suppressAutoSaveRef = useRef(null); // blocks the debounced placement save while a map's placement is being deleted
+  const lastSavedRef = useRef(""); // tracks last-saved allocations JSON to avoid auto-save loops
   const [savingOverlay, setSavingOverlay] = useState(false);
   const [overlaySaved, setOverlaySaved] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -376,20 +377,70 @@ export default function GeoMap() {
     });
   }, [selectedMap, outletForMoga]);
 
+  // Persist allocations to server (create or update the register record).
+  // Used by the auto-save effect so every allocate/remove/edit survives reload.
+  const persistAllocations = useCallback(async (allocs) => {
+    if (!selectedMapId) return;
+    const kanal = allocs.reduce((s, a) => s + (a.kanal || 0), 0);
+    const payload = {
+      map_id: selectedMapId,
+      map_title: selectedMap?.title || "",
+      moga_number: selectedMap?.moga_number || selectedMoga || "",
+      village: registerInfo.village,
+      tehsil: registerInfo.tehsil,
+      district: registerInfo.district,
+      mouza: registerInfo.mouza,
+      channel_name: registerInfo.channel,
+      outlet_rd: registerInfo.outlet_rd,
+      outlet_side: registerInfo.side,
+      rows_json: JSON.stringify(allocs),
+      total_acres: +(kanal / 8).toFixed(3),
+      total_kanal: +kanal.toFixed(2),
+      status: "draft",
+    };
+    try {
+      if (existingRegId) {
+        await base44.entities.Form1Register.update(existingRegId, payload);
+      } else {
+        const r = await base44.entities.Form1Register.create(payload);
+        if (r?.id) setExistingRegId(r.id);
+      }
+      lastSavedRef.current = JSON.stringify(allocs);
+      queryClient.invalidateQueries({ queryKey: ["form1-register", selectedMapId] });
+    } catch (e) {
+      // silent — user-facing errors surface in the manual Save button flow
+    }
+  }, [selectedMapId, selectedMap, selectedMoga, registerInfo, existingRegId, queryClient]);
+
   // Load saved allocations when a register exists for this moga
   useEffect(() => {
     if (matchingRegister) {
       setExistingRegId(matchingRegister.id);
       try {
-        setAllocations(JSON.parse(matchingRegister.rows_json || "[]"));
+        const loaded = JSON.parse(matchingRegister.rows_json || "[]");
+        setAllocations(loaded);
+        lastSavedRef.current = JSON.stringify(loaded);
       } catch {
         setAllocations([]);
+        lastSavedRef.current = "[]";
       }
     } else {
       setExistingRegId(null);
       setAllocations([]);
+      lastSavedRef.current = "[]";
     }
   }, [matchingRegister]);
+
+  // Auto-save — whenever allocations change (allocate/remove/edit/patch), persist
+  // to the server so they survive page reloads. Skips when the change is just the
+  // data loaded from the server (lastSavedRef matches) to avoid a save loop.
+  useEffect(() => {
+    if (!selectedMapId) return;
+    const json = JSON.stringify(allocations);
+    if (json === lastSavedRef.current) return;
+    const timer = setTimeout(() => { persistAllocations(allocations); }, 1000);
+    return () => clearTimeout(timer);
+  }, [allocations, selectedMapId, persistAllocations]);
 
   const handleCellClick = useCallback((obj, mustNo, acre) => {
     if (kanalUsedInAcre(allocations, mustNo, acre) >= 8) {

@@ -270,7 +270,7 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
                     );
                   })}
                 </div>
-                {/* Kanal slider — defaults to 8 (or remaining), green slider to reduce */}
+                {/* Kanal slider + 8-position grid — slider sets count, grid picks exact positions */}
                 {Object.entries(g.acres).length > 0 && (
                   <div className="mt-2 space-y-2">
                     {Object.entries(g.acres).map(([acre]) => {
@@ -278,6 +278,7 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
                       const maxK = Math.min(8, rem);
                       const selected = g.positions?.[acre] || [];
                       const kanalCount = g.acres[acre] || selected.length || maxK;
+                      const taken = takenPositions(allocations, g.mustNo, +acre);
                       return (
                         <div key={acre} className="bg-slate-50 rounded px-2 py-1.5">
                           <div className="flex items-center justify-between mb-1">
@@ -302,6 +303,34 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
                           <div className="flex justify-between text-[8px] text-slate-400 mt-0.5">
                             <span>1 کنال</span>
                             <span>{maxK} کنال</span>
+                          </div>
+                          {/* 8-kanal position grid — green = selected, red = taken by another farmer, white = available */}
+                          <div className="mt-1.5">
+                            <div className="text-[8px] text-slate-500 font-bold mb-0.5">کنال پوزیشن (1-8) — سبز = منتخب، سرخ = دوسروں کے، سفید = خالی</div>
+                            <div className="flex gap-0.5">
+                              {[1, 2, 3, 4, 5, 6, 7, 8].map((pos) => {
+                                const isTaken = taken.includes(pos);
+                                const isSel = selected.includes(pos);
+                                return (
+                                  <button
+                                    key={pos}
+                                    type="button"
+                                    disabled={isTaken}
+                                    onClick={() => togglePosition(gi, +acre, pos)}
+                                    title={isTaken ? "دوسرے زمیندار کا" : `پوزیشن ${pos}`}
+                                    className={`w-6 h-6 text-[9px] rounded font-bold border transition-colors ${
+                                      isSel
+                                        ? "bg-green-600 text-white border-green-600"
+                                        : isTaken
+                                        ? "bg-red-200 text-red-600 border-red-300 cursor-not-allowed"
+                                        : "bg-white text-slate-600 border-slate-300 hover:bg-green-50 hover:border-green-400"
+                                    }`}
+                                  >
+                                    {pos}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       );
