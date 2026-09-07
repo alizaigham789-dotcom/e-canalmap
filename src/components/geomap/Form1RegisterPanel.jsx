@@ -155,7 +155,7 @@ export default function Form1RegisterPanel({
     }, 600);
   };
 
-  const COLS = ["Sr", "Occupier Name", "Khasra / Kanal / Crop", "Tot K", "Tot Ac", "Moga No", "Rajbah", "Own/Tnt", ""];
+  const COLS = ["Sr", "Occupier Name", "Tot K", "Tot Ac", "Moga No", "Rajbah", "Own/Tnt", ""];
   const GRID_W = 50;
 
   return (
@@ -224,7 +224,6 @@ export default function Form1RegisterPanel({
                             <div className="text-[8px] text-amber-700 font-medium mt-0.5">Tenant: {g.tenant_name} · {g.tenant_phone} · {g.tenant_cnic}</div>
                           )}
                         </td>
-                        <td className="px-1 py-1 border border-slate-200 bg-slate-100"></td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-blue-700">{t.kanal}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-amber-700">{t.acres.toFixed(3)}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono text-[9px] text-slate-700">{info.outlet_rd || "—"}</td>
@@ -239,8 +238,7 @@ export default function Form1RegisterPanel({
                       {/* Row B — Khasra/Kanal combined boxes (khasra top, kanal bottom) */}
                       <tr className="align-top">
                         <td className="px-1 py-1 border border-slate-200 text-center font-bold text-indigo-700 bg-indigo-50">Khasra/Kanal</td>
-                        <td className="px-1 py-1 border border-slate-200"></td>
-                        <td className="px-1 py-1 border border-slate-200" colSpan={6}>
+                        <td className="px-1 py-1 border border-slate-200" colSpan={5}>
                           <div style={{ display: "grid", gridTemplateColumns: tpl }}>
                             {acres.length === 0 ? <span className="text-slate-300">—</span> : acres.map((a, j) => (
                               <div key={j} className="border border-indigo-300 rounded bg-white text-center mx-0.5 overflow-hidden">
@@ -254,8 +252,7 @@ export default function Form1RegisterPanel({
                       {/* Row C — Crop (one name spans consecutive same-crop acres) */}
                       <tr className="align-top">
                         <td className="px-1 py-1 border border-slate-200 text-center font-bold text-emerald-700 bg-emerald-50">Crop</td>
-                        <td className="px-1 py-1 border border-slate-200"></td>
-                        <td className="px-1 py-1 border border-slate-200" colSpan={6}>
+                        <td className="px-1 py-1 border border-slate-200" colSpan={5}>
                           <div style={{ display: "grid", gridTemplateColumns: tpl }}>
                             {runs.length === 0 ? <span className="text-slate-300">—</span> : runs.map((r, j) => (
                               <div key={j} style={{ gridColumn: `span ${r.count}` }} className="border border-emerald-300 rounded px-1 text-center bg-emerald-50 font-bold text-[9px] text-emerald-700 leading-tight mx-0.5">{r.crop || "—"}</div>
