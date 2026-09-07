@@ -42,12 +42,13 @@ function groupAllocations(rows) {
   for (const a of rows) {
     const key = a.cnic ? `cnic:${a.cnic}` : `name:${a.farmer_name || ""}||${a.father || ""}`;
     if (!map.has(key)) {
-      map.set(key, { key, serial: serial++, farmer_name: a.farmer_name || "", father: a.father || "", cnic: a.cnic || "", khata_no: a.khata_no || "", phone: a.phone || "", tenure: a.tenure || "", land_type: a.land_type || "", crop_name: a.crop_name || "", moga_number: "", channel_name: "", outlet_side: "", items: [] });
+      map.set(key, { key, serial: serial++, farmer_name: a.farmer_name || "", father: a.father || "", cnic: a.cnic || "", khata_no: a.khata_no || "", phone: a.phone || "", tenure: a.tenure || "", land_type: a.land_type || "", crop_name: a.crop_name || "", moga_numbers: [], channel_name: "", outlet_side: "", items: [] });
     }
     const g = map.get(key);
     const pick = (k) => { if (!g[k] && a[k]) g[k] = a[k]; };
     pick("father"); pick("cnic"); pick("khata_no"); pick("phone"); pick("tenure"); pick("land_type"); pick("crop_name");
-    pick("moga_number"); pick("channel_name"); pick("outlet_side");
+    pick("channel_name"); pick("outlet_side");
+    if (a.moga_number && !g.moga_numbers.includes(String(a.moga_number))) g.moga_numbers.push(String(a.moga_number));
     if (!g.farmer_name && a.farmer_name) g.farmer_name = a.farmer_name;
     g.items.push(a);
   }
@@ -70,7 +71,8 @@ function farmerAcres(items) {
   const acres = [];
   for (const it of items) {
     if (it.acre_no != null) {
-      acres.push({ khasra: it.khasra || `${it.mustateel_no || ""}/${it.acre_no}`, murba: it.mustateel_no || "", killa: it.acre_no || "", kanal: it.kanal || 0, marla: it.marla || 0, crop: it.crop_name || "" });
+      const moga = it.moga_number ? `${it.moga_number}/` : "";
+      acres.push({ khasra: it.khasra || `${it.mustateel_no || ""}/${it.acre_no}`, murba: moga + (it.mustateel_no || ""), killa: it.acre_no || "", kanal: it.kanal || 0, marla: it.marla || 0, crop: it.crop_name || "" });
     } else if (it.geometry) {
       const khasraStr = it.khasra || "";
       const parts = khasraStr.split(";").filter(Boolean);
@@ -101,7 +103,7 @@ function buildPrintHTML(meta, groups, mode = "moga") {
     const cnicFmt = formatCNIC(g.cnic);
     const phoneFmt = formatPhone(g.phone);
     const areaStr = fmtArea(tot.kanal, tot.marla);
-    const gMoga = `${g.moga_number || meta.moga_number || ""}${g.outlet_side || meta.outlet_side ? `-${g.outlet_side || meta.outlet_side}` : ""}`;
+    const gMoga = g.moga_numbers && g.moga_numbers.length ? g.moga_numbers.join(", ") : (meta.moga_number || "");
     const gRajbah = g.channel_name || meta.channel_name || "";
     const nameCell = `
       <div class="fname">${esc(g.farmer_name)} ولد: ${esc(g.father)}</div>
@@ -339,7 +341,7 @@ export default function Form1Register() {
             const tot = groupTotals(g.items);
             const acres = farmerAcres(g.items);
             const rowCount = Math.max(acres.length, 1);
-            const gMoga = `${g.moga_number || ""}${g.outlet_side ? `-${g.outlet_side}` : ""}`;
+            const gMoga = g.moga_numbers && g.moga_numbers.length ? g.moga_numbers.join(", ") : "";
             return Array.from({ length: rowCount }).map((_, ai) => {
               const acre = acres[ai] || {};
               const isFirst = ai === 0;
