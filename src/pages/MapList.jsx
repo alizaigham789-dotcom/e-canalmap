@@ -178,6 +178,18 @@ export default function MapList() {
     queryFn: () => base44.entities.LandMap.list("-created_date", 50),
   });
 
+  const { data: currentUser } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => base44.auth.me(),
+  });
+
+  // Per-user isolation: a regular user sees only their own maps + template
+  // (dummy/sample) maps. Admins see everything.
+  const visibleMaps = useMemo(() => {
+    if (!currentUser || currentUser.role === "admin") return maps;
+    return maps.filter(m => m.created_by_id === currentUser.id || m.is_template);
+  }, [maps, currentUser]);
+
   // Sub Division + Canal Division names previously entered in existing moga files —
   // shown as dropdown suggestions so users pick instead of re-typing.
   const subDivisions = useMemo(() => [...new Set(maps.map(m => m.tehsil).filter(Boolean))].sort(), [maps]);
@@ -310,7 +322,7 @@ export default function MapList() {
     toast.success(`Generating PDF with ${count} map(s)…`);
   };
 
-  const filtered = maps.filter(m =>
+  const filtered = visibleMaps.filter(m =>
     (m.title || "").toLowerCase().includes(search.toLowerCase()) ||
     (m.village || "").toLowerCase().includes(search.toLowerCase()) ||
     (m.district || "").toLowerCase().includes(search.toLowerCase())
