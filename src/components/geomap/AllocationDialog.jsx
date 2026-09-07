@@ -270,51 +270,39 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
                     );
                   })}
                 </div>
-                {/* Kanal position selector — 8 slots per acre (2 rows × 4 cols).
-                    The farmer picks which specific kanal positions (which side) they want. */}
+                {/* Kanal slider — defaults to 8 (or remaining), green slider to reduce */}
                 {Object.entries(g.acres).length > 0 && (
                   <div className="mt-2 space-y-2">
-                    {Object.entries(g.acres).map(([acre, k]) => {
+                    {Object.entries(g.acres).map(([acre]) => {
                       const rem = remainingKanal(allocations, g.mustNo, +acre);
                       const maxK = Math.min(8, rem);
-                      const taken = takenPositions(allocations, g.mustNo, +acre);
                       const selected = g.positions?.[acre] || [];
+                      const kanalCount = g.acres[acre] || selected.length || maxK;
                       return (
                         <div key={acre} className="bg-slate-50 rounded px-2 py-1.5">
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-mono text-[10px] font-bold text-slate-700">{g.mustNo}/{acre}</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-mono font-bold text-green-700">{selected.length} K</span>
-                              <button onClick={() => selectAllPositions(gi, +acre)} className="text-[9px] font-bold px-1.5 h-5 rounded bg-green-600 text-white hover:bg-green-700">All</button>
-                            </div>
+                            <span className="text-[12px] font-mono font-bold text-green-700">{kanalCount} کنال</span>
                           </div>
-                          <div className="grid grid-cols-4 gap-1">
-                            {[1, 2, 3, 4, 5, 6, 7, 8].map((pos) => {
-                              const isTaken = taken.includes(pos);
-                              const isSel = selected.includes(pos);
-                              const atMax = selected.length >= maxK;
-                              return (
-                                <button
-                                  key={pos}
-                                  disabled={isTaken}
-                                  onClick={() => togglePosition(gi, +acre, pos)}
-                                  title={isTaken ? "دوسرے زمیندار کی کنال" : `کنال پوزیشن ${pos}`}
-                                  className={`h-7 text-[10px] rounded font-bold border flex items-center justify-center ${
-                                    isTaken
-                                      ? "bg-slate-300 text-slate-500 border-slate-300 cursor-not-allowed"
-                                      : isSel
-                                      ? "bg-green-600 text-white border-green-600"
-                                      : atMax
-                                      ? "bg-slate-100 text-slate-400 border-slate-200"
-                                      : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-green-100"
-                                  }`}
-                                >
-                                  {isTaken ? <Lock className="w-2.5 h-2.5" /> : pos}
-                                </button>
-                              );
-                            })}
+                          <input
+                            type="range"
+                            min={1}
+                            max={maxK}
+                            value={kanalCount}
+                            onChange={(e) => {
+                              const count = parseInt(e.target.value, 10);
+                              const sel = autoSelectPositions(allocations, g.mustNo, +acre, count);
+                              setGroups(prev => prev.map((gg, i) => {
+                                if (i !== gi) return gg;
+                                return { ...gg, positions: { ...(gg.positions || {}), [acre]: sel }, acres: { ...gg.acres, [acre]: count } };
+                              }));
+                            }}
+                            className="w-full h-2 accent-green-600 cursor-pointer"
+                          />
+                          <div className="flex justify-between text-[8px] text-slate-400 mt-0.5">
+                            <span>1 کنال</span>
+                            <span>{maxK} کنال</span>
                           </div>
-                          <div className="text-[8px] text-slate-400 mt-1 text-center">8 کنال پوزیشن · منتخب کریں کہ کون سی سائیڈ کی کنال چاہیے (L۱‒۴ / R۵‒۸)</div>
                         </div>
                       );
                     })}

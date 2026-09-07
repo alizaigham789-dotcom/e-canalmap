@@ -351,8 +351,11 @@ export default function GeoMap() {
   });
 
   const matchingRegister = useMemo(
-    () => (form1Existing || []).find((r) => String(r.moga_number) === String(selectedMoga)),
-    [form1Existing, selectedMoga]
+    () => (form1Existing || []).find((r) => {
+      const moga = String(r.moga_number || "");
+      return moga === String(selectedMoga) || (!selectedMoga && moga === String(selectedMap?.moga_number || ""));
+    }),
+    [form1Existing, selectedMoga, selectedMap]
   );
 
   // Pre-fill register header info from the map editor header line
@@ -517,6 +520,8 @@ export default function GeoMap() {
         const r = await base44.entities.Form1Register.create(payload);
         if (r?.id) setExistingRegId(r.id);
       }
+      // Invalidate so the panel reloads fresh data on next open (view & overlay modes)
+      queryClient.invalidateQueries({ queryKey: ["form1-register", selectedMapId] });
       toast.success("Form 1 register saved");
     } catch (e) {
       toast.error("Save failed");
