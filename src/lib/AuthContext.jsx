@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { base44, USE_SUPABASE } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
@@ -32,6 +32,20 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAppState = async () => {
+    // Supabase mode — skip Base44 public-settings; just resolve the Supabase session.
+    if (USE_SUPABASE) {
+      try {
+        setIsLoadingPublicSettings(true);
+        setAuthError(null);
+        setIsLoadingPublicSettings(false);
+        await checkUserAuth();
+      } catch (error) {
+        setIsLoadingPublicSettings(false);
+        setIsLoadingAuth(false);
+      }
+      return;
+    }
+
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
