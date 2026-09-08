@@ -21,35 +21,7 @@ export default function MapScanDialog({ onClose, onAddObjects }) {
     setResult(null);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const res = await base44.integrations.Core.InvokeLLM({
-        prompt: `This is a scanned cadastral / land-record map (Khasra / Chakbandi / Parat). 
-Identify all recognizable land parcels, canals, roads, and boundaries.
-Return a JSON object with an array "objects" where each item has:
-- type: "mustateel" | "muraba" | "acre" | "canal" | "khal" | "road"
-- label: string (parcel number or name, if visible)
-- notes: string (any extra info)
-
-Return ONLY the JSON, no extra text.`,
-        file_urls: [file_url],
-        model: "claude_sonnet_4_6",
-        response_json_schema: {
-          type: "object",
-          properties: {
-            objects: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  type: { type: "string" },
-                  label: { type: "string" },
-                  notes: { type: "string" },
-                },
-              },
-            },
-            summary: { type: "string" },
-          },
-        },
-      });
+      const { data: res } = await base44.functions.invoke('ai-scan-map', { file_url });
       setResult(res);
     } catch (e) {
       setResult({ error: "اسکین ناکام — دوبارہ کوشش کریں" });

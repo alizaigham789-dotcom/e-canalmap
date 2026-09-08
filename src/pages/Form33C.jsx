@@ -62,10 +62,7 @@ function SigUpload({ label, value, onChange }) {
       setEnhancing(true);
       try {
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
-        const result = await base44.integrations.Core.GenerateImage({
-          prompt: `Extract just the handwritten signature or rubber stamp ink from this scanned image. Remove all paper background, making it pure white (#FFFFFF). Keep the ink lines crisp, dark, and at original scale. Do not resize or crop the ink marks. White background only.`,
-          existing_image_urls: [file_url],
-        });
+        const { data: result } = await base44.functions.invoke('ai-enhance-signature', { file_url });
         if (result?.url) onChange(result.url);
       } catch (err) { /* keep original */ }
       setEnhancing(false);
@@ -140,11 +137,8 @@ export default function Form33C() {
     setScanLoading(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `This is a 33-C form or village irrigation billing list. Extract all village rows. Return ONLY tab-separated lines with no headers: VillageName(Urdu)\tTehsil\tTotalBills\tZarAabiana. Leave column empty if not found.`,
-        file_urls: [file_url],
-        model: "claude_sonnet_4_6",
-      });
+      const { data: scanRes } = await base44.functions.invoke('ai-scan-form-33c', { file_url });
+      const result = scanRes?.result || "";
       setLastScanResult(result);
       setPasteText(result);
     } catch (e) {
