@@ -212,7 +212,12 @@ export default function GeoMap() {
     const all = rawMaps || [];
     if (!currentUser) return all;
     if (currentUser.role === "admin") return all;
-    return all.filter((m) => m.created_by_id === currentUser.id);
+    return all.filter((m) =>
+      m.created_by_id === currentUser.id ||
+      m.status === "approved" ||
+      m.status === "published" ||
+      m.is_template
+    );
   }, [rawMaps, currentUser]);
 
   const { data: selectedMap } = useQuery({

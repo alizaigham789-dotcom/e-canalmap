@@ -400,9 +400,9 @@ export default function MapList() {
           <div className="text-center py-16">
             <Map className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-500 text-sm mb-4">
-              {maps.length === 0 ? "No maps yet." : "No maps match your search."}
+              {visibleMaps.length === 0 ? "No maps yet." : "No maps match your search."}
             </p>
-            {maps.length === 0 && (
+            {visibleMaps.length === 0 && (
               <Button onClick={() => { titleTouched.current = false; setVillages(["", ""]); setShowCreate(true); }} className="bg-blue-600 hover:bg-blue-500 gap-2">
                 <Plus className="w-4 h-4" /> Create Map
               </Button>
