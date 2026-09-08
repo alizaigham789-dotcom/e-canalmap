@@ -251,92 +251,102 @@ export default function AllocationDialog({ open, data, mustateels, allocations, 
                     const rem = remainingKanal(allocations, g.mustNo, acre);
                     const selected = !!g.acres[acre];
                     const locked = rem <= 0 && !selected;
+
+                    // Unselected acre → compact number button
+                    if (!selected) {
+                      return (
+                        <button
+                          key={acre}
+                          disabled={locked}
+                          onClick={() => toggleAcre(gi, acre)}
+                          title={locked ? "مکمل الوٹ" : `بقیہ ${rem} کنال`}
+                          className={`w-7 h-7 text-[10px] rounded font-bold border ${
+                            locked
+                              ? "bg-slate-200 text-slate-400 border-slate-200 cursor-not-allowed"
+                              : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                          }`}
+                        >
+                          {locked ? <Lock className="w-2.5 h-2.5 mx-auto" /> : acre}
+                        </button>
+                      );
+                    }
+
+                    // Selected acre → box with kanal positions shown INSIDE it
+                    const maxK = Math.min(8, rem);
+                    const sel = g.positions?.[acre] || [];
+                    const kanalCount = g.acres[acre] || sel.length || maxK;
+                    const taken = takenPositions(allocations, g.mustNo, acre);
+                    // پوری 8 کنال ہو تو پراپرٹیز (پوزیشن گرڈ) کھولنے کی ضرورت نہیں
+                    const isFull = kanalCount >= 8;
+
                     return (
-                      <button
-                        key={acre}
-                        disabled={locked}
-                        onClick={() => toggleAcre(gi, acre)}
-                        title={locked ? "مکمل الوٹ" : `بقیہ ${rem} کنال`}
-                        className={`w-7 h-7 text-[10px] rounded font-bold border ${
-                          selected
-                            ? "bg-green-600 text-white border-green-600"
-                            : locked
-                            ? "bg-slate-200 text-slate-400 border-slate-200 cursor-not-allowed"
-                            : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
-                        }`}
-                      >
-                        {locked ? <Lock className="w-2.5 h-2.5 mx-auto" /> : acre}
-                      </button>
+                      <div key={acre} className="w-full border border-green-400 bg-green-50/50 rounded-lg p-2 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-[10px] font-bold text-slate-700">{g.mustNo}/{acre}</span>
+                          <div className="flex items-center gap-1.5">
+                            {isFull ? (
+                              <span className="text-[10px] font-bold text-green-700">8 کنال — مکمل</span>
+                            ) : (
+                              <span className="text-[11px] font-mono font-bold text-green-700">{kanalCount} کنال</span>
+                            )}
+                            <button
+                              onClick={() => toggleAcre(gi, acre)}
+                              className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-red-600"
+                              title="ایکڑ ہٹائیں"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* ہرا سلائیڈر (چھوٹا) — کنال تعداد منتخب کرنے کے لیے */}
+                        <input
+                          type="range"
+                          min={1}
+                          max={maxK}
+                          value={kanalCount}
+                          onChange={(e) => {
+                            const count = parseInt(e.target.value, 10);
+                            const auto = autoSelectPositions(allocations, g.mustNo, acre, count);
+                            setGroups((prev) => prev.map((gg, i) => {
+                              if (i !== gi) return gg;
+                              return { ...gg, positions: { ...(gg.positions || {}), [acre]: auto }, acres: { ...gg.acres, [acre]: count } };
+                            }));
+                          }}
+                          className="w-full h-1 accent-green-600 cursor-pointer"
+                        />
+
+                        {/* صرف اس ایکڑ کے کنال دکھائیں جب 8 سے کم ہوں — کونسی رکھنیں / کونسی چھوڑنیں */}
+                        {!isFull && (
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((pos) => {
+                              const isTaken = taken.includes(pos);
+                              const isSel = sel.includes(pos);
+                              return (
+                                <button
+                                  key={pos}
+                                  type="button"
+                                  disabled={isTaken}
+                                  onClick={() => togglePosition(gi, acre, pos)}
+                                  title={isTaken ? "دوسرے زمیندار کا" : `پوزیشن ${pos}`}
+                                  className={`w-5 h-5 text-[8px] rounded font-bold border transition-colors ${
+                                    isSel
+                                      ? "bg-green-600 text-white border-green-600"
+                                      : isTaken
+                                      ? "bg-red-200 text-red-600 border-red-300 cursor-not-allowed"
+                                      : "bg-white text-slate-600 border-slate-300 hover:bg-green-50 hover:border-green-400"
+                                  }`}
+                                >
+                                  {pos}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
-                {/* Kanal slider + 8-position grid — slider sets count, grid picks exact positions */}
-                {Object.entries(g.acres).length > 0 && (
-                  <div className="mt-2 space-y-2">
-                    {Object.entries(g.acres).map(([acre]) => {
-                      const rem = remainingKanal(allocations, g.mustNo, +acre);
-                      const maxK = Math.min(8, rem);
-                      const selected = g.positions?.[acre] || [];
-                      const kanalCount = g.acres[acre] || selected.length || maxK;
-                      const taken = takenPositions(allocations, g.mustNo, +acre);
-                      return (
-                        <div key={acre} className="bg-slate-50 rounded px-2 py-1.5">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-mono text-[10px] font-bold text-slate-700">{g.mustNo}/{acre}</span>
-                            <span className="text-[12px] font-mono font-bold text-green-700">{kanalCount} کنال</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={1}
-                            max={maxK}
-                            value={kanalCount}
-                            onChange={(e) => {
-                              const count = parseInt(e.target.value, 10);
-                              const sel = autoSelectPositions(allocations, g.mustNo, +acre, count);
-                              setGroups(prev => prev.map((gg, i) => {
-                                if (i !== gi) return gg;
-                                return { ...gg, positions: { ...(gg.positions || {}), [acre]: sel }, acres: { ...gg.acres, [acre]: count } };
-                              }));
-                            }}
-                            className="w-full h-2 accent-green-600 cursor-pointer"
-                          />
-                          <div className="flex justify-between text-[8px] text-slate-400 mt-0.5">
-                            <span>1 کنال</span>
-                            <span>{maxK} کنال</span>
-                          </div>
-                          {/* 8-kanal position grid — green = selected, red = taken by another farmer, white = available */}
-                          <div className="mt-1.5">
-                            <div className="text-[8px] text-slate-500 font-bold mb-0.5">کنال پوزیشن (1-8) — سبز = منتخب، سرخ = دوسروں کے، سفید = خالی</div>
-                            <div className="flex gap-0.5">
-                              {[1, 2, 3, 4, 5, 6, 7, 8].map((pos) => {
-                                const isTaken = taken.includes(pos);
-                                const isSel = selected.includes(pos);
-                                return (
-                                  <button
-                                    key={pos}
-                                    type="button"
-                                    disabled={isTaken}
-                                    onClick={() => togglePosition(gi, +acre, pos)}
-                                    title={isTaken ? "دوسرے زمیندار کا" : `پوزیشن ${pos}`}
-                                    className={`w-6 h-6 text-[9px] rounded font-bold border transition-colors ${
-                                      isSel
-                                        ? "bg-green-600 text-white border-green-600"
-                                        : isTaken
-                                        ? "bg-red-200 text-red-600 border-red-300 cursor-not-allowed"
-                                        : "bg-white text-slate-600 border-slate-300 hover:bg-green-50 hover:border-green-400"
-                                    }`}
-                                  >
-                                    {pos}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             ))}
             {groups.length < mustateels.length && (
