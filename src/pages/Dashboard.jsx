@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Shield, LogOut, Globe, Database, Search, X } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import ModuleCard from "@/components/dashboard/ModuleCard";
+import CommitsPanel from "@/components/dashboard/CommitsPanel";
 import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
 import { useSubscription } from "@/hooks/useSubscription";
 
@@ -304,6 +305,13 @@ export default function Dashboard() {
         <div className="hidden md:grid grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {filteredModules.map((mod) => renderCard(mod))}
         </div>
+
+        {/* Latest commits from the land mapping engine repo (admin only) */}
+        {isAdmin && (
+          <div className="hidden md:block mt-4 shrink-0">
+            <CommitsPanel defaultRepo="" />
+          </div>
+        )}
 
         {/* Mobile carousel — 8 modules per screen (2 cols × 4 rows), swipe sideways */}
         <div className="md:hidden flex-1 min-h-0 flex flex-col">
