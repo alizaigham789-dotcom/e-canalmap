@@ -298,6 +298,37 @@ CREATE TABLE IF NOT EXISTS naqsha_27b (
   created_by_id   UUID REFERENCES auth.users(id)
 );
 
+-- --- LandSurveyRecord (field survey / khasra-level land record data) ---
+CREATE TABLE IF NOT EXISTS land_survey_records (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  khasra_no       TEXT NOT NULL,
+  village         TEXT,
+  tehsil          TEXT,
+  district        TEXT,
+  moga_number     TEXT,
+  rajbah          TEXT,
+  owner_name      TEXT,
+  father_name     TEXT,
+  owner_cnic      TEXT,
+  area_acre       DOUBLE PRECISION DEFAULT 0,
+  area_kanal      DOUBLE PRECISION DEFAULT 0,
+  area_marla      DOUBLE PRECISION DEFAULT 0,
+  land_use        TEXT CHECK (land_use IN ('cultivable','bagh','fish_farm','ghair_mumkin','abadi','')),
+  crop_name       TEXT,
+  tenure          TEXT,
+  survey_date     DATE,
+  surveyor_name   TEXT,
+  geo_lat         DOUBLE PRECISION,
+  geo_lng         DOUBLE PRECISION,
+  map_id          TEXT,
+  attachment_url  TEXT,
+  notes           TEXT,
+  status          TEXT DEFAULT 'draft' CHECK (status IN ('draft','verified','approved')),
+  created_date    TIMESTAMPTZ DEFAULT NOW(),
+  updated_date    TIMESTAMPTZ DEFAULT NOW(),
+  created_by_id   UUID REFERENCES auth.users(id)
+);
+
 -- ============================================================
 -- 4. UPDATED_DATE TRIGGERS (all tables)
 -- ============================================================
@@ -307,7 +338,8 @@ BEGIN
   FOR t IN SELECT unnest(ARRAY[
     'profiles','land_maps','parat_warabandis','parat_warabandi_records',
     'map_snapshots','form33c_records','form_field_configs','formula_configs',
-    'fard_masroobas','task_assignments','subscriptions','form1_registers','naqsha_27b'
+    'fard_masroobas','task_assignments','subscriptions','form1_registers','naqsha_27b',
+    'land_survey_records'
   ]) LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS trg_%s_updated ON %s;', t, t);
     EXECUTE format('CREATE TRIGGER trg_%s_updated BEFORE UPDATE ON %s FOR EACH ROW EXECUTE FUNCTION update_timestamp();', t, t);
@@ -330,6 +362,7 @@ ALTER TABLE task_assignments      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE form1_registers       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE naqsha_27b            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE land_survey_records   ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- 6. RLS POLICIES
@@ -423,6 +456,13 @@ CREATE POLICY n27_update ON naqsha_27b FOR UPDATE USING (created_by_id = auth.ui
   WITH CHECK (created_by_id = auth.uid() OR is_admin());
 CREATE POLICY n27_delete ON naqsha_27b FOR DELETE USING (created_by_id = auth.uid() OR is_admin());
 
+-- --- LandSurveyRecord (read: any authed, write: own/admin) ---
+CREATE POLICY lsr_read ON land_survey_records FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY lsr_create ON land_survey_records FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY lsr_update ON land_survey_records FOR UPDATE USING (created_by_id = auth.uid() OR is_admin())
+  WITH CHECK (created_by_id = auth.uid() OR is_admin());
+CREATE POLICY lsr_delete ON land_survey_records FOR DELETE USING (created_by_id = auth.uid() OR is_admin());
+
 -- --- Profiles (read: own or admin, update: own or admin) ---
 CREATE POLICY profiles_read ON profiles FOR SELECT USING (id = auth.uid() OR is_admin());
 CREATE POLICY profiles_update ON profiles FOR UPDATE USING (id = auth.uid() OR is_admin())
@@ -460,3 +500,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE task_assignments;
 ALTER PUBLICATION supabase_realtime ADD TABLE subscriptions;
 ALTER PUBLICATION supabase_realtime ADD TABLE form1_registers;
 ALTER PUBLICATION supabase_realtime ADD TABLE naqsha_27b;
+ALTER PUBLICATION supabase_realtime ADD TABLE land_survey_records;
