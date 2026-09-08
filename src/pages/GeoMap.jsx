@@ -22,6 +22,7 @@ import AllocationToolbar from "@/components/geomap/AllocationToolbar";
 import AllOverlaysLayer from "@/components/geomap/AllOverlaysLayer";
 import AllocationLayer from "@/components/geomap/AllocationLayer";
 import AllocationDialog from "@/components/geomap/AllocationDialog";
+import EditAllocationDialog from "@/components/geomap/EditAllocationDialog";
 import PatchDrawLayer from "@/components/geomap/PatchDrawLayer";
 import PatchDialog from "@/components/geomap/PatchDialog";
 import KhalDrawLayer from "@/components/geomap/KhalDrawLayer";
@@ -180,6 +181,7 @@ export default function GeoMap() {
   const [moveTool, setMoveTool] = useState(false); // drag-to-move placed mogas
   const [allocations, setAllocations] = useState([]);
   const [allocCell, setAllocCell] = useState(null);
+  const [editAllocCell, setEditAllocCell] = useState(null);
   const [patchDialog, setPatchDialog] = useState(null);
   const [activePatchId, setActivePatchId] = useState(null);
   const [registerInfo, setRegisterInfo] = useState({ village: "", tehsil: "", district: "", mouza: "", channel: "", outlet_rd: "", side: "", sub_division: "", division: "", circle: "", zone: "" });
@@ -461,6 +463,22 @@ export default function GeoMap() {
   };
 
   const handleRemoveAllocation = (id) => setAllocations((prev) => prev.filter((a) => a.id !== id));
+
+  // Click a green (allocated) patch → open its properties for editing.
+  const handleEditAllocation = useCallback((obj, mustNo, acre) => {
+    setEditAllocCell({ obj, mustNo, acre });
+  }, []);
+
+  // Patch an existing allocation (farmer details / kanal positions) — reflects on
+  // the green patch AND the Form 1 register (shared allocations state).
+  const handleUpdateAllocation = (id, changes) => {
+    setAllocations((prev) => prev.map((a) => {
+      if (a.id !== id) return a;
+      const next = { ...a, ...changes };
+      if (changes.kanal != null) next.acres = changes.kanal / 8;
+      return next;
+    }));
+  };
 
   // Re-edit an entire occupier group (same CNIC/name): update farmer name, khata, etc.
   const handleUpdateGroup = (groupKey, changes) => {
@@ -1527,6 +1545,7 @@ export default function GeoMap() {
             allocations={allocations}
             mode={allocTool === "cell"}
             onCellClick={handleCellClick}
+            onEditAllocation={handleEditAllocation}
             activeMustateelIds={activeMustateelIds}
             onMustateelClick={handleMustateelClick}
           />
@@ -1897,6 +1916,16 @@ export default function GeoMap() {
         info={registerInfo}
         onAllocate={handleAllocate}
         onClose={() => setAllocCell(null)}
+      />
+
+      {/* Edit an existing allocation — opened by clicking a green patch */}
+      <EditAllocationDialog
+        open={!!editAllocCell}
+        data={editAllocCell}
+        allocations={allocations}
+        onUpdate={handleUpdateAllocation}
+        onRemove={handleRemoveAllocation}
+        onClose={() => setEditAllocCell(null)}
       />
 
       {/* Drawn patch farmer details dialog */}

@@ -11,7 +11,7 @@ import {
 // Renders clickable killa (acre) cells over each mustateel/muraba of the selected moga.
 // The filled area inside each acre is proportional to the kanal allotted (used/8);
 // the remaining portion stays vacant (dashed boundary). Clickable only in allocation mode.
-export default function AllocationLayer({ objects, overlay, selectedMoga, allocations, mode, onCellClick, activeMustateelIds, onMustateelClick }) {
+export default function AllocationLayer({ objects, overlay, selectedMoga, allocations, mode, onCellClick, onEditAllocation, activeMustateelIds, onMustateelClick }) {
   const cells = useMemo(() => {
     if (!overlay?.transform) return [];
     const out = [];
@@ -83,11 +83,18 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
                 </Tooltip>
               )}
             </Polygon>
-            {/* Filled portion — proportional to kanal selected; non-interactive so clicks pass through */}
+            {/* Filled portion — proportional to kanal selected; clickable to edit the
+                existing allocation (green patch → open its properties). */}
             {fillLatLngs && (
               <Polygon
                 positions={fillLatLngs.map((p) => [p.lat, p.lng])}
-                pathOptions={{ color: "#15803d", fillColor: "#16a34a", fillOpacity: 0.55, weight: 1, interactive: false }}
+                pathOptions={{ color: "#15803d", fillColor: "#16a34a", fillOpacity: 0.55, weight: 1, interactive: true }}
+                eventHandlers={{
+                  click: (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    onEditAllocation && onEditAllocation(obj, mustNo, acre);
+                  },
+                }}
               />
             )}
           </React.Fragment>

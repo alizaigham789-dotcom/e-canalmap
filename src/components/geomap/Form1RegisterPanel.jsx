@@ -3,11 +3,12 @@ import { X, Trash2, Download, Save, Loader2, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 // Excel-style Form 1 register. Each occupier = 3 rows sharing one serial number:
-//   Row A — farmer details (name, CNIC, totals, khata, tenure, tenant …)
+//   Row A — farmer details (name, CNIC, phone, tenant, khata, totals…)
 //   Row B — "Khasra/Kanal" : one box per acre (khasra on top, kanal below it)
 //   Row C — "Crop"         : crop name beneath; one name spans consecutive same-crop acres
-// Farmers with the same CNIC are merged. An acre fully allotted to one farmer
-// cannot be allotted to another (enforced at allocation time).
+// Farmers with the same CNIC are merged. Header info (Moga, Section, Mouza, Sub
+// Division, Division) is shown in a table form above the rows. An acre fully
+// allotted to one farmer cannot be allotted to another (enforced at allocation time).
 export default function Form1RegisterPanel({
   open,
   onClose,
@@ -65,6 +66,12 @@ export default function Form1RegisterPanel({
 
   if (!open) return null;
 
+  const mogaNo = selectedMoga || mapData?.moga_number || "—";
+  const section = info?.sub_division || "—";
+  const mouza = info?.mouza || info?.village || "—";
+  const subDivision = info?.tehsil || "—";
+  const division = info?.district || "—";
+
   const farmerTotals = (g) =>
     g.items.reduce(
       (s, it) => ({ kanal: s.kanal + (it.kanal || 0), acres: s.acres + (it.acres || 0) }),
@@ -87,23 +94,24 @@ export default function Form1RegisterPanel({
         const cropCells = runs
           .map((r) => `<span class="cell crop" style="min-width:${r.count * 50}px;">${esc(r.crop || "—")}</span>`)
           .join("");
-        const tenantLine =
+        const tenantCell =
           g.tenure === "Tenant" && g.tenant_name
-            ? `<div class="sub">Tenant: ${esc(g.tenant_name)} · ${esc(g.tenant_phone)} · ${esc(g.tenant_cnic)}</div>`
-            : "";
+            ? `${esc(g.tenant_name)}<br/><span class="sub">${esc(g.tenant_phone)}<br/>${esc(g.tenant_cnic)}</span>`
+            : "—";
         return `
         <tr>
           <td class="sr" rowspan="3">${i + 1}</td>
-          <td><b>${esc(g.farmer_name)}</b><br/><span class="mono">${esc(g.cnic)}</span><br/><span class="sub">S/o ${esc(g.father)}</span><br/><span class="sub">${esc(g.phone)}</span><br/><span class="sub">Kh ${esc(g.khata_no)}</span>${tenantLine}</td>
-          <td class="blk"></td>
+          <td class="num mono">${esc(mogaNo)}</td>
+          <td><b>${esc(g.farmer_name)}</b><br/><span class="sub">S/o ${esc(g.father)}</span><br/><span class="mono">${esc(g.cnic)}</span><br/><span class="sub">${esc(g.phone)}</span></td>
+          <td>${tenantCell}</td>
+          <td class="num">${esc(g.khata_no || "—")}</td>
           <td class="num">${t.kanal}</td>
           <td class="num">${t.acres.toFixed(3)}</td>
-          <td class="num">${esc(info.outlet_rd || "—")}</td>
           <td class="num">${esc(info.channel || "—")}</td>
           <td>${esc(g.tenure)}</td>
         </tr>
-        <tr class="detail"><td class="lbl">Khasra/Kanal</td><td></td><td colspan="5" class="strip">${boxes}</td></tr>
-        <tr class="detail"><td class="lbl">Crop</td><td></td><td colspan="5" class="strip">${cropCells}</td></tr>`;
+        <tr class="detail"><td class="lbl">Khasra/Kanal</td><td colspan="7" class="strip">${boxes}</td></tr>
+        <tr class="detail"><td class="lbl">Crop</td><td colspan="7" class="strip">${cropCells}</td></tr>`;
       })
       .join("");
     const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
@@ -124,7 +132,6 @@ export default function Form1RegisterPanel({
       .sub { font-size:${isMobile ? 6 : 7}px; color:#475569; }
       .mono { font-family: monospace; font-size:${isMobile ? 6 : 8}px; }
       .num { text-align:center; font-weight:700; }
-      .blk { background:#f1f5f9; }
       .detail td { background:#fff; }
       .lbl { font-weight:700; background:#eef2ff !important; color:#3730a3; text-align:center; }
       .strip { line-height:1.6; }
@@ -136,8 +143,9 @@ export default function Form1RegisterPanel({
       .foot { margin-top:16px; display:flex; justify-content:space-between; font-size:${isMobile ? 8 : 10}px; }
     </style></head><body>
     <h1>Form 1 Register</h1>
+    <div class="meta">Moga: ${esc(mogaNo)} &nbsp;|&nbsp; Section: ${esc(section)} &nbsp;|&nbsp; Mouza: ${esc(mouza)} &nbsp;|&nbsp; Sub Division: ${esc(subDivision)} &nbsp;|&nbsp; Division: ${esc(division)}</div>
     <table><thead><tr>
-      <th>Sr</th><th>Occupier Name</th><th>Khasra / Kanal / Crop</th><th>Tot K</th><th>Tot Ac</th><th>Moga No</th><th>Rajbah</th><th>Own/Tnt</th>
+      <th>Sr</th><th>Moga No</th><th>Occupier Name</th><th>Tenant</th><th>Khata</th><th>Tot K</th><th>Tot Ac</th><th>Rajbah</th><th>Own/Tnt</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <div class="totals">Total Area: ${totals.acres.toFixed(3)} Acres &nbsp;|&nbsp; ${totals.kanal.toFixed(2)} Kanal</div>
     <div class="foot"><span>Girdawar _______________</span><span>Patwari _______________</span><span>Zilladar _______________</span></div>
@@ -155,7 +163,7 @@ export default function Form1RegisterPanel({
     }, 600);
   };
 
-  const COLS = ["Sr", "Occupier Name", "Tot K", "Tot Ac", "Moga No", "Rajbah", "Own/Tnt", ""];
+  const COLS = ["Sr", "Moga No", "Occupier Name", "Tenant", "Khata", "Tot K", "Tot Ac", "Rajbah", "Own/Tnt", ""];
   const GRID_W = 50;
 
   return (
@@ -171,8 +179,6 @@ export default function Form1RegisterPanel({
           </button>
         </div>
 
-        {/* Metadata (village, mouza, tehsil, district, moga, side, channel) is auto-collected
-            from the map editor header line — no header info row is shown here. */}
         <div className="px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0">
           <div className="bg-amber-50 border-2 border-amber-300 rounded-lg px-4 py-1.5">
             <div className="text-[9px] font-bold text-amber-700 uppercase">Total Acres</div>
@@ -184,6 +190,17 @@ export default function Form1RegisterPanel({
           </div>
           <div className="text-xs text-slate-500">{groups.length} occupier{groups.length !== 1 ? "s" : ""}</div>
           <div className="ml-auto text-[10px] text-slate-400">Same CNIC merged · full acre locked</div>
+        </div>
+
+        {/* Header info (Moga, Section, Mouza, Sub Division, Division) in table form */}
+        <div className="px-4 py-2 border-b border-slate-200 bg-slate-50 shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[10px]">
+            <InfoCell label="Moga No" value={mogaNo} />
+            <InfoCell label="Section" value={section} />
+            <InfoCell label="Mouza" value={mouza} />
+            <InfoCell label="Sub Division" value={subDivision} />
+            <InfoCell label="Division" value={division} />
+          </div>
         </div>
 
         <div className="flex-1 overflow-auto">
@@ -211,22 +228,29 @@ export default function Form1RegisterPanel({
                       {/* Row A — farmer */}
                       <tr className="bg-slate-50/60 align-top">
                         <td className="px-1 py-1 border border-slate-200 text-center font-bold text-slate-700 w-6" rowSpan={3}>{i + 1}</td>
+                        <td className="px-1 py-1 border border-slate-200 text-center font-mono text-[9px] text-slate-700">{mogaNo}</td>
                         <td className="px-1 py-1 border border-slate-200">
                           <input value={g.farmer_name} onChange={(e) => onUpdateGroup(g.key, { farmer_name: e.target.value })} className="w-full font-medium text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" />
                           <div className="font-mono text-[9px] text-slate-700 leading-tight">{g.cnic}</div>
                           <div className="text-[8px] text-slate-500 leading-tight">S/o {g.father}</div>
                           <div className="text-[8px] font-mono text-slate-500 leading-tight">{g.phone}</div>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <span className="text-[8px] text-slate-400">Kh</span>
-                            <input value={g.khata_no} onChange={(e) => onUpdateGroup(g.key, { khata_no: e.target.value })} className="w-12 text-center text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" placeholder="Khata" />
-                          </div>
-                          {g.tenure === "Tenant" && g.tenant_name && (
-                            <div className="text-[8px] text-amber-700 font-medium mt-0.5">Tenant: {g.tenant_name} · {g.tenant_phone} · {g.tenant_cnic}</div>
+                        </td>
+                        <td className="px-1 py-1 border border-slate-200">
+                          {g.tenure === "Tenant" ? (
+                            <>
+                              <div className="text-[9px] font-medium text-amber-800 leading-tight">{g.tenant_name}</div>
+                              <div className="text-[8px] font-mono text-slate-600 leading-tight">{g.tenant_phone}</div>
+                              <div className="text-[8px] font-mono text-slate-600 leading-tight">{g.tenant_cnic}</div>
+                            </>
+                          ) : (
+                            <span className="text-slate-300">—</span>
                           )}
+                        </td>
+                        <td className="px-1 py-1 border border-slate-200 text-center">
+                          <input value={g.khata_no} onChange={(e) => onUpdateGroup(g.key, { khata_no: e.target.value })} className="w-12 text-center text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" placeholder="—" />
                         </td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-blue-700">{t.kanal}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-amber-700">{t.acres.toFixed(3)}</td>
-                        <td className="px-1 py-1 border border-slate-200 text-center font-mono text-[9px] text-slate-700">{info.outlet_rd || "—"}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono text-[9px] text-slate-700">{info.channel || "—"}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center">{g.tenure}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center">
@@ -238,7 +262,7 @@ export default function Form1RegisterPanel({
                       {/* Row B — Khasra/Kanal combined boxes (khasra top, kanal bottom) */}
                       <tr className="align-top">
                         <td className="px-1 py-1 border border-slate-200 text-center font-bold text-indigo-700 bg-indigo-50">Khasra/Kanal</td>
-                        <td className="px-1 py-1 border border-slate-200" colSpan={5}>
+                        <td className="px-1 py-1 border border-slate-200" colSpan={8}>
                           <div style={{ display: "grid", gridTemplateColumns: tpl }}>
                             {acres.length === 0 ? <span className="text-slate-300">—</span> : acres.map((a, j) => (
                               <div key={j} className="border border-indigo-300 rounded bg-white text-center mx-0.5 overflow-hidden">
@@ -252,7 +276,7 @@ export default function Form1RegisterPanel({
                       {/* Row C — Crop (one name spans consecutive same-crop acres) */}
                       <tr className="align-top">
                         <td className="px-1 py-1 border border-slate-200 text-center font-bold text-emerald-700 bg-emerald-50">Crop</td>
-                        <td className="px-1 py-1 border border-slate-200" colSpan={5}>
+                        <td className="px-1 py-1 border border-slate-200" colSpan={8}>
                           <div style={{ display: "grid", gridTemplateColumns: tpl }}>
                             {runs.length === 0 ? <span className="text-slate-300">—</span> : runs.map((r, j) => (
                               <div key={j} style={{ gridColumn: `span ${r.count}` }} className="border border-emerald-300 rounded px-1 text-center bg-emerald-50 font-bold text-[9px] text-emerald-700 leading-tight mx-0.5">{r.crop || "—"}</div>
@@ -277,6 +301,15 @@ export default function Form1RegisterPanel({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function InfoCell({ label, value }) {
+  return (
+    <div className="border border-slate-200 rounded bg-white px-2 py-1">
+      <div className="text-[8px] font-bold text-slate-400 uppercase">{label}</div>
+      <div className="text-[10px] font-bold text-slate-700 truncate">{value}</div>
     </div>
   );
 }
