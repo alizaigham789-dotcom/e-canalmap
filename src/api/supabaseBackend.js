@@ -11,6 +11,7 @@
  *   export { base44 } from "@/api/supabaseBackend";
  */
 import { supabase } from "@/lib/supabaseClient";
+import { safeReturnTo } from "@/lib/authReturnTo";
 
 // ─── Entity → Table mapping ───────────────────────────────────
 const ENTITY_TABLES = {
@@ -244,10 +245,8 @@ const auth = {
     });
     if (error) throw error;
 
-    // Resolve returnTo (same-origin param, fallback to "/")
-    const urlParams = new URLSearchParams(window.location.search);
-    const returnTo = urlParams.get("returnTo") || "/";
-    window.location.href = returnTo;
+    // Resolve returnTo safely (same-origin validation strips open-redirect values)
+    window.location.href = safeReturnTo();
     return data;
   },
 
@@ -279,9 +278,7 @@ const auth = {
     if (error) throw error;
 
     // After OTP verification, set session and hard redirect
-    const urlParams = new URLSearchParams(window.location.search);
-    const returnTo = urlParams.get("returnTo") || "/";
-    window.location.href = returnTo;
+    window.location.href = safeReturnTo();
     return data;
   },
 
@@ -315,9 +312,11 @@ const auth = {
 
     const { data: result, error } = await supabase
       .from("profiles")
+      // NOTE: role is intentionally NOT updatable here — clients must never set
+      // their own role. Only a server-side admin function with asServiceRole may
+      // change roles, otherwise any user could self-escalate to admin.
       .update({
         full_name: data.full_name,
-        role: data.role,
       })
       .eq("id", user.id)
       .select()

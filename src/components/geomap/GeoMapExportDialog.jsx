@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useCallback } from "react";
 import { X, Download, FileImage, FileText, FileType2, Loader2, Printer, Share2 } from "lucide-react";
 import { buildSVG } from "@/lib/svgMapBuilder";
 import { buildPrintHeaderHTML, buildPrintFooterHTML, buildMapHeaderText } from "@/lib/gisEngine";
+import { escapeHtml } from "@/lib/escapeHtml";
 import { canvasToPdfBlob, canvasToPdfBlobRaw, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdfExport";
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 
@@ -275,7 +276,7 @@ export default function GeoMapExportDialog({
       </svg>`;
       const win = window.open("", "_blank");
       if (!win) { alert("Popup blocked — allow popups for this site"); setExporting(false); return; }
-      win.document.write(`<!DOCTYPE html><html dir="rtl"><head><title>${mapData?.title || "GeoMap Print"}</title>
+      win.document.write(`<!DOCTYPE html><html dir="rtl"><head><title>${escapeHtml(mapData?.title || "GeoMap Print")}</title>
         <style>
           @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
           @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');

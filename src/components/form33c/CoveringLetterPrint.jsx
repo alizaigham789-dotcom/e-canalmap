@@ -4,7 +4,10 @@
  * Follows the government reference image format with dashed lines,
  * editable Division/Tehsil, Crop/Year boxes, and notification section.
  */
+import { escapeHtml } from "@/lib/escapeHtml";
+
 export function printCoveringLetter({ villages, fasal, year, district, tehsil, letterData, signatures }) {
+  const e = escapeHtml;
   const totalBills = villages.reduce((s, v) => s + (parseFloat(v.total_bills) || 0), 0);
   const total33C = villages.length;
 
@@ -42,20 +45,20 @@ export function printCoveringLetter({ villages, fasal, year, district, tehsil, l
 
     <!-- Header line: نمبر / تاریخ with dashed lines -->
     <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
-      <span>نمبر:۔ <span class="dash-line" style="min-width:180px;">${numberStr}</span></span>
-      <span>تاریخ:۔ <span class="dash-line" style="min-width:160px;">${dateStr}</span></span>
+      <span>نمبر:۔ <span class="dash-line" style="min-width:180px;">${e(numberStr)}</span></span>
+      <span>تاریخ:۔ <span class="dash-line" style="min-width:160px;">${e(dateStr)}</span></span>
     </div>
 
     <div style="margin-bottom:10px;font-size:16px;line-height:2.2;">
-      <div>از دفتر:۔ ${fromOffice}</div>
-      <div>بجانب:۔ ${toOffice}</div>
-      <div>عنوان:۔ ریکوری ای۔آبیانہ پرنٹڈ بلز بابت فصل ${cropLabel} ${year}ء</div>
+      <div>از دفتر:۔ ${e(fromOffice)}</div>
+      <div>بجانب:۔ ${e(toOffice)}</div>
+      <div>عنوان:۔ ریکوری ای۔آبیانہ پرنٹڈ بلز بابت فصل ${cropLabel} ${e(year)}ء</div>
     </div>
 
     <!-- Notification section -->
     <div style="font-size:14px;margin-bottom:6px;line-height:1.9;">
-      بحوالہ نوٹیفکیشن نمبر: ${govtOrder}<br/>
-      مورخہ ${govtDate} گورنمنٹ آف پنجاب ریونیو ڈیپارٹمنٹ (ریکوری سیکشن) بابت ریکوری ای۔آبیانہ پرنٹڈ بلز برائے فصل ${cropLabel} ${year}ء، بمراد کاروائی ضابطہ ارسال ہے۔ لسٹ مواضعات و تعداد بلز بذیل ہیں۔
+      بحوالہ نوٹیفکیشن نمبر: ${e(govtOrder)}<br/>
+      مورخہ ${e(govtDate)} گورنمنٹ آف پنجاب ریونیو ڈیپارٹمنٹ (ریکوری سیکشن) بابت ریکوری ای۔آبیانہ پرنٹڈ بلز برائے فصل ${cropLabel} ${e(year)}ء، بمراد کاروائی ضابطہ ارسال ہے۔ لسٹ مواضعات و تعداد بلز بذیل ہیں۔
     </div>
 
     <div style="font-size:15px;margin-bottom:6px;text-align:right;">تفصیل درج ذیل ہے۔</div>
@@ -80,7 +83,7 @@ export function printCoveringLetter({ villages, fasal, year, district, tehsil, l
 
     <!-- Signature -->
     <div style="display:flex;justify-content:flex-start;margin-top:40px;padding-bottom:10px;align-items:flex-end;direction:ltr;">
-      ${sigBlock(signatures?.divisional_img || "", "Executive Engineer", district ? `${district} Canal Division<br/>${district}` : "")}
+      ${sigBlock(signatures?.divisional_img || "", "Executive Engineer", district ? `${e(district)} Canal Division<br/>${e(district)}` : "")}
     </div>
 
   </div>

@@ -3,7 +3,10 @@
  * (all villages in one table, totals row, signatures at bottom)
  * matching the PDF format exactly.
  */
+import { escapeHtml } from "@/lib/escapeHtml";
+
 export function printNaqsha33C({ villages, fasal, year, district, tehsil, surchargePercent, signatures, showPageBorder, showTableBorder }) {
+  const e = escapeHtml;
   const sp = parseFloat(surchargePercent) || 10;
 
   // Calculate surcharge for each village
@@ -48,9 +51,9 @@ export function printNaqsha33C({ villages, fasal, year, district, tehsil, surcha
   <div style="border:${outerBorder};padding:14px 20px;min-height:calc(210mm - 16mm);">
     <div style="text-align:center;margin-bottom:10px;">
       <div style="font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">
-        NAQSHA NO. 33-C RECOVERY OF E-ABIANA BILLING CROP ${fasal === "ربیع" ? "RABI" : "KHARIF"} ${year}
-        ${tehsil ? `TEHSIL ${tehsil.toUpperCase()}` : ""}
-        ${district ? `DISTRICT ${district.toUpperCase()} OF ${district.toUpperCase()} CANAL DIVISION ${district.toUpperCase()}` : ""}
+        NAQSHA NO. 33-C RECOVERY OF E-ABIANA BILLING CROP ${fasal === "ربیع" ? "RABI" : "KHARIF"} ${e(year)}
+        ${tehsil ? `TEHSIL ${e(tehsil.toUpperCase())}` : ""}
+        ${district ? `DISTRICT ${e(district.toUpperCase())} OF ${e(district.toUpperCase())} CANAL DIVISION ${e(district.toUpperCase())}` : ""}
       </div>
     </div>
 
@@ -69,7 +72,7 @@ export function printNaqsha33C({ villages, fasal, year, district, tehsil, surcha
         ${rows.map(r => `
           <tr>
             <td>${r._idx}</td>
-            <td style="text-align:left;padding-left:10px;">${r.mouza || "—"}</td>
+            <td style="text-align:left;padding-left:10px;">${e(r.mouza || "—")}</td>
             <td>${r.total_bills || "—"}</td>
             <td>${r._zar ? r._zar.toLocaleString() : "—"}</td>
             <td>${r._surcharge ? r._surcharge.toLocaleString() : ""}</td>
