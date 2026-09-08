@@ -90,6 +90,11 @@
     "geo_moga_filter": {
       "type": "string",
       "description": "Saved GeoMap moga filter for overlay display"
+    },
+    "is_template": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for sample/demo maps shown to all users as motivation"
     }
   },
   "required": [
@@ -97,7 +102,29 @@
   ],
   "rls": {
     "create": null,
-    "read": null,
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.is_template": true
+        },
+        {
+          "data.status": {
+            "$in": [
+              "approved",
+              "published"
+            ]
+          }
+        }
+      ]
+    },
     "update": {
       "$or": [
         {
@@ -110,6 +137,17 @@
         }
       ]
     },
-    "delete": null
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
   }
 }
