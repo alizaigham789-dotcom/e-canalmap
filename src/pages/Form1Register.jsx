@@ -2,7 +2,9 @@ import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Printer, FileText, Search, ChevronDown, Layers, MapPin } from "lucide-react";
+import { ArrowRight, Printer, FileText, Search, ChevronDown, Layers, MapPin, Pencil } from "lucide-react";
+import Form1RegisterEditDialog from "@/components/form1/Form1RegisterEditDialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function esc(s) {
@@ -71,8 +73,7 @@ function farmerAcres(items) {
   const acres = [];
   for (const it of items) {
     if (it.acre_no != null) {
-      const moga = it.moga_number ? `${it.moga_number}/` : "";
-      acres.push({ khasra: it.khasra || `${it.mustateel_no || ""}/${it.acre_no}`, murba: moga + (it.mustateel_no || ""), killa: it.acre_no || "", kanal: it.kanal || 0, marla: it.marla || 0, crop: it.crop_name || "" });
+      acres.push({ khasra: it.khasra || `${it.mustateel_no || ""}/${it.acre_no}`, murba: it.mustateel_no || "", killa: it.acre_no || "", kanal: it.kanal || 0, marla: it.marla || 0, crop: it.crop_name || "" });
     } else if (it.geometry) {
       const khasraStr = it.khasra || "";
       const parts = khasraStr.split(";").filter(Boolean);
@@ -218,9 +219,11 @@ function buildPrintHTML(meta, groups, mode = "moga") {
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function Form1Register() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("moga"); // "moga" | "mouza"
   const [expandedId, setExpandedId] = useState(null);
+  const [editingReg, setEditingReg] = useState(null);
 
   const { data: registers = [], isLoading } = useQuery({
     queryKey: ["form1-registers-all"],
@@ -469,6 +472,13 @@ export default function Form1Register() {
                           {groups.length} زمیندار
                         </span>
                         <button
+                          onClick={e => { e.stopPropagation(); setEditingReg(reg); }}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors tap-target"
+                          title="ترمیم کریں"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={e => { e.stopPropagation(); handlePrintMoga(reg); }}
                           className="w-8 h-8 flex items-center justify-center rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors tap-target"
                           title="پرنٹ / PDF"
@@ -547,6 +557,13 @@ export default function Form1Register() {
           )
         )}
       </main>
+
+      <Form1RegisterEditDialog
+        open={!!editingReg}
+        register={editingReg}
+        onClose={() => setEditingReg(null)}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["form1-registers-all"] })}
+      />
     </div>
   );
 }
