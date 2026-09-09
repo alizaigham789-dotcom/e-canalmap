@@ -1,0 +1,54 @@
+{
+  "name": "ChatMessage",
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "description": "Message body"
+    },
+    "sender_name": {
+      "type": "string",
+      "description": "Display name of the sender"
+    },
+    "sender_id": {
+      "type": "string",
+      "description": "User id of the sender"
+    },
+    "room": {
+      "type": "string",
+      "default": "main",
+      "description": "Chat room / channel key (default 'main' group chat)"
+    }
+  },
+  "required": [
+    "text"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
