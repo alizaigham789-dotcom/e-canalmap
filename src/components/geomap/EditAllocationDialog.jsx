@@ -72,11 +72,17 @@ export default function EditAllocationDialog({ open, data, allocations, mustatee
       setTenantCnic(f.tenant_cnic || "");
       setKhata(f.khata_no || "");
       // Group existing cell allocations by mustateel → { acre: positions }
+      // Older allocations were saved with `kanal` but no `positions` array —
+      // synthesize [1..kanal] so they aren't treated as "emptied" on save
+      // (which would delete the farmer's allocation they never intended to clear).
       const byMust = {};
       for (const a of list) {
         if (a.acre_no == null) continue;
         const m = String(a.mustateel_no || "");
-        (byMust[m] = byMust[m] || {})[a.acre_no] = a.positions || [];
+        const pos = Array.isArray(a.positions) && a.positions.length
+          ? a.positions
+          : (a.kanal ? Array.from({ length: a.kanal }, (_, i) => i + 1) : []);
+        (byMust[m] = byMust[m] || {})[a.acre_no] = pos;
       }
       const gs = Object.keys(byMust)
         .sort((a, b) => +a - +b)
