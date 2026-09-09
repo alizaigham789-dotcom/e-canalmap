@@ -502,7 +502,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
                   </div>
                 )}
               </div>
-              <SpacingControl label="Block Size" value={local.blockSize || 20} min={8} max={80} step={2} onChange={v => commit("blockSize", v)} unit="ft" />
+              <SpacingControl label="Block Size" value={local.blockSize || 32} min={8} max={80} step={2} onChange={v => commit("blockSize", v)} unit="ft" />
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Moga Size / Arrow</label>
                 <div className="flex items-center gap-2">

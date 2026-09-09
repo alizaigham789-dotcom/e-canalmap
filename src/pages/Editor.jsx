@@ -920,9 +920,9 @@ export default function Editor() {
     setOutletDraft(null);
     if (draft) {
       const start = { x: draft.x, y: draft.y };
-      // Default outlet length = 240 ft, in the drawn direction. If the user clicked
+      // Default outlet length = 300 ft, in the drawn direction. If the user clicked
       // the same spot (no direction), fall back to perpendicular from the canal.
-      const OUTLET_LEN = 240;
+      const OUTLET_LEN = 300;
       const dx = endPt.x - start.x, dy = endPt.y - start.y;
       const drawn = Math.hypot(dx, dy);
       let finalEnd;

@@ -761,7 +761,7 @@ export function createOutlet(canalId, startPt, endPt, label = "", canalWidth = 1
     type: "outlet", canalId,
     start: { ...startPt }, end: { ...endPt },
     label, mogha_name: "", mogha_number: moghaNumber, mogha_side: moghaSide,
-    arrowScale: 1, blockSize: 30, canalWidth,
+    arrowScale: 1, blockSize: 32, canalWidth,
     outletColor: "#dc2626",
   };
 }
@@ -1637,7 +1637,7 @@ export function getOutletDimensions(obj) {
   const canalW = obj.canalWidth || 100;
   // blockSize slider is now functional: default 20 → factor 1 (unchanged look),
   // 40 → 2× bigger block, 10 → half size. Preserves existing maps (blockSize 20).
-  const blockFactor = (obj.blockSize || 20) / 20;
+  const blockFactor = (obj.blockSize || 32) / 20;
   const size = DIMENSIONS.KHAL_WIDTH * 4 * scale * blockFactor;
   return {
     size,                   // block size (square at start point)
