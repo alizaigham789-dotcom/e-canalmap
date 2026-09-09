@@ -358,13 +358,19 @@ export default function GeoMap() {
     enabled: !!selectedMapId,
   });
 
-  const matchingRegister = useMemo(
-    () => (form1Existing || []).find((r) => {
+  const matchingRegister = useMemo(() => {
+    const list = form1Existing || [];
+    if (list.length === 0) return undefined;
+    // Single register for this map → use it regardless of stored moga number
+    // (older records were saved with an empty moga_number, and the map's overlay
+    // can be deleted & re-added — the allocation data must survive and reload).
+    if (list.length === 1) return list[0];
+    // Multiple registers (one per moga) → match by moga number
+    return list.find((r) => {
       const moga = String(r.moga_number || "");
       return moga === String(selectedMoga) || (!selectedMoga && moga === String(selectedMap?.moga_number || ""));
-    }),
-    [form1Existing, selectedMoga, selectedMap]
-  );
+    });
+  }, [form1Existing, selectedMoga, selectedMap]);
 
   // Pre-fill register header info from the map editor header line
   useEffect(() => {
