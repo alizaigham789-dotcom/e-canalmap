@@ -7,6 +7,9 @@
 //  • Two tools only (mirrors the slim MergeToolPanel):
 //      - "move": click a moga → drag the whole group (grid-snapped)
 //      - "pan":  drag anywhere to pan the canvas
+//  • Yellow dummy mustateel cells render on every open edge of the
+//    placed mustateels. Clicking a dummy opens the attach dialog so
+//    the user can type the Khasra number and attach a new moga there.
 //  • Auto-fit + zoom in/out exposed to parent via ref.
 //  • Background mustateel + muraba grid always shown for alignment.
 // Rendering reuses the same GISRenderer draw functions as the editor.
@@ -56,8 +59,42 @@ function objectsBounds(objects) {
   return { minX, minY, maxX, maxY };
 }
 
+// Draw a dummy mustateel cell: dashed yellow rect + a "+" in the middle.
+function drawDummy(ctx, d, zoom) {
+  ctx.save();
+  ctx.strokeStyle = "#eab308";
+  ctx.fillStyle = "rgba(250,204,21,0.28)";
+  ctx.lineWidth = 3 / zoom;
+  ctx.setLineDash([10 / zoom, 6 / zoom]);
+  ctx.fillRect(d.x, d.y, d.w || MUST_W, d.h || MUST_H);
+  ctx.strokeRect(d.x, d.y, d.w || MUST_W, d.h || MUST_H);
+  ctx.setLineDash([]);
+  // Plus icon
+  ctx.strokeStyle = "#a16207";
+  ctx.lineWidth = 4 / zoom;
+  ctx.lineCap = "round";
+  const w = d.w || MUST_W, h = d.h || MUST_H;
+  const cx = d.x + w / 2, cy = d.y + h / 2;
+  const s = Math.min(w, h) * 0.22;
+  ctx.beginPath();
+  ctx.moveTo(cx - s, cy); ctx.lineTo(cx + s, cy);
+  ctx.moveTo(cx, cy - s); ctx.lineTo(cx, cy + s);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Point-in-rect test for dummy cells (world coords).
+function hitDummy(world, dummies) {
+  if (!dummies?.length) return null;
+  for (const d of dummies) {
+    const w = d.w || MUST_W, h = d.h || MUST_H;
+    if (world.x >= d.x && world.x <= d.x + w && world.y >= d.y && world.y <= d.y + h) return d;
+  }
+  return null;
+}
+
 const MogaMergeCanvas = forwardRef(function MogaMergeCanvas(
-  { objects, selectedGroup, onSelectGroup, onCommitMove, fitSignal, activeTool, onZoomChange },
+  { objects, dummies, onDummyClick, selectedGroup, onSelectGroup, onCommitMove, fitSignal, activeTool, onZoomChange },
   ref
 ) {
   const canvasRef = useRef(null);
@@ -122,8 +159,16 @@ const MogaMergeCanvas = forwardRef(function MogaMergeCanvas(
       else if (drawObj.type === "outlet") drawOutlet(ctx, drawObj, isSel, zoom, C);
       else if (drawObj.type === "damageMarker") drawDamageMarker(ctx, drawObj, isSel, zoom);
     }
+
+    // Dummy mustateel cells render above everything so they stay clickable
+    if (dummies?.length) {
+      for (const d of dummies) {
+        if (!isInViewport({ x: d.x, y: d.y, w: d.w || MUST_W, h: d.h || MUST_H, type: "mustateel" }, pan, zoom, W, H)) continue;
+        drawDummy(ctx, d, zoom);
+      }
+    }
     ctx.restore();
-  }, [objects, zoom, pan, selectedGroup]);
+  }, [objects, dummies, zoom, pan, selectedGroup]);
 
   useLayoutEffect(() => { render(); }, [render]);
 
@@ -163,8 +208,14 @@ const MogaMergeCanvas = forwardRef(function MogaMergeCanvas(
       dragRef.current = { mode: "pan", startScreen: { x: e.clientX, y: e.clientY }, startPan: { ...pan } };
       return;
     }
-    // move tool
     const world = getWorld(e);
+    // Dummy cell takes priority — open the attach dialog
+    const dummy = hitDummy(world, dummies);
+    if (dummy) {
+      onDummyClick?.(dummy);
+      return;
+    }
+    // move tool
     const hit = hitTest(world.x, world.y, objects);
     if (hit && hit.mogaGroup) {
       onSelectGroup(hit.mogaGroup);
@@ -172,7 +223,7 @@ const MogaMergeCanvas = forwardRef(function MogaMergeCanvas(
     } else {
       onSelectGroup(null);
     }
-  }, [activeTool, objects, pan, onSelectGroup]);
+  }, [activeTool, objects, pan, dummies, onSelectGroup, onDummyClick]);
 
   const onMove = useCallback((e) => {
     const d = dragRef.current;

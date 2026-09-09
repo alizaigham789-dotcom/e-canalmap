@@ -470,14 +470,16 @@ export function getEdgeDummyMustateels(objects, mogaFilter) {
 // Find unplaced maps of the same village that contain a mustateel with the
 // given Khasra label. Excludes already-placed maps and the given exclude ids.
 // Returns [{ map, must }] — must is the matching mustateel canvas rect.
-export function findUnplacedMogasByLabel(maps, village, label, excludeIds = []) {
+export function findUnplacedMogasByLabel(maps, village, label, excludeIds = [], opts = {}) {
   const lbl = String(label).trim();
   if (!lbl) return [];
   const ex = new Set(excludeIds);
   const out = [];
   for (const m of maps || []) {
     if (!m || ex.has(m.id)) continue;
-    if (m.geo_placement_lat != null) continue;
+    // In canvas merge mode, "placed" means already attached to the merge map —
+    // not geo placement. Skip the geo check when skipGeoCheck is set.
+    if (!opts.skipGeoCheck && m.geo_placement_lat != null) continue;
     if (village && m.village && m.village !== village) continue;
     if (!m.drawing_data) continue;
     const musts = getMapMustateels(m);

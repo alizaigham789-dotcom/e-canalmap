@@ -35,7 +35,7 @@ const MODULES = [
   {
     id: "moga-merge",
     label: "MOGA MERGE",
-    labelUrdu: "موجے ملائیں",
+    labelUrdu: "موگے ملائیں",
     icon: "https://media.base44.com/images/public/6a3f2746a373ce99c9fd232b/930109477_generated_image.png",
     path: "/moga-merge",
     bg: "from-[#8b5cf6] to-[#6d28d9]",

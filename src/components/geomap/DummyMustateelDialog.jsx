@@ -9,7 +9,7 @@ import { X, Search, Check, Trash2, Plus } from "lucide-react";
 //  4. Confirm → the chosen moga is auto-placed so its matching mustateel sits
 //     exactly on the dummy cell (chained to the previous moga).
 //  5. If placed wrongly, Remove clears the placement right here; Done closes.
-export default function DummyMustateelDialog({ open, dummy, dummyGeo, maps, village, placedMapId, onConfirm, onRemove, onClose }) {
+export default function DummyMustateelDialog({ open, dummy, dummyGeo, maps, village, placedMapId, placedMapIds, skipGeoCheck, onConfirm, onRemove, onClose }) {
   const [label, setLabel] = useState("");
   const [matches, setMatches] = useState([]);
   const [selectedMapId, setSelectedMapId] = useState("");
@@ -28,7 +28,8 @@ export default function DummyMustateelDialog({ open, dummy, dummyGeo, maps, vill
   // the typed Khasra label.
   useEffect(() => {
     if (!open) return;
-    const ms = findUnplacedMogasByLabel(maps, village, label, placedMapId ? [placedMapId] : []);
+    const exclude = placedMapIds && placedMapIds.length ? placedMapIds : (placedMapId ? [placedMapId] : []);
+    const ms = findUnplacedMogasByLabel(maps, village, label, exclude, { skipGeoCheck: !!skipGeoCheck });
     setMatches(
       ms.map(({ map, must }) => ({
         id: map.id,

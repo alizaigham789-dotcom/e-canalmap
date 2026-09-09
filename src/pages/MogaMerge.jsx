@@ -1,9 +1,13 @@
 // ============================================================
 // MOGA MERGE TO ONE MAP — dedicated module.
 // Phase 1 (start form): capture Mouza / Section / Subdivision /
-//   Division + select single-moga maps to merge.
-// Phase 2 (editor-like view): EditorHeader + Urdu MapHeaderLine +
-//   slim tool panel (Move + Hand only) + canvas + StatusBar.
+//   Division + pick ONE anchor moga to place first.
+// Phase 2 (editor canvas): the anchor moga renders; yellow dummy
+//   mustateel cells appear on every open edge. Clicking a dummy
+//   opens a dialog where the user types the mustateel (Khasra)
+//   number — the matching unplaced moga attaches so its
+//   mustateel lands exactly on that cell. Repeat to build the
+//   whole mouza map, one moga at a time.
 // Save → a normal LandMap that shows up & overlays in Geo Map.
 // ============================================================
 
@@ -19,22 +23,36 @@ import StatusBar from "@/components/editor/StatusBar";
 import MergeToolPanel from "@/components/mogamerge/MergeToolPanel";
 import MergeStartForm from "@/components/mogamerge/MergeStartForm";
 import MogaMergeCanvas from "@/components/mogamerge/MogaMergeCanvas";
+import DummyMustateelDialog from "@/components/geomap/DummyMustateelDialog";
 
-import { buildMouzaMerge } from "@/lib/mogaMerge";
+import { computeObjectsBounds } from "@/lib/mogaMerge";
+import { getEdgeDummyMustateels } from "@/lib/mogaArrange";
 import { loadDrawingData, storeDrawingData } from "@/lib/drawingDataStorage";
+
+const PARCEL_TYPES = ["acre", "mustateel", "muraba", "damageMarker"];
+
+// Deep-copy an object, give it a fresh id, tag its moga group, and translate
+// its geometry by (dx, dy). Used for both the anchor placement and attaching.
+function cloneWithTag(o, dx, dy, groupId, groupName) {
+  const c = JSON.parse(JSON.stringify(o));
+  c.id = `${o.type || "obj"}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  c.mogaGroup = groupId;
+  c.mogaGroupName = groupName || "";
+  if (PARCEL_TYPES.includes(o.type)) {
+    c.x = (o.x || 0) + dx;
+    c.y = (o.y || 0) + dy;
+  }
+  if (c.points) c.points = c.points.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+  if (c.start && c.end) {
+    c.start = { x: c.start.x + dx, y: c.start.y + dy };
+    c.end = { x: c.end.x + dx, y: c.end.y + dy };
+  }
+  return c;
+}
 
 // Apply a world offset to one object's geometry (commit a group move)
 function offsetObj(o, dx, dy) {
-  const copy = { ...o };
-  if (["acre", "mustateel", "muraba", "damageMarker"].includes(o.type)) {
-    copy.x = (o.x || 0) + dx; copy.y = (o.y || 0) + dy;
-  }
-  if (o.points) copy.points = o.points.map((p) => ({ x: p.x + dx, y: p.y + dy }));
-  if (o.start && o.end) {
-    copy.start = { x: o.start.x + dx, y: o.start.y + dy };
-    copy.end = { x: o.end.x + dx, y: o.end.y + dy };
-  }
-  return copy;
+  return cloneWithTag(o, dx, dy, o.mogaGroup, o.mogaGroupName);
 }
 
 export default function MogaMerge() {
@@ -49,7 +67,9 @@ export default function MogaMerge() {
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState("draft");
 
-  const [selected, setSelected] = useState(new Set());
+  const [anchorMapId, setAnchorMapId] = useState(null);
+  const [placedMapIds, setPlacedMapIds] = useState(new Set());
+  const [resolvedObjs, setResolvedObjs] = useState({}); // moga id → parsed objects
   const [objects, setObjects] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [fitSignal, setFitSignal] = useState(0);
@@ -57,6 +77,7 @@ export default function MogaMerge() {
   const [zoom, setZoom] = useState(0.15);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [dialogDummy, setDialogDummy] = useState(null);
 
   const canvasRef = useRef(null);
   const titleRef = useRef("");
@@ -80,27 +101,16 @@ export default function MogaMerge() {
     [maps, mouza]
   );
 
-  const selectedSet = selected.size ? selected : new Set(villageMogas.map((m) => m.id));
-  const allSelected = villageMogas.length > 0 && selectedSet.size === villageMogas.length;
-
-  const toggle = (id) => {
-    setError(null);
-    setSelected((prev) => {
-      const base = prev.size ? prev : new Set(villageMogas.map((m) => m.id));
-      const next = new Set(base);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-  const toggleAll = () =>
-    setSelected(allSelected ? new Set() : new Set(villageMogas.map((m) => m.id)));
+  // Yellow dummy cells on every open edge of the placed mustateels
+  const dummies = useMemo(() => getEdgeDummyMustateels(objects), [objects]);
 
   // When the user picks a Mouza, auto-fill Section/Subdivision/Division
   // from the first moga of that village (editable afterwards).
   const handleMouzaChange = (v) => {
     setMouza(v);
-    setSelected(new Set());
+    setAnchorMapId(null);
     setObjects([]);
+    setPlacedMapIds(new Set());
     setError(null);
     const first = (maps || []).find((m) => m.village === v && m.moga_number);
     if (first) {
@@ -116,36 +126,62 @@ export default function MogaMerge() {
     else if (key === "division") setDivision(value);
   };
 
-  // Resolve drawing_data (handles URL-stored large maps) → inline JSON map records
-  const resolveMaps = async (ids) => {
-    const chosen = villageMogas.filter((m) => ids.has(m.id));
-    return Promise.all(
-      chosen.map(async (m) => {
-        const objs = await loadDrawingData(m.drawing_data);
-        return { ...m, drawing_data: JSON.stringify(objs) };
-      })
-    );
-  };
-
-  // Build / rebuild the merged mouza map → switch to editor-like view
-  const handleBuild = async () => {
-    const ids = selectedSet;
-    if (!ids.size) { setError("کم از کم ایک موگہ منتخب کریں۔"); return; }
+  // Start: place the anchor moga at the origin and resolve all village mogas
+  // (so the attach dialog can search their mustateels later).
+  const handleStart = async () => {
+    if (!anchorMapId) { setError("پہلے ایک موگہ منتخب کریں۔"); return; }
     setBusy(true); setError(null);
     try {
-      const resolved = await resolveMaps(ids);
-      const { objects: merged } = buildMouzaMerge(resolved);
-      if (!merged.length) { setError("مرج کرنے کے لیے کوئی ڈیٹا نہیں ملا۔"); return; }
-      setObjects(merged);
-      setSelectedGroup(null);
-      setFitSignal((s) => s + 1);
+      const resolved = {};
+      await Promise.all(
+        villageMogas.map(async (m) => {
+          try { resolved[m.id] = await loadDrawingData(m.drawing_data); }
+          catch { resolved[m.id] = []; }
+        })
+      );
+      setResolvedObjs(resolved);
+
+      const anchorObjs = resolved[anchorMapId] || [];
+      if (!anchorObjs.length) { setError("اس موگہ میں کوئی ڈیٹا نہیں۔"); setBusy(false); return; }
+
+      // Normalise the anchor to the origin so the merged map starts near (0,0)
+      const bounds = computeObjectsBounds(anchorObjs);
+      const dx = bounds ? -bounds.minX : 0;
+      const dy = bounds ? -bounds.minY : 0;
+      const anchorName = villageMogas.find((v) => v.id === anchorMapId)?.moga_number || "";
+      const placed = anchorObjs.map((o) => cloneWithTag(o, dx, dy, anchorMapId, anchorName));
+
+      setObjects(placed);
+      setPlacedMapIds(new Set([anchorMapId]));
       if (!title) setTitle(`موضع نقشہ - ${mouza}`);
       setPhase("editor");
+      setFitSignal((s) => s + 1);
     } catch (e) {
-      setError("مرج میں مسئلہ: " + (e?.message || "unknown"));
+      setError("شروع کرنے میں مسئلہ: " + (e?.message || "unknown"));
     } finally {
       setBusy(false);
     }
+  };
+
+  // Attach a moga so its matching mustateel lands exactly on the clicked dummy
+  const handleDummyAttach = (match, dummyCell) => {
+    const bObjs = resolvedObjs[match.id];
+    if (!bObjs || !bObjs.length) return;
+    const must = match.must; // { label, x, y, w, h }
+    const dx = dummyCell.x - must.x;
+    const dy = dummyCell.y - must.y;
+    const added = bObjs.map((o) => cloneWithTag(o, dx, dy, match.id, match.mogaNumber || ""));
+    setObjects((prev) => [...prev, ...added]);
+    setPlacedMapIds((prev) => new Set(prev).add(match.id));
+  };
+
+  const handleDummyRemove = (mapId) => {
+    setObjects((prev) => prev.filter((o) => o.mogaGroup !== mapId));
+    setPlacedMapIds((prev) => {
+      const n = new Set(prev);
+      n.delete(mapId);
+      return n;
+    });
   };
 
   // Manual commit of a whole-moga drag (canvas → state)
@@ -155,16 +191,17 @@ export default function MogaMerge() {
 
   // Save the merged map as a normal LandMap → appears in Geo Map list
   const handleSave = async (extra) => {
-    // Title-only edit from the header (no create/navigation yet)
     if (extra && extra.title !== undefined && Object.keys(extra).length === 1) {
       setTitle(extra.title);
       return;
     }
-    if (!objects.length) { setError("پہلے مرج کریں۔"); return; }
+    if (!objects.length) { setError("پہلے موگے جوڑیں۔"); return; }
     setBusy(true); setError(null);
     try {
       const parcels = objects.filter((o) => ["mustateel", "muraba"].includes(o.type)).length;
-      const placedSource = villageMogas.find(m => selectedSet.has(m.id) && m.geo_placement_lat != null && m.geo_placement_lng != null);
+      const placedSource = villageMogas.find(
+        (m) => placedMapIds.has(m.id) && m.geo_placement_lat != null && m.geo_placement_lng != null
+      );
       const saved = await base44.entities.LandMap.create({
         title: titleRef.current || `موضع نقشہ - ${mouza}`,
         village: mouza,
@@ -218,15 +255,13 @@ export default function MogaMerge() {
         mouza={mouza}
         onMouzaChange={handleMouzaChange}
         villageMogas={villageMogas}
-        selectedSet={selectedSet}
-        allSelected={allSelected}
-        onToggle={toggle}
-        onToggleAll={toggleAll}
+        anchorMapId={anchorMapId}
+        onPickAnchor={setAnchorMapId}
         section={section}
         subdivision={subdivision}
         division={division}
         onFieldChange={handleFieldChange}
-        onBuild={handleBuild}
+        onStart={handleStart}
         busy={busy}
         error={error}
         isLoading={isLoading}
@@ -234,6 +269,11 @@ export default function MogaMerge() {
       />
     );
   }
+
+  // Dialog search source: village mogas not yet placed, with inline drawing_data
+  const unplacedMaps = villageMogas
+    .filter((m) => !placedMapIds.has(m.id))
+    .map((m) => ({ ...m, drawing_data: JSON.stringify(resolvedObjs[m.id] || []) }));
 
   // ---- EDITOR-LIKE PHASE ----
   return (
@@ -274,6 +314,8 @@ export default function MogaMerge() {
             <MogaMergeCanvas
               ref={canvasRef}
               objects={objects}
+              dummies={dummies}
+              onDummyClick={setDialogDummy}
               selectedGroup={selectedGroup}
               onSelectGroup={setSelectedGroup}
               onCommitMove={handleCommitMove}
@@ -283,7 +325,7 @@ export default function MogaMerge() {
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-white">
-              <p className="text-sm text-slate-400">کوئی ڈیٹا نہیں — واپس جا کر مرج کریں</p>
+              <p className="text-sm text-slate-400">کوئی ڈیٹا نہیں — واپس جا کر شروع کریں</p>
             </div>
           )}
         </div>
@@ -296,6 +338,20 @@ export default function MogaMerge() {
         objectCount={objects.length}
         canalDraftLen={0}
       />
+
+      {dialogDummy && (
+        <DummyMustateelDialog
+          open={!!dialogDummy}
+          dummyGeo={dialogDummy}
+          maps={unplacedMaps}
+          village={mouza}
+          placedMapIds={[...placedMapIds]}
+          skipGeoCheck
+          onConfirm={handleDummyAttach}
+          onRemove={handleDummyRemove}
+          onClose={() => setDialogDummy(null)}
+        />
+      )}
     </div>
   );
 }

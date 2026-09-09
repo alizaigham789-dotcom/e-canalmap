@@ -1,26 +1,27 @@
 // ============================================================
 // MOGA MERGE START FORM — the "start page" of the merge module.
 // Captures the new mouza map's metadata (Mouza, Section,
-// Subdivision, Division) and the set of single-moga maps to merge.
-// After "Merge", MogaMerge switches to the editor-like canvas view.
+// Subdivision, Division) and the FIRST (anchor) moga to place.
+// After "Start", MogaMerge switches to an editor canvas where
+// additional mogas attach one-by-one via dummy mustateel cells.
 // ============================================================
 
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Network, Loader2, AlertCircle, CheckSquare, Square, Wand2, ArrowLeft,
+  Network, Loader2, AlertCircle, CheckCircle2, Circle, Wand2, ArrowLeft,
 } from "lucide-react";
 
 export default function MergeStartForm({
   villages, mouza, onMouzaChange,
-  villageMogas, selectedSet, allSelected, onToggle, onToggleAll,
+  villageMogas, anchorMapId, onPickAnchor,
   section, subdivision, division, onFieldChange,
-  onBuild, busy, error, isLoading, onBack,
+  onStart, busy, error, isLoading, onBack,
 }) {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
-      {/* Heading — same as before */}
+      {/* Heading */}
       <header className="bg-white border-b border-slate-200 px-3 py-2 flex items-center gap-2 sticky top-0 z-20">
         <Button variant="ghost" size="icon" className="w-8 h-8" onClick={onBack} title="Back">
           <ArrowLeft className="w-4 h-4" />
@@ -28,7 +29,7 @@ export default function MergeStartForm({
         <Network className="w-5 h-5 text-violet-600" />
         <div className="min-w-0 flex-1">
           <h1 className="text-sm font-bold text-slate-800 truncate">Moga Merge to One Map</h1>
-          <p className="text-[10px] text-slate-500" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>موجے کو ایک نقشے میں ملائیں</p>
+          <p className="text-[10px] text-slate-500" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>موگے کو ایک نقشے میں ملائیں</p>
         </div>
       </header>
 
@@ -85,32 +86,28 @@ export default function MergeStartForm({
             <>
               <div className="flex items-center justify-between pt-1">
                 <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">
-                  Mogas ({villageMogas.length}) · {selectedSet.size} selected
+                  Mogas ({villageMogas.length})
                 </span>
-                <button
-                  onClick={onToggleAll}
-                  className="flex items-center gap-1 text-[10px] font-bold text-violet-600 hover:text-violet-700"
-                >
-                  {allSelected ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
-                  {allSelected ? "سب ہٹائیں" : "سب چنیں"}
-                </button>
+                <span className="text-[10px] text-violet-600 font-bold" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                  پہلا موگہ چنیں
+                </span>
               </div>
 
               <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
                 {villageMogas.map((m) => {
-                  const isSel = selectedSet.has(m.id);
+                  const isAnchor = m.id === anchorMapId;
                   return (
                     <button
                       key={m.id}
-                      onClick={() => onToggle(m.id)}
+                      onClick={() => onPickAnchor(m.id)}
                       className={`w-full flex items-center gap-2 border rounded-lg px-2.5 py-1.5 text-left transition-colors ${
-                        isSel ? "bg-violet-50 border-violet-300" : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+                        isAnchor ? "bg-violet-50 border-violet-400 ring-1 ring-violet-300" : "bg-slate-50 border-slate-200 hover:bg-slate-100"
                       }`}
                     >
-                      {isSel ? (
-                        <CheckSquare className="w-4 h-4 text-violet-600 shrink-0" />
+                      {isAnchor ? (
+                        <CheckCircle2 className="w-4 h-4 text-violet-600 shrink-0" />
                       ) : (
-                        <Square className="w-4 h-4 text-slate-300 shrink-0" />
+                        <Circle className="w-4 h-4 text-slate-300 shrink-0" />
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-slate-700 truncate">{m.title || "Untitled"}</p>
@@ -129,6 +126,11 @@ export default function MergeStartForm({
                   </p>
                 )}
               </div>
+              {anchorMapId && (
+                <p className="text-[10px] text-slate-400 leading-relaxed" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+                  شروع کرنے کے بعد خالی (dummy) خانوں میں مستطیل نمبر درج کر کے باقی موگے ایک ایک کر کے جوڑیں۔
+                </p>
+              )}
             </>
           )}
 
@@ -143,12 +145,12 @@ export default function MergeStartForm({
 
           <Button
             size="sm"
-            onClick={onBuild}
-            disabled={busy || !selectedSet.size}
+            onClick={onStart}
+            disabled={busy || !anchorMapId}
             className="w-full bg-violet-600 hover:bg-violet-500 text-white gap-1.5"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-            مرج کریں
+            شروع کریں
           </Button>
 
           {isLoading && (
