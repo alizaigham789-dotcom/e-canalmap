@@ -1923,7 +1923,10 @@ export default function GeoMap() {
         open={!!editAllocCell}
         data={editAllocCell}
         allocations={allocations}
+        mustateels={mogaMustateels}
+        info={registerInfo}
         onUpdate={handleUpdateAllocation}
+        onAllocate={handleAllocate}
         onRemove={handleRemoveAllocation}
         onClose={() => setEditAllocCell(null)}
       />

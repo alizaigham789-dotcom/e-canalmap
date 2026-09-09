@@ -101,10 +101,10 @@ export default function Form1RegisterPanel({
         return `
         <tr>
           <td class="sr" rowspan="3">${i + 1}</td>
-          <td class="num mono">${esc(mogaNo)}</td>
-          <td><b>${esc(g.farmer_name)}</b><br/><span class="sub">S/o ${esc(g.father)}</span><br/><span class="mono">${esc(g.cnic)}</span><br/><span class="sub">${esc(g.phone)}</span></td>
-          <td>${tenantCell}</td>
           <td class="num">${esc(g.khata_no || "—")}</td>
+          <td><b>${esc(g.farmer_name)}</b><br/><span class="sub">ولدیت: ${esc(g.father)}</span><br/><span class="sub">${esc(g.phone)}</span><br/><span class="mono">${esc(g.cnic)}</span><br/><span class="sub">کل رقبہ: ${t.acres.toFixed(3)} ایکڑ</span></td>
+          <td>${tenantCell}</td>
+          <td class="num mono">${esc(mogaNo)}</td>
           <td class="num">${t.kanal}</td>
           <td class="num">${t.acres.toFixed(3)}</td>
           <td class="num">${esc(info.channel || "—")}</td>
@@ -145,7 +145,7 @@ export default function Form1RegisterPanel({
     <h1>Form 1 Register</h1>
     <div class="meta">Moga: ${esc(mogaNo)} &nbsp;|&nbsp; Section: ${esc(section)} &nbsp;|&nbsp; Mouza: ${esc(mouza)} &nbsp;|&nbsp; Sub Division: ${esc(subDivision)} &nbsp;|&nbsp; Division: ${esc(division)}</div>
     <table><thead><tr>
-      <th>Sr</th><th>Moga No</th><th>Occupier Name</th><th>Tenant</th><th>Khata</th><th>Tot K</th><th>Tot Ac</th><th>Rajbah</th><th>Own/Tnt</th>
+      <th>Sr</th><th>Khata</th><th>Occupier Name</th><th>Tenant</th><th>Moga No</th><th>Tot K</th><th>Tot Ac</th><th>Rajbah</th><th>Own/Tnt</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <div class="totals">Total Area: ${totals.acres.toFixed(3)} Acres &nbsp;|&nbsp; ${totals.kanal.toFixed(2)} Kanal</div>
     <div class="foot"><span>Girdawar _______________</span><span>Patwari _______________</span><span>Zilladar _______________</span></div>
@@ -163,7 +163,7 @@ export default function Form1RegisterPanel({
     }, 600);
   };
 
-  const COLS = ["Sr", "Moga No", "Occupier Name", "Tenant", "Khata", "Tot K", "Tot Ac", "Rajbah", "Own/Tnt", ""];
+  const COLS = ["Sr", "Khata", "Occupier Name", "Tenant", "Moga No", "Tot K", "Tot Ac", "Rajbah", "Own/Tnt", ""];
   const GRID_W = 50;
 
   return (
@@ -228,12 +228,15 @@ export default function Form1RegisterPanel({
                       {/* Row A — farmer */}
                       <tr className="bg-slate-50/60 align-top">
                         <td className="px-1 py-1 border border-slate-200 text-center font-bold text-slate-700 w-6" rowSpan={3}>{i + 1}</td>
-                        <td className="px-1 py-1 border border-slate-200 text-center font-mono text-[9px] text-slate-700">{mogaNo}</td>
+                        <td className="px-1 py-1 border border-slate-200 text-center">
+                          <input value={g.khata_no} onChange={(e) => onUpdateGroup(g.key, { khata_no: e.target.value })} className="w-12 text-center text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" placeholder="—" />
+                        </td>
                         <td className="px-1 py-1 border border-slate-200">
                           <input value={g.farmer_name} onChange={(e) => onUpdateGroup(g.key, { farmer_name: e.target.value })} className="w-full font-medium text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" />
-                          <div className="font-mono text-[9px] text-slate-700 leading-tight">{g.cnic}</div>
-                          <div className="text-[8px] text-slate-500 leading-tight">S/o {g.father}</div>
+                          <div className="text-[8px] text-slate-500 leading-tight">ولدیت: {g.father}</div>
                           <div className="text-[8px] font-mono text-slate-500 leading-tight">{g.phone}</div>
+                          <div className="font-mono text-[9px] text-slate-700 leading-tight">{g.cnic}</div>
+                          <div className="text-[8px] font-bold text-amber-700 leading-tight">کل رقبہ: {t.acres.toFixed(3)} ایکڑ</div>
                         </td>
                         <td className="px-1 py-1 border border-slate-200">
                           {g.tenure === "Tenant" ? (
@@ -246,9 +249,7 @@ export default function Form1RegisterPanel({
                             <span className="text-slate-300">—</span>
                           )}
                         </td>
-                        <td className="px-1 py-1 border border-slate-200 text-center">
-                          <input value={g.khata_no} onChange={(e) => onUpdateGroup(g.key, { khata_no: e.target.value })} className="w-12 text-center text-[10px] bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none rounded-sm" placeholder="—" />
-                        </td>
+                        <td className="px-1 py-1 border border-slate-200 text-center font-mono text-[9px] text-slate-700">{mogaNo}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-blue-700">{t.kanal}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono font-bold text-amber-700">{t.acres.toFixed(3)}</td>
                         <td className="px-1 py-1 border border-slate-200 text-center font-mono text-[9px] text-slate-700">{info.channel || "—"}</td>

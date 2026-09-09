@@ -22,13 +22,13 @@ import {
 } from "@/lib/gisEngine";
 import {
   drawGrid, drawAcre, drawMustateel, drawMuraba, drawCanal, drawKhal,
-  drawRoad, drawBridge, drawChakbandi, drawMouza, drawOutlet, drawDamageMarker,
+  drawRoad, drawRailway, drawBridge, drawChakbandi, drawMouza, drawOutlet, drawDamageMarker,
 } from "@/components/editor/GISRenderer";
 
 const MUST_W = DIMENSIONS.MUSTATEEL.width;
 const MUST_H = DIMENSIONS.MUSTATEEL.height;
 
-const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
+const DRAW_ORDER = ["mouza", "muraba", "mustateel", "acre", "road", "railway", "bridge", "canal", "khal", "chakbandi", "outlet", "damageMarker"];
 
 const C = {
   acreFill: "rgba(234,179,8,0.08)", acreStroke: "#eab308",
@@ -153,6 +153,7 @@ const MogaMergeCanvas = forwardRef(function MogaMergeCanvas(
       else if (drawObj.type === "canal") drawCanal(ctx, drawObj, isSel, zoom, C);
       else if (drawObj.type === "khal") drawKhal(ctx, drawObj, isSel, zoom, C);
       else if (drawObj.type === "road") drawRoad(ctx, drawObj, isSel, zoom, C);
+      else if (drawObj.type === "railway") drawRailway(ctx, drawObj, isSel, zoom, C);
       else if (drawObj.type === "bridge") drawBridge(ctx, drawObj, isSel, zoom, C);
       else if (drawObj.type === "chakbandi") drawChakbandi(ctx, drawObj, isSel, zoom, C, true);
       else if (drawObj.type === "mouza") drawMouza(ctx, drawObj, isSel, zoom, C);
