@@ -1547,6 +1547,7 @@ export default function GeoMap() {
         center={center}
         zoom={zoom}
         maxZoom={23}
+        preferCanvas
         className="w-full h-full"
         style={{ background: "#0f1923" }}
         doubleClickZoom={false}
@@ -1637,13 +1638,13 @@ export default function GeoMap() {
         )}
 
         {/* Allocation layer — clickable killa (acre) cells + allocated highlights */}
-        {activeOverlay?.transform && !capturing && (
+        {activeOverlay?.transform && !capturing && allocTool === "cell" && (
           <AllocationLayer
             objects={mapObjects}
             overlay={activeOverlay}
             selectedMoga={selectedMoga}
             allocations={allocations}
-            mode={allocTool === "cell"}
+            mode
             onCellClick={handleCellClick}
             onEditAllocation={handleEditAllocation}
             activeMustateelIds={activeMustateelIds}
