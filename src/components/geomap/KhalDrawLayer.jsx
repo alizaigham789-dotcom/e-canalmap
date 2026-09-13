@@ -62,6 +62,7 @@ export default function KhalDrawLayer({
   onKhalDrawn,
   onKhalUpdated,
   onKhalDeleted,
+  onSelectObj,
 }) {
   const [draftPoints, setDraftPoints] = useState([]);
   const [mouseLatLng, setMouseLatLng] = useState(null);
@@ -162,16 +163,19 @@ export default function KhalDrawLayer({
 
   const handleKhalClick = useCallback((khalId, e) => {
     L.DomEvent.stopPropagation(e);
-    setSelectedKhalId(prev => prev === khalId ? null : khalId);
+    const willSelect = selectedKhalId !== khalId;
+    setSelectedKhalId(willSelect ? khalId : null);
     setLongPressSel(false);
-  }, []);
+    onSelectObj && onSelectObj(willSelect ? khals.find(o => o.id === khalId) : null);
+  }, [selectedKhalId, khals, onSelectObj]);
 
   // Long-press / double-click → select khal and show edit nodes (works in ANY mode)
   const handleKhalSelectInline = useCallback((khalId, e) => {
     if (e) L.DomEvent.stopPropagation(e);
     setSelectedKhalId(khalId);
     setLongPressSel(true);
-  }, []);
+    onSelectObj && onSelectObj(khals.find(o => o.id === khalId));
+  }, [khals, onSelectObj]);
 
   // Long-press detection on a khal polyline (touch + mouse)
   const startLongPress = useCallback((khalId) => {
@@ -179,8 +183,9 @@ export default function KhalDrawLayer({
     longPressTimer.current = setTimeout(() => {
       setSelectedKhalId(khalId);
       setLongPressSel(true);
+      onSelectObj && onSelectObj(khals.find(o => o.id === khalId));
     }, 500);
-  }, []);
+  }, [khals, onSelectObj]);
   const cancelLongPress = useCallback(() => {
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
   }, []);
@@ -192,14 +197,16 @@ export default function KhalDrawLayer({
     onKhalDeleted && onKhalDeleted(khalId);
     setSelectedKhalId(null);
     setLongPressSel(false);
-  }, [onKhalDeleted]);
+    onSelectObj && onSelectObj(null);
+  }, [onKhalDeleted, onSelectObj]);
 
   // Deselect on background click (when not drawing)
   const handleBackgroundClick = useCallback(() => {
     if (drawMode) return;
     setSelectedKhalId(null);
     setLongPressSel(false);
-  }, [drawMode]);
+    onSelectObj && onSelectObj(null);
+  }, [drawMode, onSelectObj]);
 
   // Draft preview polyline
   const draftPreviewPositions = useMemo(() => {

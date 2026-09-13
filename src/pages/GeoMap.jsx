@@ -30,6 +30,7 @@ import MogaDrawLayer from "@/components/geomap/MogaDrawLayer";
 import CanalEditLayer from "@/components/geomap/CanalEditLayer";
 import ZoomLock from "@/components/geomap/ZoomLock";
 import MapSourceSelector, { getSource } from "@/components/geomap/MapSourceSelector";
+import GeoMapSelectionPanel from "@/components/geomap/GeoMapSelectionPanel";
 import { remainingKanal, acreAllocations, kanalUsedInAcre, parcelKillaCells } from "@/lib/allocationEngine";
 import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap, buildGridPoints } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
@@ -193,6 +194,7 @@ export default function GeoMap() {
   const [existingRegId, setExistingRegId] = useState(null);
   const [selectedMuraba, setSelectedMuraba] = useState("");
   const [dummyDialog, setDummyDialog] = useState(null); // { dummy, geo } — dummy mustateel attach
+  const [selectedGeoObj, setSelectedGeoObj] = useState(null); // selected khal/moga for properties panel
 
   // Measurement tools state
   const [markers, setMarkers] = useState([]); // user markers
@@ -612,6 +614,35 @@ export default function GeoMap() {
       toast.success("موگہ حذف ہو گیا");
     } catch (e) {
       toast.error("موگہ حذف نہیں ہوا");
+    }
+  }, [selectedMapId, selectedMap, queryClient]);
+
+  // Update properties of a selected khal/moga (name, width, colour, mogha number…)
+  const handleGeoObjUpdated = useCallback(async (id, changes) => {
+    if (!selectedMapId || !selectedMap) return;
+    const currentObjs = selectedMap.drawing_data ? DrawingStateManager.deserialize(selectedMap.drawing_data) : [];
+    const updated = currentObjs.map(o => o.id === id ? { ...o, ...changes } : o);
+    try {
+      await base44.entities.LandMap.update(selectedMapId, { drawing_data: JSON.stringify(updated) });
+      queryClient.invalidateQueries({ queryKey: ["geomap-map", selectedMapId] });
+      setSelectedGeoObj(prev => prev && prev.id === id ? { ...prev, ...changes } : prev);
+    } catch (e) {
+      toast.error("اپڈیٹ نہیں ہوا");
+    }
+  }, [selectedMapId, selectedMap, queryClient]);
+
+  // Delete a selected khal/moga from its properties panel
+  const handleGeoObjDeleted = useCallback(async (id) => {
+    if (!selectedMapId || !selectedMap) return;
+    const currentObjs = selectedMap.drawing_data ? DrawingStateManager.deserialize(selectedMap.drawing_data) : [];
+    const updated = currentObjs.filter(o => o.id !== id);
+    try {
+      await base44.entities.LandMap.update(selectedMapId, { drawing_data: JSON.stringify(updated) });
+      queryClient.invalidateQueries({ queryKey: ["geomap-map", selectedMapId] });
+      setSelectedGeoObj(null);
+      toast.success("حذف ہو گیا");
+    } catch (e) {
+      toast.error("حذف نہیں ہوا");
     }
   }, [selectedMapId, selectedMap, queryClient]);
 
@@ -1061,6 +1092,7 @@ export default function GeoMap() {
     setOverlaySaved(false);
     setPlacingStep(0); // auto-place effect decides: restore saved placement or enter placement mode
     autoPlacedRef.current = null;
+    setSelectedGeoObj(null);
   };
 
   // Top cascade: pick a moga → auto-select its map; pick a muraba → focus it on the map
@@ -1651,6 +1683,7 @@ export default function GeoMap() {
             onKhalDrawn={handleKhalDrawn}
             onKhalUpdated={handleKhalUpdated}
             onKhalDeleted={handleKhalDeleted}
+            onSelectObj={setSelectedGeoObj}
           />
         )}
 
@@ -1666,6 +1699,7 @@ export default function GeoMap() {
             onMogaDrawn={handleMogaDrawn}
             onMogaUpdated={handleMogaUpdated}
             onMogaDeleted={handleMogaDeleted}
+            onSelectObj={setSelectedGeoObj}
           />
         )}
 
@@ -2076,6 +2110,14 @@ export default function GeoMap() {
         totals={registerTotals}
         onSave={handleSaveRegister}
         saving={savingRegister}
+      />
+
+      {/* Selected khal/moga properties + delete (Map Editor style) */}
+      <GeoMapSelectionPanel
+        obj={selectedGeoObj}
+        onUpdate={handleGeoObjUpdated}
+        onDelete={handleGeoObjDeleted}
+        onClose={() => setSelectedGeoObj(null)}
       />
 
       {/* Map style selector (both sub-modules) */}

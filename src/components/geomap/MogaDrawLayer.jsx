@@ -21,7 +21,7 @@ function deleteIcon() {
 // Draw a Moga (outlet) — click 1 = start (block), click 2 = end (arrow), then
 // prompt for mogha number + side. Points snap to the killa grid. In edit mode
 // existing mogas are clickable: selecting one shows draggable start/end nodes.
-export default function MogaDrawLayer({ drawMode, editMode, overlay, objects, gridPoints, onMogaDrawn, onMogaUpdated, onMogaDeleted }) {
+export default function MogaDrawLayer({ drawMode, editMode, overlay, objects, gridPoints, onMogaDrawn, onMogaUpdated, onMogaDeleted, onSelectObj }) {
   const [startLatLng, setStartLatLng] = useState(null);
   const [mouseLatLng, setMouseLatLng] = useState(null);
   const [pending, setPending] = useState(null);
@@ -61,7 +61,7 @@ export default function MogaDrawLayer({ drawMode, editMode, overlay, objects, gr
   useMapEvents({
     click: (e) => {
       if (drawMode) handleAddPoint(e.latlng);
-      else if (editMode) setSelectedMogaId(null); // background tap deselects
+      else if (editMode) { setSelectedMogaId(null); onSelectObj && onSelectObj(null); } // background tap deselects
     },
     mousemove: (e) => {
       if (!drawMode) return;
@@ -113,14 +113,17 @@ export default function MogaDrawLayer({ drawMode, editMode, overlay, objects, gr
 
   const handleMogaClick = useCallback((mogaId, e) => {
     L.DomEvent.stopPropagation(e);
-    setSelectedMogaId(prev => prev === mogaId ? null : mogaId);
-  }, []);
+    const willSelect = selectedMogaId !== mogaId;
+    setSelectedMogaId(willSelect ? mogaId : null);
+    onSelectObj && onSelectObj(willSelect ? mogas.find(o => o.id === mogaId) : null);
+  }, [selectedMogaId, mogas, onSelectObj]);
 
   const handleDeleteMoga = useCallback((mogaId, e) => {
     L.DomEvent.stopPropagation(e);
     onMogaDeleted && onMogaDeleted(mogaId);
     setSelectedMogaId(null);
-  }, [onMogaDeleted]);
+    onSelectObj && onSelectObj(null);
+  }, [onMogaDeleted, onSelectObj]);
 
   if (!transform) return null;
 
