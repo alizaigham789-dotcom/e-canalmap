@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Pencil } from "lucide-react";
 import { COL_LETTERS, PRINT_CSS, BW_CSS, fracHtml, bandubastHtml, tarmeemMarker, sumCol, sumPair, d } from "@/lib/paratHelpers";
 import { openPrintWindow } from "@/lib/paratPrint";
+import { useHasSubscription } from "@/hooks/useSubscription";
+import UpgradePrompt from "@/components/subscription/UpgradePrompt";
 
 // Columns on the summary side that are hidden in print by default and can be
 // toggled on individually: C (کل رقبہ), D (غیر ممکن), F/G (واری بحساب),
@@ -11,6 +13,8 @@ const TOGGLE_COLS = ["C", "D", "F", "G", "H", "I", "J", "K"];
 export default function ParatPrintModal({ docType, headerLine, rows, notes, autoTarmeemNotes = [], printRowSr, printColSr, setPrintRowSr, setPrintColSr, printCols, setPrintCols, onClose, variant }) {
   const [pageSize, setPageSize] = useState("A4");
   const [bw, setBw] = useState(false);
+  const { hasAccess } = useHasSubscription();
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   const isJadeed = variant === "jadeed";
   const showSummary = !isJadeed;
@@ -45,6 +49,7 @@ export default function ParatPrintModal({ docType, headerLine, rows, notes, auto
   })();
 
   const handlePrint = () => {
+    if (!hasAccess) { setShowUpgrade(true); return; }
     const content = document.getElementById("parat-print-content").innerHTML;
     const css = PRINT_CSS.replace("A4 landscape", `${pageSize} landscape`);
     const html = `<!DOCTYPE html><html dir="rtl"><head><title></title><style>${css}${bw ? BW_CSS : ""}</style></head><body><div class="print-page-wrap">${content}</div></body></html>`;
@@ -311,6 +316,7 @@ export default function ParatPrintModal({ docType, headerLine, rows, notes, auto
           </div>
         </div>
       </div>
+      <UpgradePrompt open={showUpgrade} onClose={() => setShowUpgrade(false)} />
     </div>
   );
 }

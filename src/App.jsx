@@ -7,7 +7,6 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import SubscriptionGate from '@/components/SubscriptionGate';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Route-level code splitting — each page loads in its own chunk so the
@@ -80,10 +79,8 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Dashboard />} />
         <Route path="/account" element={<Account />} />
         <Route path="/subscription" element={<Subscription />} />
-        <Route element={<SubscriptionGate />}>
-          <Route path="/editor" element={<ErrorBoundary label="Map Editor"><Editor /></ErrorBoundary>} />
-          <Route path="/map-list" element={<MapList />} />
-        </Route>
+        <Route path="/editor" element={<ErrorBoundary label="Map Editor"><Editor /></ErrorBoundary>} />
+        <Route path="/map-list" element={<MapList />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/canal-forms" element={<CanalForms />} />
         <Route path="/parat-warabandi" element={<ParatWarabandi />} />
@@ -92,11 +89,9 @@ const AuthenticatedApp = () => {
         <Route path="/warashikni" element={<Warashikni />} />
         <Route path="/tawan-case" element={<TawanCase />} />
         <Route path="/ta-form" element={<TAForm />} />
-        <Route element={<SubscriptionGate />}>
-          <Route path="/geo-map" element={<GeoMap />} />
-          <Route path="/moga-merge" element={<MogaMerge />} />
-          <Route path="/form1-register" element={<Form1Register />} />
-        </Route>
+        <Route path="/geo-map" element={<GeoMap />} />
+        <Route path="/moga-merge" element={<MogaMerge />} />
+        <Route path="/form1-register" element={<Form1Register />} />
         <Route path="/deputy-collector" element={<DeputyCollectorDocs />} />
         <Route path="/deputy-collector/33c" element={<Form33C />} />
         <Route path="/deputy-collector/task-assignment" element={<TaskAssignment />} />

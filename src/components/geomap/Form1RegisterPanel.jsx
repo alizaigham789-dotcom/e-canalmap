@@ -1,6 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { X, Trash2, Download, Save, Loader2, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { useHasSubscription } from "@/hooks/useSubscription";
+import UpgradePrompt from "@/components/subscription/UpgradePrompt";
 
 // Excel-style Form 1 register. Each occupier = 3 rows sharing one serial number:
 //   Row A — farmer details (name, CNIC, phone, tenant, khata, totals…)
@@ -64,6 +66,9 @@ export default function Form1RegisterPanel({
     return [...map.values()];
   }, [allocations]);
 
+  const { hasAccess } = useHasSubscription();
+  const [showUpgrade, setShowUpgrade] = useState(false);
+
   if (!open) return null;
 
   const mogaNo = selectedMoga || mapData?.moga_number || "—";
@@ -79,6 +84,7 @@ export default function Form1RegisterPanel({
     );
 
   const handlePrintPDF = () => {
+    if (!hasAccess) { setShowUpgrade(true); return; }
     if (allocations.length === 0) {
       toast.error("Allocate patches first");
       return;
@@ -302,6 +308,7 @@ export default function Form1RegisterPanel({
           </button>
         </div>
       </div>
+      <UpgradePrompt open={showUpgrade} onClose={() => setShowUpgrade(false)} />
     </div>
   );
 }

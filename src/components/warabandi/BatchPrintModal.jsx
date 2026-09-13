@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Printer, X } from "lucide-react";
 import { buildBatchHTML, printParatBatch } from "@/lib/paratPrint";
+import { useHasSubscription } from "@/hooks/useSubscription";
+import UpgradePrompt from "@/components/subscription/UpgradePrompt";
 
 // Scoped CSS for the on-screen preview only (does not leak to the app).
 const PREVIEW_CSS = `
@@ -17,12 +19,15 @@ export default function BatchPrintModal({ open, records, onClose }) {
   const [pageSize, setPageSize] = useState("A4");
   const [orientation, setOrientation] = useState("landscape");
   const [printRowSr, setPrintRowSr] = useState(true);
+  const { hasAccess } = useHasSubscription();
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   if (!open) return null;
 
   const html = buildBatchHTML(records, { printRowSr, printColSr: false });
 
   const handlePrint = () => {
+    if (!hasAccess) { setShowUpgrade(true); return; }
     printParatBatch(records, { pageSize, orientation, printRowSr, printColSr: false });
   };
 
@@ -72,6 +77,7 @@ export default function BatchPrintModal({ open, records, onClose }) {
           )}
         </div>
       </div>
+      <UpgradePrompt open={showUpgrade} onClose={() => setShowUpgrade(false)} />
     </div>
   );
 }

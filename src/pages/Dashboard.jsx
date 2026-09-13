@@ -2,9 +2,10 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
-import { Shield, LogOut, Globe, Database, Search, X } from "lucide-react";
+import { Shield, LogOut, Globe, Database, Search, X, Sparkles } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import ModuleCard from "@/components/dashboard/ModuleCard";
+import { Button } from "@/components/ui/button";
 import CommitsPanel from "@/components/dashboard/CommitsPanel";
 import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -211,8 +212,8 @@ export default function Dashboard() {
   }, [search]);
 
   const renderCard = (mod) => {
-    const needsSub = mod.id === "map-editor" || mod.id === "geo-map" || mod.id === "moga-merge";
-    const subLocked = needsSub && !hasAccess;
+    // Freemium model: every module is usable; print/PDF is gated in-module.
+    const subLocked = false;
     const isLocked = !isAdmin && mod.locked;
     return (
       <ModuleCard
@@ -280,6 +281,14 @@ export default function Dashboard() {
           </h2>
           <p className="text-xs text-slate-500 mt-0.5" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>ایک ماڈیول منتخب کریں</p>
         </div>
+
+        {currentUser && !hasAccess && (
+          <div className="mb-2 md:mb-4 shrink-0 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-2.5 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-[11px] text-amber-800 flex-1" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>پرنٹ / PDF اور مکمل فیچرز کے لیے سبسکرپشن لیں۔</p>
+            <Button size="sm" onClick={() => navigate("/subscription")} className="h-7 bg-amber-600 hover:bg-amber-700 text-[11px]">سبسکرائب</Button>
+          </div>
+        )}
 
         {/* Search bar — quick module access, app-like */}
         <div className="mb-2 md:mb-4 relative shrink-0">
