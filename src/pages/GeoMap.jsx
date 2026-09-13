@@ -28,7 +28,7 @@ import PatchDialog from "@/components/geomap/PatchDialog";
 import KhalDrawLayer from "@/components/geomap/KhalDrawLayer";
 import MogaDrawLayer from "@/components/geomap/MogaDrawLayer";
 import { remainingKanal, acreAllocations, kanalUsedInAcre, parcelKillaCells } from "@/lib/allocationEngine";
-import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap } from "@/lib/patchSnap";
+import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap, buildGridPoints } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import { inverseTransform } from "@/lib/geoOverlay";
 import { arrangeMogas, autoAttachPlacement, suggestNextMogas, computePlacementForMustateel } from "@/lib/mogaArrange";
@@ -584,6 +584,36 @@ export default function GeoMap() {
       toast.error("موگہ محفوظ نہیں ہوا");
     }
   }, [selectedMapId, selectedMap, queryClient]);
+
+  // Update an existing moga (outlet) — vertex drag in edit mode
+  const handleMogaUpdated = useCallback(async (mogaId, newStart, newEnd) => {
+    if (!selectedMapId || !selectedMap) return;
+    const currentObjs = selectedMap.drawing_data ? DrawingStateManager.deserialize(selectedMap.drawing_data) : [];
+    const updated = currentObjs.map(o => o.id === mogaId ? { ...o, start: newStart, end: newEnd } : o);
+    try {
+      await base44.entities.LandMap.update(selectedMapId, { drawing_data: JSON.stringify(updated) });
+      queryClient.invalidateQueries({ queryKey: ["geomap-map", selectedMapId] });
+    } catch (e) {
+      toast.error("موگہ اپڈیٹ نہیں ہوا");
+    }
+  }, [selectedMapId, selectedMap, queryClient]);
+
+  // Delete a moga (outlet) from the map's drawing_data
+  const handleMogaDeleted = useCallback(async (mogaId) => {
+    if (!selectedMapId || !selectedMap) return;
+    const currentObjs = selectedMap.drawing_data ? DrawingStateManager.deserialize(selectedMap.drawing_data) : [];
+    const updated = currentObjs.filter(o => o.id !== mogaId);
+    try {
+      await base44.entities.LandMap.update(selectedMapId, { drawing_data: JSON.stringify(updated) });
+      queryClient.invalidateQueries({ queryKey: ["geomap-map", selectedMapId] });
+      toast.success("موگہ حذف ہو گیا");
+    } catch (e) {
+      toast.error("موگہ حذف نہیں ہوا");
+    }
+  }, [selectedMapId, selectedMap, queryClient]);
+
+  // Grid intersections (lat/lng) used to snap khal/moga drawing to killa grid lines
+  const gridPoints = useMemo(() => buildGridPoints(mapObjects, activeOverlay?.transform, selectedMoga), [mapObjects, activeOverlay, selectedMoga]);
 
   const registerTotals = useMemo(() => {
     const kanal = allocations.reduce((s, a) => s + (a.kanal || 0), 0);
@@ -1603,6 +1633,7 @@ export default function GeoMap() {
             editMode={khalTool === "edit"}
             overlay={activeOverlay}
             objects={mapObjects}
+            gridPoints={gridPoints}
             khalType={viewMode === "view" ? "informal" : "approved"}
             onKhalDrawn={handleKhalDrawn}
             onKhalUpdated={handleKhalUpdated}
@@ -1615,9 +1646,13 @@ export default function GeoMap() {
         {(viewMode === "overlay" || viewMode === "view") && activeOverlay?.transform && !capturing && (
           <MogaDrawLayer
             drawMode={mogaTool === "draw"}
+            editMode={khalTool === "edit"}
             overlay={activeOverlay}
             objects={mapObjects}
+            gridPoints={gridPoints}
             onMogaDrawn={handleMogaDrawn}
+            onMogaUpdated={handleMogaUpdated}
+            onMogaDeleted={handleMogaDeleted}
           />
         )}
 

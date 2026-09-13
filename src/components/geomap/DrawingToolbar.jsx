@@ -1,11 +1,10 @@
 import React from "react";
-import { Slash, Pentagon, Square, Circle, MapPin, Trash2, Download, Layers } from "lucide-react";
+import { Slash, Pentagon, Square, MapPin, Trash2, Download, Layers } from "lucide-react";
 
 const TOOLS = [
   { id: "line", icon: Slash, label: "Measure Line" },
   { id: "polygon", icon: Pentagon, label: "Draw Polygon" },
   { id: "rectangle", icon: Square, label: "Measure Rectangle" },
-  { id: "circle", icon: Circle, label: "Measure Circle" },
   { id: "marker", icon: MapPin, label: "Place Marker" },
 ];
 

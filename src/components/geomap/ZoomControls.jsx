@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Minus, Crosshair, MapPin, Pencil, Waves, Navigation } from "lucide-react";
+import { Plus, Minus, Crosshair, MapPin, Waves, Navigation } from "lucide-react";
 
 // Moga / Outlet icon — matches the Map Editor's outlet tool icon
 const MogaIcon = ({ className }) => (
@@ -51,19 +51,6 @@ export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, on
           <MapPin className="w-4 h-4" />
         </button>
       )}
-      {onEditPatch && (
-        <button
-          onClick={onEditPatch}
-          className={`w-9 h-9 rounded-xl shadow-xl border flex items-center justify-center transition-all ${
-            editActive
-              ? "bg-orange-600 text-white border-orange-600"
-              : "bg-white text-orange-600 border-slate-200 hover:bg-orange-50"
-          }`}
-          title="Edit Patch"
-        >
-          <Pencil className="w-4 h-4" />
-        </button>
-      )}
       {onKhalDraw && (
         <button
           onClick={onKhalDraw}
@@ -85,7 +72,7 @@ export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, on
               ? "bg-orange-600 text-white border-orange-600"
               : "bg-white text-orange-600 border-slate-200 hover:bg-orange-50"
           }`}
-          title="Edit Watercourse (Khal)"
+          title="Edit Watercourse / Moga"
         >
           <Navigation className="w-4 h-4" />
         </button>

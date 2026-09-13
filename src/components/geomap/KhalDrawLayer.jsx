@@ -3,6 +3,7 @@ import { Polyline, Marker, CircleMarker, Tooltip, useMapEvents } from "react-lea
 import L from "leaflet";
 import { inverseTransform } from "@/lib/geoOverlay";
 import { createKhal, DIMENSIONS } from "@/lib/gisEngine";
+import { snapToGrid } from "@/lib/patchSnap";
 
 // Vertex icon — small blue draggable circle
 function vertexIcon(num) {
@@ -56,6 +57,7 @@ export default function KhalDrawLayer({
   editMode,
   overlay,
   objects,
+  gridPoints,
   khalType = "approved",
   onKhalDrawn,
   onKhalUpdated,
@@ -88,8 +90,9 @@ export default function KhalDrawLayer({
   }, [khals, transform]);
 
   const handleAddPoint = useCallback((latlng) => {
-    setDraftPoints(prev => [...prev, latlng]);
-  }, []);
+    const p = snapToGrid(latlng, gridPoints, 10);
+    setDraftPoints(prev => [...prev, p]);
+  }, [gridPoints]);
 
   const handleFinish = useCallback(() => {
     if (draftPoints.length < 2) {
