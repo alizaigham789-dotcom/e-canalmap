@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Minus, Crosshair, MapPin, Waves, Navigation } from "lucide-react";
+import { Plus, Minus, Crosshair, MapPin, Waves, Navigation, Eye, EyeOff } from "lucide-react";
 
 // Moga / Outlet icon — matches the Map Editor's outlet tool icon
 const MogaIcon = ({ className }) => (
@@ -10,7 +10,7 @@ const MogaIcon = ({ className }) => (
   </svg>
 );
 
-export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, onPlaceByCoords, onPlaceByCoordsLower, onEditPatch, editActive, onKhalDraw, khalDrawActive, onKhalEdit, khalEditActive, onMogaDraw, mogaDrawActive }) {
+export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, onPlaceByCoords, onPlaceByCoordsLower, onEditPatch, editActive, onKhalDraw, khalDrawActive, onKhalEdit, khalEditActive, onMogaDraw, mogaDrawActive, onToggleCanals, canalsVisible }) {
   return (
     <div className="absolute top-16 left-3 z-[1000] flex flex-col items-center gap-1.5">
       <div className="bg-white rounded-xl shadow-xl border border-slate-200 flex flex-col overflow-hidden">
@@ -88,6 +88,19 @@ export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, on
           title="Draw Moga (Outlet)"
         >
           <MogaIcon className="w-4 h-4" />
+        </button>
+      )}
+      {onToggleCanals && (
+        <button
+          onClick={onToggleCanals}
+          className={`w-9 h-9 rounded-xl shadow-xl border flex items-center justify-center transition-all ${
+            canalsVisible
+              ? "bg-white text-blue-600 border-slate-200 hover:bg-blue-50"
+              : "bg-slate-500 text-white border-slate-600"
+          }`}
+          title={canalsVisible ? "Hide Canals" : "Show Canals"}
+        >
+          {canalsVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
         </button>
       )}
     </div>

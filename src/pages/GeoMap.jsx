@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves, Map as MapIcon, Satellite, Move, Eye, EyeOff } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves, Map as MapIcon, Satellite, Move } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -1791,6 +1791,8 @@ export default function GeoMap() {
         khalEditActive={khalTool === "edit"}
         onMogaDraw={() => { setMogaTool((v) => (v === "draw" ? null : "draw")); setKhalTool(null); setActiveTool(null); setAllocTool(null); }}
         mogaDrawActive={mogaTool === "draw"}
+        onToggleCanals={() => setShowCanals(v => !v)}
+        canalsVisible={showCanals}
       />
       <Compass />
 
@@ -2049,13 +2051,6 @@ export default function GeoMap() {
       />
 
       {/* Hybrid / Satellite toggle (both sub-modules) */}
-      <button
-        onClick={() => setShowCanals(v => !v)}
-        className={`absolute bottom-16 right-3 z-[1000] flex items-center justify-center w-9 h-9 rounded-full shadow-xl transition-colors ${showCanals ? "bg-[#1A4550] text-white" : "bg-white/20 text-white/40"}`}
-        title={showCanals ? "Canals On — click to hide" : "Canals Off — click to show"}
-      >
-        {showCanals ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-      </button>
       <button
         onClick={() => setHybrid(v => !v)}
         className="absolute bottom-5 right-3 z-[1000] flex items-center gap-1.5 px-4 h-9 bg-[#1A4550] text-white text-xs font-bold rounded-full shadow-xl hover:bg-[#2C5E6D] transition-colors"

@@ -1,7 +1,7 @@
 import React, { useMemo, memo, useEffect } from "react";
 import { Polygon, Polyline, Tooltip, CircleMarker, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
-import { getMustateelKillaCells, getMurabaKillaCells, DIMENSIONS } from "@/lib/gisEngine";
+import { getMustateelKillaCells, getMurabaKillaCells, DIMENSIONS, canalNameFont } from "@/lib/gisEngine";
 import { canvasRectToLatLngs, canvasPolylineToLatLngs, computeCcaCenter } from "@/lib/geoOverlay";
 
 function labelFontSize(zoom) {
@@ -245,6 +245,40 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
     return { leftLine: left, rightLine: right, fillLatLngs: fill };
   }, [obj.points, transform, halfW]);
 
+  // Repeating canal-name label positions along the centerline — matches the Map
+  // Editor: gold text with dark outline, repeating every ~5 acres of frontage.
+  const labelPoints = useMemo(() => {
+    if (!obj.name || !obj.points || obj.points.length < 2 || !transform) return [];
+    const pts = obj.points;
+    const segLens = [];
+    let total = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const d = Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
+      segLens.push(d); total += d;
+    }
+    if (total < 1) return [];
+    const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH || 14);
+    const labelW = obj.name.length * cf * 0.55;
+    const repeatSpacing = 1100; // ~5 acres of canal frontage
+    const out = [];
+    for (let dist = labelW / 2; dist + labelW / 2 < total; dist += repeatSpacing) {
+      let acc = 0, placed = false, px = 0, py = 0;
+      for (let i = 0; i < segLens.length; i++) {
+        if (acc + segLens[i] >= dist) {
+          const t = segLens[i] > 0 ? (dist - acc) / segLens[i] : 0;
+          const a = pts[i], b = pts[i + 1];
+          px = a.x + (b.x - a.x) * t;
+          py = a.y + (b.y - a.y) * t;
+          placed = true; break;
+        }
+        acc += segLens[i];
+      }
+      if (!placed) break;
+      out.push(transform.transform(px, py));
+    }
+    return out;
+  }, [obj.name, obj.points, obj.width, transform]);
+
   if (fillLatLngs.length === 0) {
     return (
       <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#0284c7", weight: 3, opacity: 0.9 }} />
@@ -256,23 +290,25 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
 
   return (
     <>
-      {/* Water fill polygon — carries the canal name tooltip so it renders at the canal centre */}
+      {/* Water fill polygon */}
       <Polygon
         positions={fillLatLngs.map(p => [p.lat, p.lng])}
         pathOptions={{ color: strokeColor, fillColor, fillOpacity, weight: 0, opacity: 0 }}
-      >
-        {obj.name && (
-          <Tooltip permanent direction="center" className="canal-label" opacity={0.95}>
-            <span style={{ fontSize: `${fontSize * 0.68}px`, fontWeight: 700, color: "#FFD700", backgroundColor: "rgba(0,0,0,0.5)", padding: "1px 4px", borderRadius: 2 }}>
-              {obj.name}
-            </span>
-          </Tooltip>
-        )}
-      </Polygon>
+      />
       {/* Left boundary */}
       <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined }} />
       {/* Right boundary */}
       <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined }} />
+      {/* Canal name — repeating along the centerline, gold with dark outline (matches Map Editor) */}
+      {obj.name && labelPoints.map((p, i) => (
+        <CircleMarker key={`lbl-${i}`} center={[p.lat, p.lng]} radius={0} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
+          <Tooltip permanent direction="center" className="canal-label" opacity={0.95}>
+            <span style={{ fontSize: `${Math.max(10, fontSize * 0.62)}px`, fontWeight: 700, color: "#FFD700", textShadow: "1px 1px 2px #000, -1px -1px 2px #000, 0 0 3px #000", whiteSpace: "nowrap" }}>
+              {obj.name}
+            </span>
+          </Tooltip>
+        </CircleMarker>
+      ))}
     </>
   );
 }
