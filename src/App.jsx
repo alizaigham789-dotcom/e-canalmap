@@ -53,7 +53,7 @@ const AuthenticatedApp = () => {
       <div className="fixed inset-0 flex items-center justify-center bg-[#0a0f1a]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-slate-700 border-t-blue-500 rounded-full animate-spin"></div>
-          <p className="text-xs text-slate-600 font-mono">Loading Canal E Record…</p>
+          <p className="text-xs text-slate-600 font-mono">Loading E-canal Map…</p>
         </div>
       </div>
     );

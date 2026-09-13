@@ -162,7 +162,7 @@ export default function Account() {
           <InviteRow user={user} />
 
           <a
-            href={`https://wa.me/923023538711?text=${encodeURIComponent("السلام علیکم، مجھے Canal E Record app کی معلومات چاہیے۔")}`}
+            href={`https://wa.me/923023538711?text=${encodeURIComponent("السلام علیکم، مجھے E-canal Map app کی معلومات چاہیے۔")}`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 hover:bg-emerald-100 transition-colors text-left"
@@ -248,8 +248,8 @@ function InviteRow({ user }) {
   const [copied, setCopied] = useState(false);
   const link = `${window.location.origin}/register?ref=${user?.id || ""}`;
   const shareData = {
-    title: "Canal E Record",
-    text: "Canal E Record app میں شامل ہوں — لینڈ ریکارڈز اور وارابندی ڈیجیٹل کریں:",
+    title: "E-canal Map",
+    text: "E-canal Map app میں شامل ہوں — لینڈ ریکارڈز اور وارابندی ڈیجیٹل کریں:",
     url: link,
   };
   const share = async () => {

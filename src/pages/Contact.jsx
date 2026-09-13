@@ -40,7 +40,7 @@ export default function Contact() {
       <main className="max-w-2xl mx-auto px-6 py-10 space-y-6">
         <h1 className="text-3xl font-bold font-heading">Contact Us</h1>
         <p className="text-slate-300 leading-relaxed">
-          Questions, feedback, or support requests? Reach the Canal E Record team using the form below
+          Questions, feedback, or support requests? Reach the E-canal Map team using the form below
           or email us at{" "}
           <a
             href="mailto:support@canalerecord.example"

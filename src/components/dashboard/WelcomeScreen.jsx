@@ -75,7 +75,7 @@ export default function WelcomeScreen() {
           <div className="absolute -left-10 -bottom-12 w-40 h-40 rounded-full bg-white/10" />
           <div className="relative">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 text-[10px] font-bold uppercase tracking-wider mb-3">
-              <Sparkles className="w-3 h-3" /> Canal E Record
+              <Sparkles className="w-3 h-3" /> E-canal Map
             </div>
             <h1 className="text-xl sm:text-2xl font-bold font-heading leading-tight">
               Welcome to the world of Digitization

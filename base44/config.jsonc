@@ -1,5 +1,5 @@
 {
-  "name": "Canal E Record",
+  "name": "E-canal Map",
   "site": {
     "installCommand": "npm install",
     "buildCommand": "npm run build",

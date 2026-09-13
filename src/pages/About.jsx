@@ -19,7 +19,7 @@ export default function About() {
       <main className="max-w-3xl mx-auto px-6 py-10 space-y-5">
         <h1 className="text-3xl font-bold font-heading">About ChakLand GIS PRO</h1>
         <p className="text-slate-300 leading-relaxed">
-          ChakLand GIS PRO (Canal E Record) is a precision cadastral mapping and land-records
+          ChakLand GIS PRO (E-canal Map) is a precision cadastral mapping and land-records
           management platform built for irrigation and revenue departments. It digitizes survey
           records, manages canal and watercourse (khal) networks, and automates land-record workflows
           such as Form 1 registers, Parat Warabandi, Fard Masrooba, and Naqsha 27B.
@@ -32,7 +32,7 @@ export default function About() {
           desktop GIS software.
         </p>
         <p className="text-slate-300 leading-relaxed">
-          ChakLand GIS PRO is built and maintained by the Canal E Record team to bring transparency,
+          ChakLand GIS PRO is built and maintained by the E-canal Map team to bring transparency,
           speed, and reliability to land-record and irrigation administration. The platform combines a
           georeferenced map editor with automated registers and form generation, so the same data flows
           seamlessly from the field map to the official paper record.

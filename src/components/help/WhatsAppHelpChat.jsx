@@ -64,7 +64,7 @@ export default function WhatsAppHelpChat({ open, onClose }) {
 
   if (!open) return null;
 
-  const waLink = `https://wa.me/${ADMIN_WA}?text=${encodeURIComponent("السلام علیکم، مجھے Canal E Record app کی مدد چاہیے۔")}`;
+  const waLink = `https://wa.me/${ADMIN_WA}?text=${encodeURIComponent("السلام علیکم، مجھے E-canal Map app کی مدد چاہیے۔")}`;
 
   return (
     <div className="fixed inset-0 z-[1300] flex items-end sm:items-center justify-center bg-black/40" onClick={onClose}>

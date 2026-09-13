@@ -258,7 +258,7 @@ export default function Dashboard() {
               <Globe className="w-5 h-5 text-white" strokeWidth={2.2} />
             </div>
             <div>
-              <h1 className="text-sm font-bold font-heading tracking-wide text-slate-800">Canal E Record</h1>
+              <h1 className="text-sm font-bold font-heading tracking-wide text-slate-800">E-canal Map</h1>
               <p className="hidden sm:block text-[9px] text-slate-400 font-mono uppercase tracking-widest">Irrigation & Canal System</p>
             </div>
           </div>

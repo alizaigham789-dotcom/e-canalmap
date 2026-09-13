@@ -1,4 +1,4 @@
-// Canal E Record service worker
+// E-canal Map service worker
 // Network-first strategy: always serve fresh content when online so app
 // updates reach mobile users immediately. Falls back to cache only offline.
 // On activate, all legacy caches are deleted — this forces devices that have

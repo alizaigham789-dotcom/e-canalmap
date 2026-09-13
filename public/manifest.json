@@ -1,6 +1,6 @@
 {
-  "name": "Canal E Record",
-  "short_name": "Canal E Record",
+  "name": "E-canal Map",
+  "short_name": "E-canal Map",
   "description": "Precision cadastral mapping and land record management system",
   "start_url": "/",
   "scope": "/",
