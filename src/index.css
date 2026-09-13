@@ -122,7 +122,7 @@
 
 /* Brighten GeoMap satellite/Earth tiles for clearer visibility */
 .satellite-bright {
-  filter: brightness(1.35) contrast(1.08) saturate(1.18);
+  filter: brightness(1.42) contrast(1.1) saturate(1.28);
 }
 
 /* GeoMap — transparent killa label tooltip (no white background) */

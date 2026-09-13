@@ -56,8 +56,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-const SAT_URL = "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}";
-const HYBRID_URL = "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}";
+const ARC_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const LABELS_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
 
 // Colored marker icon factory
 function coloredIcon(color) {
@@ -1472,7 +1472,7 @@ export default function GeoMap() {
     if (transform) setOverlay({ transform, rotation: transform.rotationDeg || 0, placementPoint });
   };
 
-  const tileUrl = hybrid ? HYBRID_URL : SAT_URL;
+  // ArcGIS World Imagery base + optional labels overlay (hybrid mode)
 
   // ─── GPS accuracy circle ──────────────────────────────────────
   const gpsAccuracyCircle = gpsPosition && gpsAccuracy ? (
@@ -1514,14 +1514,15 @@ export default function GeoMap() {
       <MapContainer
         center={center}
         zoom={zoom}
-        maxZoom={20}
+        maxZoom={23}
         className="w-full h-full"
         style={{ background: "#0f1923" }}
         doubleClickZoom={false}
         zoomControl={false}
         attributionControl={false}
       >
-        {!capturing && <TileLayer url={tileUrl} maxZoom={20} className="satellite-bright" />}
+        {!capturing && <TileLayer url={ARC_URL} maxZoom={23} className="satellite-bright" />}
+        {!capturing && hybrid && <TileLayer url={LABELS_URL} maxZoom={20} />}
         <MapController onMapClick={handleMapClick} onMapInstance={handleMapInstance} onZoomChange={setZoom} />
         <ZoomLock active={drawActive} />
         <MouseTracker />
