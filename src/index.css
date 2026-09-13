@@ -120,6 +120,11 @@
   cursor: cell;
 }
 
+/* Brighten GeoMap satellite/Earth tiles for clearer visibility */
+.satellite-bright {
+  filter: brightness(1.35) contrast(1.08) saturate(1.18);
+}
+
 /* GeoMap — transparent killa label tooltip (no white background) */
 .leaflet-tooltip.killa-label {
   background: transparent !important;

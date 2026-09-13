@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves, Map as MapIcon, Satellite, Move } from "lucide-react";
+import { ChevronDown, ChevronLeft, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves, Map as MapIcon, Satellite, Move } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -1521,7 +1521,7 @@ export default function GeoMap() {
         zoomControl={false}
         attributionControl={false}
       >
-        {!capturing && <TileLayer url={tileUrl} maxZoom={20} />}
+        {!capturing && <TileLayer url={tileUrl} maxZoom={20} className="satellite-bright" />}
         <MapController onMapClick={handleMapClick} onMapInstance={handleMapInstance} onZoomChange={setZoom} />
         <ZoomLock active={drawActive} />
         <MouseTracker />
@@ -1817,6 +1817,15 @@ export default function GeoMap() {
       <Compass />
 
       {/* Overlay toggle — left side (overlay mode only) */}
+      {viewMode === "overlay" && (
+        <button
+          onClick={() => setEntered(false)}
+          className="absolute top-3 left-3 z-[1000] w-9 h-9 flex items-center justify-center bg-white text-slate-700 rounded-full shadow-xl hover:bg-slate-100 transition-colors"
+          title="Back"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+      )}
       {viewMode === "overlay" && (
         <button
           onClick={() => setShowOverlayPanel(v => !v)}
