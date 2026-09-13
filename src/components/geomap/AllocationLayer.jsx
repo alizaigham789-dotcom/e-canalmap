@@ -11,7 +11,7 @@ import {
 // Renders clickable killa (acre) cells over each mustateel/muraba of the selected moga.
 // The filled area inside each acre is proportional to the kanal allotted (used/8);
 // the remaining portion stays vacant (dashed boundary). Clickable only in allocation mode.
-export default function AllocationLayer({ objects, overlay, selectedMoga, allocations, mode, onCellClick, onEditAllocation, activeMustateelIds, onMustateelClick }) {
+export default function AllocationLayer({ objects, overlay, selectedMoga, allocations, mode, onCellClick, onEditAllocation, activeMustateelIds, onMustateelClick, cellInteractive = true }) {
   const cells = useMemo(() => {
     if (!overlay?.transform) return [];
     const out = [];
@@ -56,7 +56,7 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
             {/* Base acre cell — dashed boundary, vacant */}
             <Polygon
               positions={latlngs.map((p) => [p.lat, p.lng])}
-              pathOptions={{ color: "#dc2626", fillColor: "#000000", fillOpacity: 0, weight: mode ? 1 : 0, dashArray: "4,4", interactive: true }}
+              pathOptions={{ color: "#dc2626", fillColor: "#000000", fillOpacity: 0, weight: mode ? 1 : 0, dashArray: "4,4", interactive: cellInteractive }}
               eventHandlers={{
                 click: (e) => {
                   L.DomEvent.stopPropagation(e);
@@ -88,7 +88,7 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
             {fillLatLngs && mode && (
               <Polygon
                 positions={fillLatLngs.map((p) => [p.lat, p.lng])}
-                pathOptions={{ color: "#15803d", fillColor: "#16a34a", fillOpacity: 0.55, weight: 1, interactive: true }}
+                pathOptions={{ color: "#15803d", fillColor: "#16a34a", fillOpacity: 0.55, weight: 1, interactive: cellInteractive }}
                 eventHandlers={{
                   click: (e) => {
                     L.DomEvent.stopPropagation(e);

@@ -58,7 +58,7 @@ function KillaLabel({ num, latlng, zoom }) {
   );
 }
 
-function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, gridAll, onClick }) {
+function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, gridAll, onClick, interactive = true }) {
   const map = useMap();
   const boundaryThickness = obj.boundaryThickness || 5;
   const lineWeight = Math.max(3, boundaryThickness * 1.2);
@@ -88,6 +88,7 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
           fillOpacity: isActive ? 0.18 : 0.08,
           weight: isActive ? lineWeight + 1.5 : lineWeight,
           opacity: 1,
+          interactive: interactive,
         }}
         eventHandlers={{ click: (e) => { L.DomEvent.stopPropagation(e); onClick && onClick(obj.id); } }}
       >
@@ -110,7 +111,7 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
   );
 }
 
-function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, gridAll, onClick }) {
+function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, gridAll, onClick, interactive = true }) {
   const map = useMap();
   // Bold boundary — same treatment as mustateel (boundaryThickness-driven weight)
   const boundaryThickness = obj.boundaryThickness || 5;
@@ -137,6 +138,7 @@ function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, i
           fillOpacity: isActive ? 0.18 : 0.08,
           weight: isActive ? lineWeight + 1.5 : lineWeight,
           opacity: 1,
+          interactive: interactive,
         }}
         eventHandlers={{ click: (e) => { L.DomEvent.stopPropagation(e); onClick && onClick(obj.id); } }}
       >
@@ -619,7 +621,7 @@ function computeKillaLatLngs(obj, transform) {
   });
 }
 
-export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels, showCanals = true, chakbandiOnly = false, colorSettings }) {
+export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels, showCanals = true, chakbandiOnly = false, colorSettings, interactive = true }) {
   const map = useMap();
   // Create the dedicated top pane ONCE (guarded) — multiple OverlayLayer
   // instances share it. react-leaflet's <Pane> throws if the name already
@@ -687,8 +689,8 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
     <>
       {regularObjects.map(({ obj, latlngs, killaLatLngs, ccaCenter }) => {
         switch (obj.type) {
-          case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} />;
-          case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} />;
+          case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} interactive={interactive} />;
+          case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} interactive={interactive} />;
           case "acre": return <MemoAcre key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
           case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} colorSettings={colorSettings} />;
           case "khal": return <MemoKhal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;

@@ -27,6 +27,8 @@ import PatchDrawLayer from "@/components/geomap/PatchDrawLayer";
 import PatchDialog from "@/components/geomap/PatchDialog";
 import KhalDrawLayer from "@/components/geomap/KhalDrawLayer";
 import MogaDrawLayer from "@/components/geomap/MogaDrawLayer";
+import CanalEditLayer from "@/components/geomap/CanalEditLayer";
+import ZoomLock from "@/components/geomap/ZoomLock";
 import { remainingKanal, acreAllocations, kanalUsedInAcre, parcelKillaCells } from "@/lib/allocationEngine";
 import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap, buildGridPoints } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
@@ -347,6 +349,7 @@ export default function GeoMap() {
 
   const patchesWithGeometry = useMemo(() => allocations.filter((a) => a.geometry), [allocations]);
   const khalsExist = useMemo(() => mapObjects.some(o => o.type === "khal"), [mapObjects]);
+  const drawActive = viewMode === "view" && (khalTool === "draw" || mogaTool === "draw");
 
   // ─── FORM 1 ALLOCATION (Farmer Patch Selection) ───────────────
   const outletForMoga = useMemo(
@@ -1520,6 +1523,7 @@ export default function GeoMap() {
       >
         {!capturing && <TileLayer url={tileUrl} maxZoom={20} />}
         <MapController onMapClick={handleMapClick} onMapInstance={handleMapInstance} onZoomChange={setZoom} />
+        <ZoomLock active={drawActive} />
         <MouseTracker />
         <GPSTracker active={gpsActive} onPosition={(pos, acc) => { setGpsPosition(pos); setGpsAccuracy(acc); }} />
 
@@ -1572,6 +1576,7 @@ export default function GeoMap() {
             onMustateelClick={handleMustateelClick}
             showCanals={showCanals}
             colorSettings={editorSettings?.colors || {}}
+            interactive={!drawActive}
           />
         )}
         {/* Chakbandi lines render in a FINAL pass — after all mustateels from
@@ -1604,6 +1609,7 @@ export default function GeoMap() {
             onEditAllocation={handleEditAllocation}
             activeMustateelIds={activeMustateelIds}
             onMustateelClick={handleMustateelClick}
+            cellInteractive={!drawActive}
           />
         )}
 
@@ -1653,6 +1659,17 @@ export default function GeoMap() {
             onMogaDrawn={handleMogaDrawn}
             onMogaUpdated={handleMogaUpdated}
             onMogaDeleted={handleMogaDeleted}
+          />
+        )}
+
+        {/* Canal node-editor — select a canal, drag vertices to turn it (Map Editor style) */}
+        {viewMode === "view" && khalTool === "edit" && activeOverlay?.transform && !capturing && (
+          <CanalEditLayer
+            editMode
+            overlay={activeOverlay}
+            objects={mapObjects}
+            onCanalUpdated={handleKhalUpdated}
+            onCanalDeleted={handleKhalDeleted}
           />
         )}
 
