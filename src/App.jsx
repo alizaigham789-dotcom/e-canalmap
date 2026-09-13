@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import FloatingPlansBanner from '@/components/subscription/FloatingPlansBanner';
 
 // Route-level code splitting — each page loads in its own chunk so the
 // initial bundle stays small and the app opens fast. Heavy libs (three.js,
@@ -68,6 +69,7 @@ const AuthenticatedApp = () => {
   }
 
   return (
+    <>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -105,6 +107,8 @@ const AuthenticatedApp = () => {
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    <FloatingPlansBanner />
+    </>
   );
 };
 

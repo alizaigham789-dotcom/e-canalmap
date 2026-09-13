@@ -9,17 +9,17 @@ import { base44 } from "@/api/base44Client";
 export const PLANS = [
   {
     code: "2m", label: "Starter", labelUr: "اسٹارٹر", months: 2, durationDays: 60,
-    price: 1500, discountPrice: 1300, popular: false,
+    price: 2000, discountPrice: 1500, popular: false,
     features: ["پرت وارابندی پرنٹ/PDF", "فارم 1 رجسٹر", "میپ ایڈیٹر استعمال", "2 ماہ مکمل رسائی"],
   },
   {
     code: "6m", label: "Professional", labelUr: "پروفیشنل", months: 6, durationDays: 180,
-    price: 3000, discountPrice: 2500, popular: true,
+    price: 4000, discountPrice: 2500, popular: true,
     features: ["اسٹارٹر کی تمام سہولیات", "جیو میپ ملٹی موگہ اوورلے", "موگہ مارج", "6 ماہ رسائی", "ترجیحی سپورٹ"],
   },
   {
     code: "y", label: "Annual", labelUr: "سالانہ", months: 12, durationDays: 365,
-    price: 5000, discountPrice: 4000, popular: false,
+    price: 8000, discountPrice: 4000, popular: false,
     features: ["پروفیشنل کی تمام سہولیات", "1000 روپے بچت", "سال بھر رسائی", "ریفرل پروگرام"],
   },
 ];

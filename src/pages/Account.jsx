@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Gift,
   Copy,
+  Share2,
   Check,
   MessageCircle,
 } from "lucide-react";
@@ -245,7 +246,16 @@ export default function Account() {
 function InviteRow({ user }) {
   const [copied, setCopied] = useState(false);
   const link = `${window.location.origin}/register?ref=${user?.id || ""}`;
-  const copy = () => {
+  const share = async () => {
+    const shareData = {
+      title: "Canal E Record",
+      text: "Canal E Record app میں شامل ہوں — لینڈ ریکارڈز اور وارابندی ڈیجیٹل کریں:",
+      url: link,
+    };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch {}
+      return;
+    }
     navigator.clipboard?.writeText(link).then(() => {
       setCopied(true);
       toast.success("ریفرل لنک کاپی ہو گیا");
@@ -261,9 +271,9 @@ function InviteRow({ user }) {
       <p className="text-[10px] text-violet-600 mb-2">3 دوست جوائن کر کے ادائیگی کریں → پلان مفت!</p>
       <div className="flex items-center gap-1.5 bg-white rounded-lg border border-violet-200 p-1.5">
         <input readOnly value={link} className="flex-1 text-[10px] text-slate-600 bg-transparent outline-none font-mono truncate" />
-        <Button size="sm" onClick={copy} className="h-7 bg-violet-600 hover:bg-violet-700 text-[10px] gap-1">
-          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-          {copied ? "ہو گیا" : "کاپی"}
+        <Button size="sm" onClick={share} className="h-7 bg-violet-600 hover:bg-violet-700 text-[10px] gap-1">
+          {copied ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+          {copied ? "ہو گیا" : "شیئر"}
         </Button>
       </div>
     </div>
