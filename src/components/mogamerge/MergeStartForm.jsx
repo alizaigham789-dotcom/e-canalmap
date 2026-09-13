@@ -28,7 +28,7 @@ export default function MergeStartForm({
         </Button>
         <Network className="w-5 h-5 text-violet-600" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-sm font-bold text-slate-800 truncate">Moga Merge to One Map</h1>
+          <h1 className="text-sm font-bold text-slate-800 truncate">Mouza Map</h1>
           <p className="text-[10px] text-slate-500" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>موگے کو ایک نقشے میں ملائیں</p>
         </div>
       </header>
