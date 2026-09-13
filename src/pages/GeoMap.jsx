@@ -1756,25 +1756,27 @@ export default function GeoMap() {
       </MapContainer>
 
       {/* UI Overlays */}
-      <MapHeader
-        districts={districts}
-        tehsils={tehsils}
-        villages={villages}
-        district={filters.district}
-        tehsil={filters.tehsil}
-        village={filters.village}
-        onSelect={handleFilterSelect}
-        onMenu={() => setEntered(false)}
-        rajbahs={rajbahs}
-        rajbah={filters.rajbah}
-        mogas={cascadeMogas}
-        selectedMoga={selectedMoga}
-        onSelectMoga={handleSelectMogaTop}
-        murabas={mogaMustateels.map(m => m.mustNo)}
-        selectedMuraba={selectedMuraba}
-        onSelectMuraba={handleSelectMuraba}
-        viewMode={viewMode}
-      />
+      {viewMode === "view" && (
+        <MapHeader
+          districts={districts}
+          tehsils={tehsils}
+          villages={villages}
+          district={filters.district}
+          tehsil={filters.tehsil}
+          village={filters.village}
+          onSelect={handleFilterSelect}
+          onMenu={() => setEntered(false)}
+          rajbahs={rajbahs}
+          rajbah={filters.rajbah}
+          mogas={cascadeMogas}
+          selectedMoga={selectedMoga}
+          onSelectMoga={handleSelectMogaTop}
+          murabas={mogaMustateels.map(m => m.mustNo)}
+          selectedMuraba={selectedMuraba}
+          onSelectMuraba={handleSelectMuraba}
+          viewMode={viewMode}
+        />
+      )}
 
       <ZoomControls
         onZoomIn={handleZoomIn}
@@ -1783,16 +1785,17 @@ export default function GeoMap() {
         gpsActive={gpsActive}
         onPlaceByCoords={viewMode === "overlay" ? () => setShowCoordDialog(true) : null}
         onPlaceByCoordsLower={viewMode === "overlay" ? () => setShowLowerLeftDialog(true) : null}
-        onEditPatch={() => setAllocTool((v) => (v === "edit" ? null : "edit"))}
+        onEditPatch={viewMode === "view" ? () => setAllocTool((v) => (v === "edit" ? null : "edit")) : null}
         editActive={allocTool === "edit"}
-        onKhalDraw={() => { setKhalTool((v) => (v === "draw" ? null : "draw")); setMogaTool(null); setActiveTool(null); setAllocTool(null); }}
+        onKhalDraw={viewMode === "view" ? () => { setKhalTool((v) => (v === "draw" ? null : "draw")); setMogaTool(null); setActiveTool(null); setAllocTool(null); } : null}
         khalDrawActive={khalTool === "draw"}
-        onKhalEdit={() => { setKhalTool((v) => (v === "edit" ? null : "edit")); setMogaTool(null); setActiveTool(null); setAllocTool(null); }}
+        onKhalEdit={viewMode === "view" ? () => { setKhalTool((v) => (v === "edit" ? null : "edit")); setMogaTool(null); setActiveTool(null); setAllocTool(null); } : null}
         khalEditActive={khalTool === "edit"}
-        onMogaDraw={() => { setMogaTool((v) => (v === "draw" ? null : "draw")); setKhalTool(null); setActiveTool(null); setAllocTool(null); }}
+        onMogaDraw={viewMode === "view" ? () => { setMogaTool((v) => (v === "draw" ? null : "draw")); setKhalTool(null); setActiveTool(null); setAllocTool(null); } : null}
         mogaDrawActive={mogaTool === "draw"}
-        onToggleCanals={() => setShowCanals(v => !v)}
+        onToggleCanals={viewMode === "view" ? () => setShowCanals(v => !v) : null}
         canalsVisible={showCanals}
+        hideZoom={viewMode === "overlay"}
       />
       <Compass />
 
