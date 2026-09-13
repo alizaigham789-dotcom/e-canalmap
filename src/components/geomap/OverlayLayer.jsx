@@ -527,7 +527,7 @@ function CcaCenterLabel({ latlng, text, zoom }) {
       pathOptions={{ opacity: 0, fillOpacity: 0 }}
     >
       <Tooltip permanent direction="center" opacity={0.95} className="chakbandi-center">
-        <span style={{ fontSize: `${fontSize * 0.6}px`, fontWeight: 700, color: "#15803d", backgroundColor: "rgba(255,255,255,0.92)", padding: "2px 6px", borderRadius: 3, border: "1px solid #15803d", whiteSpace: "nowrap" }}>{text}</span>
+        <span style={{ fontSize: `${Math.max(13, fontSize * 0.95)}px`, fontWeight: 700, color: "#15803d", backgroundColor: "rgba(255,255,255,0.92)", padding: "2px 6px", borderRadius: 3, border: "1px solid #15803d", whiteSpace: "nowrap" }}>{text}</span>
       </Tooltip>
     </CircleMarker>
   );
@@ -550,7 +550,7 @@ function OutletMarker({ obj, latlngs, zoom }) {
         pathOptions={{ color: "#0e7490", fillColor: obj.outletColor || "#06b6d4", fillOpacity: 0.9, weight: 2 }}
       >
         <Tooltip permanent direction="top" className="moga-label" opacity={0.95}>
-          <span style={{ fontSize: `${fontSize * 0.62}px`, fontWeight: 700, color: "#0e7490", backgroundColor: "rgba(255,255,255,0.92)", padding: "1px 4px", borderRadius: 2, fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
+          <span style={{ fontSize: `${Math.max(14, fontSize * 1.0)}px`, fontWeight: 700, color: "#0e7490", backgroundColor: "rgba(255,255,255,0.92)", padding: "1px 4px", borderRadius: 2, fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
             موگہ {obj.mogha_number || ""}{obj.mogha_side ? `/${obj.mogha_side}` : ""}
           </span>
         </Tooltip>
