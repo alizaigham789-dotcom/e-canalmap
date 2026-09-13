@@ -1,7 +1,7 @@
 import React from "react";
-import { Plus, Minus, Crosshair, MapPin, Pencil } from "lucide-react";
+import { Plus, Minus, Crosshair, MapPin, Pencil, Waves, PenTool, Navigation } from "lucide-react";
 
-export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, onPlaceByCoords, onPlaceByCoordsLower, onEditPatch, editActive }) {
+export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, onPlaceByCoords, onPlaceByCoordsLower, onEditPatch, editActive, onKhalDraw, khalDrawActive, onKhalEdit, khalEditActive, onMogaDraw, mogaDrawActive }) {
   return (
     <div className="absolute top-16 left-3 z-[1000] flex flex-col items-center gap-1.5">
       <div className="bg-white rounded-xl shadow-xl border border-slate-200 flex flex-col overflow-hidden">
@@ -53,6 +53,45 @@ export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, on
           title="Edit Patch"
         >
           <Pencil className="w-4 h-4" />
+        </button>
+      )}
+      {onKhalDraw && (
+        <button
+          onClick={onKhalDraw}
+          className={`w-9 h-9 rounded-xl shadow-xl border flex items-center justify-center transition-all ${
+            khalDrawActive
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-white text-blue-600 border-slate-200 hover:bg-blue-50"
+          }`}
+          title="Draw Watercourse (Khal)"
+        >
+          <Waves className="w-4 h-4" />
+        </button>
+      )}
+      {onKhalEdit && (
+        <button
+          onClick={onKhalEdit}
+          className={`w-9 h-9 rounded-xl shadow-xl border flex items-center justify-center transition-all ${
+            khalEditActive
+              ? "bg-orange-600 text-white border-orange-600"
+              : "bg-white text-orange-600 border-slate-200 hover:bg-orange-50"
+          }`}
+          title="Edit Watercourse (Khal)"
+        >
+          <PenTool className="w-4 h-4" />
+        </button>
+      )}
+      {onMogaDraw && (
+        <button
+          onClick={onMogaDraw}
+          className={`w-9 h-9 rounded-xl shadow-xl border flex items-center justify-center transition-all ${
+            mogaDrawActive
+              ? "bg-cyan-600 text-white border-cyan-600"
+              : "bg-white text-cyan-600 border-slate-200 hover:bg-cyan-50"
+          }`}
+          title="Draw Moga (Outlet)"
+        >
+          <Navigation className="w-4 h-4" />
         </button>
       )}
     </div>

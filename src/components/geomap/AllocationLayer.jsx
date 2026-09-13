@@ -85,7 +85,7 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
             </Polygon>
             {/* Filled portion — proportional to kanal selected; clickable to edit the
                 existing allocation (green patch → open its properties). */}
-            {fillLatLngs && (
+            {fillLatLngs && mode && (
               <Polygon
                 positions={fillLatLngs.map((p) => [p.lat, p.lng])}
                 pathOptions={{ color: "#15803d", fillColor: "#16a34a", fillOpacity: 0.55, weight: 1, interactive: true }}

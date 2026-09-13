@@ -26,6 +26,7 @@ import EditAllocationDialog from "@/components/geomap/EditAllocationDialog";
 import PatchDrawLayer from "@/components/geomap/PatchDrawLayer";
 import PatchDialog from "@/components/geomap/PatchDialog";
 import KhalDrawLayer from "@/components/geomap/KhalDrawLayer";
+import MogaDrawLayer from "@/components/geomap/MogaDrawLayer";
 import { remainingKanal, acreAllocations, kanalUsedInAcre, parcelKillaCells } from "@/lib/allocationEngine";
 import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
@@ -178,6 +179,7 @@ export default function GeoMap() {
   const [showForm1, setShowForm1] = useState(false);
   const [allocTool, setAllocTool] = useState(null); // null | "cell" | "draw" | "edit"
   const [khalTool, setKhalTool] = useState(null); // null | "draw" | "edit"
+  const [mogaTool, setMogaTool] = useState(null); // null | "draw"
   const [moveTool, setMoveTool] = useState(false); // drag-to-move placed mogas
   const [allocations, setAllocations] = useState([]);
   const [allocCell, setAllocCell] = useState(null);
@@ -566,6 +568,23 @@ export default function GeoMap() {
     }
   }, [selectedMapId, selectedMap, queryClient]);
 
+  // ─── MOGA (OUTLET) DRAW (GeoMap) ───────────────────────────────
+  // Save a new outlet (moga) drawn on the GeoMap into the map's drawing_data
+  // so it appears in the Map Editor in exactly the same place (and passes
+  // through the same mustateels), identical to a khal drawn here.
+  const handleMogaDrawn = useCallback(async (outlet) => {
+    if (!selectedMapId || !selectedMap) return;
+    const currentObjs = selectedMap.drawing_data ? DrawingStateManager.deserialize(selectedMap.drawing_data) : [];
+    const updated = [...currentObjs, outlet];
+    try {
+      await base44.entities.LandMap.update(selectedMapId, { drawing_data: JSON.stringify(updated) });
+      queryClient.invalidateQueries({ queryKey: ["geomap-map", selectedMapId] });
+      toast.success("موگہ محفوظ ہو گیا");
+    } catch (e) {
+      toast.error("موگہ محفوظ نہیں ہوا");
+    }
+  }, [selectedMapId, selectedMap, queryClient]);
+
   const registerTotals = useMemo(() => {
     const kanal = allocations.reduce((s, a) => s + (a.kanal || 0), 0);
     return { kanal, acres: kanal / 8 };
@@ -796,6 +815,7 @@ export default function GeoMap() {
   const handleMapClick = useCallback((latlng) => {
     if (allocTool) return; // allocation tools handle their own clicks
     if (khalTool) return;  // khal draw/edit handles its own clicks
+    if (mogaTool) return;  // moga draw handles its own clicks
     // 1. One-click placement — anchor upper-left corner, rotation 0° (straight), fixed scale (10-acre mustateel)
     if (placingStep === 1 && selectedMapId) {
       setPlacementPoint(latlng);
@@ -1590,6 +1610,16 @@ export default function GeoMap() {
           />
         )}
 
+        {/* Moga (outlet) draw layer — draw a moga on the GeoMap; saved to the
+            map's drawing_data so it appears in the Map Editor at the same place. */}
+        {(viewMode === "overlay" || viewMode === "view") && activeOverlay?.transform && !capturing && (
+          <MogaDrawLayer
+            drawMode={mogaTool === "draw"}
+            overlay={activeOverlay}
+            onMogaDrawn={handleMogaDrawn}
+          />
+        )}
+
         {/* Corner placement marker — shows where the map corner is placed + coordinates */}
         {viewMode === "overlay" && placementPoint && !capturing && (
           <Marker position={[placementPoint.lat, placementPoint.lng]} icon={cornerPlaceIcon()}>
@@ -1719,6 +1749,12 @@ export default function GeoMap() {
         onPlaceByCoordsLower={viewMode === "overlay" ? () => setShowLowerLeftDialog(true) : null}
         onEditPatch={() => setAllocTool((v) => (v === "edit" ? null : "edit"))}
         editActive={allocTool === "edit"}
+        onKhalDraw={() => { setKhalTool((v) => (v === "draw" ? null : "draw")); setMogaTool(null); setActiveTool(null); setAllocTool(null); }}
+        khalDrawActive={khalTool === "draw"}
+        onKhalEdit={() => { setKhalTool((v) => (v === "edit" ? null : "edit")); setMogaTool(null); setActiveTool(null); setAllocTool(null); }}
+        khalEditActive={khalTool === "edit"}
+        onMogaDraw={() => { setMogaTool((v) => (v === "draw" ? null : "draw")); setKhalTool(null); setActiveTool(null); setAllocTool(null); }}
+        mogaDrawActive={mogaTool === "draw"}
       />
       <Compass />
 
@@ -1823,14 +1859,11 @@ export default function GeoMap() {
 
       <DrawingToolbar
         activeTool={activeTool}
-        onToolChange={(t) => { setActiveTool(t); if (t) setKhalTool(null); }}
+        onToolChange={(t) => { setActiveTool(t); if (t) { setKhalTool(null); setMogaTool(null); } }}
         onClear={handleClearMeasurements}
         onExport={handleExport}
         onLayerToggle={() => setLayerVisible(v => !v)}
         layerVisible={layerVisible}
-        khalTool={khalTool}
-        onKhalToolChange={(t) => { setKhalTool(t); if (t) setActiveTool(null); }}
-        showKhal={true}
       />
 
       {/* Moga tools — Hand (pan) + Move (drag placed mogas) — overlay mode only */}

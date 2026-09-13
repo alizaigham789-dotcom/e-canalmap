@@ -1,5 +1,5 @@
 import React from "react";
-import { Slash, Pentagon, Square, Circle, MapPin, Trash2, Download, Layers, Waves, Pencil } from "lucide-react";
+import { Slash, Pentagon, Square, Circle, MapPin, Trash2, Download, Layers } from "lucide-react";
 
 const TOOLS = [
   { id: "line", icon: Slash, label: "Measure Line" },
@@ -26,34 +26,6 @@ export default function DrawingToolbar({ activeTool, onToolChange, onClear, onEx
           <Icon className="w-4 h-4" />
         </button>
       ))}
-      <div className="w-7 h-px bg-slate-200 my-0.5" />
-      {/* Khal draw + edit tools (Map Overlay module only) */}
-      {showKhal && (
-        <>
-          <button
-            onClick={() => onKhalToolChange(khalTool === "draw" ? null : "draw")}
-            title="Draw Watercourse (Khal)"
-            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
-              khalTool === "draw"
-                ? "bg-blue-600 text-white"
-                : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-            }`}
-          >
-            <Waves className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => onKhalToolChange(khalTool === "edit" ? null : "edit")}
-            title="Edit Watercourse (Khal)"
-            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
-              khalTool === "edit"
-                ? "bg-orange-500 text-white"
-                : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-            }`}
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-        </>
-      )}
       <div className="w-7 h-px bg-slate-200 my-0.5" />
       <button
         onClick={onLayerToggle}
