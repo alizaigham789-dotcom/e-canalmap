@@ -65,7 +65,7 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
                 },
               }}
             >
-              {(isActive || label) && (
+              {(isActive || (mode && label)) && (
                 <Tooltip permanent direction="center" className="killa-label" opacity={1}>
                   <span
                     style={{
@@ -77,8 +77,8 @@ export default function AllocationLayer({ objects, overlay, selectedMoga, alloca
                     }}
                   >
                     {isActive && <span style={{ color: "#facc15" }}>{acre}</span>}
-                    {isActive && label ? " · " : ""}
-                    {label}
+                    {isActive && mode && label ? " · " : ""}
+                    {mode && label}
                   </span>
                 </Tooltip>
               )}
