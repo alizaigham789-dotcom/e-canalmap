@@ -349,7 +349,7 @@ export default function GeoMap() {
 
   const patchesWithGeometry = useMemo(() => allocations.filter((a) => a.geometry), [allocations]);
   const khalsExist = useMemo(() => mapObjects.some(o => o.type === "khal"), [mapObjects]);
-  const drawActive = viewMode === "view" && (khalTool === "draw" || mogaTool === "draw");
+  const drawActive = viewMode === "view" && (khalTool === "draw" || khalTool === "edit" || mogaTool === "draw");
 
   // ─── FORM 1 ALLOCATION (Farmer Patch Selection) ───────────────
   const outletForMoga = useMemo(

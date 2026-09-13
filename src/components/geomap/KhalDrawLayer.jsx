@@ -103,6 +103,7 @@ export default function KhalDrawLayer({
     // Convert lat/lng → canvas coords
     const canvasPts = draftPoints.map(ll => inverseTransform(ll.lat, ll.lng, transform, rotationDeg));
     const khal = createKhal(canvasPts, "", khalType);
+    khal.drawnIn = "geomap"; // mark as GeoMap-drawn → deletable only from GeoMap
     // Inherit width / fill from an existing khal on this map so new khals match
     const ref = khals.find(k => k.width);
     if (ref) { khal.width = ref.width; if (ref.fillColor) khal.fillColor = ref.fillColor; }
@@ -311,7 +312,7 @@ export default function KhalDrawLayer({
                 />
               );
             })}
-            {isSelected && effLatLngs.length >= 2 && (() => {
+            {isSelected && khal.drawnIn === "geomap" && effLatLngs.length >= 2 && (() => {
               const midIdx = Math.floor(effLatLngs.length / 2);
               const mid = effLatLngs[midIdx];
               return (

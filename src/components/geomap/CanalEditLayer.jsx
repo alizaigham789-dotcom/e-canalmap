@@ -139,16 +139,7 @@ export default function CanalEditLayer({ editMode, overlay, objects, onCanalUpda
                 />
               );
             })}
-            {isSelected && effLatLngs.length >= 2 && (() => {
-              const mid = effLatLngs[Math.floor(effLatLngs.length / 2)];
-              return (
-                <Marker
-                  position={mid}
-                  icon={deleteIcon()}
-                  eventHandlers={{ click: (e) => handleDelete(c.id, e) }}
-                />
-              );
-            })()}
+            {/* Canals are Map-Editor objects — editable (move nodes) but not deletable from GeoMap */}
           </React.Fragment>
         );
       })}
