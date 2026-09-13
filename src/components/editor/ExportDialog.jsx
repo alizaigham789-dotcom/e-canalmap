@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Globe, Map, Table2, Image, FileImage, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import { useHasSubscription } from "@/hooks/useSubscription";
+import UpgradePrompt from "@/components/subscription/UpgradePrompt";
 import { getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getParallelPolyline, CHAKBANDI_SCALE, MUSTATEEL_SCALE, getMustateelMouzaSplit, DIMENSIONS, calculateTotalGCA, calculateChakbandiGCA, calculateChakbandiLoopGCA, buildPrintFooterHTML, buildPrintHeaderHTML, mogaNumberFont, canalNameFont, mogaInCanalFont, PAGE_SIZES, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawCanalNameOnCanvas, svgCanalNameOnPath, drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, drawCCAGCAFractionBoxOnCanvas, svgMogaFractionBox, svgCCAGCAFractionBox, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, drawLegendOnCanvas, svgAcreUses, acreUseHasLabel, drawAcreUsesOnCanvas, svgRailwayTracks, drawRailwayTracksCanvas as drawRailwayTracks } from "@/lib/printRenderHelpers";
 import { drawExclusionHatchOnCanvas, drawChakbandi } from "@/components/editor/GISRenderer";
@@ -13,6 +15,8 @@ import { canvasToPdfBlob, downloadBlob, shareBlob } from "@/lib/pdfExport";
 
 export default function ExportDialog({ open, onClose, mapData, objects, killaVisibility = {}, colorSettings = {}, pageBorderStyle = "none" }) {
   const [loading, setLoading] = useState(null);
+  const { hasAccess } = useHasSubscription();
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [pageOrientation, setPageOrientation] = useState("landscape");
   const [pageSize, setPageSize] = useState("A4");
   const [showLegendInExport, setShowLegendInExport] = useState(true);
@@ -844,7 +848,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         </div>
         <div className="space-y-2 py-2 max-h-[70vh] overflow-y-auto">
           {EXPORTS.map(({ label, desc, icon: Icon, color, action, key }) => (
-            <button key={key} onClick={() => action()}
+            <button key={key} onClick={() => (hasAccess ? action() : setShowUpgrade(true))}
               disabled={loading === key}
               className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-left disabled:opacity-60">
               <div className={`w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center ${color}`}>
@@ -861,6 +865,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
             </button>
           ))}
         </div>
+        <UpgradePrompt open={showUpgrade} onClose={() => setShowUpgrade(false)} />
       </DialogContent>
     </Dialog>
   );

@@ -9,6 +9,8 @@ import { buildSideBoundarySVG, buildCanalStyleSVG, isNewCanalStyle } from "@/lib
 import { Move, Download, Share2, Loader2 } from "lucide-react";
 import { canvasToPdfBlob, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdfExport";
 import { toast } from "sonner";
+import { useHasSubscription } from "@/hooks/useSubscription";
+import UpgradePrompt from "@/components/subscription/UpgradePrompt";
 
 // Lead-pencil print mode — dim grey lines like a hand-drawn sketch, red mouza
 // Lead-pencil print mode — ONLY mustateel/muraba boundaries, their killa grid lines
@@ -940,6 +942,8 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
   const [showPageBorder, setShowPageBorder] = useState(false);
   const [legendMoveMode, setLegendMoveMode] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const { hasAccess } = useHasSubscription();
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const svgWrapRef = useRef(null);
 
   // Mustateel print size (cm) — lock each mustateel to an exact cm width; height
@@ -1168,6 +1172,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   // ─── VECTOR PRINT — single page, Urdu header ─────────────────────────────────
   const handlePrint = () => {
+    if (!hasAccess) { setShowUpgrade(true); return; }
     if (!svgData) return;
     // Mobile browsers can't handle window.open + document.write + print reliably
     // (shows about:blank). Fall back to direct PDF download on mobile.
@@ -1274,6 +1279,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   // ─── SVG DOWNLOAD ────────────────────────────────────────────────────────────
   const handleDownloadSVG = () => {
+    if (!hasAccess) { setShowUpgrade(true); return; }
     if (!svgString) return;
     const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -1286,6 +1292,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   // ─── PDF FILE DOWNLOAD (jsPDF — saves to storage on mobile) ──────────────────
   const handleDownloadPDF = async () => {
+    if (!hasAccess) { setShowUpgrade(true); return; }
     if (!svgString) return;
     setPdfLoading(true);
     try {
@@ -1301,6 +1308,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   // ─── SHARE PDF (Web Share API — WhatsApp etc.) ───────────────────────────────
   const handleSharePDF = async () => {
+    if (!hasAccess) { setShowUpgrade(true); return; }
     if (!svgString) return;
     setPdfLoading(true);
     try {
@@ -1320,6 +1328,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-0 sm:p-4">
+      <UpgradePrompt open={showUpgrade} onClose={() => setShowUpgrade(false)} />
       <div className="bg-white border border-slate-200 rounded-none sm:rounded-2xl shadow-2xl flex flex-col w-full h-full sm:h-auto sm:max-w-5xl sm:max-h-[95vh]">
 
         {/* Header */}

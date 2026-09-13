@@ -21,6 +21,10 @@ import {
   Trash2,
   Loader2,
   CheckCircle2,
+  Gift,
+  Copy,
+  Check,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
@@ -133,6 +137,45 @@ export default function Account() {
           </div>
         </section>
 
+        {/* Subscription & Invite */}
+        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+          <h2 className="text-sm font-bold text-slate-800">سبسکرپشن اور ریفرل</h2>
+
+          <button
+            onClick={() => navigate("/subscription")}
+            className="w-full flex items-center gap-3 rounded-xl border border-slate-200 p-3 hover:border-blue-300 hover:bg-blue-50/40 transition-colors text-left"
+          >
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-slate-800">Subscription</p>
+              <p className="text-[11px] text-slate-500">
+                {subscription ? "فعال" : "ابھی سبسکرائب نہیں — پلانز دیکھیں"}
+              </p>
+            </div>
+            <ArrowLeft className="w-4 h-4 text-slate-400 rotate-180" />
+          </button>
+
+          <InviteRow user={user} />
+
+          <a
+            href={`https://wa.me/923023538711?text=${encodeURIComponent("السلام علیکم، مجھے Canal E Record app کی معلومات چاہیے۔")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 hover:bg-emerald-100 transition-colors text-left"
+          >
+            <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center">
+              <MessageCircle className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-emerald-800">WhatsApp Help</p>
+              <p className="text-[11px] text-emerald-600">مدد کے لیے واٹس ایپ پر رابطہ کریں</p>
+            </div>
+            <ArrowLeft className="w-4 h-4 text-emerald-500 rotate-180" />
+          </a>
+        </section>
+
         {/* Danger zone */}
         <section className="bg-white rounded-2xl border border-red-200 shadow-sm p-5">
           <h2 className="text-sm font-bold text-red-600 flex items-center gap-2">
@@ -195,6 +238,34 @@ export default function Account() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function InviteRow({ user }) {
+  const [copied, setCopied] = useState(false);
+  const link = `${window.location.origin}/register?ref=${user?.id || ""}`;
+  const copy = () => {
+    navigator.clipboard?.writeText(link).then(() => {
+      setCopied(true);
+      toast.success("ریفرل لنک کاپی ہو گیا");
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <div className="rounded-xl border border-violet-200 bg-violet-50 p-3">
+      <div className="flex items-center gap-2 mb-1.5">
+        <Gift className="w-4 h-4 text-violet-600" />
+        <p className="text-xs font-bold text-violet-800">دوستوں کو مدعو کریں</p>
+      </div>
+      <p className="text-[10px] text-violet-600 mb-2">3 دوست جوائن کر کے ادائیگی کریں → پلان مفت!</p>
+      <div className="flex items-center gap-1.5 bg-white rounded-lg border border-violet-200 p-1.5">
+        <input readOnly value={link} className="flex-1 text-[10px] text-slate-600 bg-transparent outline-none font-mono truncate" />
+        <Button size="sm" onClick={copy} className="h-7 bg-violet-600 hover:bg-violet-700 text-[10px] gap-1">
+          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+          {copied ? "ہو گیا" : "کاپی"}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -22,5 +22,7 @@ export function useSubscription() {
 
 export function useHasSubscription() {
   const { data, isLoading } = useSubscription();
-  return { hasAccess: !!data, subscription: data, isLoading };
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  return { hasAccess: isAdmin || !!data, subscription: data, isLoading };
 }

@@ -144,12 +144,7 @@ export default function Subscription() {
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-5">
         {/* Active status */}
-        {isAdmin ? (
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
-            <p className="text-sm text-blue-800 font-medium">آپ ایڈمن ہیں — تمام فیچرز مفت دستیاب ہیں۔</p>
-          </div>
-        ) : activeSub ? (
+        {activeSub ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
             <div className="flex items-center gap-2 mb-1">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -164,6 +159,12 @@ export default function Subscription() {
           </div>
         ) : (
           <>
+            {isAdmin && (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
+                <p className="text-sm text-blue-800 font-medium">آپ ایڈمن ہیں — تمام فیچرز مفت دستیاب ہیں۔ یہ پلانز صرف پیشنمائش کے لیے ہیں۔</p>
+              </div>
+            )}
             {flash.active && <FlashTimer msLeft={flash.msLeft} />}
 
             {/* Referral card */}
@@ -199,9 +200,9 @@ export default function Subscription() {
                       <Receipt className="w-4 h-4 text-emerald-600" /> ادائیگی کے طریقے
                     </p>
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-1.5">
-                      <p><span className="font-bold">JazzCash:</span> 0300-1234567</p>
-                      <p><span className="font-bold">Easypaisa:</span> 0345-1234567</p>
-                      <p><span className="font-bold">بینک (HBL):</span> 1234-567890-001</p>
+                      <p><span className="font-bold">JazzCash:</span> 03023538711</p>
+                      <p><span className="font-bold">نام:</span> Munsib Ali</p>
+                      <p className="text-[10px] text-slate-400 mt-1">Easypaisa / بینک — جلد دستیاب</p>
                       <p className="text-[10px] text-slate-400 mt-1.5 pt-1.5 border-t border-slate-200">
                         Rs {getPlanPrice(selectedPlan, flash.active)} جمع کر کے رسید اپلوڈ کریں — ایڈمن تصدیق کے بعد{" "}
                         {getPlan(selectedPlan).labelUr} کی ایکسیس مل جائے گی۔
