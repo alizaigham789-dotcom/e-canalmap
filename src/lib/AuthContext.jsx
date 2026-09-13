@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44, USE_SUPABASE } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
+import { processPendingReferral } from '@/lib/referralSystem';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
 const AuthContext = createContext();
@@ -125,6 +126,8 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
       setAuthChecked(true);
+      // Link a pending referral (from ?ref= at signup) to this user. Non-blocking.
+      try { await processPendingReferral(currentUser); } catch (e) {}
     } catch (error) {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);

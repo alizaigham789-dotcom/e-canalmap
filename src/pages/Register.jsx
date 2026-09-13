@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { captureReferralFromUrl } from "@/lib/referralSystem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,11 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
+
+  // Capture ?ref=<inviter> into localStorage so it survives OTP + Google flows.
+  useEffect(() => {
+    captureReferralFromUrl();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

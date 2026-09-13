@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Check, X, ExternalLink, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { expiryForPlan, getPlan } from "@/lib/referralSystem";
 
 const STATUS_STYLE = {
   pending: "border-amber-500/40 bg-amber-500/10 text-amber-400",
@@ -25,10 +26,10 @@ export default function ManualApprovalsTab() {
   });
 
   const actMutation = useMutation({
-    mutationFn: async ({ id, action }) => {
+    mutationFn: async ({ id, action, planCode }) => {
       if (action === "approve") {
         const now = new Date();
-        const expiry = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const expiry = expiryForPlan(planCode || "2m", now);
         return base44.entities.Subscription.update(id, {
           status: "active",
           payment_date: now.toISOString(),
@@ -58,7 +59,10 @@ export default function ManualApprovalsTab() {
           {s.method}
         </Badge>
       </TableCell>
-      <TableCell className="text-xs text-slate-300 font-mono">Rs {s.amount || 2000}</TableCell>
+      <TableCell className="text-xs text-slate-300 font-mono">
+        Rs {s.amount || 0}
+        {s.plan_code ? <div className="text-[9px] text-slate-500">{getPlan(s.plan_code).labelUr}</div> : null}
+      </TableCell>
       <TableCell>
         <Badge variant="outline" className={`text-[10px] ${STATUS_STYLE[s.status] || ""}`}>
           {s.status}
@@ -87,7 +91,7 @@ export default function ManualApprovalsTab() {
               variant="ghost"
               className="w-7 h-7 text-emerald-400 hover:bg-emerald-500/10"
               disabled={actMutation.isPending}
-              onClick={() => actMutation.mutate({ id: s.id, action: "approve" })}
+              onClick={() => actMutation.mutate({ id: s.id, action: "approve", planCode: s.plan_code })}
               title="منظور کریں"
             >
               <Check className="w-3.5 h-3.5" />

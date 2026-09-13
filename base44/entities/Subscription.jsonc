@@ -14,16 +14,31 @@
     },
     "amount": {
       "type": "number",
-      "default": 2000,
+      "default": 0,
       "description": "Amount paid in PKR"
     },
     "method": {
       "type": "string",
       "enum": [
         "stripe",
-        "manual"
+        "manual",
+        "referral"
       ],
       "description": "Payment method"
+    },
+    "plan_code": {
+      "type": "string",
+      "enum": [
+        "2m",
+        "6m",
+        "y"
+      ],
+      "description": "Subscription plan (2-month / 6-month / yearly)"
+    },
+    "is_referral_reward": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this is a free referral-reward subscription"
     },
     "status": {
       "type": "string",
@@ -44,7 +59,7 @@
     "expiry_date": {
       "type": "string",
       "format": "date-time",
-      "description": "Access expiry (30 days from payment)"
+      "description": "Access expiry"
     },
     "receipt_url": {
       "type": "string",
