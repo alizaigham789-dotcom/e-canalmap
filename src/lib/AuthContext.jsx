@@ -122,6 +122,12 @@ export const AuthProvider = ({ children }) => {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
+      // Record first-login timestamp once — used as the flash-sale window start
+      // so new users always see the 48h discount even if created_date is absent.
+      if (!currentUser.first_login_at) {
+        const ts = new Date().toISOString();
+        try { await base44.auth.updateMe({ first_login_at: ts }); currentUser.first_login_at = ts; } catch (e) {}
+      }
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);

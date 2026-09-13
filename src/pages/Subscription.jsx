@@ -8,6 +8,7 @@ import { Upload, Loader2, CheckCircle2, Clock, ArrowLeft, Receipt } from "lucide
 import { toast } from "sonner";
 import FlashTimer from "@/components/subscription/FlashTimer";
 import ReferralCard from "@/components/subscription/ReferralCard";
+import PlanPricingCard from "@/components/subscription/PlanPricingCard";
 import {
   PLANS,
   getPlan,
@@ -29,7 +30,7 @@ export default function Subscription() {
   const [pendingManual, setPendingManual] = useState(null);
   const rewardCheckedRef = useRef(false);
 
-  const flash = getFlashState(currentUser?.created_date);
+  const flash = getFlashState(currentUser);
 
   // Referrals where I am the inviter (progress toward free plan)
   const { data: myReferrals = [] } = useQuery({
@@ -168,37 +169,17 @@ export default function Subscription() {
             {/* Referral card */}
             <ReferralCard user={currentUser} qualifiedCount={qualifiedCount} totalReferred={myReferrals.length} />
 
-            {/* Plans */}
-            <div className="grid gap-3">
-              {PLANS.map((p) => {
-                const price = getPlanPrice(p.code, flash.active);
-                const discounted = flash.active && price < p.price;
-                const selected = selectedPlan === p.code;
-                return (
-                  <button
-                    key={p.code}
-                    onClick={() => setSelectedPlan(p.code)}
-                    className={`text-left rounded-2xl border-2 p-4 transition-all ${
-                      selected
-                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
-                        : "border-slate-200 bg-white hover:border-blue-300"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">{p.labelUr} پلان</p>
-                        <p className="text-[10px] text-slate-500">{p.months} ماہ تک مکمل رسائی</p>
-                      </div>
-                      <div className="text-right">
-                        {discounted && (
-                          <span className="block text-[11px] text-slate-400 line-through font-mono">Rs {p.price}</span>
-                        )}
-                        <span className="text-xl font-bold text-blue-700 font-mono">Rs {price}</span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+            {/* Plans — pricing cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              {PLANS.map((p) => (
+                <PlanPricingCard
+                  key={p.code}
+                  plan={p}
+                  flashActive={flash.active}
+                  selected={selectedPlan === p.code}
+                  onSelect={setSelectedPlan}
+                />
+              ))}
             </div>
 
             {/* Payment for selected plan */}

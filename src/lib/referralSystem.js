@@ -7,9 +7,21 @@ import { base44 } from "@/api/base44Client";
 // ============================================================
 
 export const PLANS = [
-  { code: "2m", label: "2 Month", labelUr: "2 ماہ", months: 2, durationDays: 60, price: 1500, discountPrice: 1300 },
-  { code: "6m", label: "6 Month", labelUr: "6 ماہ", months: 6, durationDays: 180, price: 3000, discountPrice: 2500 },
-  { code: "y", label: "1 Year", labelUr: "سالانہ", months: 12, durationDays: 365, price: 5000, discountPrice: 4000 },
+  {
+    code: "2m", label: "Starter", labelUr: "اسٹارٹر", months: 2, durationDays: 60,
+    price: 1500, discountPrice: 1300, popular: false,
+    features: ["پرت وارابندی پرنٹ/PDF", "فارم 1 رجسٹر", "میپ ایڈیٹر استعمال", "2 ماہ مکمل رسائی"],
+  },
+  {
+    code: "6m", label: "Professional", labelUr: "پروفیشنل", months: 6, durationDays: 180,
+    price: 3000, discountPrice: 2500, popular: true,
+    features: ["اسٹارٹر کی تمام سہولیات", "جیو میپ ملٹی موگہ اوورلے", "موگہ مارج", "6 ماہ رسائی", "ترجیحی سپورٹ"],
+  },
+  {
+    code: "y", label: "Annual", labelUr: "سالانہ", months: 12, durationDays: 365,
+    price: 5000, discountPrice: 4000, popular: false,
+    features: ["پروفیشنل کی تمام سہولیات", "1000 روپے بچت", "سال بھر رسائی", "ریفرل پروگرام"],
+  },
 ];
 
 export const FLASH_WINDOW_MS = 48 * 60 * 60 * 1000; // 48 hours
@@ -24,7 +36,11 @@ export function getPlanPrice(code, flashActive) {
 }
 
 // Flash sale is active for 48h after the user's account creation date.
-export function getFlashState(createdDate) {
+// Flash sale is active for 48h after the user's first login (or account
+// creation date as fallback). Accepts the full user object so new users who
+// don't yet have a created_date still see the discount window.
+export function getFlashState(user) {
+  const createdDate = user?.first_login_at || user?.created_date;
   if (!createdDate) return { active: false, end: 0, msLeft: 0 };
   const start = new Date(createdDate).getTime();
   const end = start + FLASH_WINDOW_MS;

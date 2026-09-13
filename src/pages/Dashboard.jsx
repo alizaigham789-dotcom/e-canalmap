@@ -181,8 +181,19 @@ export default function Dashboard() {
 
   const isAdmin = currentUser?.role === "admin";
   const isDeputyCollector = currentUser?.role === "deputy_collector";
-  const { data: subscription } = useSubscription();
+  const { data: subscription, isLoading: subLoading } = useSubscription();
   const hasAccess = isAdmin || !!subscription;
+
+  // One-time onboarding: show the subscription plans to brand-new (non-subscribed)
+  // users so they can see their options right after sign-in.
+  useEffect(() => {
+    if (subLoading || !currentUser) return;
+    if (isAdmin || subscription) return;
+    if (!localStorage.getItem("onboarded_subscription")) {
+      localStorage.setItem("onboarded_subscription", "1");
+      navigate("/subscription");
+    }
+  }, [subLoading, currentUser, isAdmin, subscription]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Deputy Collector role: surface the Deputy Collector module at the top on login.
   const orderedModules = isDeputyCollector
