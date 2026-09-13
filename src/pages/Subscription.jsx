@@ -177,6 +177,7 @@ export default function Subscription() {
                   key={p.code}
                   plan={p}
                   flashActive={flash.active}
+                  msLeft={flash.msLeft}
                   selected={selectedPlan === p.code}
                   onSelect={setSelectedPlan}
                 />

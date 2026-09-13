@@ -1,10 +1,10 @@
-import React from "react";
-import { Check, Star } from "lucide-react";
-import { getPlanPrice } from "@/lib/referralSystem";
+import React, { useState, useEffect } from "react";
+import { Check, Star, Flame } from "lucide-react";
+import { getPlanPrice, formatCountdown } from "@/lib/referralSystem";
 
 // A single pricing-tier card (Base44-style plan layout): header, price, feature
 // list with checkmarks, and a select CTA. The "popular" tier is highlighted.
-export default function PlanPricingCard({ plan, flashActive, selected, onSelect }) {
+export default function PlanPricingCard({ plan, flashActive, msLeft = 0, selected, onSelect }) {
   const price = getPlanPrice(plan.code, flashActive);
   const discounted = flashActive && price < plan.price;
 
@@ -37,6 +37,7 @@ export default function PlanPricingCard({ plan, flashActive, selected, onSelect 
         )}
         <span className="text-2xl font-bold text-blue-700 font-mono">Rs {price}</span>
         <span className="block text-[10px] text-slate-400 mt-0.5">{plan.months} ماہ</span>
+        {discounted && <FlashCountdown msLeft={msLeft} />}
       </div>
 
       <ul className="space-y-1.5 pb-3 flex-1">
@@ -61,5 +62,20 @@ export default function PlanPricingCard({ plan, flashActive, selected, onSelect 
         {selected ? "منتخب شدہ ✓" : "منتخب کریں"}
       </button>
     </div>
+  );
+}
+
+function FlashCountdown({ msLeft }) {
+  const [left, setLeft] = useState(msLeft);
+  useEffect(() => {
+    setLeft(msLeft);
+    const t = setInterval(() => setLeft((v) => Math.max(0, v - 1000)), 1000);
+    return () => clearInterval(t);
+  }, [msLeft]);
+  if (left <= 0) return null;
+  return (
+    <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[9px] font-bold font-mono">
+      <Flame className="w-2.5 h-2.5 animate-pulse" /> {formatCountdown(left)}
+    </span>
   );
 }
