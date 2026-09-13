@@ -29,6 +29,7 @@ import KhalDrawLayer from "@/components/geomap/KhalDrawLayer";
 import MogaDrawLayer from "@/components/geomap/MogaDrawLayer";
 import CanalEditLayer from "@/components/geomap/CanalEditLayer";
 import ZoomLock from "@/components/geomap/ZoomLock";
+import MapSourceSelector, { getSource } from "@/components/geomap/MapSourceSelector";
 import { remainingKanal, acreAllocations, kanalUsedInAcre, parcelKillaCells } from "@/lib/allocationEngine";
 import { patchArea, coveredAcres, khasraListFromCovered, patchesOverlap, buildGridPoints } from "@/lib/patchSnap";
 import { DrawingStateManager } from "@/lib/gisEngine";
@@ -56,8 +57,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-const ARC_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-const LABELS_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+// Base-map sources now managed by MapSourceSelector (see MAP_SOURCES)
 
 // Colored marker icon factory
 function coloredIcon(color) {
@@ -144,7 +144,7 @@ export default function GeoMap() {
   const mapRef = useRef(null);
   const [center] = useState([32.2889, 72.3525]);
   const [zoom, setZoom] = useState(13);
-  const [hybrid, setHybrid] = useState(true);
+  const [mapSourceKey, setMapSourceKey] = useState("google_hybrid");
   const [viewMode, setViewMode] = useState("overlay"); // "overlay" | "view"
   const [entered, setEntered] = useState(false); // hub → sub-module entry
   const [activeTool, setActiveTool] = useState(null);
@@ -1472,7 +1472,7 @@ export default function GeoMap() {
     if (transform) setOverlay({ transform, rotation: transform.rotationDeg || 0, placementPoint });
   };
 
-  // ArcGIS World Imagery base + optional labels overlay (hybrid mode)
+  const mapSource = getSource(mapSourceKey);
 
   // ─── GPS accuracy circle ──────────────────────────────────────
   const gpsAccuracyCircle = gpsPosition && gpsAccuracy ? (
@@ -1521,8 +1521,14 @@ export default function GeoMap() {
         zoomControl={false}
         attributionControl={false}
       >
-        {!capturing && <TileLayer url={ARC_URL} maxZoom={23} className="satellite-bright" />}
-        {!capturing && hybrid && <TileLayer url={LABELS_URL} maxZoom={20} />}
+        {!capturing && (
+          <TileLayer
+            url={mapSource.url}
+            maxZoom={23}
+            maxNativeZoom={mapSource.maxNativeZoom}
+            className={mapSource.satellite ? "satellite-bright" : ""}
+          />
+        )}
         <MapController onMapClick={handleMapClick} onMapInstance={handleMapInstance} onZoomChange={setZoom} />
         <ZoomLock active={drawActive} />
         <MouseTracker />
@@ -2072,14 +2078,8 @@ export default function GeoMap() {
         saving={savingRegister}
       />
 
-      {/* Hybrid / Satellite toggle (both sub-modules) */}
-      <button
-        onClick={() => setHybrid(v => !v)}
-        className="absolute bottom-5 right-3 z-[1000] flex items-center gap-1.5 px-4 h-9 bg-[#1A4550] text-white text-xs font-bold rounded-full shadow-xl hover:bg-[#2C5E6D] transition-colors"
-      >
-        {hybrid ? "Hybrid Satellite" : "Pure Satellite"}
-        <ChevronDown className="w-3.5 h-3.5" />
-      </button>
+      {/* Map style selector (both sub-modules) */}
+      <MapSourceSelector value={mapSourceKey} onChange={setMapSourceKey} />
     </div>
   );
 }

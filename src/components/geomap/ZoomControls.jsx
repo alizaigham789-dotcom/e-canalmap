@@ -29,11 +29,11 @@ export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, on
         className={`w-9 h-9 rounded-xl shadow-xl border flex items-center justify-center transition-all ${
           gpsActive
             ? "bg-blue-500 text-white border-blue-600 animate-pulse"
-            : "bg-white text-blue-600 border-slate-200 hover:bg-blue-50"
+            : "bg-white text-red-500 border-slate-200 hover:bg-red-50"
         }`}
         title="GPS Location"
       >
-        <Crosshair className="w-4 h-4" />
+        <Crosshair className="w-[18px] h-[18px]" strokeWidth={2.2} />
       </button>
       {onPlaceByCoords && (
         <button
