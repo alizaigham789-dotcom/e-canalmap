@@ -163,11 +163,19 @@ export default function KhalDrawLayer({
 
   const handleKhalClick = useCallback((khalId, e) => {
     L.DomEvent.stopPropagation(e);
+    // In edit mode, single-click selects (no toggle-off) so double-click reliably
+    // ends with the khal editable. Click empty map to deselect.
+    if (editMode) {
+      setSelectedKhalId(khalId);
+      setLongPressSel(false);
+      onSelectObj && onSelectObj(khals.find(o => o.id === khalId));
+      return;
+    }
     const willSelect = selectedKhalId !== khalId;
     setSelectedKhalId(willSelect ? khalId : null);
     setLongPressSel(false);
     onSelectObj && onSelectObj(willSelect ? khals.find(o => o.id === khalId) : null);
-  }, [selectedKhalId, khals, onSelectObj]);
+  }, [selectedKhalId, khals, onSelectObj, editMode]);
 
   // Long-press / double-click → select khal and show edit nodes (works in ANY mode)
   const handleKhalSelectInline = useCallback((khalId, e) => {
@@ -269,6 +277,7 @@ export default function KhalDrawLayer({
                 weight: isSelected ? 6 : 4,
                 opacity: 0.9,
                 dashArray: isInformal ? "8,6" : undefined,
+                className: editMode ? "khal-edit-cursor" : "",
               }}
               eventHandlers={{
                 click: (e) => handleKhalClick(khal.id, e),
@@ -284,7 +293,9 @@ export default function KhalDrawLayer({
               {!drawMode && (
                 <Tooltip direction="top" sticky>
                   <div className={`text-[10px] font-bold whitespace-nowrap ${isInformal ? "text-cyan-700" : "text-blue-700"}`}>
-                    {isInformal ? "خال (زمیندار — غیر رسمی) — ڈبل کلک / لانگ پریس سے ایڈٹ کریں" : "خال — ڈبل کلک / لانگ پریس سے ایڈٹ کریں"}
+                    {editMode
+                      ? (isInformal ? "خال (زمیندار) — ڈبل کلک سے ایڈٹ کریں" : "خال — ڈبل کلک سے ایڈٹ کریں")
+                      : (isInformal ? "خال (زمیندار — غیر رسمی) — ڈبل کلک / لانگ پریس سے ایڈٹ کریں" : "خال — ڈبل کلک / لانگ پریس سے ایڈٹ کریں")}
                   </div>
                 </Tooltip>
               )}

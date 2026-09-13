@@ -125,6 +125,12 @@
   filter: brightness(1.42) contrast(1.1) saturate(1.28);
 }
 
+/* Pointer cursor when the GeoMap khal edit tool is active — signals a khal is
+   editable on hover (double-click to edit). */
+.khal-edit-cursor {
+  cursor: pointer !important;
+}
+
 /* GeoMap — transparent killa label tooltip (no white background) */
 .leaflet-tooltip.killa-label {
   background: transparent !important;

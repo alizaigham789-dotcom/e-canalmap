@@ -1425,7 +1425,7 @@ export default function GeoMap() {
     const savedZoom = map.getZoom();
     setCapturing(true);
     const arcgisUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-    const tileLayer = L.tileLayer(arcgisUrl, { crossOrigin: true, maxZoom: 19 });
+    const tileLayer = L.tileLayer(arcgisUrl, { crossOrigin: true, maxZoom: 19, className: "satellite-bright" });
     tileLayer.addTo(map);
     map.fitBounds(bounds, { padding: [60, 60], animate: false });
     try {
@@ -1436,10 +1436,16 @@ export default function GeoMap() {
         setTimeout(finish, 6000);
       });
       await new Promise((r) => setTimeout(r, 500));
+      const sz = map.getSize();
+      const MAX_DIM = 8192;
+      let capScale = 4;
+      if (Math.max(sz.x, sz.y) * capScale > MAX_DIM) {
+        capScale = Math.max(1.5, Math.floor((MAX_DIM / Math.max(sz.x, sz.y)) * 10) / 10);
+      }
       const canvas = await html2canvas(map.getContainer(), {
         useCORS: true,
         allowTaint: false,
-        scale: 3,
+        scale: capScale,
         backgroundColor: "#0f1923",
       });
       if (bw) {
@@ -1451,6 +1457,18 @@ export default function GeoMap() {
           d[i] = d[i + 1] = d[i + 2] = g;
         }
         ctx.putImageData(img, 0, 0);
+      } else {
+        // Brighten the satellite imagery so trees/houses/land patches are clearly
+        // visible under the mustateel overlay (mild boost — boundaries stay sharp).
+        const ctx = canvas.getContext("2d");
+        const tmp = document.createElement("canvas");
+        tmp.width = canvas.width;
+        tmp.height = canvas.height;
+        const tctx = tmp.getContext("2d");
+        tctx.filter = "brightness(1.28) contrast(1.08) saturate(1.2)";
+        tctx.drawImage(canvas, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(tmp, 0, 0);
       }
       return canvas;
     } finally {
