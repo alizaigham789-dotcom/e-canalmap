@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
-import { Polyline, CircleMarker, Marker, Tooltip, useMapEvents } from "react-leaflet";
+import { Polyline, CircleMarker, Marker, Tooltip, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import { inverseTransform } from "@/lib/geoOverlay";
 import { createOutlet } from "@/lib/gisEngine";
@@ -57,12 +57,26 @@ export default function MogaDrawLayer({ drawMode, editMode, overlay, objects, gr
     setPending({ startCanvas, endCanvas, startLatLng, endLatLng: p });
   }, [transform, rotationDeg, startLatLng, snap]);
 
+  const map = useMap();
   useMapEvents({
     click: (e) => {
       if (drawMode) handleAddPoint(e.latlng);
       else if (editMode) setSelectedMogaId(null); // background tap deselects
     },
-    mousemove: (e) => { if (drawMode) setMouseLatLng(e.latlng); },
+    mousemove: (e) => {
+      if (!drawMode) return;
+      setMouseLatLng(e.latlng);
+      if (e.containerPoint && map) {
+        const size = map.getSize();
+        const margin = 40;
+        let dx = 0, dy = 0;
+        if (e.containerPoint.x < margin) dx = -10;
+        else if (e.containerPoint.x > size.x - margin) dx = 10;
+        if (e.containerPoint.y < margin) dy = -10;
+        else if (e.containerPoint.y > size.y - margin) dy = 10;
+        if (dx || dy) map.panBy([dx, dy], { animate: false });
+      }
+    },
   });
 
   const confirm = () => {
@@ -77,14 +91,25 @@ export default function MogaDrawLayer({ drawMode, editMode, overlay, objects, gr
   };
   const cancel = () => { setPending(null); setStartLatLng(null); };
 
+  const [dragPreview, setDragPreview] = useState(null); // { id, start, end } canvas coords
+
+  // Live drag — moga follows the node in real time; server updated on dragend.
   const handleVertexDrag = useCallback((mogaId, which, newLatLng) => {
     const m = mogas.find(o => o.id === mogaId);
     if (!m) return;
     const canvasPt = inverseTransform(newLatLng.lat, newLatLng.lng, transform, rotationDeg);
-    const newStart = which === "start" ? canvasPt : m.start;
-    const newEnd = which === "end" ? canvasPt : m.end;
-    onMogaUpdated && onMogaUpdated(mogaId, newStart, newEnd);
-  }, [mogas, transform, rotationDeg, onMogaUpdated]);
+    const base = dragPreview?.id === mogaId ? dragPreview : m;
+    const newStart = which === "start" ? canvasPt : base.start;
+    const newEnd = which === "end" ? canvasPt : base.end;
+    setDragPreview({ id: mogaId, start: newStart, end: newEnd });
+  }, [mogas, transform, rotationDeg, dragPreview]);
+
+  const handleVertexDragEnd = useCallback((mogaId) => {
+    setDragPreview(prev => {
+      if (prev && prev.id === mogaId) onMogaUpdated && onMogaUpdated(mogaId, prev.start, prev.end);
+      return null;
+    });
+  }, [onMogaUpdated]);
 
   const handleMogaClick = useCallback((mogaId, e) => {
     L.DomEvent.stopPropagation(e);
@@ -116,10 +141,13 @@ export default function MogaDrawLayer({ drawMode, editMode, overlay, objects, gr
         const ll = mogaLatLngs[m.id];
         if (!ll) return null;
         const isSelected = selectedMogaId === m.id;
+        const isDragging = dragPreview?.id === m.id;
+        const startLL = isDragging ? (() => { const p = transform.transform(dragPreview.start.x, dragPreview.start.y); return [p.lat, p.lng]; })() : ll.start;
+        const endLL = isDragging ? (() => { const p = transform.transform(dragPreview.end.x, dragPreview.end.y); return [p.lat, p.lng]; })() : ll.end;
         return (
           <React.Fragment key={m.id}>
             <Polyline
-              positions={[ll.start, ll.end]}
+              positions={[startLL, endLL]}
               pathOptions={{ color: isSelected ? "#ff0000" : "#06b6d4", weight: isSelected ? 6 : 4, opacity: 0.9 }}
               eventHandlers={{ click: (e) => handleMogaClick(m.id, e) }}
             >
@@ -129,9 +157,9 @@ export default function MogaDrawLayer({ drawMode, editMode, overlay, objects, gr
             </Polyline>
             {isSelected && (
               <>
-                <Marker position={ll.start} icon={vertexIcon("S")} draggable eventHandlers={{ dragend: (e) => handleVertexDrag(m.id, "start", e.target.getLatLng()) }} />
-                <Marker position={ll.end} icon={vertexIcon("E")} draggable eventHandlers={{ dragend: (e) => handleVertexDrag(m.id, "end", e.target.getLatLng()) }} />
-                <Marker position={[(ll.start[0] + ll.end[0]) / 2, (ll.start[1] + ll.end[1]) / 2]} icon={deleteIcon()} eventHandlers={{ click: (e) => handleDeleteMoga(m.id, e) }} />
+                <Marker position={startLL} icon={vertexIcon("S")} draggable eventHandlers={{ drag: (e) => handleVertexDrag(m.id, "start", e.target.getLatLng()), dragend: () => handleVertexDragEnd(m.id) }} />
+                <Marker position={endLL} icon={vertexIcon("E")} draggable eventHandlers={{ drag: (e) => handleVertexDrag(m.id, "end", e.target.getLatLng()), dragend: () => handleVertexDragEnd(m.id) }} />
+                <Marker position={[(startLL[0] + endLL[0]) / 2, (startLL[1] + endLL[1]) / 2]} icon={deleteIcon()} eventHandlers={{ click: (e) => handleDeleteMoga(m.id, e) }} />
               </>
             )}
           </React.Fragment>

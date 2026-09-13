@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { Polyline, Marker, CircleMarker, Tooltip, useMapEvents } from "react-leaflet";
+import { Polyline, Marker, CircleMarker, Tooltip, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import { inverseTransform } from "@/lib/geoOverlay";
 import { createKhal, DIMENSIONS } from "@/lib/gisEngine";
@@ -69,6 +69,7 @@ export default function KhalDrawLayer({
   const [longPressSel, setLongPressSel] = useState(false); // selected via long-press/dblclick
   const rotationDeg = overlay?.rotation || 0;
   const transform = overlay?.transform;
+  const map = useMap();
   const longPressTimer = useRef(null);
 
   // Existing khal objects
@@ -109,22 +110,44 @@ export default function KhalDrawLayer({
     setDraftPoints([]);
   }, [draftPoints, transform, rotationDeg, onKhalDrawn, khals]);
 
-  // Mouse tracker for draft preview
+  // Mouse tracker for draft preview + edge auto-pan while drawing
   function DraftMouseTracker() {
     useMapEvents({
-      mousemove: (e) => setMouseLatLng(e.latlng),
+      mousemove: (e) => {
+        setMouseLatLng(e.latlng);
+        if (drawMode && e.containerPoint && map) {
+          const size = map.getSize();
+          const margin = 40;
+          let dx = 0, dy = 0;
+          if (e.containerPoint.x < margin) dx = -10;
+          else if (e.containerPoint.x > size.x - margin) dx = 10;
+          if (e.containerPoint.y < margin) dy = -10;
+          else if (e.containerPoint.y > size.y - margin) dy = 10;
+          if (dx || dy) map.panBy([dx, dy], { animate: false });
+        }
+      },
     });
     return null;
   }
 
-  // Edit mode: drag a vertex → update khal
+  // Live vertex drag — a local preview keeps the khal glued to the node in real
+  // time; the server is updated only on dragend (no per-pixel API spam).
+  const [dragPreview, setDragPreview] = useState(null); // { id, points } canvas coords
+
   const handleVertexDrag = useCallback((khalId, vertexIdx, newLatLng) => {
     const khal = khals.find(k => k.id === khalId);
     if (!khal) return;
     const canvasPt = inverseTransform(newLatLng.lat, newLatLng.lng, transform, rotationDeg);
     const newPoints = khal.points.map((p, i) => i === vertexIdx ? { x: canvasPt.x, y: canvasPt.y } : p);
-    onKhalUpdated && onKhalUpdated(khalId, newPoints);
-  }, [khals, transform, rotationDeg, onKhalUpdated]);
+    setDragPreview({ id: khalId, points: newPoints });
+  }, [khals, transform, rotationDeg]);
+
+  const handleVertexDragEnd = useCallback((khalId) => {
+    setDragPreview(prev => {
+      if (prev && prev.id === khalId) onKhalUpdated && onKhalUpdated(khalId, prev.points);
+      return null;
+    });
+  }, [onKhalUpdated]);
 
   // Insert a new vertex at the given segment midpoint (canvas coords)
   const handleAddVertex = useCallback((khalId, segIdx, latlng) => {
@@ -224,10 +247,15 @@ export default function KhalDrawLayer({
         const isSelected = isKhalEditable(khal.id);
         const isInformal = khal.khalType === "informal";
         const baseColor = isInformal ? "#0891b2" : "#2563eb";
+        const isDragging = dragPreview?.id === khal.id;
+        const effPoints = isDragging ? dragPreview.points : khal.points;
+        const effLatLngs = isDragging
+          ? effPoints.map(p => { const ll = transform.transform(p.x, p.y); return [ll.lat, ll.lng]; })
+          : latlngs;
         return (
           <React.Fragment key={khal.id}>
             <Polyline
-              positions={latlngs}
+              positions={effLatLngs}
               pathOptions={{
                 color: isSelected ? "#ff0000" : baseColor,
                 weight: isSelected ? 6 : 4,
@@ -253,7 +281,7 @@ export default function KhalDrawLayer({
                 </Tooltip>
               )}
             </Polyline>
-            {isSelected && khal.points.map((p, i) => {
+            {isSelected && effPoints.map((p, i) => {
               const ll = transform.transform(p.x, p.y);
               return (
                 <Marker
@@ -261,14 +289,17 @@ export default function KhalDrawLayer({
                   position={[ll.lat, ll.lng]}
                   icon={vertexIcon(i + 1)}
                   draggable
-                  eventHandlers={{ dragend: (e) => handleVertexDrag(khal.id, i, e.target.getLatLng()) }}
+                  eventHandlers={{
+                    drag: (e) => handleVertexDrag(khal.id, i, e.target.getLatLng()),
+                    dragend: () => handleVertexDragEnd(khal.id),
+                  }}
                 />
               );
             })}
             {/* Mid-segment "+" markers to insert new vertices */}
-            {isSelected && khal.points.length >= 2 && khal.points.map((p, i) => {
-              if (i >= khal.points.length - 1) return null;
-              const a = khal.points[i], b = khal.points[i + 1];
+            {isSelected && effPoints.length >= 2 && effPoints.map((p, i) => {
+              if (i >= effPoints.length - 1) return null;
+              const a = effPoints[i], b = effPoints[i + 1];
               const midCanvas = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
               const midLL = transform.transform(midCanvas.x, midCanvas.y);
               return (
@@ -280,9 +311,9 @@ export default function KhalDrawLayer({
                 />
               );
             })}
-            {isSelected && latlngs.length >= 2 && (() => {
-              const midIdx = Math.floor(latlngs.length / 2);
-              const mid = latlngs[midIdx];
+            {isSelected && effLatLngs.length >= 2 && (() => {
+              const midIdx = Math.floor(effLatLngs.length / 2);
+              const mid = effLatLngs[midIdx];
               return (
                 <Marker
                   position={mid}

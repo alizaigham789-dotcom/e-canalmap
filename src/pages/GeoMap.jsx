@@ -1572,7 +1572,7 @@ export default function GeoMap() {
             killaVisible={killaVisible}
             mogaFilter={selectedMoga}
             activeMustateelIds={activeMustateelIds}
-            gridAll={allocTool === "cell"}
+            gridAll={allocTool === "cell" || (viewMode === "view" && (khalTool === "draw" || khalTool === "edit"))}
             onMustateelClick={handleMustateelClick}
             showCanals={showCanals}
             colorSettings={editorSettings?.colors || {}}

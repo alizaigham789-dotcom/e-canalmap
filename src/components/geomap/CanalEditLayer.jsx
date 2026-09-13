@@ -49,13 +49,23 @@ export default function CanalEditLayer({ editMode, overlay, objects, onCanalUpda
     return map;
   }, [canals, transform]);
 
+  const [dragPreview, setDragPreview] = useState(null); // { id, points } canvas coords during vertex drag
+
+  // Live drag — canal follows the node in real time; server updated on dragend.
   const handleVertexDrag = useCallback((id, idx, ll) => {
     const c = canals.find(o => o.id === id);
     if (!c) return;
     const cp = inverseTransform(ll.lat, ll.lng, transform, rotationDeg);
     const newPoints = c.points.map((p, i) => i === idx ? { x: cp.x, y: cp.y } : p);
-    onCanalUpdated && onCanalUpdated(id, newPoints);
-  }, [canals, transform, rotationDeg, onCanalUpdated]);
+    setDragPreview({ id, points: newPoints });
+  }, [canals, transform, rotationDeg]);
+
+  const handleVertexDragEnd = useCallback((id) => {
+    setDragPreview(prev => {
+      if (prev && prev.id === id) onCanalUpdated && onCanalUpdated(id, prev.points);
+      return null;
+    });
+  }, [onCanalUpdated]);
 
   const handleAddVertex = useCallback((id, segIdx, midLL) => {
     const c = canals.find(o => o.id === id);
@@ -81,10 +91,15 @@ export default function CanalEditLayer({ editMode, overlay, objects, onCanalUpda
         const latlngs = canalLatLngs[c.id];
         if (!latlngs) return null;
         const isSelected = selectedId === c.id;
+        const isDragging = dragPreview?.id === c.id;
+        const effPoints = isDragging ? dragPreview.points : c.points;
+        const effLatLngs = isDragging
+          ? effPoints.map(p => { const ll = transform.transform(p.x, p.y); return [ll.lat, ll.lng]; })
+          : latlngs;
         return (
           <React.Fragment key={c.id}>
             <Polyline
-              positions={latlngs}
+              positions={effLatLngs}
               pathOptions={{
                 color: isSelected ? "#ff0000" : "#f59e0b",
                 weight: isSelected ? 6 : 8,
@@ -96,7 +111,7 @@ export default function CanalEditLayer({ editMode, overlay, objects, onCanalUpda
                 <div className="text-[10px] font-bold whitespace-nowrap text-amber-700">{c.name || "نہر"} — کلک سے ایڈٹ کریں</div>
               </Tooltip>
             </Polyline>
-            {isSelected && c.points.map((p, i) => {
+            {isSelected && effPoints.map((p, i) => {
               const ll = transform.transform(p.x, p.y);
               return (
                 <Marker
@@ -104,13 +119,16 @@ export default function CanalEditLayer({ editMode, overlay, objects, onCanalUpda
                   position={[ll.lat, ll.lng]}
                   icon={vertexIcon(i + 1)}
                   draggable
-                  eventHandlers={{ dragend: (e) => handleVertexDrag(c.id, i, e.target.getLatLng()) }}
+                  eventHandlers={{
+                    drag: (e) => handleVertexDrag(c.id, i, e.target.getLatLng()),
+                    dragend: () => handleVertexDragEnd(c.id),
+                  }}
                 />
               );
             })}
-            {isSelected && c.points.length >= 2 && c.points.map((p, i) => {
-              if (i >= c.points.length - 1) return null;
-              const a = c.points[i], b = c.points[i + 1];
+            {isSelected && effPoints.length >= 2 && effPoints.map((p, i) => {
+              if (i >= effPoints.length - 1) return null;
+              const a = effPoints[i], b = effPoints[i + 1];
               const mid = transform.transform((a.x + b.x) / 2, (a.y + b.y) / 2);
               return (
                 <Marker
@@ -121,8 +139,8 @@ export default function CanalEditLayer({ editMode, overlay, objects, onCanalUpda
                 />
               );
             })}
-            {isSelected && latlngs.length >= 2 && (() => {
-              const mid = latlngs[Math.floor(latlngs.length / 2)];
+            {isSelected && effLatLngs.length >= 2 && (() => {
+              const mid = effLatLngs[Math.floor(effLatLngs.length / 2)];
               return (
                 <Marker
                   position={mid}
