@@ -56,6 +56,7 @@ export default function KhalDrawLayer({
   editMode,
   overlay,
   objects,
+  khalType = "approved",
   onKhalDrawn,
   onKhalUpdated,
   onKhalDeleted,
@@ -97,7 +98,7 @@ export default function KhalDrawLayer({
     }
     // Convert lat/lng → canvas coords
     const canvasPts = draftPoints.map(ll => inverseTransform(ll.lat, ll.lng, transform, rotationDeg));
-    const khal = createKhal(canvasPts, "");
+    const khal = createKhal(canvasPts, "", khalType);
     onKhalDrawn && onKhalDrawn(khal);
     setDraftPoints([]);
   }, [draftPoints, transform, rotationDeg, onKhalDrawn]);
@@ -201,7 +202,7 @@ export default function KhalDrawLayer({
           <ClickCapture active={drawMode} onAddPoint={handleAddPoint} onFinish={handleFinish} />
           {/* Draft preview */}
           {draftPreviewPositions.length >= 2 && (
-            <Polyline positions={draftPreviewPositions} pathOptions={{ color: "#2563eb", weight: 3, dashArray: "6,4", opacity: 0.8 }} />
+            <Polyline positions={draftPreviewPositions} pathOptions={{ color: khalType === "informal" ? "#f97316" : "#2563eb", weight: 3, dashArray: khalType === "informal" ? "8,6" : "6,4", opacity: 0.8 }} />
           )}
           {/* Draft vertex markers */}
           {draftPoints.map((p, i) => (
@@ -215,14 +216,17 @@ export default function KhalDrawLayer({
         const latlngs = khalLatLngs[khal.id];
         if (!latlngs || latlngs.length < 2) return null;
         const isSelected = isKhalEditable(khal.id);
+        const isInformal = khal.khalType === "informal";
+        const baseColor = isInformal ? "#f97316" : "#2563eb";
         return (
           <React.Fragment key={khal.id}>
             <Polyline
               positions={latlngs}
               pathOptions={{
-                color: isSelected ? "#ff0000" : "#2563eb",
+                color: isSelected ? "#ff0000" : baseColor,
                 weight: isSelected ? 6 : 4,
                 opacity: 0.9,
+                dashArray: isInformal ? "8,6" : undefined,
               }}
               eventHandlers={{
                 click: (e) => handleKhalClick(khal.id, e),
@@ -237,8 +241,8 @@ export default function KhalDrawLayer({
             >
               {!drawMode && (
                 <Tooltip direction="top" sticky>
-                  <div className="text-[10px] font-bold text-blue-700 whitespace-nowrap">
-                    خال — ڈبل کلک / لانگ پریس سے ایڈٹ کریں
+                  <div className={`text-[10px] font-bold whitespace-nowrap ${isInformal ? "text-orange-600" : "text-blue-700"}`}>
+                    {isInformal ? "خال (زمیندار — غیر رسمی) — ڈبل کلک / لانگ پریس سے ایڈٹ کریں" : "خال — ڈبل کلک / لانگ پریس سے ایڈٹ کریں"}
                   </div>
                 </Tooltip>
               )}

@@ -707,11 +707,12 @@ export function createCanal(points, name = "") {
   };
 }
 
-export function createKhal(points, name = "") {
+export function createKhal(points, name = "", khalType = "approved") {
   return {
     id: `khal_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     type: "khal", points: points.map(p => ({ ...p })), name,
     width: DIMENSIONS.KHAL_WIDTH,
+    khalType, // "approved" (official, from Map Editor) | "informal" (zamindar-drawn in GeoMap view mode)
     fillColor: "", // empty = use default solid blue fill
   };
 }

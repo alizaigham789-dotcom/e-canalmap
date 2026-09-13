@@ -1573,13 +1573,17 @@ export default function GeoMap() {
           />
         )}
 
-        {/* Khal draw/edit layer — watercourse drawing & vertex editing on satellite */}
-        {viewMode === "overlay" && activeOverlay?.transform && !capturing && (
+        {/* Khal draw/edit layer — watercourse drawing & vertex editing.
+            In View mode, drawn khals are tagged "informal" (zamindar-drawn) so
+            their exact real-world location is captured; in Overlay mode they are
+            "approved" (official). Informal khals render in a different colour. */}
+        {(viewMode === "overlay" || viewMode === "view") && activeOverlay?.transform && !capturing && (
           <KhalDrawLayer
             drawMode={khalTool === "draw"}
             editMode={khalTool === "edit"}
             overlay={activeOverlay}
             objects={mapObjects}
+            khalType={viewMode === "view" ? "informal" : "approved"}
             onKhalDrawn={handleKhalDrawn}
             onKhalUpdated={handleKhalUpdated}
             onKhalDeleted={handleKhalDeleted}
@@ -1789,20 +1793,20 @@ export default function GeoMap() {
         </div>
       )}
 
-      {khalTool === "draw" && activeOverlay && viewMode === "overlay" && (
-        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-blue-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
-          <Waves className="w-3 h-3" /> نقشے پر کلک کر کے خال بنائیں — ڈبل کلک سے مکمل کریں
+      {khalTool === "draw" && activeOverlay && (viewMode === "overlay" || viewMode === "view") && (
+        <div className={`absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5 ${viewMode === "view" ? "bg-orange-600" : "bg-blue-600"}`}>
+          <Waves className="w-3 h-3" /> {viewMode === "view" ? "نقشے پر کلک کر کے خال (زمیندار) بنائیں — ڈبل کلک سے مکمل کریں" : "نقشے پر کلک کر کے خال بنائیں — ڈبل کلک سے مکمل کریں"}
         </div>
       )}
 
-      {khalTool === "edit" && activeOverlay && viewMode === "overlay" && (
+      {khalTool === "edit" && activeOverlay && (viewMode === "overlay" || viewMode === "view") && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[1001] bg-orange-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
           <Pencil className="w-3 h-3" /> کسی خال پر کلک کریں — نوڈس کو کھینچ کر ایڈجسٹ کریں، × سے حذف کریں
         </div>
       )}
 
       {/* Always-on khal edit hint — long-press / double-click any khal to edit */}
-      {viewMode === "overlay" && activeOverlay && !khalTool && khalsExist && (
+      {(viewMode === "overlay" || viewMode === "view") && activeOverlay && !khalTool && khalsExist && (
         <div className="absolute bottom-48 left-1/2 -translate-x-1/2 z-[1000] bg-blue-600/90 text-white text-[10px] font-medium px-3 h-7 rounded-full shadow-xl flex items-center gap-1.5">
           <Waves className="w-3 h-3" />
           خال پر ڈبل کلک یا لانگ پریس کریں — نوڈس کھینچ کر ایڈٹ کریں
@@ -1826,7 +1830,7 @@ export default function GeoMap() {
         layerVisible={layerVisible}
         khalTool={khalTool}
         onKhalToolChange={(t) => { setKhalTool(t); if (t) setActiveTool(null); }}
-        showKhal={viewMode === "overlay"}
+        showKhal={true}
       />
 
       {/* Moga tools — Hand (pan) + Move (drag placed mogas) — overlay mode only */}
