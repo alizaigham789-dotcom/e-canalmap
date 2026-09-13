@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Printer, Languages, ScanLine, Loader2, ClipboardPaste, LayoutGrid, Save, Pencil, Info } from "lucide-react";
@@ -288,6 +288,69 @@ export default function WarabandiParatForm({ defaultDocType = "پرت وارہ �
       if (data.header) setHeader((prev) => ({ ...prev, ...data.header }));
     } catch {}
   }, [record?.id]);
+
+  // === Tarmeem: سابقہ پرت وارہ بندی کا data خود بخود کالم A تا M تک کاپی ===
+  // جب یہ پرت "کیس ترمیم وارہ بندی" ہو اور اس میں ابھی کوئی rows محفوظ نہیں، تو اسی
+  // موگہ کا سب سے recent "پرت وارہ بندی" (jadeed) ریکارڈ تلاش کر کے اس کا data
+  // summary side (A–M) میں لکھ دیں — صرف ایک بار، خود بخود۔
+  const { data: allParats = [] } = useQuery({
+    queryKey: ["parat-records"],
+    queryFn: () => base44.entities.ParatWarabandiRecord.list("-updated_date", 100),
+  });
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (isJadeed) return;
+    if (prefilledRef.current) return;
+    if (!record?.id) return;
+    let saved = {};
+    try { saved = JSON.parse(record.data_json || "{}"); } catch {}
+    if (saved.rows && saved.rows.length > 0) return; // پہلے سے data ہے → اوور رائٹ نہ کریں
+    const num = String(header.mogha_number || "").trim();
+    if (!num) return;
+    const prev = allParats.find((r) =>
+      r.doc_type === "پرت وارہ بندی" &&
+      String(r.mogha_number || "") === num &&
+      String(r.mogha_side || "") === String(header.mogha_side || "") &&
+      r.id !== record.id
+    );
+    if (!prev) return;
+    let prevData = {};
+    try { prevData = JSON.parse(prev.data_json || "{}"); } catch {}
+    const prevRows = prevData.rows || [];
+    if (!prevRows.length) return;
+    prefilledRef.current = true;
+    const filled = prevRows.map((r, i) => ({
+      ...emptyRow(i),
+      khatoni2: String(i + 1),
+      khatoni: String(i + 1),
+      owner_name2: r.owner_name || "",
+      owner_name: r.owner_name || "",
+      nikha2_lega: r.nikha_lega || "",
+      nikha2_dega: r.nikha_dega || "",
+      nikha_lega: r.nikha_lega || "",
+      nikha_dega: r.nikha_dega || "",
+      total_area2: r.total_area || "",
+      total_area: r.total_area || "",
+      bandubast: r.bandubast || "",
+      bandubast2: r.bandubast || "",
+      ghair_mumkin: r.ghair_mumkin || "",
+      khalis_raqba: r.khalis_raqba || calcKhalis(r.total_area, r.ghair_mumkin),
+      zaidah_minute: r.zaidah_minute || "",
+      zaidah_ghante: r.zaidah_ghante || "",
+      wazgi_minute: r.wazgi_minute || "",
+      wazgi_ghante: r.wazgi_ghante || "",
+      waari_minute: r.waari_minute || "",
+      waari_ghante: r.waari_ghante || "",
+      khalis_waari2_minute: r.khalis_waari_minute || "",
+      khalis_waari2_ghante: r.khalis_waari_ghante || "",
+      khalis_waari_minute: r.khalis_waari_minute || "",
+      khalis_waari_ghante: r.khalis_waari_ghante || "",
+      tashreeh_din: r.tashreeh_din || "",
+      tashreeh_raat: r.tashreeh_raat || "",
+    }));
+    setRows(renumberRows(filled.map(normalizeRowDigits)));
+    toast.success("سابقہ پرت وارہ بندی کا data کالم A تا M تک خود بخود کاپی ہو گیا");
+  }, [isJadeed, record, allParats, header.mogha_number, header.mogha_side]);
 
   // مستقل محفوظ — پرت وارہ بندی ریکارڈ
   const handleSave = async (stepOverride) => {
