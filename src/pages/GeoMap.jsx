@@ -1820,7 +1820,7 @@ export default function GeoMap() {
       {viewMode === "overlay" && (
         <button
           onClick={() => setShowOverlayPanel(v => !v)}
-          className={`absolute top-14 left-3 z-[1000] flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
+          className={`absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
         >
           <Layers className="w-3.5 h-3.5" />
           GIS Overlay
@@ -1915,26 +1915,18 @@ export default function GeoMap() {
         </div>
       )}
 
-      <DrawingToolbar
-        activeTool={activeTool}
-        onToolChange={(t) => { setActiveTool(t); if (t) { setKhalTool(null); setMogaTool(null); } }}
-        onClear={handleClearMeasurements}
-        onExport={handleExport}
-        onLayerToggle={() => setLayerVisible(v => !v)}
-        layerVisible={layerVisible}
-      />
-
-      {/* Moga tools — Hand (pan) + Move (drag placed mogas) — overlay mode only */}
-      {viewMode === "overlay" && (
-        <MogaToolsToolbar
-          moveTool={moveTool}
-          onToggleMove={() => {
-            setMoveTool((v) => !v);
-            if (!moveTool) { setActiveTool(null); setKhalTool(null); }
-          }}
-          onHand={() => { setMoveTool(false); setActiveTool(null); setKhalTool(null); }}
+      {viewMode === "view" && (
+        <DrawingToolbar
+          activeTool={activeTool}
+          onToolChange={(t) => { setActiveTool(t); if (t) { setKhalTool(null); setMogaTool(null); } }}
+          onClear={handleClearMeasurements}
+          onExport={handleExport}
+          onLayerToggle={() => setLayerVisible(v => !v)}
+          layerVisible={layerVisible}
         />
       )}
+
+      {/* Moga hand/move tools removed from Map Overlay — kept in Map View only */}
 
       {moveTool && viewMode === "overlay" && (
         <div className="absolute bottom-36 left-16 z-[1001] bg-indigo-600 text-white text-[11px] font-bold px-4 h-8 rounded-full shadow-xl flex items-center gap-1.5">
