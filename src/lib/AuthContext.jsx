@@ -164,8 +164,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
+    // Keep the login redirect ON the current (custom) domain. The SDK's
+    // redirectToLogin builds `${appBaseUrl}/login?from_url=…`, which can point
+    // off-domain (e.g. the base44.app host) when appBaseUrl is set — the post-login
+    // return then lands on a path the custom domain doesn't serve and 404s.
+    // Send the user to this app's own /login route with a validated returnTo so
+    // the redirect after login always lands on an existing route.
+    const path = window.location.pathname + window.location.search;
+    const returnTo = path && path !== "/login" && path !== "/register" ? path : "/";
+    window.location.href = "/login?returnTo=" + encodeURIComponent(returnTo);
   };
 
   return (
