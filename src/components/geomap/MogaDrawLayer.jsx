@@ -8,7 +8,7 @@ import { createOutlet } from "@/lib/gisEngine";
 // onMogaDrawn. The outlet is saved into the map's drawing_data so it appears in
 // the Map Editor at exactly the same place (and passes through the same
 // mustateels), identical to a khal drawn here.
-export default function MogaDrawLayer({ drawMode, overlay, onMogaDrawn }) {
+export default function MogaDrawLayer({ drawMode, overlay, objects, onMogaDrawn }) {
   const [startLatLng, setStartLatLng] = useState(null);
   const [mouseLatLng, setMouseLatLng] = useState(null);
   const [pending, setPending] = useState(null); // { startCanvas, endCanvas, startLatLng, endLatLng }
@@ -34,7 +34,11 @@ export default function MogaDrawLayer({ drawMode, overlay, onMogaDrawn }) {
 
   const confirm = () => {
     if (!pending) return;
-    const outlet = createOutlet("", pending.startCanvas, pending.endCanvas, "", 100, moghaNumber.trim(), moghaSide);
+    // Inherit properties from an existing moga (outlet) on this map so the new
+    // moga matches the ones already drawn (block size, arrow scale, colour…)
+    const ref = (objects || []).find(o => o.type === "outlet");
+    const outlet = createOutlet("", pending.startCanvas, pending.endCanvas, "", ref?.canalWidth || 100, moghaNumber.trim(), moghaSide);
+    if (ref) { outlet.arrowScale = ref.arrowScale || 1; outlet.blockSize = ref.blockSize || 32; outlet.outletColor = ref.outletColor || "#dc2626"; }
     onMogaDrawn && onMogaDrawn(outlet);
     setPending(null); setStartLatLng(null); setMoghaNumber(""); setMoghaSide("");
   };

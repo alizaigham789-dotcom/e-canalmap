@@ -1616,6 +1616,7 @@ export default function GeoMap() {
           <MogaDrawLayer
             drawMode={mogaTool === "draw"}
             overlay={activeOverlay}
+            objects={mapObjects}
             onMogaDrawn={handleMogaDrawn}
           />
         )}

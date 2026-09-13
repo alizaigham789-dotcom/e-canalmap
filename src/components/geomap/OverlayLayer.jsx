@@ -282,7 +282,7 @@ function KhalLine({ obj, latlngs, zoom, transform }) {
   const fontSize = labelFontSize(zoom);
   const halfW = (obj.width || 8) / 2;
 
-  const { leftLine, rightLine } = useMemo(() => {
+  const { leftLine, rightLine, fillLatLngs } = useMemo(() => {
     if (!obj.points || obj.points.length < 2 || !transform) return { leftLine: [], rightLine: [] };
     const pts = obj.points;
     const left = [], right = [];
@@ -318,27 +318,30 @@ function KhalLine({ obj, latlngs, zoom, transform }) {
       left.push(transform.transform(pts[i].x + nx * halfW, pts[i].y + ny * halfW));
       right.push(transform.transform(pts[i].x - nx * halfW, pts[i].y - ny * halfW));
     }
-    return { leftLine: left, rightLine: right };
+    return { leftLine: left, rightLine: right, fillLatLngs: [...left, ...[...right].reverse()] };
   }, [obj.points, transform, halfW]);
 
   const isInformal = obj.khalType === "informal";
   const khalColor = isInformal ? "#0891b2" : "#2563eb";
+  const bankColor = isInformal ? "#0e7490" : "#1d4ed8";
   if (leftLine.length === 0) {
-    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: khalColor, weight: 2, opacity: 0.85, dashArray: isInformal ? "8,6" : undefined }} />;
+    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: khalColor, weight: 3, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined }} />;
   }
 
-  const w = Math.max(1, 2 - (18 - zoom) * 0.15);
+  const w = Math.max(2.5, 3 - (18 - zoom) * 0.15); // ≥ mustateel grid line width so the khal stays visible
   return (
     <>
-      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: khalColor, weight: w, opacity: 0.85, dashArray: isInformal ? "8,6" : undefined }} />
-      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: khalColor, weight: w, opacity: 0.85, dashArray: isInformal ? "8,6" : undefined }} />
-      {obj.name && (
-        <Tooltip permanent direction="center" className="khal-label" opacity={0.9}>
-          <span style={{ fontSize: `${fontSize * 0.58}px`, color: isInformal ? "#0e7490" : "#1d4ed8", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 2px" }}>
-            {obj.name}
-          </span>
-        </Tooltip>
-      )}
+      <Polygon positions={fillLatLngs.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, fillColor: khalColor, fillOpacity: 0.7, weight: 0, opacity: 0 }}>
+        {obj.name && (
+          <Tooltip permanent direction="center" className="khal-label" opacity={0.9}>
+            <span style={{ fontSize: `${fontSize * 0.58}px`, color: isInformal ? "#0e7490" : "#1d4ed8", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 2px" }}>
+              {obj.name}
+            </span>
+          </Tooltip>
+        )}
+      </Polygon>
+      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, weight: w, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined }} />
+      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, weight: w, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined }} />
     </>
   );
 }

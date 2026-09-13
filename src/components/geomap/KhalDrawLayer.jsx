@@ -99,9 +99,12 @@ export default function KhalDrawLayer({
     // Convert lat/lng → canvas coords
     const canvasPts = draftPoints.map(ll => inverseTransform(ll.lat, ll.lng, transform, rotationDeg));
     const khal = createKhal(canvasPts, "", khalType);
+    // Inherit width / fill from an existing khal on this map so new khals match
+    const ref = khals.find(k => k.width);
+    if (ref) { khal.width = ref.width; if (ref.fillColor) khal.fillColor = ref.fillColor; }
     onKhalDrawn && onKhalDrawn(khal);
     setDraftPoints([]);
-  }, [draftPoints, transform, rotationDeg, onKhalDrawn]);
+  }, [draftPoints, transform, rotationDeg, onKhalDrawn, khals]);
 
   // Mouse tracker for draft preview
   function DraftMouseTracker() {

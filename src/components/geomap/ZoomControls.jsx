@@ -1,5 +1,14 @@
 import React from "react";
-import { Plus, Minus, Crosshair, MapPin, Pencil, Waves, PenTool, Navigation } from "lucide-react";
+import { Plus, Minus, Crosshair, MapPin, Pencil, Waves, Navigation } from "lucide-react";
+
+// Moga / Outlet icon — matches the Map Editor's outlet tool icon
+const MogaIcon = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="9" height="9" rx="1" />
+    <path d="M12 7.5h6" />
+    <path d="M15 4.5l3.5 3-3.5 3" />
+  </svg>
+);
 
 export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, onPlaceByCoords, onPlaceByCoordsLower, onEditPatch, editActive, onKhalDraw, khalDrawActive, onKhalEdit, khalEditActive, onMogaDraw, mogaDrawActive }) {
   return (
@@ -78,7 +87,7 @@ export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, on
           }`}
           title="Edit Watercourse (Khal)"
         >
-          <PenTool className="w-4 h-4" />
+          <Navigation className="w-4 h-4" />
         </button>
       )}
       {onMogaDraw && (
@@ -91,7 +100,7 @@ export default function ZoomControls({ onZoomIn, onZoomOut, onGPS, gpsActive, on
           }`}
           title="Draw Moga (Outlet)"
         >
-          <Navigation className="w-4 h-4" />
+          <MogaIcon className="w-4 h-4" />
         </button>
       )}
     </div>
