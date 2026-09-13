@@ -48,7 +48,7 @@ export default function GeoMapExportDialog({
 }) {
   const [format, setFormat] = useState("print");
   const [bwMode, setBwMode] = useState(false);
-  const [satellite, setSatellite] = useState(false);
+  const [satellite, setSatellite] = useState(true);
   const [showKilla, setShowKilla] = useState(true);
   const [mogaFilter, setMogaFilter] = useState(selectedMoga || "");
   const [pageSize, setPageSize] = useState("a4");
@@ -207,7 +207,7 @@ export default function GeoMapExportDialog({
     try {
       let canvas;
       if (satellite && overlayReady && onCaptureSatellite) {
-        canvas = await onCaptureSatellite({ bw: bwMode });
+        canvas = await onCaptureSatellite({ bw: bwMode, mogaFilter: mogaFilter || null });
       } else {
         if (!svgData) { setExporting(false); return; }
         const targetW = 2400;
@@ -234,7 +234,7 @@ export default function GeoMapExportDialog({
     try {
       let canvas;
       if (satellite && overlayReady && onCaptureSatellite) {
-        canvas = await onCaptureSatellite({ bw: bwMode });
+        canvas = await onCaptureSatellite({ bw: bwMode, mogaFilter: mogaFilter || null });
       } else {
         if (!svgData) { setExporting(false); return; }
         const targetW = 2400;
@@ -299,11 +299,81 @@ export default function GeoMapExportDialog({
     }
   };
 
+  // Print with satellite/Earth background — same Map Editor layout (header line +
+  // map + footer), but the map area is the captured satellite imagery instead of a
+  // white SVG. When a single moga is selected, only that moga is captured.
+  const handlePrintSatellite = async () => {
+    if (!onCaptureSatellite) { alert("Satellite capture not available"); return; }
+    const isMobile = (typeof window !== "undefined" && window.innerWidth < 768) || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+    setExporting(true);
+    try {
+      const canvas = await onCaptureSatellite({ bw: bwMode, mogaFilter: mogaFilter || null });
+      // Mobile: fall back to a raster PDF (header + satellite + footer) download
+      if (isMobile) {
+        const fullCanvas = await buildFullCanvas(canvas);
+        const orientationMap = orientation === "portrait" ? "portrait" : "landscape";
+        const pageSizeMap = pageSize === "a4" ? "A4" : pageSize === "a3" ? "A3" : pageSize === "legal" ? "Legal" : "Letter";
+        const blob = await canvasToPdfBlobRaw(fullCanvas, orientationMap, pageSizeMap);
+        downloadBlob(blob, `${baseName}${mogaFilter ? `_moga_${mogaFilter}` : ""}_satellite.pdf`);
+        return;
+      }
+      const imgData = canvas.toDataURL("image/png");
+      const headerHTML = buildPrintHeaderHTML(mapData);
+      const footerHTML = buildPrintFooterHTML(mapData);
+      const pageSz = pageSize === "a4" ? "A4" : pageSize === "a3" ? "A3" : pageSize === "legal" ? "Legal" : "Letter";
+      const docHtml = `<!DOCTYPE html><html dir="rtl"><head><title>${escapeHtml(mapData?.title || "GeoMap Satellite Print")}</title>
+        <style>
+          @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff'); font-display: swap; }
+          @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+          @page { size: ${pageSz} ${orientation}; margin: 6mm; }
+          * { margin:0; padding:0; box-sizing:border-box; }
+          html, body { width:100%; background:white; font-family:Rajdhani,Arial,sans-serif; }
+          body { display:flex; flex-direction:column; min-height:100vh; }
+          .map-wrap { flex:1; min-height:0; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:4px; }
+          .map-wrap img { max-width:100%; max-height:74vh; width:auto; height:auto; display:block; object-fit:contain; }
+          @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } * { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+        </style></head><body>
+        ${headerHTML}
+        <div class="map-wrap"><img src="${imgData}" alt="GeoMap satellite"/></div>
+        ${footerHTML}
+        </body></html>`;
+      const iframe = document.createElement("iframe");
+      iframe.setAttribute("aria-hidden", "true");
+      iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+      document.body.appendChild(iframe);
+      let printed = false;
+      const cleanup = () => { setTimeout(() => { try { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); } catch {} }, 500); };
+      const triggerPrint = () => {
+        if (printed) return; printed = true;
+        try {
+          const cw = iframe.contentWindow;
+          if (cw && typeof cw.addEventListener === "function") cw.addEventListener("afterprint", cleanup, { once: true });
+          if (cw) { cw.focus(); cw.print(); } else cleanup();
+        } catch { cleanup(); }
+        setTimeout(cleanup, 45000);
+      };
+      iframe.onload = () => {
+        const doc = iframe.contentDocument;
+        const fontsReady = (doc && doc.fonts && doc.fonts.ready) ? doc.fonts.ready : Promise.resolve();
+        Promise.race([fontsReady, new Promise(r => setTimeout(r, 1200))]).then(() => setTimeout(triggerPrint, 100));
+      };
+      iframe.srcdoc = docHtml;
+      setTimeout(() => { if (!printed) triggerPrint(); }, 2500);
+    } catch (e) {
+      alert("Satellite print failed: " + (e.message || "unknown error"));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleDownload = () => {
     if (format === "svg") handleDownloadSVG();
     else if (format === "png") handleDownloadPNG();
     else if (format === "pdf") handleDownloadPDF();
-    else if (format === "print") handlePrintVectorPDF();
+    else if (format === "print") {
+      if (satellite && overlayReady && onCaptureSatellite) handlePrintSatellite();
+      else handlePrintVectorPDF();
+    }
   };
 
   if (!open) return null;

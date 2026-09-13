@@ -1397,12 +1397,17 @@ export default function GeoMap() {
   // Capture the live satellite map + cadastral overlay as a single canvas (for export).
   // Swaps in a CORS-enabled imagery layer (ArcGIS World Imagery) so the captured canvas
   // is not tainted, fits the view to the placed overlay, then restores the map.
-  const handleCaptureSatellite = async ({ bw } = {}) => {
+  const handleCaptureSatellite = async ({ bw, mogaFilter } = {}) => {
     const map = mapRef.current;
     const transform = activeOverlay?.transform;
     if (!map || !transform) throw new Error("Place the map overlay first");
+    // When a single moga is selected, bound the capture to that moga's parcels
+    // only (canals/khals inside the view still render). Otherwise capture all.
+    const boundsObjects = mogaFilter
+      ? mapObjects.filter(o => (o.type === "mustateel" || o.type === "muraba") && (o.mogaNumber === mogaFilter || !o.mogaNumber))
+      : mapObjects;
     const allLatLngs = [];
-    for (const o of mapObjects) {
+    for (const o of boundsObjects) {
       if (["mustateel", "muraba", "acre"].includes(o.type)) {
         const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
         for (const [cx, cy] of corners) allLatLngs.push(transform.transform(cx, cy));
