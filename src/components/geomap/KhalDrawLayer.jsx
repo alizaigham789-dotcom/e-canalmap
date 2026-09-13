@@ -8,10 +8,10 @@ import { snapToGrid } from "@/lib/patchSnap";
 // Vertex icon — small blue draggable circle
 function vertexIcon(num) {
   return L.divIcon({
-    html: `<div style="width:18px;height:18px;background:#2563eb;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;">${num || ""}</div>`,
+    html: `<div style="width:14px;height:14px;background:#2563eb;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:white;">${num || ""}</div>`,
     className: "",
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
   });
 }
 
@@ -28,10 +28,10 @@ function deleteIcon() {
 // Add-vertex icon (mid-segment) — tap to insert a new draggable vertex there
 function addVertexIcon() {
   return L.divIcon({
-    html: `<div style="width:16px;height:16px;background:#16a34a;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-weight:bold;line-height:1;">+</div>`,
+    html: `<div style="width:12px;height:12px;background:#16a34a;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;color:white;font-weight:bold;line-height:1;">+</div>`,
     className: "",
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
   });
 }
 
@@ -330,7 +330,7 @@ export default function KhalDrawLayer({
                 />
               );
             })}
-            {isSelected && khal.drawnIn === "geomap" && effLatLngs.length >= 2 && (() => {
+            {isSelected && effLatLngs.length >= 2 && (() => {
               const midIdx = Math.floor(effLatLngs.length / 2);
               const mid = effLatLngs[midIdx];
               return (
