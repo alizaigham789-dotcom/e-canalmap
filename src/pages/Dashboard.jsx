@@ -8,6 +8,7 @@ import ModuleCard from "@/components/dashboard/ModuleCard";
 import { Button } from "@/components/ui/button";
 import CommitsPanel from "@/components/dashboard/CommitsPanel";
 import BackupRecoveryDialog from "@/components/editor/BackupRecoveryDialog";
+import WhatsAppHelpButton from "@/components/help/WhatsAppHelpButton";
 import { useSubscription } from "@/hooks/useSubscription";
 
 const MODULES = [
@@ -373,6 +374,8 @@ export default function Dashboard() {
       {showRecovery && (
         <BackupRecoveryDialog mapIds={recoveryMaps} onClose={() => setShowRecovery(false)} />
       )}
+
+      <WhatsAppHelpButton />
     </div>
   );
 }

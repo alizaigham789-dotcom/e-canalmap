@@ -26,6 +26,7 @@ import {
   Share2,
   Check,
   MessageCircle,
+  Facebook,
 } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
@@ -246,12 +247,12 @@ export default function Account() {
 function InviteRow({ user }) {
   const [copied, setCopied] = useState(false);
   const link = `${window.location.origin}/register?ref=${user?.id || ""}`;
+  const shareData = {
+    title: "Canal E Record",
+    text: "Canal E Record app میں شامل ہوں — لینڈ ریکارڈز اور وارابندی ڈیجیٹل کریں:",
+    url: link,
+  };
   const share = async () => {
-    const shareData = {
-      title: "Canal E Record",
-      text: "Canal E Record app میں شامل ہوں — لینڈ ریکارڈز اور وارابندی ڈیجیٹل کریں:",
-      url: link,
-    };
     if (navigator.share) {
       try { await navigator.share(shareData); } catch {}
       return;
@@ -262,6 +263,8 @@ function InviteRow({ user }) {
       setTimeout(() => setCopied(false), 2000);
     });
   };
+  const waLink = `https://wa.me/?text=${encodeURIComponent(shareData.text + " " + link)}`;
+  const fbLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`;
   return (
     <div className="rounded-xl border border-violet-200 bg-violet-50 p-3">
       <div className="flex items-center gap-2 mb-1.5">
@@ -269,12 +272,20 @@ function InviteRow({ user }) {
         <p className="text-xs font-bold text-violet-800">دوستوں کو مدعو کریں</p>
       </div>
       <p className="text-[10px] text-violet-600 mb-2">3 دوست جوائن کر کے ادائیگی کریں → پلان مفت!</p>
-      <div className="flex items-center gap-1.5 bg-white rounded-lg border border-violet-200 p-1.5">
+      <div className="flex items-center gap-1.5 bg-white rounded-lg border border-violet-200 p-1.5 mb-2">
         <input readOnly value={link} className="flex-1 text-[10px] text-slate-600 bg-transparent outline-none font-mono truncate" />
         <Button size="sm" onClick={share} className="h-7 bg-violet-600 hover:bg-violet-700 text-[10px] gap-1">
           {copied ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
           {copied ? "ہو گیا" : "شیئر"}
         </Button>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <a href={waLink} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 h-7 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold">
+          <MessageCircle className="w-3 h-3" /> WhatsApp
+        </a>
+        <a href={fbLink} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 h-7 rounded-md bg-blue-700 hover:bg-blue-800 text-white text-[10px] font-bold">
+          <Facebook className="w-3 h-3" /> Facebook
+        </a>
       </div>
     </div>
   );
