@@ -1,0 +1,61 @@
+# ============================================================
+# E-canal Map — Hostinger deployment configuration
+# Handles: (1) API reverse-proxy to Base44 backend,
+#          (2) SPA client-side routing fallback,
+#          (3) static-asset caching, (4) dotfile security.
+# Vite copies this file from /public to the dist/ root on build,
+# so it ships inside the zip automatically — no manual step.
+# ============================================================
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # ---------- 1. Reverse proxy /api/* -> Base44 backend ----------
+  # The Base44 SDK calls /api/... on the same origin (serverUrl:"").
+  # Hostinger proxies these to the published Base44 app so the
+  # browser stays on your custom domain — no CORS, auth stays on-domain.
+  <IfModule mod_proxy.c>
+    <IfModule mod_proxy_http.c>
+      RewriteRule ^api/(.*)$ https://e-canal-map-91122b25.base44.app/api/$1 [P,L]
+      ProxyPassReverse /api/ https://e-canal-map-91122b25.base44.app/api/
+    </IfModule>
+  </IfModule>
+
+  # ---------- 2. SPA fallback ----------
+  # Every route that isn't a real file or directory falls back to
+  # index.html so React Router owns the URL (no 404s on deep links).
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# ---------- 3. Cache static assets ----------
+# Vite emits content-hashed filenames, so these are safe to cache a year.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType text/javascript "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/x-icon "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType application/json "access plus 0 seconds"
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# Gzip text responses
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript text/javascript application/json image/svg+xml
+</IfModule>
+
+# ---------- 4. Security: hide dotfiles ----------
+<FilesMatch "^\.(.*)$">
+  Require all denied
+</FilesMatch>
+
+# Prevent directory listing
+Options -Indexes
