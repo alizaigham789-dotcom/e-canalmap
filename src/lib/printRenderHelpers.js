@@ -71,7 +71,7 @@ function svgCanalNameUrdu(points, text, fontSize, outlets, bw = false) {
     let ang = pos.angle;
     if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
     const deg = (ang * 180) / Math.PI;
-    svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" direction="rtl" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${text}</text>`;
+    svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" direction="rtl" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${escapeHtml(text)}</text>`;
   }
   return svg;
 }
@@ -259,7 +259,7 @@ export function svgCanalNameOnPath(points, text, fontSize, outlets, bw = false) 
       // B&W print mode → black fill + white outline; otherwise yellow fill + dark outline.
       const _fill = bw ? "#000000" : "#FFD700";
       const _stroke = bw ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.85)";
-      svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="${_fill}" stroke="${_stroke}" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${text[ci]}</text>`;
+      svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="${_fill}" stroke="${_stroke}" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${escapeHtml(text[ci])}</text>`;
 
       const half2 = advanceAlongPath(segLens, segIdx, segRem, charW * 0.5);
       if (!half2) break;
@@ -286,7 +286,7 @@ export function svgRoadName(points, text, roadWidth) {
     ? "'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif"
     : "Rajdhani,Arial,sans-serif";
   const direction = isUrdu ? ' direction="rtl"' : '';
-  return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="${fontFamily}" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="white" stroke="rgba(0,0,0,0.6)" stroke-width="${(fontPx*0.12).toFixed(1)}" paint-order="stroke"${direction} transform="rotate(${deg.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)})">${text}</text>`;
+  return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="${fontFamily}" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="white" stroke="rgba(0,0,0,0.6)" stroke-width="${(fontPx*0.12).toFixed(1)}" paint-order="stroke"${direction} transform="rotate(${deg.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)})">${escapeHtml(text)}</text>`;
 }
 
 // ─── SVG: moga number as a fraction (number over line over R/L) ──────────
@@ -299,13 +299,13 @@ export function svgMogaFraction(num, side, x, y, fontPx, color) {
   const lineW = fontPx * Math.max(numStr.length, 1) * 0.65;
   // Number on top (baseline bottom so it sits above the line)
   const numSvg = numStr
-    ? `<text x="${x.toFixed(1)}" y="${(y - 2).toFixed(1)}" text-anchor="middle" dominant-baseline="bottom" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${color}">${numStr}</text>`
+    ? `<text x="${x.toFixed(1)}" y="${(y - 2).toFixed(1)}" text-anchor="middle" dominant-baseline="bottom" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${color}">${escapeHtml(numStr)}</text>`
     : "";
   // Horizontal line
   const lineSvg = `<line x1="${(x - lineW / 2).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x + lineW / 2).toFixed(1)}" y2="${y.toFixed(1)}" stroke="${color}" stroke-width="${Math.max(1.5, fontPx * 0.08).toFixed(1)}"/>`;
   // R/L below the line
   const sideSvg = sideStr
-    ? `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" dominant-baseline="top" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(fontPx * 0.8).toFixed(1)}" fill="${color}">${sideStr}</text>`
+    ? `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" dominant-baseline="top" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(fontPx * 0.8).toFixed(1)}" fill="${color}">${escapeHtml(sideStr)}</text>`
     : "";
   return numSvg + lineSvg + sideSvg;
 }
@@ -510,11 +510,11 @@ export function svgMogaFractionBox(num, side, cx, cy, fontPx, boxColor, borderCo
 
   let svg = "";
   if (numStr) {
-    svg += `<text x="${cx.toFixed(1)}" y="${numY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${f.toFixed(1)}" fill="${ink}">${numStr}</text>`;
+    svg += `<text x="${cx.toFixed(1)}" y="${numY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${f.toFixed(1)}" fill="${ink}">${escapeHtml(numStr)}</text>`;
   }
   svg += `<line x1="${(cx - lineW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + lineW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="${ink}" stroke-width="${Math.max(1.5, f * 0.07).toFixed(1)}" stroke-linecap="round"/>`;
   if (sideStr) {
-    svg += `<text x="${cx.toFixed(1)}" y="${sideY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(f * 0.8).toFixed(1)}" fill="${ink}">${sideStr}</text>`;
+    svg += `<text x="${cx.toFixed(1)}" y="${sideY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${(f * 0.8).toFixed(1)}" fill="${ink}">${escapeHtml(sideStr)}</text>`;
   }
   return svg;
 }
@@ -578,7 +578,7 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
   const gcaStr = _int(gcaText || "");
   if (!ccaStr && !gcaStr) return "";
   if (!ccaStr) {
-    return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="#166534">${gcaStr}</text>`;
+    return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="#166534">${escapeHtml(gcaStr)}</text>`;
   }
   const textW = fontPx * Math.max(ccaStr.length, gcaStr.length, 1) * 0.58;
   const lineY = cy;
@@ -592,9 +592,9 @@ export function svgCCAGCAFractionBox(ccaText, gcaText, cx, cy, fontPx, boxColor,
   let svg = "";
   svg += `<text x="${(cx - bracketOffset).toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${bracketFont.toFixed(1)}" fill="${ink}">(</text>`;
   svg += `<text x="${(cx + bracketOffset).toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-size="${bracketFont.toFixed(1)}" fill="${ink}">)</text>`;
-  svg += `<text x="${cx.toFixed(1)}" y="${ccaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${ccaStr}</text>`;
+  svg += `<text x="${cx.toFixed(1)}" y="${ccaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${escapeHtml(ccaStr)}</text>`;
   svg += `<line x1="${(cx - textW/2).toFixed(1)}" y1="${lineY.toFixed(1)}" x2="${(cx + textW/2).toFixed(1)}" y2="${lineY.toFixed(1)}" stroke="${ink}" stroke-width="${sw.toFixed(1)}"/>`;
-  svg += `<text x="${cx.toFixed(1)}" y="${gcaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${gcaStr}</text>`;
+  svg += `<text x="${cx.toFixed(1)}" y="${gcaY.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontPx.toFixed(1)}" fill="${ink}">${escapeHtml(gcaStr)}</text>`;
   return svg;
 }
 
@@ -953,7 +953,7 @@ export function buildLegendSVG(viewX, viewY, viewW, viewH, C, objectsBounds = nu
     } else if (item.type === "fill") {
       svg += `<rect x="${symX}" y="${(iy-5*S).toFixed(1)}" width="${symW}" height="${(10*S).toFixed(1)}" fill="${item.color}" fill-opacity="0.80" stroke="${item.color}" stroke-width="${S}"/>`;
     }
-    svg += `<text x="${nameColX + colNameW/2}" y="${iy}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#000">${item.label}</text>`;
+    svg += `<text x="${nameColX + colNameW/2}" y="${iy}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${lf.toFixed(1)}" fill="#000">${escapeHtml(item.label)}</text>`;
   });
 
   return svg;
@@ -982,7 +982,7 @@ export function buildMogaDetailsSVG(viewX, viewY, viewW, viewH, objects, mapData
     const num = o.mogha_number || "-";
     const side = o.mogha_side || "-";
     const name = o.mogha_name || "";
-    svg += `<text x="${dx + 10*S}" y="${iy}" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${fontRow}" fill="#333">موگہ ${num}/${side}${name ? ' — ' + name : ''}</text>`;
+    svg += `<text x="${dx + 10*S}" y="${iy}" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',Rajdhani,Arial,sans-serif" font-size="${fontRow}" fill="#333">موگہ ${escapeHtml(num)}/${escapeHtml(side)}${name ? ' — ' + escapeHtml(name) : ''}</text>`;
   });
 
   return svg;

@@ -5,6 +5,7 @@ import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, ge
 import PrintHeaderBox from "@/components/editor/PrintHeaderBox";
 import { svgCanalNameOnPath, svgMogaFractionBox, svgCCAGCAFractionBox, svgMogaInfo, getOutletLabelPos, getChakbandiLabelPos, getCCAGCAText, buildLegendSVG, svgRoadName, svgAcreUses, acreUseHasLabel, svgRailwayTracks, svgKanalFills, acreHasFill } from "@/lib/printRenderHelpers";
 import { collectLandUses } from "@/lib/landUsePalette";
+import { escapeHtml } from "@/lib/escapeHtml";
 import { buildSideBoundarySVG, buildCanalStyleSVG, isNewCanalStyle } from "@/lib/canalStyles";
 import { Move, Download, Share2, Loader2 } from "lucide-react";
 import { canvasToPdfBlob, svgToCanvas, downloadBlob, shareBlob } from "@/lib/pdfExport";
@@ -124,12 +125,12 @@ function svgMustateel(obj, C, idx, showKilla = true, mouzaSplit = null, showLabe
     }
   }
 
-  const label = obj.label || "";
+  const label = escapeHtml(obj.label || "");
   const labelY = obj.y + obj.h / 2;
 
   let labelSvg;
   if (mouzaSplit && obj.label2) {
-    const lbl2Final = obj.label2;
+    const lbl2Final = escapeHtml(obj.label2);
     const fitFont = (text, halfW) => {
       let fpx = Math.min(obj.w, obj.h) * 0.26;
       const estW = text.length * fpx * 0.6;
@@ -185,8 +186,8 @@ function svgMuraba(obj, C, idx, showKilla = true, mouzaSplit = null, showNameLab
     }
   }
 
-  const label = obj.label || "";
-  const label2 = obj.label2 || "";
+  const label = escapeHtml(obj.label || "");
+  const label2 = escapeHtml(obj.label2 || "");
   let labelSvg;
   if (mouzaSplit && label2) {
     const fitFont = (text, halfW) => {
@@ -266,7 +267,7 @@ function svgAcre(obj, C, idx) {
 <g key="acre_${idx}">
   <rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1"/>
   ${obj.excluded ? svgExclusionHatch(obj, idx) : ""}
-  ${obj.label ? `<text x="${obj.x + obj.w/2}" y="${obj.y + obj.h/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${obj.label}</text>` : ""}
+  ${obj.label ? `<text x="${obj.x + obj.w/2}" y="${obj.y + obj.h/2}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize}" fill="${C.labelColor||'#1e293b'}">${escapeHtml(obj.label)}</text>` : ""}
 </g>`;
 }
 
@@ -277,7 +278,7 @@ function svgChakbandi(obj, C, idx, viewW, khakaDasti = false) {
   // when greyed, real colour when the user ticks the colourful checkbox).
   const style = obj.chakbandiStyle || "cross";
   const pts = obj.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const label = obj.name || "";
+  const label = escapeHtml(obj.name || "");
   const midPt = obj.points[Math.floor(obj.points.length/2)];
   // Line thickness — applies to ALL styles (1-10 level → world units via CHAKBANDI_SCALE)
   // Loops style defaults to a thinner line (2) per user preference.
@@ -653,7 +654,7 @@ function svgOutlet(obj, C, idx, mogaScale = 1) {
   // outlet shaft), kept upright like the canal name. Same colours as the canal name.
   let mogaInside = "";
   if (obj.mogha_number || obj.mogha_side) {
-    const mogaText = [obj.mogha_number, obj.mogha_side].filter(Boolean).join("/");
+    const mogaText = escapeHtml([obj.mogha_number, obj.mogha_side].filter(Boolean).join("/"));
     let canalAng = angle + Math.PI / 2;
     if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
     const canalAngDeg = canalAng * 180 / Math.PI;
@@ -689,8 +690,8 @@ function svgMouza(obj, C, idx) {
   const angleDeg = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
   const labelFont = Math.max(14, Math.min(40, lw * 4)) * 5;
   const offset = (lw / 2 + labelFont * 0.6) * 2;
-  const text1 = obj.label1 || obj.name || "";
-  const text2 = obj.label2 || "";
+  const text1 = escapeHtml(obj.label1 || obj.name || "");
+  const text2 = escapeHtml(obj.label2 || "");
   let labels = "";
   if (text1) {
     labels += `<text transform="translate(${p.x},${p.y}) rotate(${angleDeg.toFixed(1)})" x="0" y="${(-offset).toFixed(1)}" text-anchor="middle" dominant-baseline="bottom" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${labelFont}" fill="${color}">${text1}</text>`;
