@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, Layers, Crosshair, RotateCw, MapPin, CheckCircle2, AlertCircle, Save, Loader2, Search } from "lucide-react";
 import MapSelect from "@/components/geomap/MapSelect";
+import SavedOverlaysList from "@/components/geomap/SavedOverlaysList";
 
 export default function OverlayPanel({
   maps,
@@ -56,6 +57,9 @@ export default function OverlayPanel({
           <label className="text-[10px] text-white/50 font-semibold uppercase tracking-wide block mb-1">Select Cadastral Map</label>
           <MapSelect maps={maps} value={selectedMapId} onChange={onSelectMap} />
         </div>
+
+        {/* Saved (placed) overlays — grouped by mouza → moga, click to re-activate */}
+        <SavedOverlaysList maps={maps} selectedMapId={selectedMapId} onSelectMap={onSelectMap} />
 
         {/* Moga selector */}
         {availableMogas.length > 0 && overlayReady && (
