@@ -1223,7 +1223,7 @@ const GISCanvas = forwardRef(function GISCanvas(
       const rect = canvas.getBoundingClientRect();
       const cx = (t1.clientX + t2.clientX) / 2 - rect.left;
       const cy = (t1.clientY + t2.clientY) / 2 - rect.top;
-      pinchRef.current = { initialDist: dist, initialZoom: zoom, centerSX: cx, centerSY: cy, initialPan: { ...pan } };
+      pinchRef.current = { initialDist: dist, initialZoom: zoom, centerSX: cx, centerSY: cy, initialPan: { ...pan }, initialMidSX: cx, initialMidSY: cy };
       return;
     }
     const touch = getTouchPoint(e);
@@ -1288,13 +1288,21 @@ const GISCanvas = forwardRef(function GISCanvas(
     if (e.touches.length === 2 && pinchRef.current) {
       e.preventDefault();
       const [t1, t2] = e.touches;
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
       const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      const { initialDist, initialZoom, centerSX, centerSY, initialPan } = pinchRef.current;
+      const { initialDist, initialZoom, centerSX, centerSY, initialPan, initialMidSX, initialMidSY } = pinchRef.current;
       if (initialDist < 5) return;
       const factor = dist / initialDist;
       const newZoom = Math.max(0.05, Math.min(20, initialZoom * factor));
-      const newPanX = centerSX - (centerSX - initialPan.x) * (newZoom / initialZoom);
-      const newPanY = centerSY - (centerSY - initialPan.y) * (newZoom / initialZoom);
+      // Two-finger drag pans: track the midpoint movement and add it to the pan
+      // offset so the canvas follows both fingers while the tool stays selected.
+      const curMidX = (t1.clientX + t2.clientX) / 2 - rect.left;
+      const curMidY = (t1.clientY + t2.clientY) / 2 - rect.top;
+      const midDx = curMidX - initialMidSX;
+      const midDy = curMidY - initialMidSY;
+      const newPanX = centerSX - (centerSX - initialPan.x) * (newZoom / initialZoom) + midDx;
+      const newPanY = centerSY - (centerSY - initialPan.y) * (newZoom / initialZoom) + midDy;
       onZoomChange(newZoom, { x: newPanX, y: newPanY });
       return;
     }
