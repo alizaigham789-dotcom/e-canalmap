@@ -327,6 +327,22 @@ export default function GeoMap() {
     return [...s].sort((a, b) => +a - +b);
   }, [maps]);
 
+  // Overlay-mode top cascade: only mogas already overlaid (placed) within the
+  // current district/tehsil/mouza/rajbah filter. New mogas are placed via the
+  // panel's "Select Cadastral Map" dropdown, not this cascade.
+  const overlayMogas = useMemo(() => {
+    const s = new Set();
+    for (const m of (maps || [])) {
+      if (m.geo_placement_lat == null || m.geo_placement_lng == null) continue;
+      if (filters.district && m.district !== filters.district) continue;
+      if (filters.tehsil && m.tehsil !== filters.tehsil) continue;
+      if (filters.village && m.village !== filters.village) continue;
+      if (filters.rajbah && m.rajbah !== filters.rajbah) continue;
+      if (m.moga_number) s.add(String(m.moga_number));
+    }
+    return [...s].sort((a, b) => +a - +b);
+  }, [maps, filters]);
+
   // Top moga cascade — ONLY mogas currently placed (overlaid) on the satellite
   // map. When a moga's overlay is removed (geo_placement nulled), it disappears
   // from this dropdown immediately. Unplaced mogas are selected & placed via the
@@ -1878,7 +1894,7 @@ export default function GeoMap() {
           onMenu={() => setEntered(false)}
           rajbahs={rajbahs}
           rajbah={filters.rajbah}
-          mogas={viewMode === "overlay" ? filterMogas : cascadeMogas}
+          mogas={viewMode === "overlay" ? overlayMogas : cascadeMogas}
           selectedMoga={selectedMoga}
           onSelectMoga={handleSelectMogaTop}
           murabas={mogaMustateels.map(m => m.mustNo)}
