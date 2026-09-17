@@ -45,6 +45,7 @@ function KillaGridLines({ obj, transform, zoom, forceVisible }) {
 
 // Killa label as a CircleMarker with permanent tooltip
 function KillaLabel({ num, latlng, zoom }) {
+  const size = Math.max(10, Math.min(24, 10 + (zoom - 15) * 2));
   return (
     <CircleMarker
       center={latlng}
@@ -52,7 +53,7 @@ function KillaLabel({ num, latlng, zoom }) {
       pathOptions={{ opacity: 0, fillOpacity: 0 }}
     >
       <Tooltip permanent direction="center" opacity={1} className="killa-label">
-        <span style={{ fontSize: `${Math.max(8, labelFontSize(zoom) * 0.6)}px`, fontWeight: 700, color: "#16a34a", textShadow: "1px 1px 2px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9)" }}>{num}</span>
+        <span style={{ fontSize: `${size}px`, fontWeight: 700, color: "#16a34a", textShadow: "1px 1px 2px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9)" }}>{num}</span>
       </Tooltip>
     </CircleMarker>
   );
@@ -107,6 +108,8 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
       </Polygon>
       {/* Killa grid lines — clicked/active mustateel, or all parcels in cell-allocation mode */}
       {showKilla && (isActive || gridAll) && <KillaGridLines obj={obj} transform={transform} zoom={zoom} forceVisible={gridAll || isActive} />}
+      {/* Killa (acre) numbers — inside each grid cell of the clicked mustateel */}
+      {showKilla && isActive && killaLatLngs?.map((k) => <KillaLabel key={k.num} num={k.num} latlng={k.latlng} zoom={zoom} />)}
     </>
   );
 }
@@ -152,6 +155,8 @@ function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, i
       </Polygon>
       {/* Acre grid lines — clicked/active muraba, or all parcels in cell-allocation mode */}
       {showKilla && (isActive || gridAll) && <KillaGridLines obj={obj} transform={transform} zoom={zoom} forceVisible={gridAll || isActive} />}
+      {/* Killa (acre) numbers — inside each grid cell of the clicked muraba */}
+      {showKilla && isActive && killaLatLngs?.map((k) => <KillaLabel key={k.num} num={k.num} latlng={k.latlng} zoom={zoom} />)}
     </>
   );
 }
