@@ -93,7 +93,7 @@ export default function Subscription() {
     }
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: receiptFile });
+      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file: receiptFile });
       const price = getPlanPrice(selectedPlan, flash.active);
       await base44.entities.Subscription.create({
         user_id: currentUser.id,

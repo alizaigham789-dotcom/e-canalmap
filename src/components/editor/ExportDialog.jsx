@@ -335,12 +335,15 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
   const exportJPG = async () => {
     setLoading("jpg");
     const canvas = renderToCanvas(2);
-    canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = `${mapData?.title || "map"}.jpg`;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a); URL.revokeObjectURL(url);
+    const fname = `${mapData?.title || "map"}.jpg`;
+    canvas.toBlob(async blob => {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && window.innerWidth < 900);
+      if (isMobile && navigator.share) {
+        const result = await shareBlob(blob, fname, mapData?.title || "Map", "Chakbandi GIS Map");
+        if (result === "unsupported" || result === "cancelled") downloadBlob(blob, fname);
+      } else {
+        downloadBlob(blob, fname);
+      }
       setLoading(null);
     }, "image/jpeg", 0.95);
   };
@@ -351,7 +354,16 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
     try {
       const canvas = renderToCanvas(2);
       const blob = await canvasToPdfBlob(canvas, mapData, pageOrientation, pageSize);
-      downloadBlob(blob, `${mapData?.title || "map"}.pdf`);
+      const fname = `${mapData?.title || "map"}.pdf`;
+      // Mobile browsers (iOS WebView/Safari) block <a download> on blob URLs.
+      // Use the Web Share API so the user can save to Files / share to WhatsApp.
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && window.innerWidth < 900);
+      if (isMobile && navigator.share) {
+        const result = await shareBlob(blob, fname, mapData?.title || "Map", "Chakbandi GIS Map");
+        if (result === "unsupported" || result === "cancelled") downloadBlob(blob, fname);
+      } else {
+        downloadBlob(blob, fname);
+      }
       toast.success("PDF محفوظ ہو گیا");
     } catch (e) {
       toast.error("PDF بنانے میں مسئلہ");

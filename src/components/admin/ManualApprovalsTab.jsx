@@ -74,8 +74,14 @@ export default function ManualApprovalsTab() {
       </TableCell>
       <TableCell>
         {s.receipt_url ? (
-          <a href={s.receipt_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300">
-            <ExternalLink className="w-3 h-3" /> رسید
+          <a href={s.receipt_url} target="_blank" rel="noreferrer" className="block">
+            {/\.(jpg|jpeg|png|gif|webp)$/i.test(s.receipt_url) ? (
+              <img src={s.receipt_url} alt="رسید" className="w-14 h-14 object-cover rounded-lg border border-slate-600 hover:border-blue-400 transition-colors" />
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 font-bold">
+                <ExternalLink className="w-3.5 h-3.5" /> رسید دیکھیں
+              </span>
+            )}
           </a>
         ) : s.stripe_session_id ? (
           <span className="text-[10px] text-slate-500 font-mono">Stripe</span>

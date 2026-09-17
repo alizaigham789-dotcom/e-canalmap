@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -52,6 +53,14 @@ export default function Account() {
 
   const isAdmin = user?.role === "admin";
   const canDelete = confirmText.trim().toUpperCase() === "DELETE";
+
+  // Referral progress — invited count + paid count toward the 3-paid free plan
+  const { data: myReferrals = [] } = useQuery({
+    queryKey: ["referrals-out", user?.id],
+    queryFn: () => base44.entities.Referral.filter({ referrer_user_id: user.id }, "-created_date", 50),
+    enabled: !!user?.id,
+  });
+  const qualifiedCount = myReferrals.filter((r) => r.status === "qualified").length;
 
   const handleDelete = async () => {
     if (!canDelete || deleting) return;
@@ -159,7 +168,7 @@ export default function Account() {
             <ArrowLeft className="w-4 h-4 text-slate-400 rotate-180" />
           </button>
 
-          <InviteRow user={user} />
+          <InviteRow user={user} qualifiedCount={qualifiedCount} totalReferred={myReferrals.length} />
 
           <a
             href={`https://wa.me/923023538711?text=${encodeURIComponent("السلام علیکم، مجھے E-canal Map app کی معلومات چاہیے۔")}`}
@@ -244,9 +253,10 @@ export default function Account() {
   );
 }
 
-function InviteRow({ user }) {
+function InviteRow({ user, qualifiedCount = 0, totalReferred = 0 }) {
   const [copied, setCopied] = useState(false);
   const link = `${window.location.origin}/register?ref=${user?.id || ""}`;
+  const remaining = Math.max(0, 3 - qualifiedCount);
   const shareData = {
     title: "E-canal Map",
     text: "E-canal Map app میں شامل ہوں — لینڈ ریکارڈز اور وارابندی ڈیجیٹل کریں:",
@@ -272,6 +282,16 @@ function InviteRow({ user }) {
         <p className="text-xs font-bold text-violet-800">دوستوں کو مدعو کریں</p>
       </div>
       <p className="text-[10px] text-violet-600 mb-2">3 دوست جوائن کر کے ادائیگی کریں → پلان مفت!</p>
+      <div className="mt-2 mb-2">
+        <div className="flex justify-between text-[10px] text-violet-700 mb-0.5">
+          <span>{qualifiedCount} / 3 ادائیگی مکمل</span>
+          <span>{totalReferred} کل مدعو</span>
+        </div>
+        <div className="h-2 rounded-full bg-violet-100 overflow-hidden">
+          <div className="h-full bg-violet-600 rounded-full transition-all" style={{ width: `${Math.min(100, (qualifiedCount / 3) * 100)}%` }} />
+        </div>
+        <p className="text-[9px] text-violet-500 mt-1">{remaining > 0 ? `${remaining} اور ادائیگی مکمل کرنے باقی` : "مکمل! پلان مفت فعال ہو گیا"}</p>
+      </div>
       <div className="flex items-center gap-1.5 bg-white rounded-lg border border-violet-200 p-1.5 mb-2">
         <input readOnly value={link} className="flex-1 text-[10px] text-slate-600 bg-transparent outline-none font-mono truncate" />
         <Button size="sm" onClick={share} className="h-7 bg-violet-600 hover:bg-violet-700 text-[10px] gap-1">

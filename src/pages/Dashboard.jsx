@@ -262,24 +262,30 @@ export default function Dashboard() {
               <p className="hidden sm:block text-[9px] text-slate-400 font-mono uppercase tracking-widest">Irrigation & Canal System</p>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-1.5">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setShowRecovery(true)}
-              className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-slate-100 transition-colors tap-target"
-              title="Backup Recovery"
+              className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 sm:px-3 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors tap-target shadow-sm"
+              title="Backup Recovery — بیک اپ ری کوری"
             >
-              <Database className="w-5 h-5" strokeWidth={2} />
+              <Database className="w-4 h-4" strokeWidth={2.2} />
+              <span className="text-[10px] font-bold hidden sm:inline">Backup</span>
             </button>
             {currentUser?.role === "admin" && (
-              <button onClick={() => navigate("/admin")} className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors tap-target">
-                <Shield className="w-5 h-5" strokeWidth={2} />
+              <button onClick={() => navigate("/admin")} className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 sm:px-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors tap-target shadow-sm" title="Admin Panel — ایڈمن پینل">
+                <Shield className="w-4 h-4" strokeWidth={2.2} />
+                <span className="text-[10px] font-bold hidden sm:inline">Admin</span>
               </button>
             )}
-            <button onClick={() => navigate("/account")} className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-700 text-sm font-bold hover:bg-blue-200 transition-colors tap-target" title="Account & Settings">
-              {currentUser?.full_name?.[0] || "U"}
+            <button onClick={() => navigate("/account")} className="flex items-center gap-1.5 h-9 sm:h-10 pl-1 pr-2.5 sm:pr-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors tap-target shadow-sm" title="Account & Settings — اکاؤنٹ سیٹنگز">
+              <span className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                {currentUser?.full_name?.[0] || "U"}
+              </span>
+              <span className="text-[10px] font-bold text-slate-700 hidden sm:inline">Account</span>
             </button>
-            <button onClick={() => base44.auth.logout()} className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-slate-100 transition-colors tap-target">
-              <LogOut className="w-5 h-5" strokeWidth={2} />
+            <button onClick={() => base44.auth.logout()} className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 sm:px-3 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors tap-target shadow-sm" title="Logout — لاگ آؤٹ">
+              <LogOut className="w-4 h-4" strokeWidth={2.2} />
+              <span className="text-[10px] font-bold hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
