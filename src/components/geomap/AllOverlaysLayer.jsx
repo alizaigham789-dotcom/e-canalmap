@@ -75,6 +75,7 @@ export default function AllOverlaysLayer({ maps, excludeId, zoom, showCanals = t
           showCanals={showCanals}
           chakbandiOnly={chakbandiOnly}
           colorSettings={o.colors}
+          interactive={false}
         />
       ))}
     </>

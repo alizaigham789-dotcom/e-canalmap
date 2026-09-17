@@ -1,4 +1,4 @@
-import React, { useMemo, memo, useEffect } from "react";
+import React, { useMemo, memo } from "react";
 import { Polygon, Polyline, Tooltip, CircleMarker, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import { getMustateelKillaCells, getMurabaKillaCells, DIMENSIONS, canalNameFont } from "@/lib/gisEngine";
@@ -39,7 +39,7 @@ function KillaGridLines({ obj, transform, zoom, forceVisible }) {
   lines.push([[bBR.lat, bBR.lng], [bBL.lat, bBL.lng]]);
   lines.push([[bBL.lat, bBL.lng], [bTL.lat, bTL.lng]]);
   return lines.map((pts, i) => (
-    <Polyline key={i} positions={pts} pathOptions={{ color: "#facc15", weight: 2.5, opacity: 0.9 }} />
+    <Polyline key={i} positions={pts} pathOptions={{ color: "#facc15", weight: 2.5, opacity: 0.9, interactive: false }} />
   ));
 }
 
@@ -50,7 +50,7 @@ function KillaLabel({ num, latlng, zoom }) {
     <CircleMarker
       center={latlng}
       radius={0}
-      pathOptions={{ opacity: 0, fillOpacity: 0 }}
+      pathOptions={{ opacity: 0, fillOpacity: 0, interactive: false }}
     >
       <Tooltip permanent direction="center" opacity={1} className="killa-label">
         <span style={{ fontSize: `${size}px`, fontWeight: 700, color: "#16a34a", textShadow: "1px 1px 2px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9)" }}>{num}</span>
@@ -166,7 +166,7 @@ function AcreLabel({ obj, latlngs, zoom }) {
   return (
     <Polygon
       positions={latlngs.map(p => [p.lat, p.lng])}
-      pathOptions={{ color: "#facc15", fillColor: "#facc15", fillOpacity: 0, weight: 0, opacity: 0 }}
+      pathOptions={{ color: "#facc15", fillColor: "#facc15", fillOpacity: 0, weight: 0, opacity: 0, interactive: false }}
     >
       {obj.label && (
         <Tooltip permanent direction="center" className="acre-label" opacity={1}>
@@ -288,7 +288,7 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
 
   if (fillLatLngs.length === 0) {
     return (
-      <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#0284c7", weight: 3, opacity: 0.9 }} />
+      <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#0284c7", weight: 3, opacity: 0.9, interactive: false }} />
     );
   }
 
@@ -300,12 +300,12 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
       {/* Water fill polygon */}
       <Polygon
         positions={fillLatLngs.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: strokeColor, fillColor, fillOpacity, weight: 0, opacity: 0 }}
+        pathOptions={{ color: strokeColor, fillColor, fillOpacity, weight: 0, opacity: 0, interactive: false }}
       />
       {/* Left boundary */}
-      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined }} />
+      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
       {/* Right boundary */}
-      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined }} />
+      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
       {/* Canal name — repeating along the centerline, gold with dark outline (matches Map Editor) */}
       {obj.name && labelPoints.map((p, i) => (
         <CircleMarker key={`lbl-${i}`} center={[p.lat, p.lng]} radius={0} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
@@ -368,13 +368,13 @@ function KhalLine({ obj, latlngs, zoom, transform }) {
   const khalColor = isInformal ? "#0891b2" : "#2563eb";
   const bankColor = isInformal ? "#0e7490" : "#1d4ed8";
   if (leftLine.length === 0) {
-    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: khalColor, weight: 3, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined }} />;
+    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: khalColor, weight: 3, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined, interactive: false }} />;
   }
 
   const w = Math.max(2.5, 3 - (18 - zoom) * 0.15); // ≥ mustateel grid line width so the khal stays visible
   return (
     <>
-      <Polygon positions={fillLatLngs.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, fillColor: khalColor, fillOpacity: 0.7, weight: 0, opacity: 0 }}>
+      <Polygon positions={fillLatLngs.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, fillColor: khalColor, fillOpacity: 0.7, weight: 0, opacity: 0, interactive: false }}>
         {obj.name && (
           <Tooltip permanent direction="center" className="khal-label" opacity={0.9}>
             <span style={{ fontSize: `${fontSize * 0.58}px`, color: isInformal ? "#0e7490" : "#1d4ed8", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 2px" }}>
@@ -383,8 +383,8 @@ function KhalLine({ obj, latlngs, zoom, transform }) {
           </Tooltip>
         )}
       </Polygon>
-      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, weight: w, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined }} />
-      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, weight: w, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined }} />
+      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, weight: w, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined, interactive: false }} />
+      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, weight: w, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined, interactive: false }} />
     </>
   );
 }
@@ -434,14 +434,14 @@ function RoadLine({ obj, latlngs, zoom, transform }) {
   }, [obj.points, transform, halfW]);
 
   if (leftLine.length === 0) {
-    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: 3, dashArray: "10,6", opacity: 0.8 }} />;
+    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: 3, dashArray: "10,6", opacity: 0.8, interactive: false }} />;
   }
 
   const w = Math.max(1.5, 3 - (18 - zoom) * 0.2);
   return (
     <>
-      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: w, opacity: 0.8 }} />
-      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: w, opacity: 0.8 }} />
+      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: w, opacity: 0.8, interactive: false }} />
+      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: w, opacity: 0.8, interactive: false }} />
       {obj.name && (
         <Tooltip permanent direction="center" className="road-label" opacity={0.9}>
           <span style={{ fontSize: `${fontSize * 0.58}px`, color: "#92400e", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 2px" }}>
@@ -505,12 +505,11 @@ function ChakbandiLine({ obj, latlngs, zoom, transform, ccaCenter }) {
     <>
       <Polyline
         positions={latlngs.map(p => [p.lat, p.lng])}
-        pane="chakbandiTop"
-        pathOptions={{ color: "#00cc00", weight: lineWeight + 1, opacity: 1 }}
+        pathOptions={{ color: "#00cc00", weight: lineWeight + 1, opacity: 1, interactive: false }}
       />
       {/* Cross pattern marks */}
       {crossMarks.map((pts, i) => (
-        <Polyline key={i} positions={pts} pane="chakbandiTop" pathOptions={{ color: "#00cc00", weight: Math.max(2.5, lineWeight * 0.9), opacity: 1 }} />
+        <Polyline key={i} positions={pts} pathOptions={{ color: "#00cc00", weight: Math.max(2.5, lineWeight * 0.9), opacity: 1, interactive: false }} />
       ))}
       {obj.name && (
         <Tooltip permanent direction="top" className="chakbandi-label" opacity={0.9}>
@@ -531,7 +530,7 @@ function CcaCenterLabel({ latlng, text, zoom }) {
     <CircleMarker
       center={[latlng.lat, latlng.lng]}
       radius={0}
-      pathOptions={{ opacity: 0, fillOpacity: 0 }}
+      pathOptions={{ opacity: 0, fillOpacity: 0, interactive: false }}
     >
       <Tooltip permanent direction="center" opacity={0.95} className="chakbandi-center">
         <span style={{ fontSize: `${Math.max(13, fontSize * 0.95)}px`, fontWeight: 700, color: "#15803d", backgroundColor: "rgba(255,255,255,0.92)", padding: "2px 6px", borderRadius: 3, border: "1px solid #15803d", whiteSpace: "nowrap" }}>{text}</span>
@@ -548,13 +547,13 @@ function OutletMarker({ obj, latlngs, zoom }) {
     <>
       <Polyline
         positions={latlngs.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: obj.outletColor || "#06b6d4", weight: Math.max(2, 4 - (18 - zoom) * 0.25), opacity: 0.9 }}
+        pathOptions={{ color: obj.outletColor || "#06b6d4", weight: Math.max(2, 4 - (18 - zoom) * 0.25), opacity: 0.9, interactive: false }}
       />
       {/* Block at start */}
       <CircleMarker
         center={[latlngs[0].lat, latlngs[0].lng]}
         radius={blockSize}
-        pathOptions={{ color: "#0e7490", fillColor: obj.outletColor || "#06b6d4", fillOpacity: 0.9, weight: 2 }}
+        pathOptions={{ color: "#0e7490", fillColor: obj.outletColor || "#06b6d4", fillOpacity: 0.9, weight: 2, interactive: false }}
       >
         <Tooltip permanent direction="top" className="moga-label" opacity={0.95}>
           <span style={{ fontSize: `${Math.max(14, fontSize * 1.0)}px`, fontWeight: 700, color: "#0e7490", backgroundColor: "rgba(255,255,255,0.92)", padding: "1px 4px", borderRadius: 2, fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
@@ -592,7 +591,7 @@ function MouzaLine({ obj, latlngs, zoom }) {
   return (
     <Polyline
       positions={latlngs.map(p => [p.lat, p.lng])}
-      pathOptions={{ color: "#000000", weight: 1.5, dashArray: "12,8", opacity: 0.7 }}
+      pathOptions={{ color: "#000000", weight: 1.5, dashArray: "12,8", opacity: 0.7, interactive: false }}
     >
       {obj.name && (
         <Tooltip permanent direction="top" className="mouza-label" opacity={0.85}>
@@ -627,16 +626,11 @@ function computeKillaLatLngs(obj, transform) {
 }
 
 export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels, showCanals = true, chakbandiOnly = false, colorSettings, interactive = true }) {
-  const map = useMap();
-  // Create the dedicated top pane ONCE (guarded) — multiple OverlayLayer
-  // instances share it. react-leaflet's <Pane> throws if the name already
-  // exists, so we create it manually with a getPane check instead.
-  useEffect(() => {
-    if (map && !map.getPane("chakbandiTop")) {
-      const pane = map.createPane("chakbandiTop");
-      if (pane) pane.style.zIndex = 450;
-    }
-  }, [map]);
+  // NOTE: chakbandis render in the SAME overlay pane (the final chakbandiOnly
+  // pass adds them last → drawn on top within the shared canvas). A separate
+  // top pane would give chakbandis their own full-viewport canvas ABOVE the
+  // overlay canvas — that canvas intercepts every map click/dblclick and
+  // silently kills clicks on mustateels, khals and allocation cells below.
 
   const geoObjects = useMemo(() => {
     if (!transform || !objects.length) return [];
@@ -670,9 +664,10 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
     }).filter(Boolean);
   }, [objects, transform, mogaFilter, killaVisible, skipLabels, showCanals]);
 
-  // Chakbandis render in a dedicated top pane (z-index above the default
-  // overlay pane) so green boundary lines always stay above mustateel/muraba
-  // polygons — even across multiple placed mogas in AllOverlaysLayer.
+  // Chakbandis are only split into a separate render list: callers run a final
+  // chakbandiOnly pass AFTER all mustateel passes, so within the shared canvas
+  // they are added last → drawn (and stacked) above every mustateel polygon,
+  // even across multiple placed mogas in AllOverlaysLayer.
   const regularObjects = geoObjects.filter(({ obj }) => obj.type !== "chakbandi");
   const chakbandiObjects = geoObjects.filter(({ obj }) => obj.type === "chakbandi");
 

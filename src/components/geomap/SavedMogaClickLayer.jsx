@@ -4,9 +4,14 @@ import L from "leaflet";
 import { DrawingStateManager } from "@/lib/gisEngine";
 import { computeOneClickTransform } from "@/lib/geoOverlay";
 
-// Transparent clickable polygons over each saved (placed) moga's bounding area.
-// Clicking opens a properties dialog for that moga (with a remove option).
-export default function SavedMogaClickLayer({ maps, excludeId, onMogaClick }) {
+// Transparent clickable polygons over each saved (placed) moga.
+// Default (Overlay mode): one polygon over each moga's bounding area —
+// clicking selects that moga via onMogaClick(map).
+// perMustateel (Map View): one polygon per mustateel/muraba of every placed
+// moga — clicking selects that exact parcel via onMustateelClick(map, obj),
+// so the clicked mustateel becomes the active parcel (grid lines + acre
+// numbers) even when it belongs to a different moga than the current one.
+export default function SavedMogaClickLayer({ maps, excludeId, onMogaClick, perMustateel = false, onMustateelClick }) {
   const clickableMogas = useMemo(() => {
     const out = [];
     for (const m of maps) {
@@ -40,10 +45,43 @@ export default function SavedMogaClickLayer({ maps, excludeId, onMogaClick }) {
       const minLat = Math.min(...lats), maxLat = Math.max(...lats);
       const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
       const bounds = [[minLat, minLng], [maxLat, minLng], [maxLat, maxLng], [minLat, maxLng]];
-      out.push({ id: m.id, map: m, bounds });
+      const parcels = perMustateel
+        ? objects
+            .filter(o => (o.type === "mustateel" || o.type === "muraba"))
+            .map(o => {
+              const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]]
+                .map(([cx, cy]) => transform.transform(cx, cy));
+              return { obj: o, positions: corners.map(p => [p.lat, p.lng]) };
+            })
+        : null;
+      out.push({ id: m.id, map: m, bounds, parcels });
     }
     return out;
-  }, [maps, excludeId]);
+  }, [maps, excludeId, perMustateel]);
+
+  if (perMustateel) {
+    return (
+      <>
+        {clickableMogas.map(m => (m.parcels || []).map(({ obj, positions }) => (
+          <Polygon
+            key={`${m.id}-${obj.id || obj.label}`}
+            positions={positions}
+            pathOptions={{ color: "#3b82f6", fillColor: "#3b82f6", fillOpacity: 0.01, weight: 0, interactive: true }}
+            eventHandlers={{
+              click: (e) => { L.DomEvent.stopPropagation(e); onMustateelClick && onMustateelClick(m.map, obj); },
+            }}
+          >
+            <Tooltip direction="top" sticky opacity={1}>
+              <div className="text-xs">
+                <div className="font-bold text-slate-800">مستطیل {obj.label || "—"}</div>
+                <div className="text-[10px] text-slate-500">موگہ {m.map.moga_number || "—"} · کلک کریں</div>
+              </div>
+            </Tooltip>
+          </Polygon>
+        )))}
+      </>
+    );
+  }
 
   return (
     <>

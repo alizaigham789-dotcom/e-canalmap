@@ -1501,6 +1501,25 @@ export default function GeoMap() {
     }
   }, [mapObjects, activeOverlay]);
 
+  // Click a mustateel that belongs to ANOTHER placed moga (Map View) — switch
+  // the active map to that moga, then auto-select the clicked mustateel as soon
+  // as the new map's objects finish loading (pendingMustateelRef + effect).
+  const pendingMustateelRef = useRef(null);
+  const handleForeignMustateelClick = useCallback((mapData, obj) => {
+    if (!mapData || mapData.id === selectedMapId) return;
+    pendingMustateelRef.current = { mapId: mapData.id, label: obj?.label ? String(obj.label) : null };
+    setSelectedMoga(mapData.moga_number ? String(mapData.moga_number) : "");
+    handleSelectMap(mapData.id, true);
+  }, [selectedMapId]);
+
+  useEffect(() => {
+    const pending = pendingMustateelRef.current;
+    if (!pending?.label || !selectedMapId || selectedMapId !== pending.mapId || !mapObjects.length) return;
+    pendingMustateelRef.current = null;
+    const obj = mapObjects.find(o => (o.type === "mustateel" || o.type === "muraba") && String(o.label) === String(pending.label));
+    if (obj) handleMustateelClick(obj.id);
+  }, [mapObjects, selectedMapId]);
+
   const handleClearMeasurements = () => { setMeasurements([]); setDraft(null); setLiveMeasurement(null); };
   const handleDeleteMeasurement = (id) => { setMeasurements(prev => prev.filter(m => m.id !== id)); };
 
@@ -1599,9 +1618,18 @@ export default function GeoMap() {
           <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} showCanals={showCanals} />
         )}
 
-        {/* Click layer for saved mogas — click to select it as the active overlay */}
-        {viewMode === "overlay" && !capturing && (
-          <SavedMogaClickLayer maps={villageMaps} excludeId={selectedMapId} onMogaClick={(mapData) => handleSelectMap(mapData.id)} />
+        {/* Click layer for saved mogas — Overlay: click a placed moga to make it
+            the active overlay. Map View: click ANY placed moga's mustateel to
+            switch to that moga and select that exact parcel (grid lines +
+            acre numbers). */}
+        {!capturing && (viewMode === "overlay" || viewMode === "view") && (
+          <SavedMogaClickLayer
+            maps={villageMaps}
+            excludeId={selectedMapId}
+            onMogaClick={(mapData) => handleSelectMap(mapData.id)}
+            perMustateel={viewMode === "view"}
+            onMustateelClick={handleForeignMustateelClick}
+          />
         )}
 
         {/* Moga move layer — draggable markers to reposition placed mogas */}
@@ -1643,9 +1671,9 @@ export default function GeoMap() {
           />
         )}
         {/* Chakbandi lines render in a FINAL pass — after all mustateels from
-            every placed moga — so they always stay on top. Leaflet SVG stacks
-            by DOM order, so a moga's mustateels can never hide another moga's
-            chakbandi boundary. */}
+            every placed moga — so they always stay on top. All layers share one
+            canvas (added later = drawn on top), so a moga's mustateels can
+            never hide another moga's chakbandi boundary. */}
         {!capturing && (viewMode === "view" || viewMode === "overlay") && (
           <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} showCanals={showCanals} chakbandiOnly />
         )}
