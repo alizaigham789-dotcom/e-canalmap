@@ -53,7 +53,7 @@ function KillaLabel({ num, latlng, zoom }) {
       pathOptions={{ opacity: 0, fillOpacity: 0, interactive: false }}
     >
       <Tooltip permanent direction="center" opacity={1} className="killa-label">
-        <span style={{ fontSize: `${size}px`, fontWeight: 700, color: "#16a34a", textShadow: "1px 1px 2px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9)" }}>{num}</span>
+        <span style={{ fontSize: `${size}px`, fontWeight: 800, color: "#fde047", textShadow: "0 0 3px #000, 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000, 0 0 8px rgba(253,224,71,0.85)" }}>{num}</span>
       </Tooltip>
     </CircleMarker>
   );
