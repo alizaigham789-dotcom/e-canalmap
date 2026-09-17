@@ -34,6 +34,7 @@ const ZilladarDocs = lazy(() => import('./pages/ZilladarDocs'));
 const GroupChat = lazy(() => import('./pages/GroupChat'));
 const CanalPatwari = lazy(() => import('./pages/CanalPatwari'));
 const Naqsha27B = lazy(() => import('./pages/Naqsha27B'));
+const PatwariNotepad = lazy(() => import('./pages/PatwariNotepad'));
 const MyTasks = lazy(() => import('./pages/MyTasks'));
 const ChakbandiIkhrajCase = lazy(() => import('./pages/ChakbandiIkhrajCase'));
 const Login = lazy(() => import('./pages/Login'));
@@ -102,6 +103,7 @@ const AuthenticatedApp = () => {
         <Route path="/group-chat" element={<GroupChat />} />
         <Route path="/canal-patwari" element={<CanalPatwari />} />
         <Route path="/canal-patwari/naqsha-27b" element={<Naqsha27B />} />
+        <Route path="/canal-patwari/notepad" element={<PatwariNotepad />} />
         <Route path="/canal-patwari/my-tasks" element={<MyTasks />} />
         <Route path="/chakbandi-ikhraj" element={<ChakbandiIkhrajCase />} />
       </Route>
