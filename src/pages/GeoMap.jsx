@@ -1894,7 +1894,7 @@ export default function GeoMap() {
           onMenu={() => setEntered(false)}
           rajbahs={rajbahs}
           rajbah={filters.rajbah}
-          mogas={overlayMogas}
+          mogas={placedMogas}
           selectedMoga={selectedMoga}
           onSelectMoga={handleSelectMogaTop}
           murabas={mogaMustateels.map(m => m.mustNo)}
