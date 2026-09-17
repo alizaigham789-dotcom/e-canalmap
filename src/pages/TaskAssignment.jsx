@@ -9,23 +9,27 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { toast } from "sonner";
-import { DIVISIONS, SUBDIVISIONS, sectionsFor, mouzasFor } from "@/lib/jurisdiction";
+import { findMouza, allMouzas } from "@/lib/jurisdiction";
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
+
+const todayStr = () => new Date().toISOString().slice(0, 10);
 
 const EMPTY = {
   division: "Khushab",
   subdivision: "",
   section: "",
   mouza: "",
-  officer_role: "zilladar",
+  officer_role: "patwari",
   officer_name: "",
   title: "",
   description: "",
-  due_date: "",
+  due_date: todayStr(),
   file_url: "",
   photo_url: "",
 };
+
+const MOUZA_LIST = allMouzas();
 
 const STATUS_META = {
   pending: { label: "Pending", urdu: "زیرِ التواء", color: "bg-blue-50 text-blue-600" },
@@ -79,16 +83,50 @@ export default function TaskAssignment() {
   const onSubdivision = (v) => setForm((p) => ({ ...p, subdivision: v, section: "", mouza: "" }));
   const onSection = (v) => setForm((p) => ({ ...p, section: v, mouza: "" }));
 
+  // Pick a mouza first → auto-fill division/subdivision/section (reverse lookup)
+  // and auto-fill the patwari name from the most recent task for that mouza.
+  const onMouzaTop = (v) => {
+    const loc = findMouza(v);
+    // Find the most recent patwari already assigned to this mouza
+    const existing = [...tasks]
+      .filter((t) => t.mouza === v && t.officer_role === "patwari" && t.officer_name)
+      .sort((a, b) => (b.created_date || "").localeCompare(a.created_date || ""))[0];
+    setForm((p) => ({
+      ...p,
+      mouza: v,
+      division: "Khushab",
+      subdivision: loc?.subdivision || p.subdivision,
+      section: loc?.section || p.section,
+      officer_role: "patwari",
+      officer_name: existing?.officer_name || p.officer_name,
+    }));
+  };
+
+  // When a file/photo is attached, auto-route the task to the patwari of the
+  // selected mouza (halqa) — fill the patwari name from existing assignments if
+  // the user hasn't typed one yet.
+  const autoRouteToPatwari = () => {
+    if (!form.mouza) return;
+    const existing = [...tasks]
+      .filter((t) => t.mouza === form.mouza && t.officer_role === "patwari" && t.officer_name)
+      .sort((a, b) => (b.created_date || "").localeCompare(a.created_date || ""))[0];
+    setForm((p) => ({
+      ...p,
+      officer_role: "patwari",
+      officer_name: p.officer_name || existing?.officer_name || "",
+    }));
+  };
+
   const onFile = async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    try { toast.loading("اپ لوڈ ہو رہا ہے…", { id: "upl" }); set("file_url", await uploadFile(f)); toast.success("فائل منسلک ہو گئی", { id: "upl" }); }
+    try { toast.loading("اپ لوڈ ہو رہا ہے…", { id: "upl" }); set("file_url", await uploadFile(f)); autoRouteToPatwari(); toast.success("فائل منسلک ہو گئی — پٹواری کو بھیج دی جائے گی", { id: "upl" }); }
     catch { toast.error("اپ لوڈ ناکام", { id: "upl" }); }
   };
   const onPhoto = async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    try { toast.loading("تصویر اپ لوڈ ہو رہی ہے…", { id: "photo" }); set("photo_url", await uploadFile(f)); toast.success("تصویر منسلک ہو گئی", { id: "photo" }); }
+    try { toast.loading("تصویر اپ لوڈ ہو رہی ہے…", { id: "photo" }); set("photo_url", await uploadFile(f)); autoRouteToPatwari(); toast.success("تصویر منسلک ہو گئی", { id: "photo" }); }
     catch { toast.error("اپ لوڈ ناکام", { id: "photo" }); }
   };
 
@@ -130,48 +168,33 @@ export default function TaskAssignment() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-5 space-y-5">
         {/* Assignment form */}
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/70 p-4 space-y-3">
-          <p className="text-xs font-semibold text-slate-600 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-emerald-500" /> علاقہ منتخب کریں</p>
+          <p className="text-xs font-semibold text-slate-600 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-emerald-500" /> موضع منتخب کریں — باقی خود بخود بھر جائے گا</p>
 
-          {/* Division */}
+          {/* Mouza — top-level picker (auto-fills jurisdiction) */}
           <div>
-            <Label className="text-[11px] text-slate-500">Division (ڈویژن)</Label>
-            <Select value={form.division} onValueChange={(v) => setForm((p) => ({ ...p, division: v, subdivision: "", section: "", mouza: "" }))}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>{DIVISIONS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-
-          {/* Subdivision */}
-          <div>
-            <Label className="text-[11px] text-slate-500">Sub Division (سب ڈویژن)</Label>
-            <Select value={form.subdivision} onValueChange={onSubdivision}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="منتخب کریں" /></SelectTrigger>
+            <Label className="text-[11px] text-slate-500">Mouza (موضع) ★</Label>
+            <Select value={form.mouza} onValueChange={onMouzaTop}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="موضع منتخب کریں" /></SelectTrigger>
               <SelectContent>
-                {(SUBDIVISIONS[form.division] || []).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {MOUZA_LIST.map((m) => <SelectItem key={m.mouza} value={m.mouza} style={{ fontFamily: URDU }}>{m.mouza}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Section */}
-          <div>
-            <Label className="text-[11px] text-slate-500">Zilladari Section (ضلعداری سیکشن)</Label>
-            <Select value={form.section} onValueChange={onSection} disabled={!form.subdivision}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={form.subdivision ? "منتخب کریں" : "پہلے سب ڈویژن"} /></SelectTrigger>
-              <SelectContent>
-                {sectionsFor(form.subdivision).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Mouza — dropdown from jurisdiction */}
-          <div>
-            <Label className="text-[11px] text-slate-500">Mouza (موضع)</Label>
-            <Select value={form.mouza} onValueChange={(v) => set("mouza", v)} disabled={!form.section}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={form.section ? "موضع منتخب کریں" : "پہلے سیکشن"} /></SelectTrigger>
-              <SelectContent>
-                {mouzasFor(form.subdivision, form.section).map((m) => <SelectItem key={m} value={m} style={{ fontFamily: URDU }}>{m}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          {/* Auto-filled jurisdiction — read-only chips */}
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label className="text-[11px] text-slate-400">Division</Label>
+              <div className="h-9 px-2 flex items-center text-sm text-slate-600 bg-slate-50 rounded-md ring-1 ring-slate-200/70">{form.division}</div>
+            </div>
+            <div>
+              <Label className="text-[11px] text-slate-400">Sub Division</Label>
+              <div className="h-9 px-2 flex items-center text-sm text-slate-600 bg-slate-50 rounded-md ring-1 ring-slate-200/70 truncate">{form.subdivision || "—"}</div>
+            </div>
+            <div>
+              <Label className="text-[11px] text-slate-400">Section</Label>
+              <div className="h-9 px-2 flex items-center text-sm text-slate-600 bg-slate-50 rounded-md ring-1 ring-slate-200/70 truncate">{form.section || "—"}</div>
+            </div>
           </div>
 
           <div className="border-t border-slate-100 pt-3 space-y-3">

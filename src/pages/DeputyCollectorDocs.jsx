@@ -4,8 +4,8 @@ import ModuleShell from "@/components/ModuleShell";
 import { useNavigate } from "react-router-dom";
 
 const SUB_MODULES = [
-  { id: "33c", label: "33-C", labelUrdu: "۳۳-سی", desc: "Deputy Collector 33-C proceeding" },
   { id: "task-assignment", label: "Task Assignment", labelUrdu: "ٹاسک مقرر", desc: "Assign tasks to Zilladar / Patwari officers" },
+  { id: "33c", label: "33-C", labelUrdu: "۳۳-سی", desc: "Deputy Collector 33-C proceeding" },
 ];
 
 export default function DeputyCollectorDocs() {

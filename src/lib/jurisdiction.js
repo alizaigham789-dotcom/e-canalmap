@@ -56,3 +56,29 @@ export function sectionsFor(subdivision) {
 export function mouzasFor(subdivision, section) {
   return SECTION_MOUZAS[`${subdivision}::${section}`] || [];
 }
+
+// Reverse lookup: given a mouza name, find which subdivision + section it
+// belongs to. Returns { subdivision, section } or null if not found.
+export function findMouza(mouza) {
+  for (const key of Object.keys(SECTION_MOUZAS)) {
+    const list = SECTION_MOUZAS[key];
+    if (list && list.includes(mouza)) {
+      const [subdivision, section] = key.split("::");
+      return { subdivision, section };
+    }
+  }
+  return null;
+}
+
+// All mouza names across every subdivision/section — used for a single
+// top-level mouza picker that auto-fills the rest of the jurisdiction.
+export function allMouzas() {
+  const out = [];
+  for (const key of Object.keys(SECTION_MOUZAS)) {
+    const [subdivision, section] = key.split("::");
+    for (const m of SECTION_MOUZAS[key] || []) {
+      out.push({ mouza: m, subdivision, section });
+    }
+  }
+  return out;
+}
