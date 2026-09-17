@@ -42,12 +42,12 @@ export default function MapHeader({
         <ArrowLeft className="w-5 h-5" />
       </button>
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1">
-        {viewMode !== "overlay" && <Select placeholder="District" value={district} options={districts} field="district" />}
-        {viewMode !== "overlay" && <Select placeholder="Tehsil" value={tehsil} options={tehsils} field="tehsil" />}
-        {viewMode !== "overlay" && <Select placeholder="Mouza" value={village} options={villages} field="village" />}
-        {viewMode !== "overlay" && <Select placeholder="Rajbah" value={rajbah} options={rajbahs || []} field="rajbah" />}
+        <Select placeholder="District" value={district} options={districts} field="district" />
+        <Select placeholder="Tehsil" value={tehsil} options={tehsils} field="tehsil" />
+        <Select placeholder="Mouza" value={village} options={villages} field="village" />
+        <Select placeholder="Rajbah" value={rajbah} options={rajbahs || []} field="rajbah" />
         <Select placeholder="Moga" value={selectedMoga} options={mogas || []} onChange={onSelectMoga} />
-        <Select placeholder="Select Muraba" value={selectedMuraba} options={murabas || []} onChange={onSelectMuraba} />
+        {viewMode !== "overlay" && <Select placeholder="Select Muraba" value={selectedMuraba} options={murabas || []} onChange={onSelectMuraba} />}
       </div>
       <div className="relative shrink-0">
         <button className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/10 rounded-md transition-colors">

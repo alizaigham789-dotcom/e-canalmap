@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, ChevronLeft, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves, Map as MapIcon, Satellite, Move } from "lucide-react";
+import { ChevronDown, Layers, MapPin, Trash2, Save, PenTool, Pencil, Waves, Map as MapIcon, Satellite, Move } from "lucide-react";
 
 import DrawingToolbar from "@/components/geomap/DrawingToolbar";
 import MapHeader from "@/components/geomap/MapHeader";
@@ -1866,7 +1866,7 @@ export default function GeoMap() {
       </MapContainer>
 
       {/* UI Overlays */}
-      {viewMode === "view" && (
+      {(viewMode === "view" || viewMode === "overlay") && (
         <MapHeader
           districts={districts}
           tehsils={tehsils}
@@ -1878,7 +1878,7 @@ export default function GeoMap() {
           onMenu={() => setEntered(false)}
           rajbahs={rajbahs}
           rajbah={filters.rajbah}
-          mogas={cascadeMogas}
+          mogas={viewMode === "overlay" ? filterMogas : cascadeMogas}
           selectedMoga={selectedMoga}
           onSelectMoga={handleSelectMogaTop}
           murabas={mogaMustateels.map(m => m.mustNo)}
@@ -1909,20 +1909,11 @@ export default function GeoMap() {
       />
       <Compass />
 
-      {/* Overlay toggle — left side (overlay mode only) */}
-      {viewMode === "overlay" && (
-        <button
-          onClick={() => setEntered(false)}
-          className="absolute top-3 left-3 z-[1000] w-9 h-9 flex items-center justify-center bg-white text-slate-700 rounded-full shadow-xl hover:bg-slate-100 transition-colors"
-          title="Back"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-      )}
+      {/* Overlay panel toggle — below the top header (overlay mode only) */}
       {viewMode === "overlay" && (
         <button
           onClick={() => setShowOverlayPanel(v => !v)}
-          className={`absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
+          className={`absolute top-14 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-1.5 px-3 h-8 rounded-full shadow-xl text-xs font-bold transition-all ${showOverlayPanel ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}
         >
           <Layers className="w-3.5 h-3.5" />
           GIS Overlay
