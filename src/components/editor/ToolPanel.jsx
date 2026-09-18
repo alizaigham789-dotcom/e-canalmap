@@ -93,26 +93,29 @@ const TOOLS = [
 ];
 
 export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, onZoomIn, onZoomOut, onFitView, canUndo, canRedo }) {
-  // Redo button — sits at the very top, above Select
+  // Redo button — sits at the very top, above Select.
+  // Same transparent style as the Select / Pan tool buttons (border-2, rounded-xl,
+  // same height) so it blends into the toolbar. Only the disabled fade differs.
   const redoBtn = (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button onClick={onRedo} disabled={!canRedo} className="w-[52px] h-[42px] sm:w-[64px] rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0 flex flex-col items-center justify-center gap-0.5">
+        <button onClick={onRedo} disabled={!canRedo} className="relative w-[52px] h-[50px] sm:w-[64px] sm:h-[58px] rounded-xl border-2 border-transparent shadow-sm text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0 flex flex-col items-center justify-center gap-0.5 transition-all duration-200">
           <RotateCw className="w-4 h-4" />
-          <span className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-500">Redo</span>
+          <span className="text-[7px] sm:text-[8px] font-bold leading-none tracking-wide uppercase text-slate-500">Redo</span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Redo (Ctrl+Y)</TooltipContent>
     </Tooltip>
   );
 
-  // Undo button — sits under Select / Pan / CanalMove (after the nav group)
+  // Undo button — sits under Select / Pan / CanalMove (after the nav group).
+  // Same transparent style as the Select / Pan tool buttons.
   const undoBtn = (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button onClick={onUndo} disabled={!canUndo} className="w-[52px] h-[42px] sm:w-[64px] rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0 flex flex-col items-center justify-center gap-0.5">
+        <button onClick={onUndo} disabled={!canUndo} className="relative w-[52px] h-[50px] sm:w-[64px] sm:h-[58px] rounded-xl border-2 border-transparent shadow-sm text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0 flex flex-col items-center justify-center gap-0.5 transition-all duration-200">
           <RotateCcw className="w-4 h-4" />
-          <span className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-500">Undo</span>
+          <span className="text-[7px] sm:text-[8px] font-bold leading-none tracking-wide uppercase text-slate-500">Undo</span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Undo (Ctrl+Z)</TooltipContent>

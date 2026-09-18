@@ -150,12 +150,7 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
 
         {/* Form fields */}
         <div className="px-5 py-4 space-y-4 overflow-y-auto">
-          <Field label="Map Title *">
-            <input value={form.title} onChange={e => { titleTouched.current = true; f("title", e.target.value); }}
-              className={inputClass} placeholder="Map name" />
-          </Field>
-
-          {/* Moga number: side dropdown + number, same row */}
+          {/* Moga number: side dropdown + number, same row — at the very top */}
           <Field label="موگہ نمبری">
             <div className="flex gap-2">
               <select value={form.mogha_side} onChange={e => f("mogha_side", e.target.value)}
@@ -218,6 +213,12 @@ export default function MapDetailsDialog({ mapData, open, onClose, onSave }) {
           <Field label="ڈویژن">
             <AutocompleteInput value={form.district} onChange={v => f("district", v)}
               suggestions={suggestions.district} placeholder="Division / District" className={inputClass} />
+          </Field>
+
+          {/* Map Title — at the very end (auto-derived from fields above) */}
+          <Field label="Map Title *">
+            <input value={form.title} onChange={e => { titleTouched.current = true; f("title", e.target.value); }}
+              className={inputClass} placeholder="Map name" />
           </Field>
         </div>
 
