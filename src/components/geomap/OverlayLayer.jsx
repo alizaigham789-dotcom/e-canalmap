@@ -182,7 +182,7 @@ function AcreLabel({ obj, latlngs, zoom }) {
 // PropertiesPanel) and the editor's global colorSettings, so changes made in
 // the Map Editor are reflected here automatically.
 const CANAL_STYLE_COLORS = {
-  flat:        { fill: "#2563EB", stroke: "#1E3A8A" },
+  flat:        { fill: "#1E90FF", stroke: "#1565C0" },
   "3d":        { fill: "#1d6fa5", stroke: "#1d6fa5" },
   concrete:    { fill: "#9ca3af", stroke: "#6b7280" },
   earth:       { fill: "#a16207", stroke: "#78350f" },
@@ -192,7 +192,7 @@ const CANAL_STYLE_COLORS = {
   greenWater:  { fill: "#16a34a", stroke: "#1d4ed8" },
   engineering: { fill: "#2563eb", stroke: "#1e40af" },
   dashed:      { fill: "#3b82f6", stroke: "#2563eb" },
-  custom:      { fill: "#2563EB", stroke: "#1E3A8A" },
+  custom:      { fill: "#1E90FF", stroke: "#1565C0" },
 };
 function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
   const fontSize = labelFontSize(zoom);
@@ -288,7 +288,7 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
 
   if (fillLatLngs.length === 0) {
     return (
-      <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#2563EB", weight: 3, opacity: 0.9, interactive: false }} />
+      <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#1E90FF", weight: 3, opacity: 0.9, interactive: false }} />
     );
   }
 

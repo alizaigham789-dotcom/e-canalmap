@@ -1671,13 +1671,13 @@ export function getOutletDimensions(obj) {
 // Canal name font — fills the canal's full width while staying INSIDE the banks
 // (glyph height ≈ 0.75 × font; outline stroke adds ≈ 0.09 × font each side → ≈ 0.93 × width)
 export function canalNameFont(width = 100) {
-  return Math.max(10, (width || 100) * 1.05);
+  return Math.max(10, (width || 100) * 0.55);
 }
 
 // Moga number font (drawn inside the canal at the outlet) — noticeably LARGER
 // than the canal name font, so the moga number stays the most prominent text.
 export function mogaInCanalFont(width = 100) {
-  return Math.max(12, (width || 100) * 1.4);
+  return Math.max(12, (width || 100) * 0.75);
 }
 
 // ============================================================

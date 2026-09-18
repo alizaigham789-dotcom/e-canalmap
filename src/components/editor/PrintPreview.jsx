@@ -486,8 +486,8 @@ function svgCanal(obj, C, idx, outlets) {
   // print mode is active — then fall back to the greyed colours from C.
   const canalGreyed = C.bw || C._greyTypes?.has('canal');
   // Same colours as the editor canvas — toned-down rich blue fill + darker-navy edge.
-  const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#2563EB";
-  const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#1E3A8A";
+  const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#1E90FF";
+  const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#1565C0";
   // Two centerline strokes (edge wider, fill on top) — matches the editor canvas
   // exactly: uniform width through curves, no bank lines, no white highlight.
   return `
@@ -1420,7 +1420,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               {[
                 { key: 'mustateel', label: 'مستطیل', color: '#6b6b6b' },
                 { key: 'muraba', label: 'مر FCCa', color: '#6b6b6b' },
-                { key: 'canal', label: 'کینال', color: '#2563EB' },
+                { key: 'canal', label: 'کینال', color: '#1E90FF' },
                 { key: 'khal', label: 'خال', color: '#0D47A1' },
                 { key: 'road', label: 'سڑک', color: '#1a1a1a' },
                 { key: 'chakbandi', label: 'چکبندی', color: '#22c55e' },
