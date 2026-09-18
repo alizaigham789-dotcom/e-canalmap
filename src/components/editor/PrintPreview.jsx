@@ -489,24 +489,14 @@ function svgCanal(obj, C, idx, outlets) {
   const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#1688C7";
   if (obj.canalStyle === "flat") {
     const halfW = w / 2;
-    const fillPath = parallelSmoothClosedPath(obj.points, halfW);
     const left = getParallelPolyline(obj.points, -halfW);
     const right = getParallelPolyline(obj.points, halfW);
-    // Water gradient across the canal width (deep edges → bright center).
-    // Uses fillColor/strokeColor so B&W mode turns the canal black & white.
-    const p0 = obj.points[0], p1 = obj.points[obj.points.length - 1];
-    const dirAng = Math.atan2(p1.y - p0.y, p1.x - p0.x);
-    const perpX = Math.cos(dirAng + Math.PI / 2), perpY = Math.sin(dirAng + Math.PI / 2);
-    const midX = (p0.x + p1.x) / 2, midY = (p0.y + p1.y) / 2;
-    const gx1 = (midX - perpX * halfW).toFixed(1), gy1 = (midY - perpY * halfW).toFixed(1);
-    const gx2 = (midX + perpX * halfW).toFixed(1), gy2 = (midY + perpY * halfW).toFixed(1);
-    const gradId = `canalWater_${idx}`;
-    const gradDef = `<defs><linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${gx1}" y1="${gy1}" x2="${gx2}" y2="${gy2}"><stop offset="0" stop-color="${strokeColor}"/><stop offset="0.5" stop-color="${fillColor}"/><stop offset="1" stop-color="${strokeColor}"/></linearGradient></defs>`;
+    // Flat solid-blue water body — single centerline stroke keeps the width perfectly
+    // constant through every curve (SVG round joins = no bulge at turns, no gradient).
     return `
 <g key="canal_${idx}">
   ${boundarySvg}
-  ${gradDef}
-  <path d="${fillPath}" fill="url(#${gradId})" />
+  <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
   <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
   ${nameSvg}

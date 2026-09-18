@@ -514,45 +514,22 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#1688C7");
 
   if (obj.canalStyle === "flat") {
-    // Flat style — squared ends, two parallel blue boundary lines, beautiful full-blue water
-    const halfW = w / 2;
-    const left = getParallelPolyline(obj.points, -halfW);
-    const right = getParallelPolyline(obj.points, halfW);
-    // Beautiful blue water — linear gradient across the canal width (deep edges → bright full-blue center)
-    const p0 = obj.points[0], p1 = obj.points[obj.points.length - 1];
-    const dirAng = Math.atan2(p1.y - p0.y, p1.x - p0.x);
-    const perpX = Math.cos(dirAng + Math.PI / 2), perpY = Math.sin(dirAng + Math.PI / 2);
-    const midX = (p0.x + p1.x) / 2, midY = (p0.y + p1.y) / 2;
-    const grad = ctx.createLinearGradient(
-      midX - perpX * halfW, midY - perpY * halfW,
-      midX + perpX * halfW, midY + perpY * halfW
-    );
-    grad.addColorStop(0, "#1688C7");    // darker blue outline edge
-    grad.addColorStop(0.5, "#29A9E8");  // clean professional blue centre
-    grad.addColorStop(1, "#1688C7");    // darker blue outline edge
-    ctx.fillStyle = grad;
-    // Smooth Catmull-Rom ribbon fill — matches print preview exactly: fluid turns,
-    // constant width, no miter spike at corners. Left polyline + reversed right polyline.
-    const rightRev = [...right].reverse();
-    ctx.beginPath();
-    drawSmoothPath(ctx, left);
-    ctx.lineTo(rightRev[0].x, rightRev[0].y);
-    drawSmoothPathContinue(ctx, rightRev);
-    ctx.closePath();
-    ctx.fill();
-    // Subtle white shimmer down the centerline — smooth, gives the water a lively feel
-    ctx.strokeStyle = "rgba(255,255,255,0.35)";
-    ctx.lineWidth = Math.max(1, w * 0.10);
+    // Flat style — solid flat-blue water body + thin blue boundary lines.
+    // The water body is a single centerline stroke (lineWidth = w) so the width
+    // stays perfectly constant through every curve (canvas stroke engine keeps
+    // uniform width with round joins — no bulge at turns, no gradient).
     ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.setLineDash([14 / zoom, 10 / zoom]);
+    ctx.strokeStyle = fillC;
+    ctx.lineWidth = w;
     ctx.beginPath();
     drawSmoothPath(ctx, obj.points);
     ctx.stroke();
-    ctx.setLineDash([]);
-    // Blue boundary lines — smooth + round join (matches print; fluid turn, no spike)
+    // Blue boundary lines along the banks
+    const halfW = w / 2;
+    const left = getParallelPolyline(obj.points, -halfW);
+    const right = getParallelPolyline(obj.points, halfW);
     ctx.strokeStyle = strokeC;
     ctx.lineWidth = Math.max(2, 3 / zoom);
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
     for (const side of [left, right]) {
       ctx.beginPath();
       drawSmoothPath(ctx, side);
