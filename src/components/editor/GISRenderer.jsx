@@ -4,7 +4,7 @@
 // Symmetric bilateral buffering, Vector fill patterns
 // ============================================================
 
-import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, getKanalBoxes, getKanalFills, getExcludedKanals, createFillPattern, DIMENSIONS, drawSmoothPath, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, mogaInCanalFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
+import { getParallelPolyline, getMustateeelKillaGrid, getMustateelKillaCells, getMurabaKillaGrid, getMurabaKillaCells, getKanalBoxes, getKanalFills, getExcludedKanals, createFillPattern, DIMENSIONS, drawSmoothPath, drawSmoothPathContinue, CHAKBANDI_SCALE, MUSTATEEL_SCALE, canalNameFont, mogaInCanalFont, getOutletDimensions, effectiveKillaVisible } from "@/lib/gisEngine";
 import { drawMogaFractionBoxOnCanvas, drawMogaInfoOnCanvas, getOutletLabelPos, isUrduText, drawRailwayTracksCanvas } from "@/lib/printRenderHelpers";
 import { drawSideBoundaryCanvas, drawCanalStyleCanvas, isNewCanalStyle } from "@/lib/canalStyles";
 
@@ -531,32 +531,31 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
     grad.addColorStop(0.5, "#29A9E8");  // clean professional blue centre
     grad.addColorStop(1, "#1688C7");    // darker blue outline edge
     ctx.fillStyle = grad;
+    // Smooth Catmull-Rom ribbon fill — matches print preview exactly: fluid turns,
+    // constant width, no miter spike at corners. Left polyline + reversed right polyline.
+    const rightRev = [...right].reverse();
     ctx.beginPath();
-    ctx.moveTo(left[0].x, left[0].y);
-    for (const p of left) ctx.lineTo(p.x, p.y);
-    ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
-    for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+    drawSmoothPath(ctx, left);
+    ctx.lineTo(rightRev[0].x, rightRev[0].y);
+    drawSmoothPathContinue(ctx, rightRev);
     ctx.closePath();
     ctx.fill();
-    // Subtle white shimmer down the centerline — gives the water a lively, beautiful feel
+    // Subtle white shimmer down the centerline — smooth, gives the water a lively feel
     ctx.strokeStyle = "rgba(255,255,255,0.35)";
     ctx.lineWidth = Math.max(1, w * 0.10);
-    ctx.lineCap = "round";
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
     ctx.setLineDash([14 / zoom, 10 / zoom]);
     ctx.beginPath();
-    ctx.moveTo(obj.points[0].x, obj.points[0].y);
-    for (const p of obj.points) ctx.lineTo(p.x, p.y);
+    drawSmoothPath(ctx, obj.points);
     ctx.stroke();
     ctx.setLineDash([]);
-    // Blue boundary lines — straight segments with sharp miter corners: the canal
-    // follows the drawn vertex points exactly and turns sharply instead of curving.
+    // Blue boundary lines — smooth + round join (matches print; fluid turn, no spike)
     ctx.strokeStyle = strokeC;
     ctx.lineWidth = Math.max(2, 3 / zoom);
-    ctx.lineCap = "butt"; ctx.lineJoin = "miter";
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
     for (const side of [left, right]) {
       ctx.beginPath();
-      ctx.moveTo(side[0].x, side[0].y);
-      for (const p of side) ctx.lineTo(p.x, p.y);
+      drawSmoothPath(ctx, side);
       ctx.stroke();
     }
   } else {

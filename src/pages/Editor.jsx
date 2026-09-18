@@ -756,22 +756,30 @@ export default function Editor() {
     canalDraftRef.current = null; // prevent duplicate commits before the state re-render
     setCanalDraft(null);
     if (draft && draft.length >= 2) {
-      const canal = createCanal(draft);
-      // Canal merge: if this canal starts from the END of an existing canal,
-      // inherit the existing canal's name so the flow reads as one continuous canal.
       const startPt = draft[0];
       const THRESH = 15;
+      // Head-to-head merge: if this canal starts from the END of an existing canal,
+      // append its points to that canal (one continuous path) instead of creating a
+      // separate canal — feels like it was drawn in one go, linked end-to-end.
+      let mergeTarget = null;
       for (const o of dsmRef.current.objects) {
-        if (o.type === "canal" && o.points && o.points.length >= 2 && o.id !== canal.id) {
+        if (o.type === "canal" && o.points && o.points.length >= 2) {
           const endPt = o.points[o.points.length - 1];
-          if (Math.hypot(endPt.x - startPt.x, endPt.y - startPt.y) < THRESH) {
-            if (o.name) canal.name = o.name;
-          }
+          if (Math.hypot(endPt.x - startPt.x, endPt.y - startPt.y) < THRESH) { mergeTarget = o; break; }
         }
       }
-      // Auto-fill the canal name from the map header's Rajbah (canal minor) when no
-      // name was inherited from a connected canal — so new canals are named automatically.
-      if (!canal.name) canal.name = mapData?.rajbah || "";
+      if (mergeTarget) {
+        const mergedPoints = [...mergeTarget.points, ...draft.slice(1)];
+        dsmRef.current.update(mergeTarget.id, { points: mergedPoints });
+        setSelectedId(mergeTarget.id);
+        syncObjects();
+        if (!skipSave) saveRef.current();
+        return;
+      }
+      const canal = createCanal(draft);
+      // Auto-fill the canal name from the map header's Rajbah (canal minor) — so new
+      // canals are named automatically.
+      canal.name = mapData?.rajbah || "";
       dsmRef.current.add(canal);
       setSelectedId(canal.id);
       syncObjects();
@@ -788,6 +796,26 @@ export default function Editor() {
     chakbandiDraftRef.current = null; // prevent duplicate commits before the state re-render
     setChakbandiDraft(null);
     if (draft && draft.length >= 2) {
+      const startPt = draft[0];
+      const THRESH = 15;
+      // Head-to-head merge: if this chakbandi starts from the END of an existing
+      // chakbandi, append its points to that one (one continuous patch per moga)
+      // instead of creating a new separate patch.
+      let mergeTarget = null;
+      for (const o of dsmRef.current.objects) {
+        if (o.type === "chakbandi" && o.points && o.points.length >= 2) {
+          const endPt = o.points[o.points.length - 1];
+          if (Math.hypot(endPt.x - startPt.x, endPt.y - startPt.y) < THRESH) { mergeTarget = o; break; }
+        }
+      }
+      if (mergeTarget) {
+        const mergedPoints = [...mergeTarget.points, ...draft.slice(1)];
+        dsmRef.current.update(mergeTarget.id, { points: mergedPoints });
+        setSelectedId(mergeTarget.id);
+        syncObjects();
+        if (!skipSave) saveRef.current();
+        return;
+      }
       const cb = createChakbandi(draft);
       dsmRef.current.add(cb);
       setSelectedId(cb.id);
