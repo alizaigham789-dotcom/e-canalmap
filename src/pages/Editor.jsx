@@ -1894,6 +1894,10 @@ export default function Editor() {
         activeTool={activeTool}
         objectCount={objects.length}
         canalDraftLen={(canalDraft?.length || 0) + (chakbandiDraft?.length || 0)}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
       />
 
       <ExportDialog
