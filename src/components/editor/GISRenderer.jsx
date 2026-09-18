@@ -526,9 +526,9 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
-  // Dashed white centerline along the canal (matches reference design)
+  // Dashed white centerline along the canal (thin, matches reference design)
   ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = Math.max(1, w * 0.12) / zoom;
+  ctx.lineWidth = Math.max(0.8, w * 0.035) / zoom;
   ctx.setLineDash([14 / zoom, 10 / zoom]);
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);

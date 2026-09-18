@@ -294,7 +294,7 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
 
   const boundaryWeight = Math.max(1.5, 3 - (18 - zoom) * 0.2);
   const isDashed = styleKey === "dashed";
-  const centerWeight = Math.max(1, boundaryWeight * 0.4);
+  const centerWeight = Math.max(0.8, boundaryWeight * 0.18);
 
   return (
     <>
