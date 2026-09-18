@@ -485,29 +485,16 @@ function svgCanal(obj, C, idx, outlets) {
   // Flat canal: vivid editor blue (matches the on-canvas look) unless a grey/B&W
   // print mode is active — then fall back to the greyed colours from C.
   const canalGreyed = C.bw || C._greyTypes?.has('canal');
-  const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#29A9E8";
-  const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#1688C7";
-  if (obj.canalStyle === "flat") {
-    const halfW = w / 2;
-    const left = getParallelPolyline(obj.points, -halfW);
-    const right = getParallelPolyline(obj.points, halfW);
-    // Flat solid-blue water body — single centerline stroke keeps the width perfectly
-    // constant through every curve (SVG round joins = no bulge at turns, no gradient).
-    return `
-<g key="canal_${idx}">
-  ${boundarySvg}
-  <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${pointsToSmoothPath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
-  <path d="${pointsToSmoothPath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="round"/>
-  ${nameSvg}
-</g>`;
-  }
+  // Same colours as the editor canvas — toned-down rich blue fill + darker-navy edge.
+  const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#2563EB";
+  const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#1E3A8A";
+  // Two centerline strokes (edge wider, fill on top) — matches the editor canvas
+  // exactly: uniform width through curves, no bank lines, no white highlight.
   return `
 <g key="canal_${idx}">
   ${boundarySvg}
   <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${centerPath}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="${Math.max(1, w * 0.12).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>
   ${nameSvg}
 </g>`;
 }
@@ -1433,7 +1420,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               {[
                 { key: 'mustateel', label: 'مستطیل', color: '#6b6b6b' },
                 { key: 'muraba', label: 'مر FCCa', color: '#6b6b6b' },
-                { key: 'canal', label: 'کینال', color: '#1688C7' },
+                { key: 'canal', label: 'کینال', color: '#2563EB' },
                 { key: 'khal', label: 'خال', color: '#0D47A1' },
                 { key: 'road', label: 'سڑک', color: '#1a1a1a' },
                 { key: 'chakbandi', label: 'چکبندی', color: '#22c55e' },

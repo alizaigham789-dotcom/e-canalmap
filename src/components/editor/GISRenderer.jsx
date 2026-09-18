@@ -515,13 +515,13 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   // Flat design: no 3D, no gradients, no shadows — deep water-blue channel.
   ctx.lineCap = "round"; ctx.lineJoin = "round";
   // Elegant darker-navy edge outline (drawn first, slightly wider)
-  ctx.strokeStyle = "#172554";
+  ctx.strokeStyle = "#1E3A8A";
   ctx.lineWidth = w + Math.max(1, 2 / zoom);
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
-  // Rich dark-blue water fill (drawn on top, slightly narrower)
-  ctx.strokeStyle = "#1E40AF";
+  // Rich blue water fill (drawn on top, slightly narrower) — toned-down blue
+  ctx.strokeStyle = "#2563EB";
   ctx.lineWidth = w;
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);

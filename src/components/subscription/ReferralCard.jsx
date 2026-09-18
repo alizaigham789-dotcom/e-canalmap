@@ -2,12 +2,15 @@ import React, { useState } from "react";
 import { Gift, Copy, Check, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { PLANS, lowestPlanCode } from "@/lib/referralSystem";
 
 // Referral share link + progress toward the free-plan reward (3 paid friends).
 export default function ReferralCard({ user, qualifiedCount, totalReferred }) {
   const [copied, setCopied] = useState(false);
   const link = `${window.location.origin}/register?ref=${user?.id || ""}`;
   const remaining = Math.max(0, 3 - qualifiedCount);
+  const rewardCode = lowestPlanCode(PLANS.map((p) => p.code));
+  const rewardPlan = PLANS.find((p) => p.code === rewardCode);
 
   const copy = () => {
     navigator.clipboard?.writeText(link).then(() => {
@@ -24,7 +27,7 @@ export default function ReferralCard({ user, qualifiedCount, totalReferred }) {
         <p className="text-sm font-bold text-violet-800">دوستوں کو مدعو کریں — پلان مفت پائیں</p>
       </div>
       <p className="text-xs text-violet-700 mb-3 leading-relaxed">
-        3 دوست اپنے ریفرل لنک سے جوائن کر کے ادائیگی کریں → آپ کو سب سے سستی پلان <b>مفت</b> مل جائے گی۔
+        3 دوست اپنے ریفرل لنک سے جوائن کر کے ادائیگی کریں → آپ کو <b>{rewardPlan?.labelUr || "اسٹارٹر"} پلان</b> (Rs {rewardPlan?.discountPrice || 1500}) <b>مفت</b> مل جائے گی۔
       </p>
 
       <div className="flex items-center gap-2 bg-white rounded-lg border border-violet-200 p-2">
