@@ -509,12 +509,18 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   }
   const w = Math.max(2, obj.width);
 
-  // Solid full-blue canal — single centerline stroke (lineWidth = w).
-  // The thick stroke's own edges form the natural boundaries (no separate
-  // side lines). Width stays perfectly uniform through every curve because
-  // the canvas stroke engine keeps constant width with round joins — no
-  // bulge or width increase at turns.
+  // Premium flat GIS canal — subtle darker-blue outline + clean medium-blue fill.
+  // Both are centerline strokes (lineWidth = w) so the width stays perfectly
+  // uniform through every curve — no bulge, no width increase at turns.
+  // Flat design: no 3D, no gradients, no shadows — just a defined water channel.
   ctx.lineCap = "round"; ctx.lineJoin = "round";
+  // Subtle darker-blue edge outline (drawn first, slightly wider)
+  ctx.strokeStyle = "#1D4ED8";
+  ctx.lineWidth = w + Math.max(1, 2 / zoom);
+  ctx.beginPath();
+  drawSmoothPath(ctx, obj.points);
+  ctx.stroke();
+  // Clean medium-blue water fill (drawn on top, slightly narrower)
   ctx.strokeStyle = "#29A9E8";
   ctx.lineWidth = w;
   ctx.beginPath();
@@ -1425,7 +1431,7 @@ export function drawCanalDraft(ctx, canalDraft, snapPos, zoom, C) {
   const right = getParallelPolyline(draftPts, halfW);
   // No shadow/ghost fill while drawing — only dashed boundary lines so the user
   // sees the true canal edges clearly for precise alignment.
-  ctx.strokeStyle = C.canalStroke || "#0284c7";
+  ctx.strokeStyle = "#1D4ED8";
   ctx.lineWidth = 2 / zoom;
   ctx.setLineDash([6/zoom, 4/zoom]);
   for (const side of [left, right]) {
@@ -1437,7 +1443,7 @@ export function drawCanalDraft(ctx, canalDraft, snapPos, zoom, C) {
   // Draw-only handles; never rendered in print/preview.
   for (let i = 0; i < canalDraft.length; i++) {
     const pt = canalDraft[i];
-    ctx.fillStyle = C.canalStroke || "#3b82f6";
+    ctx.fillStyle = "#1D4ED8";
     if (i === 0 || i === canalDraft.length - 1) {
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 1.5 / zoom;
