@@ -508,31 +508,18 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
     return;
   }
   const w = Math.max(2, obj.width);
-  const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#1688C7");
 
-  // Solid full-blue water body + thin darker blue boundary lines.
-  // The water body is a single centerline stroke (lineWidth = w) so the width
-  // stays perfectly constant through every curve — the canvas stroke engine
-  // keeps a uniform width with round joins, so there is NO bulge or width
-  // increase at turns (the old 3D ribbon + offset-path fill bulged at curves).
+  // Solid full-blue canal — single centerline stroke (lineWidth = w).
+  // The thick stroke's own edges form the natural boundaries (no separate
+  // side lines). Width stays perfectly uniform through every curve because
+  // the canvas stroke engine keeps constant width with round joins — no
+  // bulge or width increase at turns.
   ctx.lineCap = "round"; ctx.lineJoin = "round";
-  // Solid full-blue water body (opaque, vivid — like the original canal colour)
   ctx.strokeStyle = "#29A9E8";
   ctx.lineWidth = w;
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
-  // Blue boundary lines along the banks — slightly darker for a crisp edge
-  const halfW = w / 2;
-  const left = getParallelPolyline(obj.points, -halfW);
-  const right = getParallelPolyline(obj.points, halfW);
-  ctx.strokeStyle = strokeC;
-  ctx.lineWidth = Math.max(2, 3 / zoom);
-  for (const side of [left, right]) {
-    ctx.beginPath();
-    drawSmoothPath(ctx, side);
-    ctx.stroke();
-  }
 
   // Layer 5: Canal name INSIDE the blue canal — repeats every ~5 acres along the path,
   // follows canal geometry (straight or curved), highly visible colour, 5× font size.
