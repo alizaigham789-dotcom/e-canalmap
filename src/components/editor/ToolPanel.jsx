@@ -93,11 +93,47 @@ const TOOLS = [
 ];
 
 export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, onZoomIn, onZoomOut, onFitView, canUndo, canRedo }) {
+  // Redo button — sits at the very top, above Select
+  const redoBtn = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button onClick={onRedo} disabled={!canRedo} className="w-[52px] h-[42px] sm:w-[64px] rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0 flex flex-col items-center justify-center gap-0.5">
+          <RotateCw className="w-4 h-4" />
+          <span className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-500">Redo</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Redo (Ctrl+Y)</TooltipContent>
+    </Tooltip>
+  );
+
+  // Undo button — sits under Select / Pan / CanalMove (after the nav group)
+  const undoBtn = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button onClick={onUndo} disabled={!canUndo} className="w-[52px] h-[42px] sm:w-[64px] rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0 flex flex-col items-center justify-center gap-0.5">
+          <RotateCcw className="w-4 h-4" />
+          <span className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-500">Undo</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Undo (Ctrl+Z)</TooltipContent>
+    </Tooltip>
+  );
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col gap-0.5 sm:gap-1 bg-white border border-slate-200 rounded-xl p-1.5 sm:p-2 shadow-lg max-h-[calc(100vh-180px)] sm:max-h-none overflow-y-auto">
+        {redoBtn}
         {TOOLS.map((tool, i) => {
-          if (tool === null) return <Separator key={`sep-${i}`} className="bg-slate-200 my-0.5" />;
+          if (tool === null) {
+            // Insert Undo right after the first separator (after Select/Pan/CanalMove nav group)
+            if (i === 3) {
+              return <React.Fragment key={`sep-${i}`}>
+                {undoBtn}
+                <Separator className="bg-slate-200 my-0.5" />
+              </React.Fragment>;
+            }
+            return <Separator key={`sep-${i}`} className="bg-slate-200 my-0.5" />;
+          }
           const Icon = tool.icon;
           const isActive = activeTool === tool.id;
           const isChakbandi = tool.id === "chakbandi";
@@ -134,28 +170,6 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
             </Tooltip>
           );
         })}
-
-        <Separator className="bg-slate-200 my-0.5" />
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button onClick={onUndo} disabled={!canUndo} className="w-[52px] h-[42px] sm:w-[64px] rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0 flex flex-col items-center justify-center gap-0.5">
-              <RotateCcw className="w-4 h-4" />
-              <span className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-500">Undo</span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Undo (Ctrl+Z)</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button onClick={onRedo} disabled={!canRedo} className="w-[52px] h-[42px] sm:w-[64px] rounded-lg border border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 shrink-0 flex flex-col items-center justify-center gap-0.5">
-              <RotateCw className="w-4 h-4" />
-              <span className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-500">Redo</span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-slate-700">Redo (Ctrl+Y)</TooltipContent>
-        </Tooltip>
 
         <Separator className="bg-slate-200 my-0.5" />
 

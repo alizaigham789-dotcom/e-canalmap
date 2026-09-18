@@ -514,17 +514,18 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#1688C7");
 
   if (obj.canalStyle === "flat") {
-    // Flat style — solid flat-blue water body + thin blue boundary lines.
+    // Flat style — solid flat-blue water body + thin darker blue boundary lines.
     // The water body is a single centerline stroke (lineWidth = w) so the width
     // stays perfectly constant through every curve (canvas stroke engine keeps
     // uniform width with round joins — no bulge at turns, no gradient).
     ctx.lineCap = "round"; ctx.lineJoin = "round";
+    // Solid flat-blue water body
     ctx.strokeStyle = fillC;
     ctx.lineWidth = w;
     ctx.beginPath();
     drawSmoothPath(ctx, obj.points);
     ctx.stroke();
-    // Blue boundary lines along the banks
+    // Blue boundary lines along the banks — slightly darker for a crisp edge
     const halfW = w / 2;
     const left = getParallelPolyline(obj.points, -halfW);
     const right = getParallelPolyline(obj.points, halfW);
@@ -535,6 +536,13 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
       drawSmoothPath(ctx, side);
       ctx.stroke();
     }
+    // Subtle flat lighter-blue center line — gives the water a polished look
+    // without any 3D gradient (stays perfectly flat)
+    ctx.strokeStyle = "rgba(255,255,255,0.22)";
+    ctx.lineWidth = Math.max(1, w * 0.08);
+    ctx.beginPath();
+    drawSmoothPath(ctx, obj.points);
+    ctx.stroke();
   } else {
     // 3D ribbon — soft glow halo + darker outline + body + inner highlight
     ctx.lineCap = "round"; ctx.lineJoin = "round";

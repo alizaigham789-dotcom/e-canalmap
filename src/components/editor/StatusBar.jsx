@@ -1,5 +1,4 @@
 import React from "react";
-import { Undo2, Redo2 } from "lucide-react";
 import { DIMENSIONS } from "@/lib/gisEngine";
 
 export default function StatusBar({ zoom, snapPos, activeTool, objectCount, canalDraftLen, onUndo, onRedo, canUndo, canRedo }) {
@@ -33,24 +32,6 @@ export default function StatusBar({ zoom, snapPos, activeTool, objectCount, cana
         )}
         <span>Obj: <span className="text-slate-700">{objectCount}</span></span>
         <span className="hidden sm:inline">Zoom: <span className="text-slate-700">{Math.round(zoom * 100)}%</span></span>
-        <div className="flex items-center gap-1 ml-1">
-          <button
-            onClick={onUndo}
-            disabled={!canUndo}
-            title="Undo (Ctrl+Z)"
-            className={`w-6 h-6 flex items-center justify-center rounded border transition ${canUndo ? "border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-blue-600" : "border-slate-200 text-slate-300 cursor-not-allowed"}`}
-          >
-            <Undo2 className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={onRedo}
-            disabled={!canRedo}
-            title="Redo (Ctrl+Y)"
-            className={`w-6 h-6 flex items-center justify-center rounded border transition ${canRedo ? "border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-blue-600" : "border-slate-200 text-slate-300 cursor-not-allowed"}`}
-          >
-            <Redo2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
       </div>
     </div>
   );
