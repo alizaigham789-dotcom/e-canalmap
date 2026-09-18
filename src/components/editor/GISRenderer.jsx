@@ -508,48 +508,29 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
     return;
   }
   const w = Math.max(2, obj.width);
-  // Vivid full-blue water (opaque, saturated, bright) — replaces the old translucent powder blue.
-  // Used by the 3D ribbon body; the flat style renders its own blue gradient below.
-  const fillC = C.canalFill || "#29A9E8";
   const strokeC = isSelected ? "#60a5fa" : (C.canalStroke || "#1688C7");
 
-  if (obj.canalStyle === "flat") {
-    // Flat style — solid flat-blue water body + thin darker blue boundary lines.
-    // The water body is a single centerline stroke (lineWidth = w) so the width
-    // stays perfectly constant through every curve (canvas stroke engine keeps
-    // uniform width with round joins — no bulge at turns, no gradient).
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-    // Solid flat-blue water body
-    ctx.strokeStyle = fillC;
-    ctx.lineWidth = w;
+  // Solid full-blue water body + thin darker blue boundary lines.
+  // The water body is a single centerline stroke (lineWidth = w) so the width
+  // stays perfectly constant through every curve — the canvas stroke engine
+  // keeps a uniform width with round joins, so there is NO bulge or width
+  // increase at turns (the old 3D ribbon + offset-path fill bulged at curves).
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  // Solid full-blue water body (opaque, vivid — like the original canal colour)
+  ctx.strokeStyle = "#29A9E8";
+  ctx.lineWidth = w;
+  ctx.beginPath();
+  drawSmoothPath(ctx, obj.points);
+  ctx.stroke();
+  // Blue boundary lines along the banks — slightly darker for a crisp edge
+  const halfW = w / 2;
+  const left = getParallelPolyline(obj.points, -halfW);
+  const right = getParallelPolyline(obj.points, halfW);
+  ctx.strokeStyle = strokeC;
+  ctx.lineWidth = Math.max(2, 3 / zoom);
+  for (const side of [left, right]) {
     ctx.beginPath();
-    drawSmoothPath(ctx, obj.points);
-    ctx.stroke();
-    // Blue boundary lines along the banks — slightly darker for a crisp edge
-    const halfW = w / 2;
-    const left = getParallelPolyline(obj.points, -halfW);
-    const right = getParallelPolyline(obj.points, halfW);
-    ctx.strokeStyle = strokeC;
-    ctx.lineWidth = Math.max(2, 3 / zoom);
-    for (const side of [left, right]) {
-      ctx.beginPath();
-      drawSmoothPath(ctx, side);
-      ctx.stroke();
-    }
-  } else {
-    // 3D ribbon — soft glow halo + darker outline + body + inner highlight
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.beginPath();
-    ctx.moveTo(obj.points[0].x, obj.points[0].y);
-    for (const p of obj.points) ctx.lineTo(p.x, p.y);
-    ctx.strokeStyle = strokeC;
-    ctx.lineWidth = w + 3;
-    ctx.stroke();
-    ctx.strokeStyle = fillC;
-    ctx.lineWidth = w;
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(255,255,255,0.30)";
-    ctx.lineWidth = Math.max(1, w * 0.12);
+    drawSmoothPath(ctx, side);
     ctx.stroke();
   }
 
