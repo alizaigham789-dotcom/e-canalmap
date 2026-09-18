@@ -1,0 +1,120 @@
+{
+  "name": "PatwariHalqa",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User id of the patwari who owns this halqa registration"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Display name of the patwari"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "division": {
+      "type": "string",
+      "default": "Khushab",
+      "description": "Canal Division"
+    },
+    "subdivision": {
+      "type": "string",
+      "enum": [
+        "Jauharabad",
+        "Qaidabad"
+      ],
+      "description": "Sub Division"
+    },
+    "section": {
+      "type": "string",
+      "description": "Zilladar Section"
+    },
+    "villages_json": {
+      "type": "string",
+      "description": "JSON array of village / mouza names in this halqa"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Approval status set by Deputy Collector"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Reason if rejected by DC"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Name of DC who approved"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "subdivision",
+    "section"
+  ],
+  "rls": {
+    "create": {
+      "data.user_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "deputy_collector"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "deputy_collector"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "deputy_collector"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -90,6 +90,20 @@
     "history_json": {
       "type": "string",
       "description": "JSON array of status change events"
+    },
+    "stamp_text": {
+      "type": "string",
+      "description": "Patwari stamp text applied on approval (name + halqa + date)"
+    },
+    "stamped_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the patwari stamped/approved this task"
+    },
+    "dc_approved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the Deputy Collector approved the patwari's submission"
     }
   },
   "required": [

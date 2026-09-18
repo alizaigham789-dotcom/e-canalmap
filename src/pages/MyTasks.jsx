@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { toast } from "sonner";
+import TaskStamp from "@/components/patwari/TaskStamp";
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
 
@@ -45,6 +46,10 @@ export default function MyTasks() {
     queryKey: ["task-assignments"],
     queryFn: () => base44.entities.TaskAssignment.list("-created_date", 200),
   });
+  const { data: halqaList = [] } = useQuery({
+    queryKey: ["patwari-halqa"],
+    queryFn: () => base44.entities.PatwariHalqa.list("-created_date", 200),
+  });
 
   const uploadFile = async (file) => (await base44.integrations.Core.UploadFile({ file })).file_url;
 
@@ -59,9 +64,10 @@ export default function MyTasks() {
   const myTasks = useMemo(() => {
     if (!me) return [];
     return tasks.filter((t) => {
+      const idMatch = t.officer_user_id && t.officer_user_id === me.id;
       const nameMatch = me.full_name && t.officer_name && t.officer_name.trim() === me.full_name.trim();
       const roleMatch = myRole && t.officer_role === myRole;
-      return nameMatch || roleMatch;
+      return idMatch || nameMatch || roleMatch;
     });
   }, [tasks, me, myRole]);
 
@@ -102,6 +108,14 @@ export default function MyTasks() {
     }
     if (t.officer_role === "patwari" && draft.status === "review") {
       changes.forwarded_to = "zilladar";
+    }
+    // Patwari completes the task → apply stamp (name + halqa + date) and timestamp.
+    // The task goes back to the DC; a copy stays visible to the patwari with the seal.
+    if (t.officer_role === "patwari" && draft.status === "completed") {
+      const myHalqa = halqaList.find((h) => h.user_id === me?.id);
+      const halqaLabel = myHalqa ? `${myHalqa.section}` : "";
+      changes.stamp_text = `${me?.full_name || ""}${halqaLabel ? " · " + halqaLabel : ""}`;
+      changes.stamped_at = new Date().toISOString();
     }
     updateMut.mutate({ id: t.id, changes });
   };
@@ -157,6 +171,19 @@ export default function MyTasks() {
                 )}
                 {t.remarks && !isEditing && (
                   <div className="bg-amber-50 rounded-lg p-2"><p className="text-[10px] text-amber-700 font-semibold">Remarks:</p><p className="text-[11px] text-slate-600" style={{ fontFamily: URDU }}>{t.remarks}</p></div>
+                )}
+                {/* Patwari stamp — shown when the task is completed or DC-approved.
+                    A copy stays visible to the patwari with APPROVED / RESOLVED on it. */}
+                {t.stamp_text && !isEditing && (t.status === "completed" || t.status === "approved") && (
+                  <div className="flex items-center gap-3 bg-slate-50 rounded-lg p-2">
+                    <TaskStamp stampText={t.stamp_text} stampedAt={t.stamped_at} status={t.status} />
+                    <div className="text-[11px] text-slate-600" style={{ fontFamily: URDU }}>
+                      <p className="font-semibold text-slate-700">
+                        {t.status === "approved" ? "DC نے منظور کر لیا" : "آپ نے کام مکمل کر کے DC کو بھیج دیا"}
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">یہ کاپی آپ کے پاس رہے گی</p>
+                    </div>
+                  </div>
                 )}
 
                 {!isEditing ? (

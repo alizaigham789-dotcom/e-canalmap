@@ -10,6 +10,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { toast } from "sonner";
 import { findMouza, allMouzas } from "@/lib/jurisdiction";
+import { CheckCircle2, XCircle } from "lucide-react";
+
+// Find the approved patwari for a mouza from PatwariHalqa registrations.
+// Returns { officer_name, officer_user_id } or null.
+function findApprovedPatwari(halqaList, mouza) {
+  for (const h of halqaList) {
+    if (h.status !== "approved") continue;
+    let villages = [];
+    try { villages = JSON.parse(h.villages_json || "[]"); } catch {}
+    if (villages.includes(mouza)) {
+      return { officer_name: h.user_name || "", officer_user_id: h.user_id || "" };
+    }
+  }
+  return null;
+}
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
 
@@ -53,6 +68,10 @@ export default function TaskAssignment() {
     queryKey: ["task-assignments"],
     queryFn: () => base44.entities.TaskAssignment.list("-created_date", 200),
   });
+  const { data: halqaList = [] } = useQuery({
+    queryKey: ["patwari-halqa"],
+    queryFn: () => base44.entities.PatwariHalqa.list("-created_date", 200),
+  });
 
   const uploadFile = async (file) => {
     const res = await base44.integrations.Core.UploadFile({ file });
@@ -78,16 +97,27 @@ export default function TaskAssignment() {
     onError: () => toast.error("حذف نہیں ہوا"),
   });
 
+  // DC approves / rejects a patwari's completed submission
+  const dcApproveMut = useMutation({
+    mutationFn: ({ id, status }) => base44.entities.TaskAssignment.update(id, {
+      status,
+      dc_approved_at: status === "approved" ? new Date().toISOString() : "",
+    }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["task-assignments"] }); toast.success("اسٹیٹس اپ ڈیٹ ہو گیا"); },
+    onError: () => toast.error("ناکام"),
+  });
+
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const onSubdivision = (v) => setForm((p) => ({ ...p, subdivision: v, section: "", mouza: "" }));
   const onSection = (v) => setForm((p) => ({ ...p, section: v, mouza: "" }));
 
   // Pick a mouza first → auto-fill division/subdivision/section (reverse lookup)
-  // and auto-fill the patwari name from the most recent task for that mouza.
+  // and auto-fill the patwari name from the APPROVED PatwariHalqa for that mouza.
+  // Falls back to the most recent patwari already assigned to that mouza.
   const onMouzaTop = (v) => {
     const loc = findMouza(v);
-    // Find the most recent patwari already assigned to this mouza
+    const approved = findApprovedPatwari(halqaList, v);
     const existing = [...tasks]
       .filter((t) => t.mouza === v && t.officer_role === "patwari" && t.officer_name)
       .sort((a, b) => (b.created_date || "").localeCompare(a.created_date || ""))[0];
@@ -98,22 +128,24 @@ export default function TaskAssignment() {
       subdivision: loc?.subdivision || p.subdivision,
       section: loc?.section || p.section,
       officer_role: "patwari",
-      officer_name: existing?.officer_name || p.officer_name,
+      officer_name: approved?.officer_name || existing?.officer_name || p.officer_name,
+      officer_user_id: approved?.officer_user_id || "",
     }));
   };
 
-  // When a file/photo is attached, auto-route the task to the patwari of the
-  // selected mouza (halqa) — fill the patwari name from existing assignments if
-  // the user hasn't typed one yet.
+  // When a file/photo is attached, auto-route the task to the approved patwari
+  // of the selected mouza (halqa) — from PatwariHalqa registrations.
   const autoRouteToPatwari = () => {
     if (!form.mouza) return;
+    const approved = findApprovedPatwari(halqaList, form.mouza);
     const existing = [...tasks]
       .filter((t) => t.mouza === form.mouza && t.officer_role === "patwari" && t.officer_name)
       .sort((a, b) => (b.created_date || "").localeCompare(a.created_date || ""))[0];
     setForm((p) => ({
       ...p,
       officer_role: "patwari",
-      officer_name: p.officer_name || existing?.officer_name || "",
+      officer_name: p.officer_name || approved?.officer_name || existing?.officer_name || "",
+      officer_user_id: approved?.officer_user_id || "",
     }));
   };
 
@@ -323,6 +355,31 @@ export default function TaskAssignment() {
                         {t.file_url && <a href={t.file_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] text-blue-500"><FileText className="w-3 h-3" /> فائل دیکھیں</a>}
                         {t.photo_url && <img src={t.photo_url} alt="proof" className="w-full h-32 object-cover rounded-lg" />}
                         {t.forwarded_to && <p className="text-[10px] text-cyan-600" style={{ fontFamily: URDU }}>آگے بھیجا: {t.forwarded_to === "patwari" ? "پٹواری" : "ضلعدار"} کو</p>}
+                        {t.stamp_text && (
+                          <div className="flex items-center gap-2 bg-emerald-50 rounded-lg p-2">
+                            <div className="flex flex-col items-center justify-center rounded-full border-2 border-emerald-500 text-emerald-600 rotate-[-12deg] px-2 py-1" style={{ width: 64, height: 64 }}>
+                              <span className="text-[7px] font-bold tracking-wider leading-none">RESOLVED</span>
+                              <span className="text-[6px] leading-tight mt-0.5 text-center" style={{ fontFamily: URDU }}>{t.stamp_text}</span>
+                            </div>
+                            <div className="text-[10px] text-emerald-700" style={{ fontFamily: URDU }}>
+                              <p className="font-semibold">پٹواری کا سٹیمپ</p>
+                              {t.stamped_at && <p>{new Date(t.stamped_at).toLocaleDateString("en-GB")}</p>}
+                            </div>
+                          </div>
+                        )}
+                        {/* DC approve / reject — shown when patwari submitted (completed/review) */}
+                        {currentUser?.role === "deputy_collector" || currentUser?.role === "admin" ? (
+                          (t.status === "completed" || t.status === "review") && (
+                            <div className="flex gap-2 pt-1">
+                              <Button onClick={() => dcApproveMut.mutate({ id: t.id, status: "approved" })} disabled={dcApproveMut.isPending} className="flex-1 h-8 gap-1 text-xs bg-emerald-600 hover:bg-emerald-700">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> منظور
+                              </Button>
+                              <Button onClick={() => dcApproveMut.mutate({ id: t.id, status: "rejected" })} variant="outline" disabled={dcApproveMut.isPending} className="flex-1 h-8 gap-1 text-xs text-red-600 border-red-200 hover:bg-red-50">
+                                <XCircle className="w-3.5 h-3.5" /> مسترد
+                              </Button>
+                            </div>
+                          )
+                        ) : null}
                       </div>
                     )}
                   </div>

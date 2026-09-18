@@ -36,6 +36,7 @@ const CanalPatwari = lazy(() => import('./pages/CanalPatwari'));
 const Naqsha27B = lazy(() => import('./pages/Naqsha27B'));
 const PatwariNotepad = lazy(() => import('./pages/PatwariNotepad'));
 const MyTasks = lazy(() => import('./pages/MyTasks'));
+const PatwariHalqa = lazy(() => import('./pages/PatwariHalqa'));
 const ChakbandiIkhrajCase = lazy(() => import('./pages/ChakbandiIkhrajCase'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -105,6 +106,7 @@ const AuthenticatedApp = () => {
         <Route path="/canal-patwari/naqsha-27b" element={<Naqsha27B />} />
         <Route path="/canal-patwari/notepad" element={<PatwariNotepad />} />
         <Route path="/canal-patwari/my-tasks" element={<MyTasks />} />
+        <Route path="/canal-patwari/halqa" element={<PatwariHalqa />} />
         <Route path="/chakbandi-ikhraj" element={<ChakbandiIkhrajCase />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
