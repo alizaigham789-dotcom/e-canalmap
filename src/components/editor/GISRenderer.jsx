@@ -509,19 +509,19 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   }
   const w = Math.max(2, obj.width);
 
-  // Premium flat GIS canal — subtle darker-blue outline + clean medium-blue fill.
+  // Premium flat GIS canal — rich dark-blue water + elegant darker-navy edge.
   // Both are centerline strokes (lineWidth = w) so the width stays perfectly
   // uniform through every curve — no bulge, no width increase at turns.
-  // Flat design: no 3D, no gradients, no shadows — just a defined water channel.
+  // Flat design: no 3D, no gradients, no shadows — deep water-blue channel.
   ctx.lineCap = "round"; ctx.lineJoin = "round";
-  // Subtle darker-blue edge outline (drawn first, slightly wider)
-  ctx.strokeStyle = "#1D4ED8";
+  // Elegant darker-navy edge outline (drawn first, slightly wider)
+  ctx.strokeStyle = "#172554";
   ctx.lineWidth = w + Math.max(1, 2 / zoom);
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
-  // Clean medium-blue water fill (drawn on top, slightly narrower)
-  ctx.strokeStyle = "#29A9E8";
+  // Rich dark-blue water fill (drawn on top, slightly narrower)
+  ctx.strokeStyle = "#1E40AF";
   ctx.lineWidth = w;
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
@@ -1431,7 +1431,7 @@ export function drawCanalDraft(ctx, canalDraft, snapPos, zoom, C) {
   const right = getParallelPolyline(draftPts, halfW);
   // No shadow/ghost fill while drawing — only dashed boundary lines so the user
   // sees the true canal edges clearly for precise alignment.
-  ctx.strokeStyle = "#1D4ED8";
+  ctx.strokeStyle = "#1E3A8A";
   ctx.lineWidth = 2 / zoom;
   ctx.setLineDash([6/zoom, 4/zoom]);
   for (const side of [left, right]) {
@@ -1443,7 +1443,7 @@ export function drawCanalDraft(ctx, canalDraft, snapPos, zoom, C) {
   // Draw-only handles; never rendered in print/preview.
   for (let i = 0; i < canalDraft.length; i++) {
     const pt = canalDraft[i];
-    ctx.fillStyle = "#1D4ED8";
+    ctx.fillStyle = "#1E3A8A";
     if (i === 0 || i === canalDraft.length - 1) {
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 1.5 / zoom;
