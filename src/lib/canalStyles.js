@@ -9,11 +9,11 @@
 import { getParallelPolyline, DIMENSIONS, drawSmoothPath, drawSmoothPathContinue } from "@/lib/gisEngine";
 
 export const CANAL_STYLES = [
-  { key: "flat",         label: "Flat",        swatch: "#2563EB" },
+  { key: "flat",         label: "Flat",        swatch: "#2196F3" },
   { key: "3d",           label: "3D Ribbon",    swatch: "#1d6fa5" },
   { key: "concrete",     label: "Concrete",    swatch: "#9ca3af" },
   { key: "earth",       label: "Earth",        swatch: "#a16207" },
-  { key: "water",       label: "Water",        swatch: "#1e90ff" },
+  { key: "water",       label: "Water",        swatch: "#2196F3" },
   { key: "3dwater",     label: "3D Water",      swatch: "#0ea5e9" },
   { key: "green",       label: "Green",         swatch: "#16a34a" },
   { key: "greenWater",  label: "Green Water",   swatch: "linear-gradient(90deg,#16a34a 0 28%,#1d4ed8 28% 72%,#16a34a 72%)" },
@@ -115,10 +115,10 @@ export function drawCanalStyleCanvas(ctx, obj, style, zoom, C) {
       bankLines(ctx, pts, halfW, "#451a03", Math.max(2, 2 / zoom));
       return;
     case "water":
-      ctx.fillStyle = "#1e90ff"; fillBetween(ctx, pts, halfW);
+      ctx.fillStyle = "#2196F3"; fillBetween(ctx, pts, halfW);
       ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = Math.max(1, halfW * 0.1);
       ctx.setLineDash([14 / zoom, 10 / zoom]); strokeCenter(ctx, pts); ctx.setLineDash([]);
-      bankLines(ctx, pts, halfW, "#0c4a6e", Math.max(2, 2 / zoom));
+      bankLines(ctx, pts, halfW, "#1976D2", Math.max(2, 2 / zoom));
       return;
     case "3dwater":
       ctx.strokeStyle = "#0c4a6e"; ctx.lineWidth = w + 3; strokeCenter(ctx, pts);
@@ -272,9 +272,9 @@ export function buildCanalStyleSVG(obj, style, C) {
         + svgCenter(pts, "rgba(255,255,255,0.3)", Math.max(1, halfW * 0.1))
         + svgBanks(pts, halfW, "#451a03", 2);
     case "water":
-      return svgFill(pts, halfW, "#1e90ff")
+      return svgFill(pts, halfW, "#2196F3")
         + svgCenter(pts, "rgba(255,255,255,0.45)", Math.max(1, halfW * 0.1), "14,10")
-        + svgBanks(pts, halfW, "#0c4a6e", 2);
+        + svgBanks(pts, halfW, "#1976D2", 2);
     case "3dwater":
       return svgCenter(pts, "#0c4a6e", w + 3)
         + svgCenter(pts, "#0ea5e9", w * 0.72)

@@ -485,16 +485,17 @@ function svgCanal(obj, C, idx, outlets) {
   // Flat canal: vivid editor blue (matches the on-canvas look) unless a grey/B&W
   // print mode is active — then fall back to the greyed colours from C.
   const canalGreyed = C.bw || C._greyTypes?.has('canal');
-  // Same colours as the editor canvas — toned-down rich blue fill + darker-navy edge.
-  const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#1E90FF";
-  const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#1565C0";
-  // Two centerline strokes (edge wider, fill on top) — matches the editor canvas
-  // exactly: uniform width through curves, no bank lines, no white highlight.
+  // Same colours as the editor canvas — bright cyan-blue fill + darker-blue edge.
+  const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#2196F3";
+  const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#1976D2";
+  const centerW = Math.max(1, w * 0.12);
+  // Two centerline strokes (edge wider, fill on top) + dashed white centerline.
   return `
 <g key="canal_${idx}">
   ${boundarySvg}
   <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${centerPath}" fill="none" stroke="#ffffff" stroke-width="${centerW.toFixed(1)}" stroke-dasharray="14,10" stroke-linecap="round"/>
   ${nameSvg}
 </g>`;
 }
@@ -636,8 +637,8 @@ function svgOutlet(obj, C, idx, mogaScale = 1) {
     if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
     const canalAngDeg = canalAng * 180 / Math.PI;
     const cf = mogaInCanalFont(obj.canalWidth || DIMENSIONS.CANAL_WIDTH);
-    const mogaFill = unfilled ? "#000000" : "#FFD700";
-    mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="rgba(0,0,0,0.85)" stroke-width="${Math.max(2, cf * 0.18).toFixed(1)}" stroke-linejoin="round" fill="${mogaFill}">${mogaText}</text>`;
+    const mogaFill = unfilled ? "#000000" : "#000000";
+    mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="#FFEB3B" stroke-width="${Math.max(2, cf * 0.22).toFixed(1)}" stroke-linejoin="round" fill="${mogaFill}">${mogaText}</text>`;
   }
   const blockFill = unfilled ? "none" : color;
   const blockStroke = unfilled ? color : "#7f1d1d";
@@ -1420,7 +1421,7 @@ export default function PrintPreview({ mapData, objects, colorSettings, onClose,
               {[
                 { key: 'mustateel', label: 'مستطیل', color: '#6b6b6b' },
                 { key: 'muraba', label: 'مر FCCa', color: '#6b6b6b' },
-                { key: 'canal', label: 'کینال', color: '#1E90FF' },
+                { key: 'canal', label: 'کینال', color: '#2196F3' },
                 { key: 'khal', label: 'خال', color: '#0D47A1' },
                 { key: 'road', label: 'سڑک', color: '#1a1a1a' },
                 { key: 'chakbandi', label: 'چکبندی', color: '#22c55e' },

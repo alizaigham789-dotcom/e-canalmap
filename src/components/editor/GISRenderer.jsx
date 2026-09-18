@@ -514,18 +514,26 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   // uniform through every curve — no bulge, no width increase at turns.
   // Flat design: no 3D, no gradients, no shadows — deep water-blue channel.
   ctx.lineCap = "round"; ctx.lineJoin = "round";
-  // Elegant darker-navy edge outline (drawn first, slightly wider)
-  ctx.strokeStyle = "#1565C0";
+  // Darker-blue border outline (drawn first, slightly wider)
+  ctx.strokeStyle = "#1976D2";
   ctx.lineWidth = w + Math.max(1, 2 / zoom);
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
-  // Water-blue fill (drawn on top, slightly narrower) — natural water colour
-  ctx.strokeStyle = "#1E90FF";
+  // Bright cyan-blue fill (drawn on top, slightly narrower)
+  ctx.strokeStyle = "#2196F3";
   ctx.lineWidth = w;
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
+  // Dashed white centerline along the canal (matches reference design)
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = Math.max(1, w * 0.12) / zoom;
+  ctx.setLineDash([14 / zoom, 10 / zoom]);
+  ctx.beginPath();
+  drawSmoothPath(ctx, obj.points);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
   // Layer 5: Canal name INSIDE the blue canal — repeats every ~5 acres along the path,
   // follows canal geometry (straight or curved), highly visible colour, 5× font size.
@@ -574,11 +582,11 @@ function drawCanalNameUrduEditor(ctx, points, text, zoom, width) {
     ctx.translate(px, py);
     ctx.rotate(ang);
     try { ctx.direction = "rtl"; } catch {}
-    ctx.strokeStyle = "rgba(0,0,0,0.85)";
-    ctx.lineWidth = Math.max(2, cf * 0.18);
+    ctx.strokeStyle = "#FFEB3B";
+    ctx.lineWidth = Math.max(2, cf * 0.22);
     ctx.lineJoin = "round";
     ctx.strokeText(text, 0, 0);
-    ctx.fillStyle = "#FFD700";
+    ctx.fillStyle = "#000000";
     ctx.fillText(text, 0, 0);
     ctx.restore();
   }
@@ -662,13 +670,13 @@ function drawTextAlongPath(ctx, points, segLens, text, startDist, fontSize, char
     ctx.save();
     ctx.translate(px, py);
     ctx.rotate(angle);
-    // Outline (dark) for contrast against blue canal fill
-    ctx.strokeStyle = "rgba(0,0,0,0.85)";
-    ctx.lineWidth = Math.max(2, fontSize * 0.18);
+    // Yellow outline (thick) for contrast against blue canal fill
+    ctx.strokeStyle = "#FFEB3B";
+    ctx.lineWidth = Math.max(2, fontSize * 0.22);
     ctx.lineJoin = "round";
     ctx.strokeText(ch, 0, 0);
-    // Fill — bright white/yellow for high visibility
-    ctx.fillStyle = "#FFD700";
+    // Black fill — matches reference design
+    ctx.fillStyle = "#000000";
     ctx.fillText(ch, 0, 0);
     ctx.restore();
 
@@ -1079,12 +1087,12 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
     ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    // Same colours as the canal name: dark outline + yellow fill
-    ctx.strokeStyle = "rgba(0,0,0,0.85)";
-    ctx.lineWidth = Math.max(2, cf * 0.18);
+    // Same colours as the canal name: yellow outline + black fill
+    ctx.strokeStyle = "#FFEB3B";
+    ctx.lineWidth = Math.max(2, cf * 0.22);
     ctx.lineJoin = "round";
     ctx.strokeText(mogaText, 0, 0);
-    ctx.fillStyle = "#FFD700";
+    ctx.fillStyle = "#000000";
     ctx.fillText(mogaText, 0, 0);
     ctx.restore();
   }

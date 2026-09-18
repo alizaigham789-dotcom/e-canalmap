@@ -182,17 +182,17 @@ function AcreLabel({ obj, latlngs, zoom }) {
 // PropertiesPanel) and the editor's global colorSettings, so changes made in
 // the Map Editor are reflected here automatically.
 const CANAL_STYLE_COLORS = {
-  flat:        { fill: "#1E90FF", stroke: "#1565C0" },
+  flat:        { fill: "#2196F3", stroke: "#1976D2" },
   "3d":        { fill: "#1d6fa5", stroke: "#1d6fa5" },
   concrete:    { fill: "#9ca3af", stroke: "#6b7280" },
   earth:       { fill: "#a16207", stroke: "#78350f" },
-  water:       { fill: "#1e90ff", stroke: "#0c6fb3" },
+  water:       { fill: "#2196F3", stroke: "#1976D2" },
   "3dwater":   { fill: "#0ea5e9", stroke: "#0284c7" },
   green:       { fill: "#16a34a", stroke: "#15803d" },
   greenWater:  { fill: "#16a34a", stroke: "#1d4ed8" },
   engineering: { fill: "#2563eb", stroke: "#1e40af" },
   dashed:      { fill: "#3b82f6", stroke: "#2563eb" },
-  custom:      { fill: "#1E90FF", stroke: "#1565C0" },
+  custom:      { fill: "#2196F3", stroke: "#1976D2" },
 };
 function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
   const fontSize = labelFontSize(zoom);
@@ -288,12 +288,13 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
 
   if (fillLatLngs.length === 0) {
     return (
-      <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#1E90FF", weight: 3, opacity: 0.9, interactive: false }} />
+      <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#2196F3", weight: 3, opacity: 0.9, interactive: false }} />
     );
   }
 
   const boundaryWeight = Math.max(1.5, 3 - (18 - zoom) * 0.2);
   const isDashed = styleKey === "dashed";
+  const centerWeight = Math.max(1, boundaryWeight * 0.4);
 
   return (
     <>
@@ -306,11 +307,13 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
       <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
       {/* Right boundary */}
       <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
-      {/* Canal name — repeating along the centerline, gold with dark outline (matches Map Editor) */}
+      {/* Dashed white centerline (matches reference design) */}
+      <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#ffffff", weight: centerWeight, opacity: 0.9, dashArray: "14,10", interactive: false }} />
+      {/* Canal name — repeating along the centerline, black with yellow outline (matches Map Editor) */}
       {obj.name && labelPoints.map((p, i) => (
         <CircleMarker key={`lbl-${i}`} center={[p.lat, p.lng]} radius={0} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
           <Tooltip permanent direction="center" className="canal-label" opacity={0.95}>
-            <span style={{ fontSize: `${Math.max(10, fontSize * 0.62)}px`, fontWeight: 700, color: "#FFD700", textShadow: "1px 1px 2px #000, -1px -1px 2px #000, 0 0 3px #000", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: `${Math.max(10, fontSize * 0.62)}px`, fontWeight: 700, color: "#000000", WebkitTextStroke: "1.5px #FFEB3B", textShadow: "0 0 2px #FFEB3B, 1px 1px 2px #FFEB3B, -1px -1px 2px #FFEB3B", whiteSpace: "nowrap" }}>
               {obj.name}
             </span>
           </Tooltip>
