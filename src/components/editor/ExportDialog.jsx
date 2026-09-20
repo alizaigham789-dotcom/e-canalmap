@@ -220,12 +220,6 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       ctx.lineCap = "round"; ctx.lineJoin = "round";
       ctx.strokeStyle = strokeC; ctx.lineWidth = w + 3; drawCenter(); ctx.stroke();
       ctx.strokeStyle = fillC; ctx.lineWidth = w; drawCenter(); ctx.stroke();
-      // Dashed white centerline (thin, matches reference design)
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = Math.max(0.8, w * 0.035);
-      ctx.setLineDash([14, 10]);
-      drawCenter(); ctx.stroke();
-      ctx.setLineDash([]);
       }
       if (o.name) {
         const cf = canalNameFont(o.width || DIMENSIONS.CANAL_WIDTH);
@@ -534,7 +528,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       const fillColor = C.canalFill || "#2196F3";
       const strokeColor = C.canalStroke || "#1976D2";
       const centerPts = o.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-      return `<g>${_boundarySvg}<polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="#ffffff" stroke-width="${Math.max(0.8, w * 0.035).toFixed(1)}" stroke-dasharray="14,10" stroke-linecap="round"/>${nameSvg}</g>`;
+      return `<g>${_boundarySvg}<polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
     }
     if (o.type === "khal" && o.points?.length >= 2) {
       // Khal — bilateral buffer + flow arrow at end

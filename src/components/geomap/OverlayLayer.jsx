@@ -307,8 +307,6 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
       <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
       {/* Right boundary */}
       <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
-      {/* Dashed white centerline (matches reference design) */}
-      <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#ffffff", weight: centerWeight, opacity: 0.9, dashArray: "14,10", interactive: false }} />
       {/* Canal name — repeating along the centerline, black with yellow outline (matches Map Editor) */}
       {obj.name && labelPoints.map((p, i) => (
         <CircleMarker key={`lbl-${i}`} center={[p.lat, p.lng]} radius={0} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
