@@ -525,15 +525,6 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
-  // White dashed center flow line — small, evenly spaced dashes along the flow
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = Math.max(1, w * 0.12);
-  ctx.lineCap = "butt";
-  ctx.setLineDash([Math.max(6, w * 0.4), Math.max(4, w * 0.3)]);
-  ctx.beginPath();
-  drawSmoothPath(ctx, obj.points);
-  ctx.stroke();
-  ctx.setLineDash([]);
   // Layer 5: Canal name INSIDE the blue canal — repeats every ~5 acres along the path,
   // follows canal geometry (straight or curved), highly visible colour, 5× font size.
   // English: char-by-char on path. Urdu: whole connected labels at the same intervals.

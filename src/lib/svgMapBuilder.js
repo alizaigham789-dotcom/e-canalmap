@@ -287,15 +287,18 @@ function svgCanal(obj, C, idx, outlets) {
   const cf = canalNameFont(obj.width || DIMENSIONS.CANAL_WIDTH);
   const nameSvg = obj.name ? svgCanalNameOnPath(obj.points, obj.name, cf, outlets) : "";
   if (obj.canalStyle === "flat") {
+    // Flat — same bright blue as the editor canvas (#2196F3 fill, #1565C0 rim), square ends
+    const flatFill = C.canalFill || "#2196F3";
+    const flatStroke = C.canalStroke || "#1565C0";
     const halfW = w / 2;
     const fillPath = parallelLineClosedPath(obj.points, halfW);
     const left = getParallelPolyline(obj.points, -halfW);
     const right = getParallelPolyline(obj.points, halfW);
     return `
 <g key="canal_${idx}">
-  <path d="${fillPath}" fill="${fillColor}" />
-  <path d="${pointsToLinePath(left)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="miter"/>
-  <path d="${pointsToLinePath(right)}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="miter"/>
+  <path d="${fillPath}" fill="${flatFill}" />
+  <path d="${pointsToLinePath(left)}" fill="none" stroke="${flatStroke}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="miter"/>
+  <path d="${pointsToLinePath(right)}" fill="none" stroke="${flatStroke}" stroke-width="2.5" stroke-linecap="butt" stroke-linejoin="miter"/>
   ${nameSvg}
 </g>`;
   }

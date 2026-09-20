@@ -488,13 +488,12 @@ function svgCanal(obj, C, idx, outlets) {
   // Same colours as the editor canvas — bright cyan-blue fill + darker-blue edge.
   const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#2196F3";
   const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#1565C0";
-  // Two centerline strokes (edge wider, fill on top) + white dashed flow line — square ends.
+  // Two centerline strokes (edge wider, fill on top) — square ends, no center line.
   return `
 <g key="canal_${idx}">
   ${boundarySvg}
   <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="butt" stroke-linejoin="round"/>
   <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="butt" stroke-linejoin="round"/>
-  <path d="${centerPath}" fill="none" stroke="#ffffff" stroke-width="${Math.max(1, w * 0.12).toFixed(1)}" stroke-linecap="butt" stroke-dasharray="${Math.max(6, w * 0.4).toFixed(1)},${Math.max(4, w * 0.3).toFixed(1)}"/>
   ${nameSvg}
 </g>`;
 }
