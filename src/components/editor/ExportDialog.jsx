@@ -212,8 +212,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       // Canal — 3D ribbon: rounded thick stroke + darker outline + soft halo
       const w = Math.max(2, o.width || DIMENSIONS.CANAL_WIDTH);
       // Same colours as the editor canvas — toned-down rich blue fill + darker-navy edge.
-      const fillC = C.canalFill || "#2196F3";
-      const strokeC = C.canalStroke || "#1976D2";
+      const fillC = C.canalFill || "#3498db";
+      const strokeC = C.canalStroke || "#2980b9";
       const drawCenter = () => { ctx.beginPath(); ctx.moveTo(o.points[0].x, o.points[0].y); for (const p of o.points) ctx.lineTo(p.x, p.y); };
       // Two centerline strokes (edge wider, fill on top) — matches the editor canvas:
       // uniform width through curves, no bank lines, no white highlight.
@@ -525,8 +525,8 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       }
       // Canal — two centerline strokes (edge wider, fill on top) — matches the editor canvas.
       const w = Math.max(2, o.width || DIMENSIONS.CANAL_WIDTH);
-      const fillColor = C.canalFill || "#2196F3";
-      const strokeColor = C.canalStroke || "#1976D2";
+      const fillColor = C.canalFill || "#3498db";
+      const strokeColor = C.canalStroke || "#2980b9";
       const centerPts = o.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
       return `<g>${_boundarySvg}<polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
     }

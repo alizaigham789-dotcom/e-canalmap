@@ -486,8 +486,8 @@ function svgCanal(obj, C, idx, outlets) {
   // print mode is active — then fall back to the greyed colours from C.
   const canalGreyed = C.bw || C._greyTypes?.has('canal');
   // Same colours as the editor canvas — bright cyan-blue fill + darker-blue edge.
-  const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#2196F3";
-  const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#1976D2";
+  const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#3498db";
+  const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#2980b9";
   // Two centerline strokes (edge wider, fill on top).
   return `
 <g key="canal_${idx}">

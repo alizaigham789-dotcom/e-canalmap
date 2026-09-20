@@ -514,21 +514,15 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   // uniform through every curve — no bulge, no width increase at turns.
   // Flat design: no 3D, no gradients, no shadows — deep water-blue channel.
   ctx.lineCap = "round"; ctx.lineJoin = "round";
-  // Darker-blue border outline (drawn first, slightly wider)
-  ctx.strokeStyle = "#1976D2";
+  // Beautiful flat blue canal — vibrant blue fill (#3498db) + darker Gunjial-blue edge (#2980b9).
+  // Two centerline strokes (edge wider, fill on top) — uniform width through curves.
+  ctx.strokeStyle = "#2980b9";
   ctx.lineWidth = w + Math.max(1, 2 / zoom);
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
-  // Bright blue fill (drawn on top, slightly narrower)
-  ctx.strokeStyle = "#2196F3";
+  ctx.strokeStyle = "#3498db";
   ctx.lineWidth = w;
-  ctx.beginPath();
-  drawSmoothPath(ctx, obj.points);
-  ctx.stroke();
-  // Subtle lighter-blue water highlight (flat, no gradient) — inner stroke
-  ctx.strokeStyle = "#42A5F5";
-  ctx.lineWidth = w * 0.55;
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
@@ -1438,7 +1432,7 @@ export function drawCanalDraft(ctx, canalDraft, snapPos, zoom, C) {
   const right = getParallelPolyline(draftPts, halfW);
   // No shadow/ghost fill while drawing — only dashed boundary lines so the user
   // sees the true canal edges clearly for precise alignment.
-  ctx.strokeStyle = "#1E3A8A";
+  ctx.strokeStyle = "#2980b9";
   ctx.lineWidth = 2 / zoom;
   ctx.setLineDash([6/zoom, 4/zoom]);
   for (const side of [left, right]) {
@@ -1450,7 +1444,7 @@ export function drawCanalDraft(ctx, canalDraft, snapPos, zoom, C) {
   // Draw-only handles; never rendered in print/preview.
   for (let i = 0; i < canalDraft.length; i++) {
     const pt = canalDraft[i];
-    ctx.fillStyle = "#1E3A8A";
+    ctx.fillStyle = "#2980b9";
     if (i === 0 || i === canalDraft.length - 1) {
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 1.5 / zoom;
