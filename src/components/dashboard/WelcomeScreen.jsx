@@ -67,12 +67,13 @@ export default function WelcomeScreen() {
         <div className="relative bg-gradient-to-br from-blue-600 via-cyan-500 to-teal-500 px-5 py-7 sm:rounded-t-2xl text-white overflow-hidden">
           <button
             onClick={dismiss}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"
+            aria-label="Close"
+            className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>
-          <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
-          <div className="absolute -left-10 -bottom-12 w-40 h-40 rounded-full bg-white/10" />
+          <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
+          <div className="absolute -left-10 -bottom-12 w-40 h-40 rounded-full bg-white/10 pointer-events-none" />
           <div className="relative">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 text-[10px] font-bold uppercase tracking-wider mb-3">
               <Sparkles className="w-3 h-3" /> E-canal Map
