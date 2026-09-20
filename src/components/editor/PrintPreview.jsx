@@ -486,14 +486,14 @@ function svgCanal(obj, C, idx, outlets) {
   // print mode is active — then fall back to the greyed colours from C.
   const canalGreyed = C.bw || C._greyTypes?.has('canal');
   // Same colours as the editor canvas — bright cyan-blue fill + darker-blue edge.
-  const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#3498db";
-  const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#2980b9";
-  // Two centerline strokes (edge wider, fill on top).
+  const fillColor = canalGreyed ? (C.canalFill || "#8a8a8a") : "#2e86c1";
+  const strokeColor = canalGreyed ? (C.canalStroke || "#6b6b6b") : "#2874a6";
+  // Two centerline strokes (edge wider, fill on top) — square ends.
   return `
 <g key="canal_${idx}">
   ${boundarySvg}
-  <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${centerPath}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="butt" stroke-linejoin="round"/>
+  <path d="${centerPath}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="butt" stroke-linejoin="round"/>
   ${nameSvg}
 </g>`;
 }
@@ -635,8 +635,8 @@ function svgOutlet(obj, C, idx, mogaScale = 1) {
     if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
     const canalAngDeg = canalAng * 180 / Math.PI;
     const cf = mogaInCanalFont(obj.canalWidth || DIMENSIONS.CANAL_WIDTH);
-    const mogaFill = unfilled ? "#000000" : "#000000";
-    mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="#FFEB3B" stroke-width="${Math.max(2, cf * 0.22).toFixed(1)}" stroke-linejoin="round" fill="${mogaFill}">${mogaText}</text>`;
+    const mogaFill = unfilled ? "#000000" : "#f1c40f";
+    mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="#000000" stroke-width="${Math.max(2.5, cf * 0.28).toFixed(1)}" stroke-linejoin="round" fill="${mogaFill}">${mogaText}</text>`;
   }
   const blockFill = unfilled ? "none" : color;
   const blockStroke = unfilled ? color : "#7f1d1d";

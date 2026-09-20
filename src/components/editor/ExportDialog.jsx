@@ -212,12 +212,11 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       // Canal — 3D ribbon: rounded thick stroke + darker outline + soft halo
       const w = Math.max(2, o.width || DIMENSIONS.CANAL_WIDTH);
       // Same colours as the editor canvas — toned-down rich blue fill + darker-navy edge.
-      const fillC = C.canalFill || "#3498db";
-      const strokeC = C.canalStroke || "#2980b9";
+      const fillC = C.canalFill || "#2e86c1";
+      const strokeC = C.canalStroke || "#2874a6";
       const drawCenter = () => { ctx.beginPath(); ctx.moveTo(o.points[0].x, o.points[0].y); for (const p of o.points) ctx.lineTo(p.x, p.y); };
-      // Two centerline strokes (edge wider, fill on top) — matches the editor canvas:
-      // uniform width through curves, no bank lines, no white highlight.
-      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      // Two centerline strokes (edge wider, fill on top) — square ends.
+      ctx.lineCap = "butt"; ctx.lineJoin = "round";
       ctx.strokeStyle = strokeC; ctx.lineWidth = w + 3; drawCenter(); ctx.stroke();
       ctx.strokeStyle = fillC; ctx.lineWidth = w; drawCenter(); ctx.stroke();
       }
@@ -305,11 +304,11 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.strokeStyle = "#FFEB3B";
-        ctx.lineWidth = Math.max(2, cf * 0.22);
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = Math.max(2.5, cf * 0.28);
         ctx.lineJoin = "round";
         ctx.strokeText(mogaText, 0, 0);
-        ctx.fillStyle = "#000000";
+        ctx.fillStyle = "#f1c40f";
         ctx.fillText(mogaText, 0, 0);
         ctx.restore();
       }
@@ -525,10 +524,10 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
       }
       // Canal — two centerline strokes (edge wider, fill on top) — matches the editor canvas.
       const w = Math.max(2, o.width || DIMENSIONS.CANAL_WIDTH);
-      const fillColor = C.canalFill || "#3498db";
-      const strokeColor = C.canalStroke || "#2980b9";
+      const fillColor = C.canalFill || "#2e86c1";
+      const strokeColor = C.canalStroke || "#2874a6";
       const centerPts = o.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-      return `<g>${_boundarySvg}<polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>${nameSvg}</g>`;
+      return `<g>${_boundarySvg}<polyline points="${centerPts}" fill="none" stroke="${strokeColor}" stroke-width="${w + 3}" stroke-linecap="butt" stroke-linejoin="round"/><polyline points="${centerPts}" fill="none" stroke="${fillColor}" stroke-width="${w}" stroke-linecap="butt" stroke-linejoin="round"/>${nameSvg}</g>`;
     }
     if (o.type === "khal" && o.points?.length >= 2) {
       // Khal — bilateral buffer + flow arrow at end
@@ -623,7 +622,7 @@ export default function ExportDialog({ open, onClose, mapData, objects, killaVis
         if (canalAng > Math.PI / 2 || canalAng < -Math.PI / 2) canalAng += Math.PI;
         const canalAngDeg = canalAng * 180 / Math.PI;
         const cf = mogaInCanalFont(o.canalWidth || DIMENSIONS.CANAL_WIDTH);
-        mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="#FFEB3B" stroke-width="${Math.max(2, cf * 0.22).toFixed(1)}" stroke-linejoin="round" fill="#000000">${escapeHtml(mogaText)}</text>`;
+        mogaInside = `<text transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${canalAngDeg.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${cf.toFixed(1)}" paint-order="stroke" stroke="#000000" stroke-width="${Math.max(2.5, cf * 0.28).toFixed(1)}" stroke-linejoin="round" fill="#f1c40f">${escapeHtml(mogaText)}</text>`;
       }
       return `<g>
         <rect x="${(sx-half).toFixed(1)}" y="${(sy-half).toFixed(1)}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" rx="${radius.toFixed(1)}" fill="${color}" stroke="#0e7490" stroke-width="1"/>

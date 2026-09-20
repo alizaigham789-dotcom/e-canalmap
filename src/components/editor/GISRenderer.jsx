@@ -513,15 +513,15 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   // Both are centerline strokes (lineWidth = w) so the width stays perfectly
   // uniform through every curve — no bulge, no width increase at turns.
   // Flat design: no 3D, no gradients, no shadows — deep water-blue channel.
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
-  // Beautiful flat blue canal — vibrant blue fill (#3498db) + darker Gunjial-blue edge (#2980b9).
-  // Two centerline strokes (edge wider, fill on top) — uniform width through curves.
-  ctx.strokeStyle = "#2980b9";
+  ctx.lineCap = "butt"; ctx.lineJoin = "round";
+  // Beautiful flat blue canal — solid medium-bright blue (#2e86c1) + darker blue edge (#2874a6).
+  // Square ends (lineCap = butt) — clean perpendicular canal terminations.
+  ctx.strokeStyle = "#2874a6";
   ctx.lineWidth = w + Math.max(1, 2 / zoom);
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
-  ctx.strokeStyle = "#3498db";
+  ctx.strokeStyle = "#2e86c1";
   ctx.lineWidth = w;
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
@@ -574,11 +574,11 @@ function drawCanalNameUrduEditor(ctx, points, text, zoom, width, nameFontSize, n
     ctx.translate(px, py);
     ctx.rotate(ang);
     try { ctx.direction = "rtl"; } catch {}
-    ctx.strokeStyle = "#FFEB3B";
-    ctx.lineWidth = Math.max(2, cf * 0.22);
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = Math.max(2.5, cf * 0.28);
     ctx.lineJoin = "round";
     ctx.strokeText(text, 0, 0);
-    ctx.fillStyle = "#000000";
+    ctx.fillStyle = "#f1c40f";
     ctx.fillText(text, 0, 0);
     ctx.restore();
   }
@@ -663,13 +663,13 @@ function drawTextAlongPath(ctx, points, segLens, text, startDist, fontSize, char
     ctx.save();
     ctx.translate(px, py);
     ctx.rotate(angle);
-    // Yellow outline (thick) for contrast against blue canal fill
-    ctx.strokeStyle = "#FFEB3B";
-    ctx.lineWidth = Math.max(2, fontSize * 0.22);
+    // Black outline (thick) for contrast against blue canal
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = Math.max(2.5, fontSize * 0.28);
     ctx.lineJoin = "round";
     ctx.strokeText(ch, 0, 0);
-    // Black fill — matches reference design
-    ctx.fillStyle = "#000000";
+    // Yellow fill — matches reference design
+    ctx.fillStyle = "#f1c40f";
     ctx.fillText(ch, 0, 0);
     ctx.restore();
 
@@ -1080,12 +1080,12 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
     ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    // Same colours as the canal name: yellow outline + black fill
-    ctx.strokeStyle = "#FFEB3B";
-    ctx.lineWidth = Math.max(2, cf * 0.22);
+    // Same colours as the canal name: black outline + yellow fill
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = Math.max(2.5, cf * 0.28);
     ctx.lineJoin = "round";
     ctx.strokeText(mogaText, 0, 0);
-    ctx.fillStyle = "#000000";
+    ctx.fillStyle = "#f1c40f";
     ctx.fillText(mogaText, 0, 0);
     ctx.restore();
   }

@@ -39,11 +39,11 @@ function drawCanalNameUrduOnCanvas(ctx, points, text, fontSize, outlets, nameOff
     ctx.translate(pos.x, pos.y);
     ctx.rotate(ang);
     try { ctx.direction = "rtl"; } catch {}
-    ctx.strokeStyle = "#FFEB3B";
-    ctx.lineWidth = Math.max(2, fontSize * 0.22);
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = Math.max(2.5, fontSize * 0.28);
     ctx.lineJoin = "round";
     ctx.strokeText(text, 0, 0);
-    ctx.fillStyle = "#000000";
+    ctx.fillStyle = "#f1c40f";
     ctx.fillText(text, 0, 0);
     ctx.restore();
   }
@@ -58,8 +58,8 @@ function svgCanalNameUrdu(points, text, fontSize, outlets, bw = false) {
   const labelW = text.length * fontSize * 0.6;
   const outletArcs = outletArcsOnCanal(points, segLens, outlets);
   const clearance = Math.max(120, labelW / 2 + 80);
-  const fill = bw ? "#000000" : "#000000";
-  const stroke = bw ? "rgba(255,255,255,0.85)" : "#FFEB3B";
+  const fill = bw ? "#000000" : "#f1c40f";
+  const stroke = bw ? "rgba(255,255,255,0.85)" : "#000000";
   let svg = "";
   for (let dist = labelW / 2; dist + labelW / 2 < total; dist += repeatSpacing) {
     if (skipNearMoga(dist, outletArcs, clearance)) continue;
@@ -71,7 +71,7 @@ function svgCanalNameUrdu(points, text, fontSize, outlets, bw = false) {
     let ang = pos.angle;
     if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
     const deg = (ang * 180) / Math.PI;
-    svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" direction="rtl" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${escapeHtml(text)}</text>`;
+    svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="${(Math.max(2.5, fontSize * 0.22)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" direction="rtl" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${escapeHtml(text)}</text>`;
   }
   return svg;
 }
@@ -200,13 +200,13 @@ export function drawCanalNameOnCanvas(ctx, points, text, fontSize, outlets, name
       ctx.save();
       ctx.translate(pos.x, pos.y);
       ctx.rotate(pos.angle);
-      // Yellow outline (thick) for contrast against blue water
-      ctx.strokeStyle = "#FFEB3B";
-      ctx.lineWidth = Math.max(2, fontSize * 0.22);
+      // Black outline (thick) for contrast against blue canal
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = Math.max(2.5, fontSize * 0.28);
       ctx.lineJoin = "round";
       ctx.strokeText(text[ci], 0, 0);
-      // Black fill — matches reference design
-      ctx.fillStyle = "#000000";
+      // Yellow fill — matches reference design
+      ctx.fillStyle = "#f1c40f";
       ctx.fillText(text[ci], 0, 0);
       ctx.restore();
 
@@ -257,9 +257,9 @@ export function svgCanalNameOnPath(points, text, fontSize, outlets, bw = false, 
       const deg = (pos.angle * 180) / Math.PI;
       // paint-order: stroke fill — draws stroke first so fill is on top (outline effect).
       // B&W print mode → black fill + white outline; otherwise yellow fill + dark outline.
-      const _fill = bw ? "#000000" : "#000000";
-      const _stroke = bw ? "rgba(255,255,255,0.85)" : "#FFEB3B";
-      svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="${_fill}" stroke="${_stroke}" stroke-width="${(Math.max(2, fontSize * 0.18)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${escapeHtml(text[ci])}</text>`;
+      const _fill = bw ? "#000000" : "#f1c40f";
+      const _stroke = bw ? "rgba(255,255,255,0.85)" : "#000000";
+      svg += `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Rajdhani,Arial,sans-serif" font-weight="bold" font-size="${fontSize.toFixed(1)}" fill="${_fill}" stroke="${_stroke}" stroke-width="${(Math.max(2.5, fontSize * 0.22)).toFixed(1)}" stroke-linejoin="round" paint-order="stroke" transform="rotate(${deg.toFixed(1)} ${pos.x.toFixed(1)} ${pos.y.toFixed(1)})">${escapeHtml(text[ci])}</text>`;
 
       const half2 = advanceAlongPath(segLens, segIdx, segRem, charW * 0.5);
       if (!half2) break;
