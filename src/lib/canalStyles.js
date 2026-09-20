@@ -20,9 +20,14 @@ export const CANAL_STYLES = [
   { key: "engineering", label: "Engineering",   swatch: "#2563eb" },
   { key: "dashed",      label: "Dashed",        swatch: "#3b82f6" },
   { key: "custom",      label: "Custom",        swatch: null },
+  { key: "luminous",    label: "Luminous",      swatch: "#29b6f6" },
+  { key: "dotted",      label: "Dotted",        swatch: "repeating-linear-gradient(90deg,#29b6f6,#29b6f6 4px,#fff 4px,#fff 5px)" },
+  { key: "natural",     label: "Natural",       swatch: "linear-gradient(135deg,#4fc3f7 65%,#2e7d32 65%)" },
+  { key: "dualTone",    label: "Dual Tone",     swatch: "linear-gradient(90deg,#29b6f6 0 50%,#0d47a1 50%)" },
+  { key: "hatched",     label: "Hatched",       swatch: "repeating-linear-gradient(45deg,#4fc3f7,#4fc3f7 3px,#0d47a1 3px,#0d47a1 5px)" },
 ];
 
-const NEW_STYLES = ["concrete", "earth", "water", "3dwater", "green", "greenWater", "engineering", "dashed", "custom"];
+const NEW_STYLES = ["concrete", "earth", "water", "3dwater", "green", "greenWater", "engineering", "dashed", "custom", "luminous", "dotted", "natural", "dualTone", "hatched"];
 export function isNewCanalStyle(style) { return NEW_STYLES.includes(style); }
 
 // ---- canvas geometry helpers ----
@@ -157,6 +162,102 @@ export function drawCanalStyleCanvas(ctx, obj, style, zoom, C) {
       ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = Math.max(1, halfW * 0.1);
       ctx.setLineDash([14 / zoom, 10 / zoom]); strokeCenter(ctx, pts); ctx.setLineDash([]);
       bankLines(ctx, pts, halfW, c, Math.max(2, 2 / zoom));
+      return;
+    }
+    case "luminous": {
+      // Vibrant luminous blue (#29b6f6) + dark blue border (#0d47a1) — glowing solid
+      ctx.strokeStyle = "#0d47a1";
+      ctx.lineWidth = w + Math.max(1, 3 / zoom);
+      ctx.lineCap = "butt"; ctx.lineJoin = "round";
+      strokeCenter(ctx, pts);
+      ctx.strokeStyle = "#29b6f6";
+      ctx.lineWidth = w;
+      strokeCenter(ctx, pts);
+      // Subtle inner glow
+      ctx.strokeStyle = "rgba(129,212,250,0.45)";
+      ctx.lineWidth = w * 0.5;
+      strokeCenter(ctx, pts);
+      return;
+    }
+    case "dotted": {
+      // Light blue fill with white dotted center + dark blue banks
+      ctx.fillStyle = "#29b6f6";
+      fillBetween(ctx, pts, halfW);
+      bankLines(ctx, pts, halfW, "#0d47a1", Math.max(2, 2 / zoom));
+      // White dotted center line
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = Math.max(1.5, w * 0.15);
+      ctx.lineCap = "round";
+      ctx.setLineDash([1, Math.max(5, w * 0.5) / zoom]);
+      strokeCenter(ctx, pts);
+      ctx.setLineDash([]);
+      return;
+    }
+    case "natural": {
+      // Textured water (#4fc3f7) with soft natural green banks (#2e7d32)
+      ctx.fillStyle = "#4fc3f7";
+      fillBetween(ctx, pts, halfW);
+      // Soft inner ripple
+      ctx.strokeStyle = "rgba(255,255,255,0.2)";
+      ctx.lineWidth = Math.max(1, w * 0.08);
+      ctx.setLineDash([8 / zoom, 6 / zoom]);
+      strokeCenter(ctx, pts);
+      ctx.setLineDash([]);
+      // Natural green banks
+      bankLines(ctx, pts, halfW, "#2e7d32", Math.max(2, 2.5 / zoom));
+      return;
+    }
+    case "dualTone": {
+      // Split: light bright blue (#29b6f6) + deep dark blue (#0d47a1) — dual tone
+      ctx.fillStyle = "#0d47a1";
+      fillBetween(ctx, pts, halfW);
+      // Light blue overlay on left half (from -halfW to center)
+      const leftEdge = getParallelPolyline(pts, -halfW);
+      const centerRev = [...pts].reverse();
+      ctx.fillStyle = "#29b6f6";
+      ctx.beginPath();
+      drawSmoothPath(ctx, leftEdge);
+      ctx.lineTo(centerRev[0].x, centerRev[0].y);
+      drawSmoothPathContinue(ctx, centerRev);
+      ctx.closePath();
+      ctx.fill();
+      // Divider line at center
+      ctx.strokeStyle = "rgba(255,255,255,0.3)";
+      ctx.lineWidth = Math.max(0.5, 1 / zoom);
+      strokeCenter(ctx, pts);
+      // Banks
+      bankLines(ctx, pts, halfW, "#0d47a1", Math.max(2, 2 / zoom));
+      return;
+    }
+    case "hatched": {
+      // Base water fill + diagonal hatch lines + dark banks
+      ctx.fillStyle = "#4fc3f7";
+      fillBetween(ctx, pts, halfW);
+      // Clip to canal shape and draw diagonal hatch
+      const left = getParallelPolyline(pts, -halfW);
+      const right = getParallelPolyline(pts, halfW);
+      const rightRev = [...right].reverse();
+      ctx.save();
+      ctx.beginPath();
+      drawSmoothPath(ctx, left);
+      ctx.lineTo(rightRev[0].x, rightRev[0].y);
+      drawSmoothPathContinue(ctx, rightRev);
+      ctx.closePath();
+      ctx.clip();
+      // Diagonal hatch lines (y - x = c)
+      let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+      for (const p of pts) { if (p.x < bMinX) bMinX = p.x; if (p.y < bMinY) bMinY = p.y; if (p.x > bMaxX) bMaxX = p.x; if (p.y > bMaxY) bMaxY = p.y; }
+      const hatchSpacing = Math.max(6, halfW * 1.2);
+      ctx.strokeStyle = "rgba(13,71,161,0.35)";
+      ctx.lineWidth = Math.max(1, 1.5 / zoom);
+      for (let c = bMinY - bMaxX; c < bMaxY - bMinX; c += hatchSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(bMinX, bMinX + c);
+        ctx.lineTo(bMaxX, bMaxX + c);
+        ctx.stroke();
+      }
+      ctx.restore();
+      bankLines(ctx, pts, halfW, "#0d47a1", Math.max(2, 2 / zoom));
       return;
     }
   }
@@ -303,6 +404,42 @@ export function buildCanalStyleSVG(obj, style, C) {
       return svgFill(pts, halfW, c)
         + svgCenter(pts, "rgba(255,255,255,0.3)", Math.max(1, halfW * 0.1), "14,10")
         + svgBanks(pts, halfW, c, 2);
+    }
+    case "luminous":
+      return svgCenter(pts, "#0d47a1", w + 3)
+        + svgCenter(pts, "#29b6f6", w)
+        + svgCenter(pts, "rgba(129,212,250,0.45)", Math.max(1, w * 0.5));
+    case "dotted":
+      return svgFill(pts, halfW, "#29b6f6")
+        + svgBanks(pts, halfW, "#0d47a1", 2)
+        + `<path d="${pointsToSmoothPath(pts)}" fill="none" stroke="#ffffff" stroke-width="${Math.max(1.5, w * 0.15).toFixed(1)}" stroke-linecap="round" stroke-dasharray="1,${Math.max(5, w * 0.5).toFixed(1)}"/>`;
+    case "natural":
+      return svgFill(pts, halfW, "#4fc3f7")
+        + `<path d="${pointsToSmoothPath(pts)}" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="${Math.max(1, w * 0.08).toFixed(1)}" stroke-dasharray="8,6"/>`
+        + svgBanks(pts, halfW, "#2e7d32", 2.5);
+    case "dualTone": {
+      const darkFill = svgFill(pts, halfW, "#0d47a1");
+      const leftEdge = getParallelPolyline(pts, -halfW);
+      const centerRev = [...pts].reverse();
+      let d = pointsToSmoothPath(leftEdge);
+      d += ` L${Number(centerRev[0].x).toFixed(1)},${Number(centerRev[0].y).toFixed(1)}`;
+      d += ` ${stripLeadM(pointsToSmoothPath(centerRev))} Z`;
+      const lightFill = `<path d="${d}" fill="#29b6f6"/>`;
+      const divider = `<path d="${pointsToSmoothPath(pts)}" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>`;
+      return darkFill + lightFill + divider + svgBanks(pts, halfW, "#0d47a1", 2);
+    }
+    case "hatched": {
+      const clipId = `hatch_${Math.random().toString(36).slice(2, 8)}`;
+      let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+      for (const p of pts) { if (p.x < bMinX) bMinX = p.x; if (p.y < bMinY) bMinY = p.y; if (p.x > bMaxX) bMaxX = p.x; if (p.y > bMaxY) bMaxY = p.y; }
+      const hatchSpacing = Math.max(6, halfW * 1.2);
+      let hatchLines = "";
+      for (let c = bMinY - bMaxX; c < bMaxY - bMinX; c += hatchSpacing) {
+        hatchLines += `<line x1="${bMinX.toFixed(1)}" y1="${(bMinX + c).toFixed(1)}" x2="${bMaxX.toFixed(1)}" y2="${(bMaxX + c).toFixed(1)}" stroke="rgba(13,71,161,0.35)" stroke-width="1.5"/>`;
+      }
+      return svgFill(pts, halfW, "#4fc3f7")
+        + `<clipPath id="${clipId}"><path d="${fillPathD(pts, halfW)}"/></clipPath><g clip-path="url(#${clipId})">${hatchLines}</g>`
+        + svgBanks(pts, halfW, "#0d47a1", 2);
     }
   }
   return "";
