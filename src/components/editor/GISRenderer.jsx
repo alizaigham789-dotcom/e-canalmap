@@ -514,18 +514,26 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   // uniform through every curve — no bulge, no width increase at turns.
   // Flat design: no 3D, no gradients, no shadows — deep water-blue channel.
   ctx.lineCap = "butt"; ctx.lineJoin = "round";
-  // Beautiful flat blue canal — solid medium-bright blue (#2e86c1) + darker blue edge (#2874a6).
-  // Square ends (lineCap = butt) — clean perpendicular canal terminations.
-  ctx.strokeStyle = "#2874a6";
+  // Flat cadastral canal — bright blue fill (#2196F3) + dark-blue rim (#1565C0), square ends.
+  ctx.strokeStyle = "#1565C0";
   ctx.lineWidth = w + Math.max(1, 2 / zoom);
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
-  ctx.strokeStyle = "#2e86c1";
+  ctx.strokeStyle = "#2196F3";
   ctx.lineWidth = w;
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
+  // White dashed center flow line — small, evenly spaced dashes along the flow
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = Math.max(1, w * 0.12);
+  ctx.lineCap = "butt";
+  ctx.setLineDash([Math.max(6, w * 0.4), Math.max(4, w * 0.3)]);
+  ctx.beginPath();
+  drawSmoothPath(ctx, obj.points);
+  ctx.stroke();
+  ctx.setLineDash([]);
   // Layer 5: Canal name INSIDE the blue canal — repeats every ~5 acres along the path,
   // follows canal geometry (straight or curved), highly visible colour, 5× font size.
   // English: char-by-char on path. Urdu: whole connected labels at the same intervals.
@@ -578,7 +586,7 @@ function drawCanalNameUrduEditor(ctx, points, text, zoom, width, nameFontSize, n
     ctx.lineWidth = Math.max(2.5, cf * 0.28);
     ctx.lineJoin = "round";
     ctx.strokeText(text, 0, 0);
-    ctx.fillStyle = "#f1c40f";
+    ctx.fillStyle = "#FFEB3B";
     ctx.fillText(text, 0, 0);
     ctx.restore();
   }
@@ -669,7 +677,7 @@ function drawTextAlongPath(ctx, points, segLens, text, startDist, fontSize, char
     ctx.lineJoin = "round";
     ctx.strokeText(ch, 0, 0);
     // Yellow fill — matches reference design
-    ctx.fillStyle = "#f1c40f";
+    ctx.fillStyle = "#FFEB3B";
     ctx.fillText(ch, 0, 0);
     ctx.restore();
 
@@ -1085,7 +1093,7 @@ export function drawOutlet(ctx, obj, isSelected, zoom, C) {
     ctx.lineWidth = Math.max(2.5, cf * 0.28);
     ctx.lineJoin = "round";
     ctx.strokeText(mogaText, 0, 0);
-    ctx.fillStyle = "#f1c40f";
+    ctx.fillStyle = "#FFEB3B";
     ctx.fillText(mogaText, 0, 0);
     ctx.restore();
   }

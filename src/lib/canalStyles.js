@@ -9,7 +9,7 @@
 import { getParallelPolyline, DIMENSIONS, drawSmoothPath, drawSmoothPathContinue } from "@/lib/gisEngine";
 
 export const CANAL_STYLES = [
-  { key: "flat",         label: "Flat",        swatch: "#2e86c1" },
+  { key: "flat",         label: "Flat",        swatch: "#2196F3" },
   { key: "3d",           label: "3D Ribbon",    swatch: "#1d6fa5" },
   { key: "concrete",     label: "Concrete",    swatch: "#9ca3af" },
   { key: "earth",       label: "Earth",        swatch: "#a16207" },

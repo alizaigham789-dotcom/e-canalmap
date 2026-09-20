@@ -182,7 +182,7 @@ function AcreLabel({ obj, latlngs, zoom }) {
 // PropertiesPanel) and the editor's global colorSettings, so changes made in
 // the Map Editor are reflected here automatically.
 const CANAL_STYLE_COLORS = {
-  flat:        { fill: "#2e86c1", stroke: "#2874a6" },
+  flat:        { fill: "#2196F3", stroke: "#1565C0" },
   "3d":        { fill: "#1d6fa5", stroke: "#1d6fa5" },
   concrete:    { fill: "#9ca3af", stroke: "#6b7280" },
   earth:       { fill: "#a16207", stroke: "#78350f" },
@@ -293,7 +293,7 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
 
   if (fillLatLngs.length === 0) {
     return (
-      <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#2e86c1", weight: 3, opacity: 0.9, interactive: false }} />
+      <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#2196F3", weight: 3, opacity: 0.9, interactive: false }} />
     );
   }
 
@@ -312,11 +312,15 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
       <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
       {/* Right boundary */}
       <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
+      {/* White dashed center flow line — Flat style */}
+      {styleKey === "flat" && (
+        <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#ffffff", weight: Math.max(1, boundaryWeight * 0.22), opacity: 0.85, dashArray: "6,4", interactive: false }} />
+      )}
       {/* Canal name — repeating along the centerline, black with yellow outline (matches Map Editor) */}
       {obj.name && labelPoints.map((p, i) => (
         <CircleMarker key={`lbl-${i}`} center={[p.lat, p.lng]} radius={0} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
           <Tooltip permanent direction="center" className="canal-label" opacity={0.95}>
-            <span style={{ fontSize: `${Math.max(10, fontSize * 0.62)}px`, fontWeight: 700, color: "#f1c40f", WebkitTextStroke: "1.5px #000000", textShadow: "0 0 2px #000000, 1px 1px 2px #000000, -1px -1px 2px #000000", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: `${Math.max(10, fontSize * 0.62)}px`, fontWeight: 700, color: "#FFEB3B", WebkitTextStroke: "1.5px #000000", textShadow: "0 0 2px #000000, 1px 1px 2px #000000, -1px -1px 2px #000000", whiteSpace: "nowrap" }}>
               {obj.name}
             </span>
           </Tooltip>
