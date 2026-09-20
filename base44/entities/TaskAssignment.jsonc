@@ -114,9 +114,41 @@
     "title"
   ],
   "rls": {
-    "create": null,
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "deputy_collector"
+          }
+        }
+      ]
+    },
     "read": null,
-    "update": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.officer_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "deputy_collector"
+          }
+        }
+      ]
+    },
     "delete": {
       "$or": [
         {
