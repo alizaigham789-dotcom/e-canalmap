@@ -6,7 +6,7 @@ import { CANAL_STYLES } from "@/lib/canalStyles";
 // Canal Style selector (10 professional styles) + Side Boundary controls.
 // Style only changes appearance; geometry/width/vertices stay untouched.
 export default function CanalStyleControl({ local, commit }) {
-  const style = local.canalStyle || "flat";
+  const style = local.canalStyle || "water";
   return (
     <div className="space-y-2">
       <div>

@@ -50,6 +50,8 @@ import {
 } from "@/lib/geoOverlay";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
+import { useHasSubscription } from "@/hooks/useSubscription";
+import UpgradePrompt from "@/components/subscription/UpgradePrompt";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -150,6 +152,10 @@ export default function GeoMap() {
   const [entered, setEntered] = useState(false); // hub → sub-module entry
   const [activeTool, setActiveTool] = useState(null);
   const [filters, setFilters] = useState({ district: "", tehsil: "", village: "", rajbah: "" });
+
+  // Subscription — first moga overlay is free; a 2nd (new) moga overlay requires a plan.
+  const { hasAccess } = useHasSubscription();
+  const [showMogaUpgrade, setShowMogaUpgrade] = useState(false);
 
   // GPS
   const [gpsActive, setGpsActive] = useState(false);
@@ -290,6 +296,20 @@ export default function GeoMap() {
     (!filters.village || m.village === filters.village) &&
     (!filters.rajbah || m.rajbah === filters.rajbah)
   ), [maps, filters]);
+
+  // Count of already-placed moga overlays in the current village/rajbah filter.
+  // First overlay is free; placing a NEW (not-yet-placed) moga beyond the first
+  // requires a subscription. Re-saving / moving an already-placed moga is always free.
+  const placedMogaCount = useMemo(
+    () => villageMaps.filter(m => m.geo_placement_lat != null).length,
+    [villageMaps]
+  );
+  const canPlaceMogaOverlay = useCallback((targetMapId) => {
+    if (hasAccess) return true;
+    const target = (maps || []).find(m => m.id === targetMapId);
+    if (target?.geo_placement_lat != null) return true; // already placed → update is free
+    return placedMogaCount < 1; // first overlay free
+  }, [hasAccess, maps, placedMogaCount]);
 
   // Suggested next mogas — unplaced maps of the selected mouza that can chain
   // off the already-placed mogas via mustateel Khasra continuity (555 → 556).
@@ -1263,6 +1283,7 @@ export default function GeoMap() {
   // Save overlay placement to server so it persists across sessions
   const handleSaveOverlay = async () => {
     if (!selectedMapId || !placementPoint) return;
+    if (!canPlaceMogaOverlay(selectedMapId)) { setShowMogaUpgrade(true); return; }
     setSavingOverlay(true);
     try {
       await base44.entities.LandMap.update(selectedMapId, {
@@ -1283,6 +1304,7 @@ export default function GeoMap() {
   // so none is lost; only an explicit delete removes a map's placement.
   const [savingAllMogas, setSavingAllMogas] = useState(false);
   const handleSaveAllMogas = async () => {
+    if (selectedMapId && !canPlaceMogaOverlay(selectedMapId)) { setShowMogaUpgrade(true); return; }
     setSavingAllMogas(true);
     try {
       if (selectedMapId && placementPoint) {
@@ -1321,6 +1343,7 @@ export default function GeoMap() {
 
   // One-click place a suggested next moga at its computed chaining position.
   const handlePlaceSuggestion = async (sug) => {
+    if (!canPlaceMogaOverlay(sug.mapId)) { setShowMogaUpgrade(true); return; }
     try {
       await base44.entities.LandMap.update(sug.mapId, {
         geo_placement_lat: sug.placement.lat,
@@ -1348,6 +1371,7 @@ export default function GeoMap() {
   const handleDummyConfirm = async (match, dummyGeo) => {
     const targetMap = (maps || []).find((m) => m.id === match.id);
     if (!targetMap?.drawing_data) return;
+    if (!canPlaceMogaOverlay(match.id)) { setShowMogaUpgrade(true); return; }
     let bObjects;
     try {
       bObjects = DrawingStateManager.deserialize(targetMap.drawing_data);
@@ -2183,6 +2207,13 @@ export default function GeoMap() {
 
       {/* Map style selector (both sub-modules) */}
       <MapSourceSelector value={mapSourceKey} onChange={setMapSourceKey} />
+
+      {/* 2nd moga overlay requires a subscription — first moga overlay is free */}
+      <UpgradePrompt
+        open={showMogaUpgrade}
+        onClose={() => setShowMogaUpgrade(false)}
+        title="دوسری موگہ اوورلے — سبسکرپشن"
+      />
     </div>
   );
 }
