@@ -6,6 +6,7 @@ import { base44 } from "@/api/base44Client";
 import Form33CHistory from "@/components/form33c/Form33CHistory";
 import { printNaqsha33C } from "@/components/form33c/Naqsha33CPrint";
 import { printCoveringLetter } from "@/components/form33c/CoveringLetterPrint";
+import { escapeHtml } from "@/lib/escapeHtml";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 10 }, (_, i) => String(CURRENT_YEAR - i));
@@ -198,11 +199,11 @@ export default function Form33C() {
     const p = compact ? "6px 8px" : "10px 14px";
     const borderStyle = showTableBorder ? "1.5px solid #000" : "1px solid transparent";
     const outerBorder = showPageBorder ? "2px solid #000" : "2px solid transparent";
-    const districtLine = showDistrict && district ? `<div style="font-size:${sigFs};">${district} Canal Division</div>` : "";
+    const districtLine = showDistrict && district ? `<div style="font-size:${sigFs};">${escapeHtml(district)} Canal Division</div>` : "";
     const cols = showSurcharge ? COLUMNS.map(c => c.key === "surcharge" ? { ...c, label: surchargeLabel } : c) : COLUMNS.filter(c => c.key !== "surcharge");
     const headers = cols.map(c => `<th style="border:${borderStyle};padding:${p};font-size:${fs};text-align:center;font-weight:bold;">${c.label}</th>`).join("");
     const cells = cols.map(c => {
-      const val = c.key === "surcharge" ? "" : (v[c.key] || "—");
+      const val = c.key === "surcharge" ? "" : escapeHtml(v[c.key] || "—");
       return `<td style="border:${borderStyle};padding:${p};font-size:${fs};text-align:center;">${val}</td>`;
     }).join("");
     const sig = (src, title) => {

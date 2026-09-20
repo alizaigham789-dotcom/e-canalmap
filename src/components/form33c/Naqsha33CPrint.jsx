@@ -22,7 +22,7 @@ export function printNaqsha33C({ villages, fasal, year, district, tehsil, surcha
   const totalZar = rows.reduce((s, r) => s + r._zar, 0);
   const totalSurcharge = rows.reduce((s, r) => s + r._surcharge, 0);
 
-  const distLabel = district ? `${district} Canal Division` : "";
+  const distLabel = district ? `${e(district)} Canal Division` : "";
   const outerBorder = showPageBorder ? "2px solid #000" : "none";
   const tb = showTableBorder ? "1px solid #000" : "1px solid #ccc";
 

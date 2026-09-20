@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Trash2, Printer, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { escapeHtml } from "@/lib/escapeHtml";
 
 const URDU_FONT = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif";
 
@@ -91,19 +92,20 @@ export default function Naqsha27B() {
 
   const handlePrint = () => {
     const w = window.open("", "_blank", "width=900,height=700");
+    const esc = escapeHtml;
     const headerFields = (label, val) =>
       `<span style="display:inline-block; margin: 0 12px;">
         <span style="font-weight:bold;">${label}</span>
-        <span style="border-bottom:1.5px solid #000; display:inline-block; min-width:100px; text-align:center; padding:0 8px;">${val || "&nbsp;"}</span>
+        <span style="border-bottom:1.5px solid #000; display:inline-block; min-width:100px; text-align:center; padding:0 8px;">${val ? esc(val) : "&nbsp;"}</span>
       </span>`;
 
     const tableRows = rows.map((r, i) =>
       `<tr>
-        <td style="border:1px solid #000; padding:4px 8px; text-align:center; height:28px;">${r.sr || i + 1}</td>
-        <td style="border:1px solid #000; padding:4px 8px; text-align:center;">${r.pages || ""}</td>
-        <td style="border:1px solid #000; padding:4px 8px; text-align:center;">${r.date_inclusion || ""}</td>
-        <td style="border:1px solid #000; padding:4px 8px; text-align:right;">${r.name || ""}</td>
-        <td style="border:1px solid #000; padding:4px 8px;">${r.remarks || ""}</td>
+        <td style="border:1px solid #000; padding:4px 8px; text-align:center; height:28px;">${esc(r.sr || i + 1)}</td>
+        <td style="border:1px solid #000; padding:4px 8px; text-align:center;">${esc(r.pages || "")}</td>
+        <td style="border:1px solid #000; padding:4px 8px; text-align:center;">${esc(r.date_inclusion || "")}</td>
+        <td style="border:1px solid #000; padding:4px 8px; text-align:right;">${esc(r.name || "")}</td>
+        <td style="border:1px solid #000; padding:4px 8px;">${esc(r.remarks || "")}</td>
       </tr>`).join("");
 
     w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>نقشہ نمبر 27B</title>
