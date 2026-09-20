@@ -16,7 +16,7 @@ export function isUrduText(text) {
 // CANVAS: Urdu canal name — repeating connected labels along the path.
 // Urdu is a connected RTL script, so the whole name is drawn as one string at
 // regular intervals (every ~5 acres), kept upright, in Jameel Noori Nastaleeq.
-function drawCanalNameUrduOnCanvas(ctx, points, text, fontSize, outlets) {
+function drawCanalNameUrduOnCanvas(ctx, points, text, fontSize, outlets, nameOffset = 0) {
   const { segLens, total } = pathSegments(points);
   if (total < 1) return;
   const repeatSpacing = 1100;
@@ -162,9 +162,9 @@ function skipNearMoga(arc, outletArcs, clearance) {
 
 // ─── CANVAS: draw canal name text along the canal centerline ─────────────
 // Bright yellow fill + dark outline, repeats every ~5 acres (1100 ft).
-export function drawCanalNameOnCanvas(ctx, points, text, fontSize, outlets) {
+export function drawCanalNameOnCanvas(ctx, points, text, fontSize, outlets, nameOffset = 0) {
   if (!points || points.length < 2 || !text) return;
-  if (isUrduText(text)) { drawCanalNameUrduOnCanvas(ctx, points, text, fontSize, outlets); return; }
+  if (isUrduText(text)) { drawCanalNameUrduOnCanvas(ctx, points, text, fontSize, outlets, nameOffset); return; }
   const { segLens, total } = pathSegments(points);
   if (total < 1) return;
 
@@ -223,9 +223,9 @@ export function drawCanalNameOnCanvas(ctx, points, text, fontSize, outlets) {
 // Each character is a <text> with a dark stroke (outline) + yellow fill,
 // positioned and rotated to follow the path. Repeats every ~5 acres.
 // bw=true (B&W print mode) renders the name in solid black instead of yellow.
-export function svgCanalNameOnPath(points, text, fontSize, outlets, bw = false) {
+export function svgCanalNameOnPath(points, text, fontSize, outlets, bw = false, nameOffset = 0) {
   if (!points || points.length < 2 || !text) return "";
-  if (isUrduText(text)) return svgCanalNameUrdu(points, text, fontSize, outlets, bw);
+  if (isUrduText(text)) return svgCanalNameUrdu(points, text, fontSize, outlets, bw, nameOffset);
   const { segLens, total } = pathSegments(points);
   if (total < 1) return "";
 

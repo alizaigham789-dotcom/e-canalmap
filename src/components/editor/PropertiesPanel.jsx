@@ -180,6 +180,7 @@ export default function PropertiesPanel({ selectedObj, allObjects = [], onUpdate
               </div>
               <CanalStyleControl local={local} commit={commit} />
               <CanalWidthControl name={local.name || ""} value={local.width || 10} onChange={v => commit("width", v)} />
+              {local.name && <CanalTextControls local={local} commit={commit} />}
               <div className="text-[10px] text-blue-600 font-mono">Two parallel lines • {selectedObj.points?.length || 0} points</div>
               <p className="text-[9px] text-slate-400">Double-click any anchor point to delete it (remove extra points)</p>
             </>
@@ -596,6 +597,43 @@ function KhalWidthControl({ value, onChange }) {
         <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
           onClick={() => onChange(Math.min(max, +(clamped + 0.5).toFixed(1)))}>+</Button>
         <span className="text-xs text-slate-600 font-mono w-10 text-center">{clamped}ft</span>
+      </div>
+    </div>
+  );
+}
+
+// Canal name text — font size + position offset along the canal
+function CanalTextControls({ local, commit }) {
+  return (
+    <div className="p-2 bg-blue-50/50 border border-blue-200 rounded-lg space-y-2">
+      <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">Canal Name Text</span>
+      <div>
+        <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Text Size</label>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+            onClick={() => commit("nameFontSize", Math.max(10, (local.nameFontSize || 55) - 5))}>−</Button>
+          <input type="range" min={10} max={120} step={5} value={local.nameFontSize || 55}
+            onChange={e => commit("nameFontSize", parseInt(e.target.value))}
+            className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
+          <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+            onClick={() => commit("nameFontSize", Math.min(120, (local.nameFontSize || 55) + 5))}>+</Button>
+          <span className="text-xs text-slate-600 font-mono w-10 text-center">{local.nameFontSize || 55}px</span>
+        </div>
+        <p className="text-[9px] text-slate-400 mt-0.5" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>نام کا سائز</p>
+      </div>
+      <div>
+        <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Text Position (ft)</label>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+            onClick={() => commit("nameOffset", Math.max(0, (local.nameOffset || 0) - 50))}>−</Button>
+          <input type="range" min={0} max={2200} step={50} value={local.nameOffset || 0}
+            onChange={e => commit("nameOffset", parseInt(e.target.value))}
+            className="flex-1 min-w-0 h-1 accent-blue-500 cursor-pointer" />
+          <Button size="sm" variant="outline" className="h-6 w-6 p-0 text-xs border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+            onClick={() => commit("nameOffset", Math.min(2200, (local.nameOffset || 0) + 50))}>+</Button>
+          <span className="text-xs text-slate-600 font-mono w-10 text-center">{local.nameOffset || 0}</span>
+        </div>
+        <p className="text-[9px] text-slate-400 mt-0.5" style={{ fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>نام کی پوزیشن</p>
       </div>
     </div>
   );

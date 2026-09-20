@@ -520,9 +520,15 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
-  // Bright cyan-blue fill (drawn on top, slightly narrower)
+  // Bright blue fill (drawn on top, slightly narrower)
   ctx.strokeStyle = "#2196F3";
   ctx.lineWidth = w;
+  ctx.beginPath();
+  drawSmoothPath(ctx, obj.points);
+  ctx.stroke();
+  // Subtle lighter-blue water highlight (flat, no gradient) — inner stroke
+  ctx.strokeStyle = "#42A5F5";
+  ctx.lineWidth = w * 0.55;
   ctx.beginPath();
   drawSmoothPath(ctx, obj.points);
   ctx.stroke();
@@ -539,7 +545,7 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
   // follows canal geometry (straight or curved), highly visible colour, 5× font size.
   // English: char-by-char on path. Urdu: whole connected labels at the same intervals.
   if (obj.name) {
-    drawTextOnCanalPath(ctx, obj.points, obj.name, zoom, obj.width || DIMENSIONS.CANAL_WIDTH);
+    drawTextOnCanalPath(ctx, obj.points, obj.name, zoom, obj.width || DIMENSIONS.CANAL_WIDTH, obj.nameFontSize, obj.nameOffset);
   }
 }
 
@@ -548,9 +554,9 @@ export function drawCanal(ctx, obj, isSelected, zoom, C) {
 // joins. So the Urdu name is drawn as whole rotated strings placed along the
 // canal centerline at regular intervals (every ~5 acres), kept upright, in
 // Jameel Noori Nastaleeq — repeating the same way the English name does.
-function drawCanalNameUrduEditor(ctx, points, text, zoom, width) {
+function drawCanalNameUrduEditor(ctx, points, text, zoom, width, nameFontSize, nameOffset) {
   // Proportional to the canal's own width — fills the whole canal, stays inside the banks
-  const cf = Math.max(12 / zoom, canalNameFont(width));
+  const cf = Math.max(12 / zoom, nameFontSize || canalNameFont(width));
   const segLens = [];
   let totalLen = 0;
   for (let i = 0; i < points.length - 1; i++) {
@@ -563,7 +569,8 @@ function drawCanalNameUrduEditor(ctx, points, text, zoom, width) {
   ctx.textBaseline = "middle";
   const labelW = ctx.measureText(text).width || (text.length * cf * 0.5);
   const repeatSpacing = 1100; // ~5 acres of frontage — matches English repeating
-  for (let dist = labelW / 2; dist + labelW / 2 < totalLen; dist += repeatSpacing) {
+  const baseOffset = Math.max(0, nameOffset || 0);
+  for (let dist = labelW / 2 + baseOffset; dist + labelW / 2 < totalLen; dist += repeatSpacing) {
     let acc = 0, px = 0, py = 0, ang = 0, placed = false;
     for (let i = 0; i < segLens.length; i++) {
       if (acc + segLens[i] >= dist) {
@@ -596,11 +603,11 @@ function drawCanalNameUrduEditor(ctx, points, text, zoom, width) {
 // Draws text characters along the canal centerline so the label follows the
 // canal geometry (straight or curved). Repeats every `repeatSpacing` feet.
 // 5 acres ≈ 1100 ft of canal frontage (1 acre = 220 ft frontage).
-function drawTextOnCanalPath(ctx, points, text, zoom, width) {
+function drawTextOnCanalPath(ctx, points, text, zoom, width, nameFontSize, nameOffset) {
   if (!points || points.length < 2 || !text) return;
-  if (isUrduText(text)) { drawCanalNameUrduEditor(ctx, points, text, zoom, width); return; }
+  if (isUrduText(text)) { drawCanalNameUrduEditor(ctx, points, text, zoom, width, nameFontSize, nameOffset); return; }
   // Proportional to the canal's own width — fills the whole canal, stays inside the banks
-  const cf = Math.max(12 / zoom, canalNameFont(width));
+  const cf = Math.max(12 / zoom, nameFontSize || canalNameFont(width));
   ctx.font = `bold ${cf}px Rajdhani, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -621,7 +628,8 @@ function drawTextOnCanalPath(ctx, points, text, zoom, width) {
   const repeatSpacing = 1100; // ~5 acres of frontage
 
   // Walk along the path, placing text instances at regular intervals
-  for (let startDist = 0; startDist + textW < totalLen; startDist += repeatSpacing) {
+  const baseOffset = Math.max(0, nameOffset || 0);
+  for (let startDist = baseOffset; startDist + textW < totalLen; startDist += repeatSpacing) {
     drawTextAlongPath(ctx, points, segLens, text, startDist, cf, charW, zoom);
   }
 }
