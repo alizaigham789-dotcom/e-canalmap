@@ -4,7 +4,9 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Printer, FileText, Search, ChevronDown, Layers, MapPin, Pencil } from "lucide-react";
 import Form1RegisterEditDialog from "@/components/form1/Form1RegisterEditDialog";
+import CompareForm1Register from "@/components/form1/CompareForm1Register";
 import { useQueryClient } from "@tanstack/react-query";
+import { FileText as FileTextIcon, GitCompareArrows } from "lucide-react";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function esc(s) {
@@ -220,6 +222,7 @@ function buildPrintHTML(meta, groups, mode = "moga") {
 export default function Form1Register() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [module, setModule] = useState("register"); // "register" | "compare"
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("moga"); // "moga" | "mouza"
   const [expandedId, setExpandedId] = useState(null);
@@ -404,6 +407,26 @@ export default function Form1Register() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-5">
+        {/* Module toggle — Form 1 Register vs Compare */}
+        <div className="flex items-center gap-2 mb-3 bg-white rounded-xl p-1.5 shadow-sm border border-slate-200">
+          <button
+            onClick={() => setModule("register")}
+            className={`flex-1 flex items-center justify-center gap-1.5 h-10 rounded-lg text-xs font-bold transition-all ${module === "register" ? "bg-amber-600 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+          >
+            <FileTextIcon className="w-4 h-4" /> فارم 1 رجسٹر
+          </button>
+          <button
+            onClick={() => setModule("compare")}
+            className={`flex-1 flex items-center justify-center gap-1.5 h-10 rounded-lg text-xs font-bold transition-all ${module === "compare" ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+          >
+            <GitCompareArrows className="w-4 h-4" /> فارم 1 موازنہ (Compare)
+          </button>
+        </div>
+
+        {module === "compare" ? (
+          <CompareForm1Register />
+        ) : (
+          <>
         {/* View mode toggle */}
         <div className="flex items-center gap-2 mb-3 bg-white rounded-xl p-1.5 shadow-sm border border-slate-200">
           <button
@@ -419,142 +442,8 @@ export default function Form1Register() {
             <Layers className="w-3.5 h-3.5" /> موضع وار (Mouza-wise)
           </button>
         </div>
-
-        {/* Search */}
-        <div className="relative mb-4">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="تلاش کریں — موگہ، نام، گاؤں..."
-            className="w-full h-10 pr-9 pl-3 rounded-xl border border-slate-300 bg-white text-sm text-right placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
-            dir="rtl"
-          />
-        </div>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : viewMode === "moga" ? (
-          filteredMoga.length === 0 ? (
-            <div className="text-center py-20 text-slate-400">
-              <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">کوئی رجسٹر نہیں ملا</p>
-              <p className="text-xs mt-1 text-slate-400">جیو میپ میں پیچ الاٹ کر کے رجسٹر محفوظ کریں</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredMoga.map(reg => {
-                const rows = parseRows(reg.rows_json).map(row => ({ ...row, moga_number: resolveMoga(reg) || "", channel_name: reg.channel_name || "", outlet_side: reg.outlet_side || "" }));
-                const groups = groupAllocations(rows);
-                const isOpen = expandedId === reg.id;
-                return (
-                  <div key={reg.id} className="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
-                    <div
-                      className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-amber-50 transition-colors"
-                      onClick={() => setExpandedId(isOpen ? null : reg.id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                          <FileText className="w-4 h-4 text-amber-700" />
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-slate-800">{reg.map_title || "بے نام"}</p>
-                          <p className="text-[10px] text-slate-500">
-                             موگہ: {resolveMoga(reg) || "—"} &nbsp;|&nbsp; {reg.channel_name || "—"} &nbsp;|&nbsp; {reg.mouza || reg.village || "—"}
-                           </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                          {groups.length} زمیندار
-                        </span>
-                        <button
-                          onClick={e => { e.stopPropagation(); setEditingReg(reg); }}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors tap-target"
-                          title="ترمیم کریں"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={e => { e.stopPropagation(); handlePrintMoga(reg); }}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors tap-target"
-                          title="پرنٹ / PDF"
-                        >
-                          <Printer className="w-4 h-4" />
-                        </button>
-                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                      </div>
-                    </div>
-                    {isOpen && (
-                      <div className="border-t border-slate-200 overflow-x-auto">
-                        {groups.length === 0 ? (
-                          <div className="py-6 text-center text-slate-400 text-sm">ابھی کوئی ڈیٹا نہیں</div>
-                        ) : renderTable(groups)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )
-        ) : (
-          /* Mouza-wise view */
-          filteredMouza.length === 0 ? (
-            <div className="text-center py-20 text-slate-400">
-              <Layers className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">کوئی موضع نہیں ملا</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredMouza.map(mg => {
-                const groups = groupAllocations(mg.allRows);
-                const isOpen = expandedId === `mouza-${mg.key}`;
-                return (
-                  <div key={mg.key} className="bg-white rounded-2xl shadow border border-purple-200 overflow-hidden">
-                    <div
-                      className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-purple-50 transition-colors"
-                      onClick={() => setExpandedId(isOpen ? null : `mouza-${mg.key}`)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                          <Layers className="w-4 h-4 text-purple-700" />
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-slate-800">موضع: {mg.mouza}</p>
-                          <p className="text-[10px] text-slate-500">
-                            {mg.tehsil || "—"} &nbsp;|&nbsp; {mg.district || "—"} &nbsp;|&nbsp; {mg.registers.length} موگے
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                          {groups.length} زمیندار
-                        </span>
-                        <button
-                          onClick={e => { e.stopPropagation(); handlePrintMouza(mg); }}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors tap-target"
-                          title="پورے موضع کا پرنٹ / PDF"
-                        >
-                          <Printer className="w-4 h-4" />
-                        </button>
-                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                      </div>
-                    </div>
-                    {isOpen && (
-                      <div className="border-t border-slate-200 overflow-x-auto">
-                        {groups.length === 0 ? (
-                          <div className="py-6 text-center text-slate-400 text-sm">ابھی کوئی ڈیٹا نہیں</div>
-                        ) : renderTable(groups)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )
+...
+          </>
         )}
       </main>
 
