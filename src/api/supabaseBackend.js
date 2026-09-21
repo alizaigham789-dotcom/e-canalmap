@@ -27,6 +27,9 @@ const ENTITY_TABLES = {
   Subscription: "subscriptions",
   Form1Register: "form1_registers",
   Naqsha27B: "naqsha_27b",
+  PatwariHalqa: "patwari_halqas",
+  Referral: "referrals",
+  ChatMessage: "chat_messages",
   User: "profiles",
 };
 
@@ -382,30 +385,32 @@ const integrations = {
       return { signed_url: data.signedUrl };
     },
 
-    // These require external API keys — set up Edge Functions or backend endpoints
-    async InvokeLLM() {
-      throw new Error("InvokeLLM: configure an Edge Function with OpenAI/Anthropic API key.");
+    // AI / external integrations — require Supabase Edge Functions with API keys.
+    // See: supabase/functions/ directory. Until configured, these throw a clear
+    // message so the UI's try/catch can show it to the user (not a silent crash).
+    async InvokeLLM({ prompt, response_json_schema }) {
+      throw new Error("AI فیچر ابھی دستیاب نہیں — Supabase Edge Function سیٹ اپ کریں (InvokeLLM)۔");
     },
     async SendEmail() {
-      throw new Error("SendEmail: configure an Edge Function with Resend/Postmark API key.");
+      throw new Error("ای میل بھیجنے کے لیے Edge Function سیٹ اپ کریں (SendEmail)۔");
     },
     async GenerateImage() {
-      throw new Error("GenerateImage: configure an Edge Function with DALL-E/Stability API key.");
+      throw new Error("تصویر بنانے کے لیے Edge Function سیٹ اپ کریں (GenerateImage)۔");
     },
     async TranscribeAudio() {
-      throw new Error("TranscribeAudio: configure an Edge Function with Whisper API key.");
+      throw new Error("آڈيو ٹرانسکرائب کے لیے Edge Function سیٹ اپ کریں۔");
     },
     async GenerateSpeech() {
-      throw new Error("GenerateSpeech: configure an Edge Function with a TTS API key.");
+      throw new Error("speech بنانے کے لیے Edge Function سیٹ اپ کریں۔");
     },
     async GenerateVideo() {
-      throw new Error("GenerateVideo: configure an Edge Function with Veo/Runway API key.");
+      throw new Error("ویڈیو بنانے کے لیے Edge Function سیٹ اپ کریں۔");
     },
     async ExtractDataFromUploadedFile() {
-      throw new Error("ExtractDataFromUploadedFile: configure an Edge Function.");
+      throw new Error("فائل سے ڈیٹا نکالنے کے لیے Edge Function سیٹ اپ کریں۔");
     },
     async SendPushNotification() {
-      throw new Error("SendPushNotification: configure an Edge Function with FCM/APNS.");
+      throw new Error("Push notification کے لیے Edge Function سیٹ اپ کریں۔");
     },
   },
 };

@@ -9,6 +9,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import FloatingPlansBanner from '@/components/subscription/FloatingPlansBanner';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 // Route-level code splitting — each page loads in its own chunk so the
 // initial bundle stays small and the app opens fast. Heavy libs (three.js,
@@ -139,6 +140,7 @@ const AuthenticatedApp = () => {
       <Route path="*" element={<PageNotFound />} />
     </Routes>
     <FloatingPlansBanner />
+    <PWAInstallPrompt />
     </>
   );
 };

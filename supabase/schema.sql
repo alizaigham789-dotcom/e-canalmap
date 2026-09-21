@@ -235,6 +235,9 @@ CREATE TABLE IF NOT EXISTS task_assignments (
   forwarded_by    TEXT,
   remarks         TEXT,
   history_json    TEXT,
+  stamp_text      TEXT,
+  stamped_at      TIMESTAMPTZ,
+  dc_approved_at  TIMESTAMPTZ,
   created_date    TIMESTAMPTZ DEFAULT NOW(),
   updated_date    TIMESTAMPTZ DEFAULT NOW(),
   created_by_id   UUID REFERENCES auth.users(id)
@@ -247,7 +250,9 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   user_email      TEXT,
   user_name       TEXT,
   amount          DOUBLE PRECISION DEFAULT 2000,
-  method          TEXT NOT NULL CHECK (method IN ('stripe','manual')),
+  method          TEXT NOT NULL CHECK (method IN ('stripe','manual','referral')),
+  plan_code       TEXT CHECK (plan_code IN ('2m','6m','y')),
+  is_referral_reward BOOLEAN DEFAULT FALSE,
   status          TEXT DEFAULT 'pending' CHECK (status IN ('pending','active','expired','rejected')),
   payment_date    TIMESTAMPTZ,
   expiry_date     TIMESTAMPTZ,
@@ -298,6 +303,50 @@ CREATE TABLE IF NOT EXISTS naqsha_27b (
   created_by_id   UUID REFERENCES auth.users(id)
 );
 
+-- --- PatwariHalqa ---
+CREATE TABLE IF NOT EXISTS patwari_halqas (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         TEXT NOT NULL,
+  user_name       TEXT,
+  user_email      TEXT,
+  division        TEXT DEFAULT 'Khushab',
+  subdivision     TEXT CHECK (subdivision IN ('Jauharabad','Qaidabad')),
+  section         TEXT NOT NULL,
+  villages_json   TEXT,
+  status          TEXT DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  rejection_reason TEXT,
+  approved_by     TEXT,
+  notes           TEXT,
+  created_date    TIMESTAMPTZ DEFAULT NOW(),
+  updated_date    TIMESTAMPTZ DEFAULT NOW(),
+  created_by_id   UUID REFERENCES auth.users(id)
+);
+
+-- --- Referral ---
+CREATE TABLE IF NOT EXISTS referrals (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  referrer_user_id TEXT NOT NULL,
+  referred_user_id TEXT NOT NULL,
+  referred_email   TEXT,
+  status          TEXT DEFAULT 'pending' CHECK (status IN ('pending','qualified')),
+  plan_code       TEXT CHECK (plan_code IN ('2m','6m','y')),
+  created_date    TIMESTAMPTZ DEFAULT NOW(),
+  updated_date    TIMESTAMPTZ DEFAULT NOW(),
+  created_by_id   UUID REFERENCES auth.users(id)
+);
+
+-- --- ChatMessage ---
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  text            TEXT NOT NULL,
+  sender_name     TEXT,
+  sender_id       TEXT,
+  room            TEXT DEFAULT 'main',
+  created_date    TIMESTAMPTZ DEFAULT NOW(),
+  updated_date    TIMESTAMPTZ DEFAULT NOW(),
+  created_by_id   UUID REFERENCES auth.users(id)
+);
+
 -- --- LandSurveyRecord (field survey / khasra-level land record data) ---
 CREATE TABLE IF NOT EXISTS land_survey_records (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -339,7 +388,7 @@ BEGIN
     'profiles','land_maps','parat_warabandis','parat_warabandi_records',
     'map_snapshots','form33c_records','form_field_configs','formula_configs',
     'fard_masroobas','task_assignments','subscriptions','form1_registers','naqsha_27b',
-    'land_survey_records'
+    'land_survey_records','patwari_halqas','referrals','chat_messages'
   ]) LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS trg_%s_updated ON %s;', t, t);
     EXECUTE format('CREATE TRIGGER trg_%s_updated BEFORE UPDATE ON %s FOR EACH ROW EXECUTE FUNCTION update_timestamp();', t, t);
@@ -363,6 +412,9 @@ ALTER TABLE subscriptions         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE form1_registers       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE naqsha_27b            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE land_survey_records   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patwari_halqas         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE referrals              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_messages         ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- 6. RLS POLICIES
@@ -468,6 +520,31 @@ CREATE POLICY profiles_read ON profiles FOR SELECT USING (id = auth.uid() OR is_
 CREATE POLICY profiles_update ON profiles FOR UPDATE USING (id = auth.uid() OR is_admin())
   WITH CHECK (id = auth.uid() OR is_admin());
 
+-- --- PatwariHalqa (read: own/admin/deputy_collector, create: own, update: own/admin/dc) ---
+CREATE POLICY ph_read ON patwari_halqas FOR SELECT USING (
+  user_id = auth.uid()::text OR is_admin()
+);
+CREATE POLICY ph_create ON patwari_halqas FOR INSERT WITH CHECK (user_id = auth.uid()::text);
+CREATE POLICY ph_update ON patwari_halqas FOR UPDATE USING (user_id = auth.uid()::text OR is_admin())
+  WITH CHECK (user_id = auth.uid()::text OR is_admin());
+CREATE POLICY ph_delete ON patwari_halqas FOR DELETE USING (user_id = auth.uid()::text OR is_admin());
+
+-- --- Referral (read: referrer/referred/admin, create: referred, update: referred/admin) ---
+CREATE POLICY ref_read ON referrals FOR SELECT USING (
+  referrer_user_id = auth.uid()::text OR referred_user_id = auth.uid()::text OR is_admin()
+);
+CREATE POLICY ref_create ON referrals FOR INSERT WITH CHECK (referred_user_id = auth.uid()::text);
+CREATE POLICY ref_update ON referrals FOR UPDATE USING (referred_user_id = auth.uid()::text OR is_admin())
+  WITH CHECK (referred_user_id = auth.uid()::text OR is_admin());
+CREATE POLICY ref_delete ON referrals FOR DELETE USING (is_admin());
+
+-- --- ChatMessage (read: any authed, create: any authed, update/delete: own/admin) ---
+CREATE POLICY cm_read ON chat_messages FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY cm_create ON chat_messages FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY cm_update ON chat_messages FOR UPDATE USING (created_by_id = auth.uid() OR is_admin())
+  WITH CHECK (created_by_id = auth.uid() OR is_admin());
+CREATE POLICY cm_delete ON chat_messages FOR DELETE USING (created_by_id = auth.uid() OR is_admin());
+
 -- ============================================================
 -- 7. STORAGE BUCKET FOR FILE UPLOADS
 -- ============================================================
@@ -501,3 +578,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE subscriptions;
 ALTER PUBLICATION supabase_realtime ADD TABLE form1_registers;
 ALTER PUBLICATION supabase_realtime ADD TABLE naqsha_27b;
 ALTER PUBLICATION supabase_realtime ADD TABLE land_survey_records;
+ALTER PUBLICATION supabase_realtime ADD TABLE patwari_halqas;
+ALTER PUBLICATION supabase_realtime ADD TABLE referrals;
+ALTER PUBLICATION supabase_realtime ADD TABLE chat_messages;
