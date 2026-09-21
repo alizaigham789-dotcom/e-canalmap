@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -48,9 +48,36 @@ const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, checkAppState } = useAuth();
+  const [slowLoad, setSlowLoad] = useState(false);
+
+  useEffect(() => {
+    if (!isLoadingAuth && !isLoadingPublicSettings) { setSlowLoad(false); return; }
+    const t = setTimeout(() => setSlowLoad(true), 12000);
+    return () => clearTimeout(t);
+  }, [isLoadingAuth, isLoadingPublicSettings]);
 
   if (isLoadingPublicSettings || isLoadingAuth) {
+    if (slowLoad) {
+      return (
+        <div className="fixed inset-0 flex items-center justify-center bg-[#0a0f1a] p-4">
+          <div className="flex flex-col items-center gap-4 text-center max-w-xs">
+            <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
+              <span className="text-2xl">⚠️</span>
+            </div>
+            <p className="text-sm text-slate-300 font-medium" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+              لوڈ ہونے میں زیادہ وقت لگ رہا ہے۔ انٹرنیٹ کنکشن چیک کریں اور دوبارہ کوشش کریں۔
+            </p>
+            <button
+              onClick={() => { setSlowLoad(false); checkAppState(); }}
+              className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            >
+              دوبارہ کوشش کریں
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-[#0a0f1a]">
         <div className="flex flex-col items-center gap-3">

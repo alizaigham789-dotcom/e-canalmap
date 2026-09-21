@@ -1573,7 +1573,7 @@ export default function Editor() {
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Tool Panel */}
-        <div className="absolute left-1.5 sm:left-3 top-1/2 -translate-y-1/2 z-20 max-h-[calc(100%-100px)]">
+        <div className="absolute left-1.5 sm:left-3 top-1/2 -translate-y-1/2 z-20 max-h-[calc(100%-100px)] overflow-y-auto no-scrollbar">
           <ToolPanel
             activeTool={activeTool}
             onToolChange={handleToolChange}

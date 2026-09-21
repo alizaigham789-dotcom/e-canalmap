@@ -124,7 +124,7 @@ export default function ToolPanel({ activeTool, onToolChange, onUndo, onRedo, on
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col gap-0.5 sm:gap-1 bg-white border border-slate-200 rounded-xl p-1.5 sm:p-2 shadow-lg max-h-[calc(100vh-180px)] sm:max-h-none overflow-y-auto">
+      <div className="flex flex-col gap-0.5 sm:gap-1 bg-white border border-slate-200 rounded-xl p-1.5 sm:p-2 shadow-lg max-h-[calc(100vh-180px)] sm:max-h-[calc(100vh-160px)] overflow-y-auto no-scrollbar">
         {redoBtn}
         {TOOLS.map((tool, i) => {
           if (tool === null) {
