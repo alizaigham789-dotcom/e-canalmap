@@ -19,6 +19,7 @@ export default function MapHeader({
   rajbahs,
   rajbah,
   viewMode,
+  showMogaSelect = true,
 }) {
   const Select = ({ placeholder, value, options, field, onChange }) => (
     <div className="relative shrink-0">
@@ -46,8 +47,8 @@ export default function MapHeader({
         <Select placeholder="Tehsil" value={tehsil} options={tehsils} field="tehsil" />
         <Select placeholder="Mouza" value={village} options={villages} field="village" />
         <Select placeholder="Rajbah" value={rajbah} options={rajbahs || []} field="rajbah" />
-        <Select placeholder="Moga" value={selectedMoga} options={mogas || []} onChange={onSelectMoga} />
-        {viewMode !== "overlay" && <Select placeholder="Select Muraba" value={selectedMuraba} options={murabas || []} onChange={onSelectMuraba} />}
+        {showMogaSelect && <Select placeholder="Moga" value={selectedMoga} options={mogas || []} onChange={onSelectMoga} />}
+        {viewMode === "view" && <Select placeholder="Select Muraba" value={selectedMuraba} options={murabas || []} onChange={onSelectMuraba} />}
       </div>
       <div className="relative shrink-0">
         <button className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/10 rounded-md transition-colors">

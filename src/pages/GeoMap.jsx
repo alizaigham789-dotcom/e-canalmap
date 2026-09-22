@@ -42,6 +42,7 @@ import DummyMustateelLayer from "@/components/geomap/DummyMustateelLayer";
 import DummyMustateelDialog from "@/components/geomap/DummyMustateelDialog";
 import GeoMapHub from "@/components/geomap/GeoMapHub";
 import SavedMogaClickLayer from "@/components/geomap/SavedMogaClickLayer";
+import MouzaExportPanel from "@/components/geomap/MouzaExportPanel";
 import {
   computeOneClickTransform, computeTwoPointTransform, getParcelBoundingBox, getBottomMustateelCorner,
   polygonAreaSqMeters, sqMetersToUnits,
@@ -49,6 +50,7 @@ import {
   fmtArea, fmtDistFeet,
 } from "@/lib/geoOverlay";
 import html2canvas from "html2canvas";
+import { canvasToPdfBlobRaw, downloadBlob } from "@/lib/pdfExport";
 import { toast } from "sonner";
 import { useHasSubscription } from "@/hooks/useSubscription";
 import UpgradePrompt from "@/components/subscription/UpgradePrompt";
@@ -148,7 +150,7 @@ export default function GeoMap() {
   const [center] = useState([32.2889, 72.3525]);
   const [zoom, setZoom] = useState(13);
   const [mapSourceKey, setMapSourceKey] = useState("google_hybrid");
-  const [viewMode, setViewMode] = useState("overlay"); // "overlay" | "view"
+  const [viewMode, setViewMode] = useState("overlay"); // "overlay" | "view" | "mouzaExport"
   const [entered, setEntered] = useState(false); // hub → sub-module entry
   const [activeTool, setActiveTool] = useState(null);
   const [filters, setFilters] = useState({ district: "", tehsil: "", village: "", rajbah: "" });
@@ -296,6 +298,33 @@ export default function GeoMap() {
     (!filters.village || m.village === filters.village) &&
     (!filters.rajbah || m.rajbah === filters.rajbah)
   ), [maps, filters]);
+
+  // ─── MOuza Map Export — count + bounds of every placed moga of the mouza ───
+  const placedMouzaCount = useMemo(
+    () => (!filters.village ? 0 : villageMaps.filter(m => m.geo_placement_lat != null && m.geo_placement_lng != null).length),
+    [villageMaps, filters.village]
+  );
+
+  const mouzaBounds = useMemo(() => {
+    if (viewMode !== "mouzaExport" || !filters.village) return null;
+    const pts = [];
+    for (const m of villageMaps) {
+      if (m.geo_placement_lat == null || m.geo_placement_lng == null || !m.drawing_data) continue;
+      let objs;
+      try { objs = DrawingStateManager.deserialize(m.drawing_data); } catch { continue; }
+      const t = computeOneClickTransform({ lat: m.geo_placement_lat, lng: m.geo_placement_lng }, objs, m.geo_rotation || 0);
+      if (!t) continue;
+      for (const o of objs) {
+        if (!["mustateel", "muraba", "acre"].includes(o.type)) continue;
+        for (const [cx, cy] of [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]]) {
+          const p = t.transform(cx, cy);
+          if (p && Number.isFinite(p.lat) && Number.isFinite(p.lng)) pts.push(p);
+        }
+      }
+    }
+    if (!pts.length) return null;
+    return L.latLngBounds(pts.map(p => [p.lat, p.lng]));
+  }, [villageMaps, viewMode, filters.village]);
 
   // Count of already-placed moga overlays in the current village/rajbah filter.
   // First overlay is free; placing a NEW (not-yet-placed) moga beyond the first
@@ -1055,6 +1084,12 @@ export default function GeoMap() {
   const handleZoomIn = () => mapRef.current?.flyTo(mapRef.current.getCenter(), mapRef.current.getZoom() + 1);
   const handleZoomOut = () => mapRef.current?.flyTo(mapRef.current.getCenter(), mapRef.current.getZoom() - 1);
 
+  // Mouza Map Export — fit the view to every placed moga of the chosen mouza.
+  useEffect(() => {
+    if (viewMode !== "mouzaExport" || !mouzaBounds) return;
+    safeFly(m => m.flyToBounds(mouzaBounds, { padding: [60, 60], maxZoom: 19, duration: 0.6 }));
+  }, [viewMode, mouzaBounds]);
+
   const handleGPS = () => {
     if (gpsActive) { setGpsActive(false); setGpsPosition(null); return; }
     if (!navigator.geolocation) { alert("GPS not available"); return; }
@@ -1436,33 +1471,12 @@ export default function GeoMap() {
     }
   };
 
-  // Capture the live satellite map + cadastral overlay as a single canvas (for export).
-  // Swaps in a CORS-enabled imagery layer (ArcGIS World Imagery) so the captured canvas
-  // is not tainted, fits the view to the placed overlay, then restores the map.
-  const handleCaptureSatellite = async ({ bw, mogaFilter } = {}) => {
+  // Capture the live satellite map + cadastral overlay for the given bounds into a
+  // single canvas (for export). Swaps in a CORS-enabled imagery layer (ArcGIS World
+  // Imagery) so the captured canvas is not tainted, then restores the map view.
+  const captureBoundsToCanvas = async (bounds, bw = false) => {
     const map = mapRef.current;
-    const transform = activeOverlay?.transform;
-    if (!map || !transform) throw new Error("Place the map overlay first");
-    // When a single moga is selected, bound the capture to that moga's parcels
-    // only (canals/khals inside the view still render). Otherwise capture all.
-    const boundsObjects = mogaFilter
-      ? mapObjects.filter(o => (o.type === "mustateel" || o.type === "muraba") && (o.mogaNumber === mogaFilter || !o.mogaNumber))
-      : mapObjects;
-    const allLatLngs = [];
-    for (const o of boundsObjects) {
-      if (["mustateel", "muraba", "acre"].includes(o.type)) {
-        const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
-        for (const [cx, cy] of corners) allLatLngs.push(transform.transform(cx, cy));
-      } else if (o.points?.length) {
-        for (const p of o.points) allLatLngs.push(transform.transform(p.x, p.y));
-      } else if (o.start && o.end) {
-        allLatLngs.push(transform.transform(o.start.x, o.start.y));
-        allLatLngs.push(transform.transform(o.end.x, o.end.y));
-      }
-    }
-    const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
-    if (valid.length === 0) throw new Error("No overlay bounds");
-    const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]));
+    if (!map) throw new Error("Map not ready");
     const savedCenter = map.getCenter();
     const savedZoom = map.getZoom();
     setCapturing(true);
@@ -1517,6 +1531,58 @@ export default function GeoMap() {
       map.removeLayer(tileLayer);
       map.flyTo(savedCenter, savedZoom, { animate: false });
       setCapturing(false);
+    }
+  };
+
+  // Capture the currently-selected map (optionally one moga) — used by the export dialog.
+  const handleCaptureSatellite = async ({ bw, mogaFilter } = {}) => {
+    const transform = activeOverlay?.transform;
+    if (!transform) throw new Error("Place the map overlay first");
+    // When a single moga is selected, bound the capture to that moga's parcels
+    // only (canals/khals inside the view still render). Otherwise capture all.
+    const boundsObjects = mogaFilter
+      ? mapObjects.filter(o => (o.type === "mustateel" || o.type === "muraba") && (o.mogaNumber === mogaFilter || !o.mogaNumber))
+      : mapObjects;
+    const allLatLngs = [];
+    for (const o of boundsObjects) {
+      if (["mustateel", "muraba", "acre"].includes(o.type)) {
+        const corners = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]];
+        for (const [cx, cy] of corners) allLatLngs.push(transform.transform(cx, cy));
+      } else if (o.points?.length) {
+        for (const p of o.points) allLatLngs.push(transform.transform(p.x, p.y));
+      } else if (o.start && o.end) {
+        allLatLngs.push(transform.transform(o.start.x, o.start.y));
+        allLatLngs.push(transform.transform(o.end.x, o.end.y));
+      }
+    }
+    const valid = allLatLngs.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+    if (valid.length === 0) throw new Error("No overlay bounds");
+    return captureBoundsToCanvas(L.latLngBounds(valid.map(p => [p.lat, p.lng])), bw);
+  };
+
+  // Mouza Map Export — one map per mouza (all placed mogas of the chosen mouza),
+  // mustateel/muraba as red lines over the satellite/Earth background.
+  const [exportingMouza, setExportingMouza] = useState(false);
+  const handleMouzaExport = async (fmt) => {
+    if (!mouzaBounds) { toast.error("اس موضع کا کوئی پلیس شدہ نقشہ نہیں ملا"); return; }
+    setExportingMouza(true);
+    try {
+      const canvas = await captureBoundsToCanvas(mouzaBounds, false);
+      const base = `mouza_${(filters.village || "map").replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+      if (fmt === "png") {
+        const a = document.createElement("a");
+        a.href = canvas.toDataURL("image/png");
+        a.download = `${base}.png`;
+        a.click();
+      } else {
+        const blob = await canvasToPdfBlobRaw(canvas, "landscape", "A4");
+        downloadBlob(blob, `${base}.pdf`);
+      }
+      toast.success("نقشہ ایکسپورٹ ہو گیا");
+    } catch (e) {
+      toast.error("ایکسپورٹ میں مسئلہ: " + (e.message || ""));
+    } finally {
+      setExportingMouza(false);
     }
   };
 
@@ -1623,7 +1689,19 @@ export default function GeoMap() {
     return null;
   }, [draft, mouseLatLng]);
 
-  if (!entered) return <GeoMapHub onSelect={(mode) => { setViewMode(mode); setEntered(true); }} />;
+  if (!entered) return <GeoMapHub onSelect={(mode) => {
+    setViewMode(mode);
+    setEntered(true);
+    if (mode === "mouzaExport") {
+      // Fresh mouza-export view — drop any single-map overlay left from another mode.
+      setSelectedMapId("");
+      setSelectedMoga("");
+      setOverlay(null);
+      setPlacementPoint(null);
+      setLowerLeftPoint(null);
+      setPlacingStep(0);
+    }
+  }} />;
 
   return (
     <div className="fixed inset-0 bg-[#0f1923] z-40">
@@ -1655,9 +1733,10 @@ export default function GeoMap() {
         {gpsAccuracyCircle}
         {gpsPosition && <Marker position={[gpsPosition.lat, gpsPosition.lng]} icon={GPS_ICON} />}
 
-        {/* All saved (placed) mogas — always visible in both modes so previously-placed mogas stay on screen */}
-        {!capturing && (viewMode === "view" || viewMode === "overlay") && (
-          <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} showCanals={showCanals} />
+        {/* All saved (placed) mogas — visible in every mode so previously-placed mogas stay on screen.
+            In Mouza Map Export they render in red-line mode (mustateel/muraba red, other layers dimmed). */}
+        {(viewMode === "mouzaExport" ? !!filters.village : (!capturing && (viewMode === "view" || viewMode === "overlay"))) && (
+          <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} showCanals={showCanals} redLineMode={viewMode === "mouzaExport"} />
         )}
 
         {/* Click layer for saved mogas — Overlay: click a placed moga to make it
@@ -1716,8 +1795,8 @@ export default function GeoMap() {
             every placed moga — so they always stay on top. All layers share one
             canvas (added later = drawn on top), so a moga's mustateels can
             never hide another moga's chakbandi boundary. */}
-        {!capturing && (viewMode === "view" || viewMode === "overlay") && (
-          <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} showCanals={showCanals} chakbandiOnly />
+        {(viewMode === "mouzaExport" ? !!filters.village : (!capturing && (viewMode === "view" || viewMode === "overlay"))) && (
+          <AllOverlaysLayer maps={villageMaps} excludeId={selectedMapId} zoom={zoom} showCanals={showCanals} chakbandiOnly redLineMode={viewMode === "mouzaExport"} />
         )}
         {layerVisible && activeOverlay?.transform && (
           <OverlayLayer
@@ -1908,7 +1987,7 @@ export default function GeoMap() {
       </MapContainer>
 
       {/* UI Overlays */}
-      {(viewMode === "view" || viewMode === "overlay") && (
+      {(viewMode === "view" || viewMode === "overlay" || viewMode === "mouzaExport") && (
         <MapHeader
           districts={districts}
           tehsils={tehsils}
@@ -1927,6 +2006,7 @@ export default function GeoMap() {
           selectedMuraba={selectedMuraba}
           onSelectMuraba={handleSelectMuraba}
           viewMode={viewMode}
+          showMogaSelect={viewMode !== "mouzaExport"}
         />
       )}
 
@@ -1950,6 +2030,17 @@ export default function GeoMap() {
         hideZoom={viewMode === "overlay"}
       />
       <Compass />
+
+      {/* Mouza Map Export — per-mouza export bar (red-line parcels on satellite) */}
+      {viewMode === "mouzaExport" && (
+        <MouzaExportPanel
+          village={filters.village}
+          placedCount={placedMouzaCount}
+          exporting={exportingMouza}
+          onExportPDF={() => handleMouzaExport("pdf")}
+          onExportPNG={() => handleMouzaExport("png")}
+        />
+      )}
 
       {/* Overlay panel toggle — below the top header (overlay mode only) */}
       {viewMode === "overlay" && (

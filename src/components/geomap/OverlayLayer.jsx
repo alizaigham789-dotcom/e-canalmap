@@ -114,7 +114,7 @@ function MustateelLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform
   );
 }
 
-function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, gridAll, onClick, interactive = true }) {
+function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, isActive, gridAll, onClick, interactive = true, redLineMode = false }) {
   const map = useMap();
   // Bold boundary — same treatment as mustateel (boundaryThickness-driven weight)
   const boundaryThickness = obj.boundaryThickness || 5;
@@ -136,8 +136,8 @@ function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, i
       <Polygon
         positions={latlngs.map(p => [p.lat, p.lng])}
         pathOptions={{
-          color: isActive ? "#ff0000" : "#f97316",
-          fillColor: isActive ? "#ef4444" : "#f97316",
+          color: isActive ? "#ff0000" : (redLineMode ? "#dc2626" : "#f97316"),
+          fillColor: isActive ? "#ef4444" : (redLineMode ? "#dc2626" : "#f97316"),
           fillOpacity: isActive ? 0.18 : 0.08,
           weight: isActive ? lineWeight + 1.5 : lineWeight,
           opacity: 1,
@@ -147,7 +147,7 @@ function MurabaLabel({ obj, latlngs, zoom, showKilla, killaLatLngs, transform, i
       >
         {showLabel && (
           <Tooltip permanent direction="center" className="muraba-label" opacity={1}>
-            <div style={{ fontSize: `${numSize}px`, fontWeight: 800, color: "#c2410c", textAlign: "center", lineHeight: 1.1, whiteSpace: "nowrap", textShadow: "0 0 3px #fff, 0 0 3px #fff" }}>
+            <div style={{ fontSize: `${numSize}px`, fontWeight: 800, color: redLineMode ? "#dc2626" : "#c2410c", textAlign: "center", lineHeight: 1.1, whiteSpace: "nowrap", textShadow: "0 0 3px #fff, 0 0 3px #fff" }}>
               {obj.label && <div>{obj.label}</div>}
             </div>
           </Tooltip>
@@ -199,7 +199,7 @@ const CANAL_STYLE_COLORS = {
   dashed:      { fill: "#3b82f6", stroke: "#2563eb" },
   custom:      { fill: "#2196F3", stroke: "#1976D2" },
 };
-function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
+function CanalLine({ obj, latlngs, zoom, transform, colorSettings, dim = 1 }) {
   const fontSize = labelFontSize(zoom);
   const halfW = (obj.width || DIMENSIONS.CANAL_WIDTH || 14) / 2;
   const C = colorSettings || {};
@@ -208,7 +208,7 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
   const styleDef = CANAL_STYLE_COLORS[styleKey] || CANAL_STYLE_COLORS.flat;
   const fillColor = obj.fillColor || C.canalFill || styleDef.fill;
   const strokeColor = obj.strokeColor || C.canalStroke || styleDef.stroke;
-  const fillOpacity = obj.fillOpacity ?? 0.70;
+  const fillOpacity = (obj.fillOpacity ?? 0.70) * dim;
 
   // Compute parallel offset in canvas space, then transform to lat/lng
   const { leftLine, rightLine, fillLatLngs } = useMemo(() => {
@@ -309,14 +309,14 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
         pathOptions={{ color: strokeColor, fillColor, fillOpacity, weight: 0, opacity: 0, interactive: false }}
       />
       {/* Left boundary */}
-      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
+      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9 * dim, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
       {/* Right boundary */}
-      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
+      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: strokeColor, weight: boundaryWeight, opacity: 0.9 * dim, dashArray: isDashed ? "10,6" : undefined, interactive: false }} />
 
       {/* Canal name — repeating along the centerline, black with yellow outline (matches Map Editor) */}
       {obj.name && labelPoints.map((p, i) => (
         <CircleMarker key={`lbl-${i}`} center={[p.lat, p.lng]} radius={0} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
-          <Tooltip permanent direction="center" className="canal-label" opacity={0.95}>
+          <Tooltip permanent direction="center" className="canal-label" opacity={0.95 * dim}>
             <span style={{ fontSize: `${Math.max(10, fontSize * 0.62)}px`, fontWeight: 700, color: "#FFEB3B", WebkitTextStroke: "1.5px #000000", textShadow: "0 0 2px #000000, 1px 1px 2px #000000, -1px -1px 2px #000000", whiteSpace: "nowrap" }}>
               {obj.name}
             </span>
@@ -328,7 +328,7 @@ function CanalLine({ obj, latlngs, zoom, transform, colorSettings }) {
 }
 
 // ─── KHAL: parallel blue boundary lines ──────────────────────────
-function KhalLine({ obj, latlngs, zoom, transform }) {
+function KhalLine({ obj, latlngs, zoom, transform, dim = 1 }) {
   const fontSize = labelFontSize(zoom);
   const halfW = (obj.width || 8) / 2;
 
@@ -375,29 +375,29 @@ function KhalLine({ obj, latlngs, zoom, transform }) {
   const khalColor = isInformal ? "#0891b2" : "#2563eb";
   const bankColor = isInformal ? "#0e7490" : "#1d4ed8";
   if (leftLine.length === 0) {
-    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: khalColor, weight: 3, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined, interactive: false }} />;
+    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: khalColor, weight: 3, opacity: 0.9 * dim, dashArray: isInformal ? "8,6" : undefined, interactive: false }} />;
   }
 
   const w = Math.max(2.5, 3 - (18 - zoom) * 0.15); // ≥ mustateel grid line width so the khal stays visible
   return (
     <>
-      <Polygon positions={fillLatLngs.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, fillColor: khalColor, fillOpacity: 0.7, weight: 0, opacity: 0, interactive: false }}>
+      <Polygon positions={fillLatLngs.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, fillColor: khalColor, fillOpacity: 0.7 * dim, weight: 0, opacity: 0, interactive: false }}>
         {obj.name && (
-          <Tooltip permanent direction="center" className="khal-label" opacity={0.9}>
+          <Tooltip permanent direction="center" className="khal-label" opacity={0.9 * dim}>
             <span style={{ fontSize: `${fontSize * 0.58}px`, color: isInformal ? "#0e7490" : "#1d4ed8", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 2px" }}>
               {obj.name}
             </span>
           </Tooltip>
         )}
       </Polygon>
-      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, weight: w, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined, interactive: false }} />
-      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, weight: w, opacity: 0.9, dashArray: isInformal ? "8,6" : undefined, interactive: false }} />
+      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, weight: w, opacity: 0.9 * dim, dashArray: isInformal ? "8,6" : undefined, interactive: false }} />
+      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: bankColor, weight: w, opacity: 0.9 * dim, dashArray: isInformal ? "8,6" : undefined, interactive: false }} />
     </>
   );
 }
 
 // ─── ROAD: parallel amber boundary lines ──────────────────────────
-function RoadLine({ obj, latlngs, zoom, transform }) {
+function RoadLine({ obj, latlngs, zoom, transform, dim = 1 }) {
   const fontSize = labelFontSize(zoom);
   const halfW = (obj.width || 28) / 2;
 
@@ -441,16 +441,16 @@ function RoadLine({ obj, latlngs, zoom, transform }) {
   }, [obj.points, transform, halfW]);
 
   if (leftLine.length === 0) {
-    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: 3, dashArray: "10,6", opacity: 0.8, interactive: false }} />;
+    return <Polyline positions={latlngs.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: 3, dashArray: "10,6", opacity: 0.8 * dim, interactive: false }} />;
   }
 
   const w = Math.max(1.5, 3 - (18 - zoom) * 0.2);
   return (
     <>
-      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: w, opacity: 0.8, interactive: false }} />
-      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: w, opacity: 0.8, interactive: false }} />
+      <Polyline positions={leftLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: w, opacity: 0.8 * dim, interactive: false }} />
+      <Polyline positions={rightLine.map(p => [p.lat, p.lng])} pathOptions={{ color: "#b45309", weight: w, opacity: 0.8 * dim, interactive: false }} />
       {obj.name && (
-        <Tooltip permanent direction="center" className="road-label" opacity={0.9}>
+        <Tooltip permanent direction="center" className="road-label" opacity={0.9 * dim}>
           <span style={{ fontSize: `${fontSize * 0.58}px`, color: "#92400e", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 2px" }}>
             {obj.name}
           </span>
@@ -462,7 +462,7 @@ function RoadLine({ obj, latlngs, zoom, transform }) {
 
 // ─── CHAKBANDI: green line + cross pattern marks ─────────────────
 // Same as map editor: green boundary with × marks at regular intervals.
-function ChakbandiLine({ obj, latlngs, zoom, transform, ccaCenter }) {
+function ChakbandiLine({ obj, latlngs, zoom, transform, ccaCenter, dim = 1 }) {
   const fontSize = labelFontSize(zoom);
   const lineThickness = obj.lineThickness || 6;
   const crossPattern = obj.crossPattern !== false;
@@ -512,14 +512,14 @@ function ChakbandiLine({ obj, latlngs, zoom, transform, ccaCenter }) {
     <>
       <Polyline
         positions={latlngs.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: "#00cc00", weight: lineWeight + 1, opacity: 1, interactive: false }}
+        pathOptions={{ color: "#00cc00", weight: lineWeight + 1, opacity: dim, interactive: false }}
       />
       {/* Cross pattern marks */}
       {crossMarks.map((pts, i) => (
-        <Polyline key={i} positions={pts} pathOptions={{ color: "#00cc00", weight: Math.max(2.5, lineWeight * 0.9), opacity: 1, interactive: false }} />
+        <Polyline key={i} positions={pts} pathOptions={{ color: "#00cc00", weight: Math.max(2.5, lineWeight * 0.9), opacity: dim, interactive: false }} />
       ))}
       {obj.name && (
-        <Tooltip permanent direction="top" className="chakbandi-label" opacity={0.9}>
+        <Tooltip permanent direction="top" className="chakbandi-label" opacity={0.9 * dim}>
           <span style={{ fontSize: `${fontSize * 0.6}px`, fontWeight: 600, color: "#15803d", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 3px" }}>{obj.name}</span>
         </Tooltip>
       )}
@@ -546,7 +546,7 @@ function CcaCenterLabel({ latlng, text, zoom }) {
   );
 }
 
-function OutletMarker({ obj, latlngs, zoom }) {
+function OutletMarker({ obj, latlngs, zoom, dim = 1 }) {
   const fontSize = labelFontSize(zoom);
   if (!latlngs || latlngs.length < 2) return null;
   const blockSize = Math.max(3, (obj.blockSize || 20) / 6 - (18 - zoom) * 0.3);
@@ -554,15 +554,15 @@ function OutletMarker({ obj, latlngs, zoom }) {
     <>
       <Polyline
         positions={latlngs.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: obj.outletColor || "#06b6d4", weight: Math.max(2, 4 - (18 - zoom) * 0.25), opacity: 0.9, interactive: false }}
+        pathOptions={{ color: obj.outletColor || "#06b6d4", weight: Math.max(2, 4 - (18 - zoom) * 0.25), opacity: 0.9 * dim, interactive: false }}
       />
       {/* Block at start */}
       <CircleMarker
         center={[latlngs[0].lat, latlngs[0].lng]}
         radius={blockSize}
-        pathOptions={{ color: "#0e7490", fillColor: obj.outletColor || "#06b6d4", fillOpacity: 0.9, weight: 2, interactive: false }}
+        pathOptions={{ color: "#0e7490", fillColor: obj.outletColor || "#06b6d4", fillOpacity: 0.9 * dim, weight: 2, interactive: false }}
       >
-        <Tooltip permanent direction="top" className="moga-label" opacity={0.95}>
+        <Tooltip permanent direction="top" className="moga-label" opacity={0.95 * dim}>
           <span style={{ fontSize: `${Math.max(14, fontSize * 1.0)}px`, fontWeight: 700, color: "#0e7490", backgroundColor: "rgba(255,255,255,0.92)", padding: "1px 4px", borderRadius: 2, fontFamily: "'Noto Nastaliq Urdu', sans-serif" }}>
             موگہ {obj.mogha_number || ""}{obj.mogha_side ? `/${obj.mogha_side}` : ""}
           </span>
@@ -593,15 +593,15 @@ function OutletMarker({ obj, latlngs, zoom }) {
   );
 }
 
-function MouzaLine({ obj, latlngs, zoom }) {
+function MouzaLine({ obj, latlngs, zoom, dim = 1 }) {
   const fontSize = labelFontSize(zoom);
   return (
     <Polyline
       positions={latlngs.map(p => [p.lat, p.lng])}
-      pathOptions={{ color: "#000000", weight: 1.5, dashArray: "12,8", opacity: 0.7, interactive: false }}
+      pathOptions={{ color: "#000000", weight: 1.5, dashArray: "12,8", opacity: 0.7 * dim, interactive: false }}
     >
       {obj.name && (
-        <Tooltip permanent direction="top" className="mouza-label" opacity={0.85}>
+        <Tooltip permanent direction="top" className="mouza-label" opacity={0.85 * dim}>
           <span style={{ fontSize: `${fontSize * 0.62}px`, fontWeight: 700, color: "#000", backgroundColor: "rgba(255,255,255,0.8)", padding: "0 3px" }}>
             {obj.name}
           </span>
@@ -632,7 +632,11 @@ function computeKillaLatLngs(obj, transform) {
   });
 }
 
-export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels, showCanals = true, chakbandiOnly = false, colorSettings, interactive = true }) {
+export default function OverlayLayer({ objects, transform, zoom, killaVisible, mogaFilter, activeMustateelIds, gridAll, onMustateelClick, skipLabels, showCanals = true, chakbandiOnly = false, colorSettings, interactive = true, redLineMode = false }) {
+  // Red-line mode (Mouza Map Export): mustateel/muraba boundaries stay bold and
+  // red, while every other layer (canal, watercourse, road, chakbandi, mouza,
+  // moga) is faded back so the parcel outlines read clearly over satellite.
+  const dim = redLineMode ? 0.2 : 1;
   // NOTE: chakbandis render in the SAME overlay pane (the final chakbandiOnly
   // pass adds them last → drawn on top within the shared canvas). A separate
   // top pane would give chakbandis their own full-viewport canvas ABOVE the
@@ -686,7 +690,7 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
     return (
       <>
         {chakbandiObjects.map(({ obj, latlngs, ccaCenter }) => (
-          <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} ccaCenter={ccaCenter} />
+          <MemoChakbandi key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} ccaCenter={ccaCenter} dim={dim} />
         ))}
       </>
     );
@@ -697,13 +701,13 @@ export default function OverlayLayer({ objects, transform, zoom, killaVisible, m
       {regularObjects.map(({ obj, latlngs, killaLatLngs, ccaCenter }) => {
         switch (obj.type) {
           case "mustateel": return <MemoMustateel key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} interactive={interactive} />;
-          case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} interactive={interactive} />;
+          case "muraba": return <MemoMuraba key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} showKilla={killaVisible} killaLatLngs={killaLatLngs} transform={transform} isActive={activeMustateelIds?.has(obj.id)} gridAll={gridAll} onClick={onMustateelClick} interactive={interactive} redLineMode={redLineMode} />;
           case "acre": return <MemoAcre key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
-          case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} colorSettings={colorSettings} />;
-          case "khal": return <MemoKhal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
-          case "road": return <MemoRoad key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} />;
-          case "mouza": return <MemoMouza key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
-          case "outlet": return <MemoOutlet key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} />;
+          case "canal": return <MemoCanal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} colorSettings={colorSettings} dim={dim} />;
+          case "khal": return <MemoKhal key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} dim={dim} />;
+          case "road": return <MemoRoad key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} transform={transform} dim={dim} />;
+          case "mouza": return <MemoMouza key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} dim={dim} />;
+          case "outlet": return <MemoOutlet key={obj.id} obj={obj} latlngs={latlngs} zoom={zoom} dim={dim} />;
           default: return null;
         }
       })}

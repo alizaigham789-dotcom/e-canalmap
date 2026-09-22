@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Map as MapIcon, Satellite } from "lucide-react";
+import { ArrowLeft, Map as MapIcon, Satellite, FileDown } from "lucide-react";
 
 const URDU = "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif";
 
@@ -20,6 +20,14 @@ const SUBMODULES = [
     desc: "Georeference on satellite imagery",
     icon: Satellite,
     color: "from-blue-500 to-indigo-500",
+  },
+  {
+    key: "mouzaExport",
+    name: "Mouza Map Export",
+    urdu: "موضع وار نقشہ ایکسپورٹ",
+    desc: "Red-line mustateel / muraba on satellite",
+    icon: FileDown,
+    color: "from-rose-500 to-red-600",
   },
 ];
 
