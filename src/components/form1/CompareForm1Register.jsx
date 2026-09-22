@@ -255,7 +255,7 @@ export default function CompareForm1Register() {
     setError("");
     try {
       const parsed = await parseExcelFile(f);
-      if (which === "فائل 1 (پرانا)") {
+      if (which.startsWith("فائل 1")) {
         setFile1(f);
         setData1(parsed);
       } else {
