@@ -17,7 +17,7 @@ const COLUMN_ALIASES = {
   acre_no: ["acre", "acre_no", "killa", "کیلہ", "ایکڑ", "ایکڑ نمبر", "کلہ"],
   channel_name: ["channel", "rajbah", "rajbah_name", "راجباہ", "راجباہ/مائنر", "کینال", "نہر"],
   crop_name: ["crop", "crop_name", "کیفیت", "فصل", "فصل کا نام"],
-  total_acres: ["total_acres", "total_acre", "total_area", "total_area_acres", "cca", "total_cca", "کل رقبہ", "کل ایکڑ", "رقبہ ایکڑ", "رقبہ کل", "کل", "ایکڑ کل", "cca acres", "total cca"],
+  total_acres: ["total_acres", "total_acre", "total_area", "total_area_acres", "cca", "total_cca", "total cca acre", "total cca (acre)", "cca acre", "cca (acre)", "total cca (acres)", "کل رقبہ", "کل ایکڑ", "رقبہ ایکڑ", "رقبہ کل", "کل", "ایکڑ کل", "cca acres", "total cca"],
 };
 
 function normalizeHeader(h) {
