@@ -115,9 +115,13 @@ function groupByKhata(rows, unit = "kanal") {
     const rawMarla = parseFloat(r.marla) || 0;
     const rawAcres = parseFloat(r.total_acres) || 0;
     if (unit === "acres") {
-      // ایکڑ کالم کو ترجیح، ورنہ کنال کالم کی قدر کو ایکڑ سمجھ کر ×8
-      const acresVal = rawAcres || rawKanal;
-      g.kanal += acresVal * 8;
+      // ایکڑ کالم (Total CCA) ہو تو ×8 سے کنال بنائیں؛ کنال کالم پر ×8 نہ کریں (غلط tabdeli سے بچنے کے لیے)
+      if (rawAcres) {
+        g.kanal += rawAcres * 8;
+      } else {
+        g.kanal += rawKanal;
+        g.marla += rawMarla;
+      }
     } else {
       g.kanal += rawKanal;
       g.marla += rawMarla;
@@ -254,8 +258,8 @@ function downloadDiffPDF(diffs) {
     body += `<tr style="background:${d.type === "unchanged" ? "#fafafa" : "#ffffff"}">
       <td style="text-align:center;font-weight:700;font-family:monospace">${esc(d.khata_no)}</td>
       <td style="text-align:center"><span style="display:inline-block;background:${tm.bg};color:${tm.fg};border:1px solid ${tm.bd};border-radius:999px;padding:2px 10px;font-weight:700;font-size:11px">${tm.label}</span></td>
-      <td>${esc(name1)}</td>
-      <td>${cell(d.changes.includes("name"), name1, name2, "#dbeafe", "#60a5fa")}</td>
+      <td>${d.changes.includes("name") ? `<span style="text-decoration:line-through;color:#94a3b8">${esc(name1)}</span>` : `<span style="color:#94a3b8">${esc(name1)}</span>`}</td>
+      <td>${d.changes.includes("name") ? `<span style="background:#dbeafe;border:1px solid #60a5fa;border-radius:6px;padding:2px 6px;font-weight:700;color:#1e40af">${esc(name2)}</span>` : `<span style="color:#94a3b8">—</span>`}</td>
       <td style="text-align:center">${esc(area1)}</td>
       <td style="text-align:center">${cell(d.changes.includes("raqba"), area1, area2, "#ffe4e6", "#fb7185")}</td>
       <td style="text-align:center">${esc(kh1)}</td>
@@ -359,7 +363,7 @@ export default function CompareForm1Register() {
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("all"); // all | modified | added | removed
   const [unit1, setUnit1] = useState("kanal"); // File 1 raqba unit
-  const [unit2, setUnit2] = useState("acres");  // File 2 raqba unit
+  const [unit2, setUnit2] = useState("kanal");  // File 2 raqba unit (کنال — غلط ×8 سے بچنے کے لیے)
 
   const handleFile = useCallback(async (f, which) => {
     setLoading(true);
