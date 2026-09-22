@@ -137,10 +137,13 @@ function compareKhatas(map1, map2) {
       const changes = [];
       const name1 = [...g1.names].join("؛ ") || "—";
       const name2 = [...g2.names].join("؛ ") || "—";
-      if (name1 !== name2) changes.push("name");
-      const area1 = g1.kanal + g1.marla / 20;
-      const area2 = g2.kanal + g2.marla / 20;
-      if (Math.abs(area1 - area2) > 0.001) changes.push("raqba");
+      // نام کا موازنہ — خالی جگہوں اور کیس کو نارملائز کر کے
+      const normName = (s) => String(s || "").replace(/\s+/g, " ").trim();
+      if (normName(name1) !== normName(name2)) changes.push("name");
+      // رقبہ کا موازنہ — 2 اعشاریے تک راؤنڈ، 0.05 کنال (≈1 مرلہ) تک کی فرق نظر انداز
+      const area1 = +(g1.kanal + g1.marla / 20).toFixed(2);
+      const area2 = +(g2.kanal + g2.marla / 20).toFixed(2);
+      if (Math.abs(area1 - area2) > 0.05) changes.push("raqba");
       const khasra1 = [...g1.khasra].sort().join("،");
       const khasra2 = [...g2.khasra].sort().join("،");
       if (khasra1 !== khasra2) changes.push("khasra");
