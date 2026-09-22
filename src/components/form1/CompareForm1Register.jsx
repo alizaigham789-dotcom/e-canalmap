@@ -320,8 +320,8 @@ export default function CompareForm1Register() {
           </h3>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <FileUploadBox label="فائل 1 (پرانا)" file={file1} onFile={handleFile} fileData={data1} accent="amber" />
-          <FileUploadBox label="فائل 2 (نیا)" file={file2} onFile={handleFile} fileData={data2} accent="blue" />
+          <FileUploadBox label="فائل 1 — File 1 (پرانا)" file={file1} onFile={handleFile} fileData={data1} accent="amber" />
+          <FileUploadBox label="فائل 2 — File 2 (نیا)" file={file2} onFile={handleFile} fileData={data2} accent="blue" />
         </div>
 
         {error && (
@@ -370,11 +370,11 @@ export default function CompareForm1Register() {
             <p className="text-xl font-bold text-amber-700">{summary.modified}</p>
           </div>
           <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-3 text-center">
-            <p className="text-[10px] text-emerald-600" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>نئے</p>
+            <p className="text-[10px] text-emerald-600" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>نئی</p>
             <p className="text-xl font-bold text-emerald-700">{summary.added}</p>
           </div>
           <div className="bg-rose-50 rounded-xl border border-rose-200 p-3 text-center">
-            <p className="text-[10px] text-rose-600" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>ختم شدہ</p>
+            <p className="text-[10px] text-rose-600" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>حذف شدہ</p>
             <p className="text-xl font-bold text-rose-700">{summary.removed}</p>
           </div>
           <div className="bg-slate-50 rounded-xl border border-slate-200 p-3 text-center">
@@ -390,8 +390,8 @@ export default function CompareForm1Register() {
           {[
             { key: "all", label: "تمام", active: "bg-slate-600 text-white", inactive: "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50" },
             { key: "modified", label: "تبدیلی", active: "bg-amber-600 text-white", inactive: "bg-white text-amber-600 border border-amber-200 hover:bg-amber-50" },
-            { key: "added", label: "نئے", active: "bg-emerald-600 text-white", inactive: "bg-white text-emerald-600 border border-emerald-200 hover:bg-emerald-50" },
-            { key: "removed", label: "ختم شدہ", active: "bg-rose-600 text-white", inactive: "bg-white text-rose-600 border border-rose-200 hover:bg-rose-50" },
+            { key: "added", label: "نئی", active: "bg-emerald-600 text-white", inactive: "bg-white text-emerald-600 border border-emerald-200 hover:bg-emerald-50" },
+            { key: "removed", label: "حذف شدہ", active: "bg-rose-600 text-white", inactive: "bg-white text-rose-600 border border-rose-200 hover:bg-rose-50" },
           ].map(f => (
             <button
               key={f.key}
@@ -430,8 +430,8 @@ export default function CompareForm1Register() {
                 {filteredDiffs.map((d, i) => {
                   const typeInfo = {
                     modified: { icon: Edit3, label: "تبدیلی", class: "bg-amber-100 text-amber-700 border-amber-300" },
-                    added: { icon: Plus, label: "نیا", class: "bg-emerald-100 text-emerald-700 border-emerald-300" },
-                    removed: { icon: Minus, label: "ختم", class: "bg-rose-100 text-rose-700 border-rose-300" },
+                    added: { icon: Plus, label: "نئی", class: "bg-emerald-100 text-emerald-700 border-emerald-300" },
+                    removed: { icon: Minus, label: "حذف شدہ", class: "bg-rose-100 text-rose-700 border-rose-300" },
                     unchanged: { icon: CheckCircle2, label: "بدلا نہیں", class: "bg-slate-100 text-slate-500 border-slate-300" },
                   }[d.type];
                   const Icon = typeInfo.icon;
