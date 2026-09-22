@@ -89,7 +89,9 @@ function parseExcelFile(file) {
 
 // ─── Comparison logic ────────────────────────────────────────────────────────
 // Group rows by khata_no; aggregate name + total area per khata.
-function groupByKhata(rows) {
+// unit: "kanal" = رقبہ کنال میں ہے (براہ راست استعمال)
+//       "acres" = رقبہ ایکڑ میں ہے (×8 سے کنال بنائیں)
+function groupByKhata(rows, unit = "kanal") {
   const map = new Map();
   for (const r of rows) {
     const khata = String(r.khata_no || "").trim();
@@ -108,12 +110,17 @@ function groupByKhata(rows) {
     const g = map.get(khata);
     const fullName = [r.farmer_name, r.father].filter(Boolean).join(" ولد ");
     if (fullName) g.names.add(fullName);
-    // اگر کنال موجود ہو تو وہ استعمال کریں، ورنہ کل ایکڑ × 8 سے کنال بنائیں
-    if (r.kanal) {
-      g.kanal += parseFloat(r.kanal) || 0;
-      g.marla += parseFloat(r.marla) || 0;
-    } else if (r.total_acres) {
-      g.kanal += (parseFloat(r.total_acres) || 0) * 8;
+    // رقبہ — اکائی کے مطابق تبدیل: ایکڑ ×8 = کنال
+    const rawKanal = parseFloat(r.kanal) || 0;
+    const rawMarla = parseFloat(r.marla) || 0;
+    const rawAcres = parseFloat(r.total_acres) || 0;
+    if (unit === "acres") {
+      // ایکڑ کالم کو ترجیح، ورنہ کنال کالم کی قدر کو ایکڑ سمجھ کر ×8
+      const acresVal = rawAcres || rawKanal;
+      g.kanal += acresVal * 8;
+    } else {
+      g.kanal += rawKanal;
+      g.marla += rawMarla;
     }
     if (r.khasra) g.khasra.add(r.khasra);
     if (r.moga_number) g.moga.add(r.moga_number);
@@ -258,6 +265,8 @@ export default function CompareForm1Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("all"); // all | modified | added | removed
+  const [unit1, setUnit1] = useState("kanal"); // File 1 raqba unit
+  const [unit2, setUnit2] = useState("acres");  // File 2 raqba unit
 
   const handleFile = useCallback(async (f, which) => {
     setLoading(true);
@@ -287,10 +296,10 @@ export default function CompareForm1Register() {
   // Run comparison
   const diffs = useMemo(() => {
     if (!data1?.rows?.length || !data2?.rows?.length) return [];
-    const map1 = groupByKhata(data1.rows);
-    const map2 = groupByKhata(data2.rows);
+    const map1 = groupByKhata(data1.rows, unit1);
+    const map2 = groupByKhata(data2.rows, unit2);
     return compareKhatas(map1, map2);
-  }, [data1, data2]);
+  }, [data1, data2, unit1, unit2]);
 
   const summary = useMemo(() => {
     if (!diffs.length) return null;
@@ -329,8 +338,22 @@ export default function CompareForm1Register() {
           </h3>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <FileUploadBox label="فائل 1 — File 1 (پرانا)" file={file1} onFile={handleFile} fileData={data1} accent="amber" />
-          <FileUploadBox label="فائل 2 — File 2 (نیا)" file={file2} onFile={handleFile} fileData={data2} accent="blue" />
+          <div className="flex-1 space-y-2">
+            <FileUploadBox label="فائل 1 — File 1 (پرانا)" file={file1} onFile={handleFile} fileData={data1} accent="amber" />
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+              <span className="text-[10px] font-bold text-amber-700 whitespace-nowrap" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>رقبہ کی اکائی:</span>
+              <button onClick={() => setUnit1("kanal")} className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${unit1 === "kanal" ? "bg-amber-600 text-white" : "bg-white text-amber-700 border border-amber-300"}`} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>کنال</button>
+              <button onClick={() => setUnit1("acres")} className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${unit1 === "acres" ? "bg-amber-600 text-white" : "bg-white text-amber-700 border border-amber-300"}`} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>ایکڑ (×8)</button>
+            </div>
+          </div>
+          <div className="flex-1 space-y-2">
+            <FileUploadBox label="فائل 2 — File 2 (نیا)" file={file2} onFile={handleFile} fileData={data2} accent="blue" />
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5">
+              <span className="text-[10px] font-bold text-blue-700 whitespace-nowrap" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>رقبہ کی اکائی:</span>
+              <button onClick={() => setUnit2("kanal")} className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${unit2 === "kanal" ? "bg-blue-600 text-white" : "bg-white text-blue-700 border border-blue-300"}`} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>کنال</button>
+              <button onClick={() => setUnit2("acres")} className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${unit2 === "acres" ? "bg-blue-600 text-white" : "bg-white text-blue-700 border border-blue-300"}`} style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>ایکڑ (×8)</button>
+            </div>
+          </div>
         </div>
 
         {error && (
