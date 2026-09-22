@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import * as XLSX from "xlsx";
-import { Upload, FileSpreadsheet, GitCompareArrows, AlertTriangle, CheckCircle2, Plus, Minus, Edit3, Download, X, Loader2, Info } from "lucide-react";
+import { Upload, FileSpreadsheet, GitCompareArrows, AlertTriangle, CheckCircle2, Plus, Minus, Edit3, Download, X, Loader2, Info, FileText } from "lucide-react";
 
 // ─── Column auto-detection ──────────────────────────────────────────────────
 // Maps possible header names (Urdu + English, case-insensitive) to canonical keys.
@@ -145,7 +145,7 @@ function compareKhatas(map1, map2) {
       const name1 = [...g1.names].join("؛ ") || "—";
       const name2 = [...g2.names].join("؛ ") || "—";
       // نام کا موازنہ — خالی جگہوں اور کیس کو نارملائز کر کے
-      const normName = (s) => String(s || "").replace(/\s+/g, " ").trim();
+      const normName = (s) => String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
       if (normName(name1) !== normName(name2)) changes.push("name");
       // رقبہ کا موازنہ — 2 اعشاریے تک راؤنڈ، 0.05 کنال (≈1 مرلہ) تک کی فرق نظر انداز
       const area1 = +(g1.kanal + g1.marla / 20).toFixed(2);
@@ -214,6 +214,99 @@ function downloadDiffCSV(diffs) {
   a.download = "form1_compare_report.csv";
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ─── Colourful PDF report (print-to-PDF, mirrors the on-screen table) ─────────
+function downloadDiffPDF(diffs) {
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const sum = {
+    total: diffs.length,
+    modified: diffs.filter(d => d.type === "modified").length,
+    added: diffs.filter(d => d.type === "added").length,
+    removed: diffs.filter(d => d.type === "removed").length,
+    unchanged: diffs.filter(d => d.type === "unchanged").length,
+  };
+  const typeMeta = {
+    modified: { label: "تبدیلی", bg: "#fef3c7", fg: "#b45309", bd: "#fbbf24" },
+    added: { label: "نئی", bg: "#d1fae5", fg: "#047857", bd: "#34d399" },
+    removed: { label: "حذف شدہ", bg: "#ffe4e6", fg: "#be123c", bd: "#fb7185" },
+    unchanged: { label: "بدلا نہیں", bg: "#f1f5f9", fg: "#64748b", bd: "#cbd5e1" },
+  };
+  // Changed cell: struck-through old ← new inside a tinted pill; unchanged: "—"
+  const cell = (changed, oldVal, newVal, bg, bd) => {
+    if (!changed) return `<span style="color:#94a3b8">—</span>`;
+    return `<div style="background:${bg};border:1px solid ${bd};border-radius:6px;padding:2px 6px;font-weight:700;display:inline-block">
+      <span style="text-decoration:line-through;color:#94a3b8">${esc(oldVal) || "—"}</span>
+      <span style="color:#ef4444"> ← </span><span>${esc(newVal) || "—"}</span></div>`;
+  };
+
+  let body = "";
+  for (const d of diffs) {
+    const tm = typeMeta[d.type];
+    const name1 = d.old ? ([...d.old.names].join("؛ ") || "—") : "—";
+    const name2 = d.new ? ([...d.new.names].join("؛ ") || "—") : "—";
+    const area1 = d.old ? `${d.old.kanal} ک ${d.old.marla} م` : "—";
+    const area2 = d.new ? `${d.new.kanal} ک ${d.new.marla} م` : "—";
+    const kh1 = d.old ? ([...d.old.khasra].join("،") || "—") : "—";
+    const kh2 = d.new ? ([...d.new.khasra].join("،") || "—") : "—";
+    const mg1 = d.old ? ([...d.old.moga].join("،") || "—") : "—";
+    const mg2 = d.new ? ([...d.new.moga].join("،") || "—") : "—";
+    body += `<tr style="background:${d.type === "unchanged" ? "#fafafa" : "#ffffff"}">
+      <td style="text-align:center;font-weight:700;font-family:monospace">${esc(d.khata_no)}</td>
+      <td style="text-align:center"><span style="display:inline-block;background:${tm.bg};color:${tm.fg};border:1px solid ${tm.bd};border-radius:999px;padding:2px 10px;font-weight:700;font-size:11px">${tm.label}</span></td>
+      <td>${esc(name1)}</td>
+      <td>${cell(d.changes.includes("name"), name1, name2, "#dbeafe", "#60a5fa")}</td>
+      <td style="text-align:center">${esc(area1)}</td>
+      <td style="text-align:center">${cell(d.changes.includes("raqba"), area1, area2, "#ffe4e6", "#fb7185")}</td>
+      <td style="text-align:center">${esc(kh1)}</td>
+      <td style="text-align:center">${cell(d.changes.includes("khasra"), kh1, kh2, "#ffedd5", "#fdba74")}</td>
+      <td style="text-align:center">${esc(mg1)}</td>
+      <td style="text-align:center">${cell(d.changes.includes("moga"), mg1, mg2, "#f3e8ff", "#c084fc")}</td>
+    </tr>`;
+  }
+
+  const card = (bg, bd, fg, label, val) =>
+    `<div style="flex:1;border-radius:10px;padding:8px;text-align:center;border:1px solid ${bd};background:${bg};color:${fg}">${label}<br><b style="font-size:18px">${val}</b></div>`;
+
+  const html = `<!doctype html><html dir="rtl"><head><meta charset="utf-8">
+  <title>فارم 1 موازنہ رپورٹ</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+    @page { size: A3 landscape; margin: 8mm; }
+    * { box-sizing: border-box; }
+    body { font-family:'Noto Nastaliq Urdu',Arial,sans-serif; direction:rtl; color:#0f172a; margin:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    h1 { text-align:center; font-size:22px; margin:0 0 4px; color:#1e293b; }
+    .sub { text-align:center; font-size:11px; color:#64748b; margin-bottom:12px; }
+    .cards { display:flex; gap:8px; margin-bottom:12px; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    th, td { border:1px solid #cbd5e1; padding:4px 6px; vertical-align:middle; }
+    th { background:#e2e8f0; color:#0f172a; font-size:13px; }
+    tr:nth-child(even) td { background:#f8fafc; }
+  </style></head><body>
+  <h1>فارم نمبر 1 — موازنہ رپورٹ</h1>
+  <div class="sub">کھاتہ نمبر کے حساب سے موازنہ — ${esc(new Date().toLocaleDateString('ur-PK'))}</div>
+  <div class="cards">
+    ${card("#f8fafc", "#cbd5e1", "#475569", "کل کھاتے", sum.total)}
+    ${card("#fffbeb", "#fcd34d", "#b45309", "تبدیلی", sum.modified)}
+    ${card("#ecfdf5", "#6ee7b7", "#047857", "نئی", sum.added)}
+    ${card("#fff1f2", "#fda4af", "#be123c", "حذف شدہ", sum.removed)}
+    ${card("#f8fafc", "#cbd5e1", "#64748b", "بدلا نہیں", sum.unchanged)}
+  </div>
+  <table>
+    <thead><tr>
+      <th>کھاتہ نمبر</th><th>حالت</th><th>نام (پرانا)</th><th>نام (نیا)</th>
+      <th>رقبہ (پرانا)</th><th>رقبہ (نیا)</th><th>خسرہ (پرانا)</th><th>خسرہ (نیا)</th>
+      <th>موگہ (پرانا)</th><th>موگہ (نیا)</th>
+    </tr></thead>
+    <tbody>${body}</tbody>
+  </table>
+  </body></html>`;
+
+  const win = window.open("", "_blank");
+  if (!win) { alert("پاپ اپ بلاک ہے — PDF کے لیے پاپ اپ کی اجازت دیں"); return; }
+  win.document.write(html);
+  win.document.close();
+  setTimeout(() => win.print(), 700);
 }
 
 // ─── File upload box ─────────────────────────────────────────────────────────
@@ -379,12 +472,20 @@ export default function CompareForm1Register() {
               <X className="w-3.5 h-3.5" /> صاف کریں
             </button>
             {canCompare && diffs.length > 0 && (
-              <button
-                onClick={() => downloadDiffCSV(diffs)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" /> CSV رپورٹ ڈاؤن لوڈ
-              </button>
+              <>
+                <button
+                  onClick={() => downloadDiffPDF(filteredDiffs.length ? filteredDiffs : diffs)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium transition-colors"
+                >
+                  <FileText className="w-3.5 h-3.5" /> PDF رپورٹ
+                </button>
+                <button
+                  onClick={() => downloadDiffCSV(diffs)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" /> CSV رپورٹ ڈاؤن لوڈ
+                </button>
+              </>
             )}
           </div>
         )}
@@ -482,19 +583,21 @@ export default function CompareForm1Register() {
                         {d.old ? [...d.old.names].join("؛ ") || "—": "—"}
                       </td>
                       <td className="border border-slate-300 px-2 py-1.5 text-right">
-                        <div className="relative">
-                          <HighlightCell
-                            value={d.new ? [...d.new.names].join("؛ ") : ""}
-                            prevValue={d.old ? [...d.old.names].join("؛ ") : ""}
-                            isChanged={d.changes.includes("name")}
-                            highlightClass="bg-blue-100 text-blue-800 border-blue-400"
-                          />
-                          {d.changes.includes("name") && (
+                        {d.changes.includes("name") ? (
+                          <div className="relative">
+                            <HighlightCell
+                              value={d.new ? [...d.new.names].join("؛ ") : ""}
+                              prevValue={d.old ? [...d.old.names].join("؛ ") : ""}
+                              isChanged={true}
+                              highlightClass="bg-blue-100 text-blue-800 border-blue-400"
+                            />
                             <span className="absolute -top-1 -left-1 px-1 py-0.5 rounded-full bg-blue-600 text-white text-[8px] font-bold leading-none" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
                               نام بدلا
                             </span>
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
                       </td>
                       <td className="border border-slate-300 px-2 py-1.5 text-center font-mono">
                         {d.old ? `${d.old.kanal} ک ${d.old.marla} م` : "—"}
