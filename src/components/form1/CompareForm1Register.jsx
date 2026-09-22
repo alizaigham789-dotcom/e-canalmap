@@ -17,6 +17,7 @@ const COLUMN_ALIASES = {
   acre_no: ["acre", "acre_no", "killa", "کیلہ", "ایکڑ", "ایکڑ نمبر", "کلہ"],
   channel_name: ["channel", "rajbah", "rajbah_name", "راجباہ", "راجباہ/مائنر", "کینال", "نہر"],
   crop_name: ["crop", "crop_name", "کیفیت", "فصل", "فصل کا نام"],
+  total_acres: ["total_acres", "total_acre", "total_area", "total_area_acres", "cca", "total_cca", "کل رقبہ", "کل ایکڑ", "رقبہ ایکڑ", "رقبہ کل", "کل", "ایکڑ کل", "cca acres", "total cca"],
 };
 
 function normalizeHeader(h) {
@@ -107,8 +108,13 @@ function groupByKhata(rows) {
     const g = map.get(khata);
     const fullName = [r.farmer_name, r.father].filter(Boolean).join(" ولد ");
     if (fullName) g.names.add(fullName);
-    g.kanal += parseFloat(r.kanal) || 0;
-    g.marla += parseFloat(r.marla) || 0;
+    // اگر کنال موجود ہو تو وہ استعمال کریں، ورنہ کل ایکڑ × 8 سے کنال بنائیں
+    if (r.kanal) {
+      g.kanal += parseFloat(r.kanal) || 0;
+      g.marla += parseFloat(r.marla) || 0;
+    } else if (r.total_acres) {
+      g.kanal += (parseFloat(r.total_acres) || 0) * 8;
+    }
     if (r.khasra) g.khasra.add(r.khasra);
     if (r.moga_number) g.moga.add(r.moga_number);
     g.rows.push(r);
