@@ -6,7 +6,9 @@ import { Upload, FileSpreadsheet, GitCompareArrows, AlertTriangle, CheckCircle2,
 // Maps possible header names (Urdu + English, case-insensitive) to canonical keys.
 const COLUMN_ALIASES = {
   khata_no: ["khata_no", "khata", "khatano", "khatanumber", "کھاتہ", "کھاتہ نمبر", "نمبر کھاتہ", "خاتہ", "خاتہ نمبر"],
-  farmer_name: ["farmer_name", "name", "farmer", "owner", "مالک", "نام", "نام مالک", "نام مالک/معہ ولدیت"],
+  farmer_name: ["farmer_name", "name", "farmer", "owner", "owner_name", "occupier", "مالک", "مالک نام", "نام", "نام مالک", "نام مالک/معہ ولدیت", "کاشتکار", "نام کاشتکار"],
+  village: ["village", "village_name", "گاؤں", "نام گاؤں", "گائوں", "گاؤں کا نام", "نام گؤں"],
+  mouza: ["mouza", "mouza_name", "موضع", "نام موضع", "موضع کا نام"],
   father: ["father", "father_name", "parent", "ولد", "ولدیت", "ولدیت نام"],
   cnic: ["cnic", "id", "identity", "شناختی", "شناختی کارڈ", "سنک", "شناختی کارڈ نمبر"],
   kanal: ["kanal", "kanal_no", "کنال", "کنال نمبر"],
@@ -176,6 +178,16 @@ function compareKhatas(map1, map2) {
   return diffs;
 }
 
+// تبدیلی کی اقسام — کیا بدلا
+const CHANGE_LABELS = { name: "نام بدلا", raqba: "رقبہ بدلا", khasra: "خسرہ بدلا", moga: "موگہ بدلا" };
+
+// ایکسل فائل کی قطاروں سے گاؤں / موضع کا نام نکالیں
+function extractMeta(data) {
+  const rows = data?.rows || [];
+  const pick = (key) => rows.map(r => String(r[key] || "").trim()).find(Boolean) || "";
+  return { village: pick("village"), mouza: pick("mouza") };
+}
+
 // ─── Highlighted cell renderer ───────────────────────────────────────────────
 function HighlightCell({ value, prevValue, isChanged, highlightClass = "bg-rose-100 text-rose-700" }) {
   if (isChanged) {
@@ -221,7 +233,7 @@ function downloadDiffCSV(diffs) {
 }
 
 // ─── Colourful PDF report (print-to-PDF, mirrors the on-screen table) ─────────
-function downloadDiffPDF(diffs) {
+function downloadDiffPDF(diffs, meta1, meta2) {
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const sum = {
     total: diffs.length,
@@ -230,6 +242,10 @@ function downloadDiffPDF(diffs) {
     removed: diffs.filter(d => d.type === "removed").length,
     unchanged: diffs.filter(d => d.type === "unchanged").length,
   };
+  // گاؤں / موضع — ایکسل فائل سے
+  const vParts = [];
+  if (meta1?.village || meta2?.village) vParts.push(`گاؤں: <b>${esc(meta1?.village || meta2?.village)}</b>`);
+  if (meta1?.mouza || meta2?.mouza) vParts.push(`موضع: <b>${esc(meta1?.mouza || meta2?.mouza)}</b>`);
   const typeMeta = {
     modified: { label: "تبدیلی", bg: "#fef3c7", fg: "#b45309", bd: "#fbbf24" },
     added: { label: "نئی", bg: "#d1fae5", fg: "#047857", bd: "#34d399" },
@@ -257,7 +273,7 @@ function downloadDiffPDF(diffs) {
     const mg2 = d.new ? ([...d.new.moga].join("،") || "—") : "—";
     body += `<tr style="background:${d.type === "unchanged" ? "#fafafa" : "#ffffff"}">
       <td style="text-align:center;font-weight:700;font-family:monospace">${esc(d.khata_no)}</td>
-      <td style="text-align:center"><span style="display:inline-block;background:${tm.bg};color:${tm.fg};border:1px solid ${tm.bd};border-radius:999px;padding:2px 10px;font-weight:700;font-size:11px">${tm.label}</span></td>
+      <td style="text-align:center"><span style="display:inline-block;background:${tm.bg};color:${tm.fg};border:1px solid ${tm.bd};border-radius:999px;padding:2px 10px;font-weight:700;font-size:11px">${tm.label}</span>${d.type === "modified" ? `<div style="margin-top:3px">${d.changes.map(c => `<span style="display:inline-block;background:#fff1f2;color:#be123c;border:1px solid #fda4af;border-radius:999px;padding:1px 8px;font-size:10px;font-weight:700;margin:1px">${CHANGE_LABELS[c] || c}</span>`).join(" ")}</div>` : ""}</td>
       <td>${d.changes.includes("name") ? `<span style="text-decoration:line-through;color:#94a3b8">${esc(name1)}</span>` : `<span style="color:#94a3b8">${esc(name1)}</span>`}</td>
       <td>${d.changes.includes("name") ? `<span style="background:#dbeafe;border:1px solid #60a5fa;border-radius:6px;padding:2px 6px;font-weight:700;color:#1e40af">${esc(name2)}</span>` : `<span style="color:#94a3b8">—</span>`}</td>
       <td style="text-align:center">${esc(area1)}</td>
@@ -289,6 +305,7 @@ function downloadDiffPDF(diffs) {
   </style></head><body>
   <h1>فارم نمبر 1 — موازنہ رپورٹ</h1>
   <div class="sub">کھاتہ نمبر کے حساب سے موازنہ — ${esc(new Date().toLocaleDateString('ur-PK'))}</div>
+  ${vParts.length ? `<div class="sub">${vParts.join(" · ")}</div>` : ""}
   <div class="cards">
     ${card("#f8fafc", "#cbd5e1", "#475569", "کل کھاتے", sum.total)}
     ${card("#fffbeb", "#fcd34d", "#b45309", "تبدیلی", sum.modified)}
@@ -409,6 +426,9 @@ export default function CompareForm1Register() {
     };
   }, [diffs]);
 
+  const meta1 = useMemo(() => extractMeta(data1), [data1]);
+  const meta2 = useMemo(() => extractMeta(data2), [data2]);
+
   const filteredDiffs = useMemo(() => {
     if (filter === "all") return diffs;
     return diffs.filter(d => d.type === filter);
@@ -478,7 +498,7 @@ export default function CompareForm1Register() {
             {canCompare && diffs.length > 0 && (
               <>
                 <button
-                  onClick={() => downloadDiffPDF(filteredDiffs.length ? filteredDiffs : diffs)}
+                  onClick={() => downloadDiffPDF(filteredDiffs.length ? filteredDiffs : diffs, meta1, meta2)}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium transition-colors"
                 >
                   <FileText className="w-3.5 h-3.5" /> PDF رپورٹ
@@ -494,6 +514,15 @@ export default function CompareForm1Register() {
           </div>
         )}
       </div>
+
+      {/* Village / Mouza — from Excel files */}
+      {(meta1.village || meta1.mouza || meta2.village || meta2.mouza) && (
+        <div className="bg-white rounded-xl border border-slate-200 px-3 py-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-700" dir="rtl" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
+          <span className="font-bold">گاؤں / موضع:</span>
+          <span>فائل 1: <b>{meta1.village || meta1.mouza || "—"}</b></span>
+          <span>فائل 2: <b>{meta2.village || meta2.mouza || "—"}</b></span>
+        </div>
+      )}
 
       {/* Summary */}
       {summary && (
@@ -577,11 +606,20 @@ export default function CompareForm1Register() {
                       <td className="border border-slate-300 px-2 py-1.5 font-bold text-slate-800 font-mono text-center">
                         {d.khata_no}
                       </td>
-                      <td className="border border-slate-300 px-2 py-1.5">
+                      <td className="border border-slate-300 px-2 py-1.5 text-center">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${typeInfo.class}`}>
                           <Icon className="w-3 h-3" />
                           {typeInfo.label}
                         </span>
+                        {d.type === "modified" && (
+                          <div className="flex flex-wrap gap-0.5 justify-center mt-1">
+                            {d.changes.map(c => (
+                              <span key={c} className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 border border-rose-300 text-[9px] font-bold">
+                                {CHANGE_LABELS[c]}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="border border-slate-300 px-2 py-1.5 text-right">
                         {d.old ? [...d.old.names].join("؛ ") || "—": "—"}
@@ -654,7 +692,7 @@ export default function CompareForm1Register() {
           <div className="mt-4 max-w-md mx-auto bg-slate-50 rounded-xl p-3 text-right">
             <p className="text-[11px] font-bold text-slate-600 mb-1" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>کالم جو خودکار طور پر پہچانے جاتے ہیں:</p>
             <p className="text-[10px] text-slate-500 leading-relaxed" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>
-              کھاتہ نمبر، نام مالک، ولدیت، شناختی کارڈ، کنال، مرلہ، خسرہ بندوبست، موگہ، مستطیل، کیلہ، راجباہ، کیفیت
+              کھاتہ نمبر، نام مالک، ولدیت، شناختی کارڈ، کنال، مرلہ، خسرہ بندوبست، موگہ، مستطیل، کیلہ، راجباہ، کیفیت، گاؤں، موضع
             </p>
           </div>
         </div>
