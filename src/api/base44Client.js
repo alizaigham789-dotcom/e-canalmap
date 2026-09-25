@@ -2,10 +2,10 @@ import { createClient } from '@base44/sdk';
 import { appParams } from '@/lib/app-params';
 import { base44 as supabaseBase44 } from "@/api/supabaseBackend";
 
-// Flip to true to run the whole app on Supabase (free tier) instead of Base44.
-// Do NOT flip until the Supabase project has the schema applied + auth configured
-// (see AuthContext Supabase branch) — flipping prematurely breaks AI features + auth.
-export const USE_SUPABASE = false;
+// Keep the backend choice explicit. Hostinger serves the Base44 SDK through
+// the same-origin /api proxy, while Supabase is an intentional alternative.
+export const BACKEND_PROVIDER = (import.meta.env.VITE_APP_BACKEND || 'base44').toLowerCase();
+export const USE_SUPABASE = BACKEND_PROVIDER === 'supabase';
 
 const { appId, token, functionsVersion, appBaseUrl, apiKey } = appParams;
 

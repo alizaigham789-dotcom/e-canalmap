@@ -25,7 +25,9 @@ BEGIN
       );
     $ cron $
   );
-EXCEPTION WHEN OTHERS THEN
+
+
+EXCEPTION WHEN OTHERS THEN 
   RAISE NOTICE 'cron schedule skipped: %', SQLERRM;
 END $$;
 

@@ -1,39 +1,25 @@
-**Welcome to your Base44 project** 
+# E-canal Map
 
-**About**
+Production-ready Vite/React frontend for cadastral mapping and canal records.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+## Local development
 
-This project contains everything you need to run your app locally.
+1. Install Node.js 18 or newer.
+2. Copy `.env.example` to `.env.local` and set the published Base44 app URL.
+3. Run `npm install` and then `npm run dev`.
 
-**Edit the code in your local development environment**
+The default backend is Base44. To use the included Supabase adapter instead,
+set `VITE_APP_BACKEND=supabase`, apply `supabase/schema.sql`, and provide the
+Supabase URL and publishable key.
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+## Production build
 
-**Prerequisites:** 
+Run `npm run build`. The generated `dist/` folder is a static deployment and
+includes the Apache `.htaccess` file needed for React deep links and the
+same-origin `/api` proxy.
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+For the complete Hostinger upload, domain, and verification procedure, see
+`HOSTINGER-DEPLOY.md`.
 
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
-
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
-
-Run the app: `npm run dev`
-
-**Publish your changes**
-
-Open [Base44.com](http://Base44.com) and click on Publish.
-
-**Docs & Support**
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+Never commit `.env`, `.env.local`, or private API keys. Values beginning with
+`VITE_` are bundled into browser JavaScript and must be treated as public.

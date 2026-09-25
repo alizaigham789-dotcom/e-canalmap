@@ -20,7 +20,7 @@
 
 const MIGRATION_CONFIG = {
   baseUrl: "https://e-canalsmaps.base44.app/api", // Your Base44 API base URL
-  apiKey: "8477e3b00c364308ad243f567d5d091b", // Your Base44 API key
+  apiKey: "", // Set locally before running; never commit a real key
   supabaseUrl: "", // ← PASTE YOUR SUPABASE PROJECT URL HERE
   supabaseKey: "", // ← PASTE YOUR SUPABASE ANON KEY HERE
 };

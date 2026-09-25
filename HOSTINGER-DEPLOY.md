@@ -23,9 +23,21 @@ environment cannot run `npm run build` or create zips for you).
 From the project root:
 
 ```bash
-npm install
+npm ci
 npm run build
 ```
+
+Before building, copy `.env.example` to `.env.local` and confirm these values:
+
+```dotenv
+VITE_APP_BACKEND=base44
+VITE_BASE44_APP_ID=your_base44_app_id
+VITE_BASE44_APP_BASE_URL=https://your-app.base44.app
+```
+
+The Base44 app URL is used for authentication and app metadata. API data calls
+are routed through the same-origin `/api` proxy in `public/.htaccess`. Do not
+put private API keys in `VITE_*` variables: Vite exposes them to end users.
 
 This creates a `dist/` folder containing the entire compiled app:
 - `index.html`
@@ -33,6 +45,8 @@ This creates a `dist/` folder containing the entire compiled app:
 - `manifest.json`, `sw.js`, favicon, etc.
 - **`.htaccess`** (copied from `public/.htaccess`) — this is what makes
   SPA routing + the Base44 API proxy work on Hostinger.
+
+After building, verify that `dist/.htaccess` exists before creating the zip.
 
 > The `.htaccess` proxies every `/api/*` request to
 > `https://e-canal-map-91122b25.base44.app/api/*`, so the app talks to
@@ -101,6 +115,8 @@ Compress-Archive -Path dist\* -DestinationPath ecanal-map-hostinger.zip
 - Test a deep route like `https://your-domain.tld/geo-map` — it must
   load (SPA fallback), not 404.
 - Log in — the auth redirect should stay on your domain.
+- Confirm the browser is using the intended backend in the built app; a
+   Hostinger deployment must be built with `VITE_APP_BACKEND=base44`.
 
 ---
 
